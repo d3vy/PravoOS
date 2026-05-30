@@ -83,6 +83,8 @@ main() {
   fi
 
   log "Building images..."
+  mkdir -p logs/{user-service,ai-service,api-gateway,notification-service}
+  chmod -R a+rwx logs 2>/dev/null || true
   compose build
 
   log "Starting stack (HTTP, certificate bootstrap)..."

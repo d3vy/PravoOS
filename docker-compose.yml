@@ -79,17 +79,18 @@ services:
       DB_USER_URL: jdbc:postgresql://postgres:5432/pravoos_users
       DB_USER_USERNAME: ${DB_USERNAME}
       DB_USER_PASSWORD: ${DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/actuator/health/liveness || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 8
+      start_period: 120s
     volumes:
       - ./logs/user-service:/app/logs/user-service
 
@@ -107,17 +108,18 @@ services:
       DB_AI_PASSWORD: ${DB_PASSWORD}
       MONGODB_HOST: mongodb
       MONGODB_PORT: 27017
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health/liveness || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 8
+      start_period: 120s
     volumes:
       - documents_data:/app/documents
       - ./logs/ai-service:/app/logs/ai-service
@@ -132,6 +134,7 @@ services:
     env_file: .env
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       kafka:
         condition: service_healthy
@@ -152,17 +155,18 @@ services:
       SERVER_IP: ${SERVER_IP:-}
       SERVER_DOMAIN: ${SERVER_DOMAIN:-}
       CORS_INCLUDE_LOCALHOST: ${CORS_INCLUDE_LOCALHOST:-true}
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       user-service:
         condition: service_healthy
       ai-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health/liveness || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 8
+      start_period: 120s
     volumes:
       - ./logs/api-gateway:/app/logs/api-gateway
 
