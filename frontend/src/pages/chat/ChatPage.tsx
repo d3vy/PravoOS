@@ -10,6 +10,7 @@ import { chatApi } from '../../api/chat'
 import type { MessageResponse, ConversationResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import { Navbar } from '../../components/layout/Navbar'
+import { ScalesIcon } from '../../components/ui/Logo'
 
 interface LocalMessage {
   id: string
@@ -19,14 +20,21 @@ interface LocalMessage {
   isStreaming?: boolean
 }
 
+const SUGGESTIONS = [
+  'Какой срок исковой давности по договору поставки?',
+  'Условия расторжения трудового договора по инициативе работодателя',
+  'Требования к форме доверенности',
+]
+
 export default function ChatPage(): JSX.Element {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<LocalMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const skipNextHistorySyncRef = useRef(false)
   const queryClient = useQueryClient()
 
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery<ConversationResponse[]>({
@@ -41,15 +49,18 @@ export default function ChatPage(): JSX.Element {
   })
 
   useEffect(() => {
-    if (historyMessages) {
-      setMessages(
-        historyMessages.map((m) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-        }))
-      )
+    if (!historyMessages) return
+    if (skipNextHistorySyncRef.current) {
+      skipNextHistorySyncRef.current = false
+      return
     }
+    setMessages(
+      historyMessages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+      }))
+    )
   }, [historyMessages])
 
   useEffect(() => {
@@ -62,19 +73,26 @@ export default function ChatPage(): JSX.Element {
       setMessages((prev) =>
         prev.map((m) =>
           m.isStreaming
-            ? { id: data.conversationId + '-ai', role: 'ASSISTANT', content: data.answer, sources: data.sources }
+            ? {
+                id: `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                role: 'ASSISTANT',
+                content: data.answer,
+                sources: data.sources,
+              }
             : m
         )
       )
-      setActiveConversationId(data.conversationId)
+      if (data.conversationId !== activeConversationId) {
+        skipNextHistorySyncRef.current = true
+        setActiveConversationId(data.conversationId)
+      }
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
     onError: () => {
-      setMessages((prev) => prev.filter((m) => !m.isStreaming))
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((m) => !m.isStreaming),
         {
-          id: 'error-' + Date.now(),
+          id: `error-${Date.now()}`,
           role: 'ASSISTANT',
           content: 'Произошла ошибка при обработке запроса. Попробуйте ещё раз.',
         },
@@ -85,20 +103,21 @@ export default function ChatPage(): JSX.Element {
     },
   })
 
-  const handleSend = async (): Promise<void> => {
+  const handleSend = (): void => {
     const message = inputValue.trim()
     if (!message || isSending) return
 
     setInputValue('')
     setIsSending(true)
 
+    const baseId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const userMessage: LocalMessage = {
-      id: 'user-' + Date.now(),
+      id: `user-${baseId}`,
       role: 'USER',
       content: message,
     }
     const loadingMessage: LocalMessage = {
-      id: 'loading-' + Date.now(),
+      id: `loading-${baseId}`,
       role: 'ASSISTANT',
       content: '',
       isStreaming: true,
@@ -119,7 +138,7 @@ export default function ChatPage(): JSX.Element {
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      void handleSend()
+      handleSend()
     }
   }
 
@@ -146,88 +165,85 @@ export default function ChatPage(): JSX.Element {
       <Navbar />
 
       <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
-        {/* Sidebar toggle on mobile */}
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className="md:hidden fixed bottom-24 left-4 z-30 w-10 h-10 rounded-full bg-light-accent dark:bg-dark-accent text-white shadow-lg flex items-center justify-center"
-          aria-label="Открыть список диалогов"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
+        {/* Mobile sidebar toggle */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden fixed top-[72px] left-3 z-30 w-10 h-10 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary shadow-card dark:shadow-card-dark flex items-center justify-center"
+            aria-label="Открыть список диалогов"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
 
         {/* Sidebar */}
-        <AnimatePresence>
-          {(sidebarOpen || typeof window !== 'undefined') && (
-            <motion.aside
-              initial={false}
-              className={`
-                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-                md:translate-x-0
-                fixed md:relative z-20 md:z-auto
-                w-72 md:w-64 h-full
-                flex flex-col
-                bg-light-surface dark:bg-dark-surface
-                border-r border-light-border dark:border-dark-border
-                transition-transform duration-200 md:transition-none
-              `}
+        <aside
+          className={`
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            md:translate-x-0
+            fixed md:relative z-20 md:z-auto
+            w-72 md:w-64 h-full
+            flex flex-col
+            bg-light-surface dark:bg-dark-surface
+            border-r border-light-border dark:border-dark-border
+            transition-transform duration-200 md:transition-none
+          `}
+        >
+          <div className="p-4 border-b border-light-border dark:border-dark-border">
+            <button
+              onClick={startNewChat}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white text-sm font-medium hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
             >
-              <div className="p-4 border-b border-light-border dark:border-dark-border">
-                <button
-                  onClick={startNewChat}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white text-sm font-medium hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Новый чат
-                </button>
-              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Новый чат
+            </button>
+          </div>
 
-              <div className="flex-1 overflow-y-auto scrollbar-thin p-2">
-                {conversationsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Spinner size="sm" />
-                  </div>
-                ) : conversations.length === 0 ? (
-                  <p className="text-xs text-center text-light-secondary dark:text-dark-secondary py-8 px-4">
-                    Нет диалогов. Начните новый чат.
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-0.5">
-                    {conversations.map((conv) => (
-                      <button
-                        key={conv.id}
-                        onClick={() => selectConversation(conv.id)}
-                        className={`
-                          w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors
-                          ${activeConversationId === conv.id
-                            ? 'bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent'
-                            : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
-                          }
-                        `}
-                      >
-                        <span className="block truncate font-medium">{conv.title}</span>
-                        <span className="block text-xs text-light-secondary dark:text-dark-secondary mt-0.5">
-                          {new Date(conv.createdAt).toLocaleDateString('ru-RU')}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-2">
+            {conversationsLoading ? (
+              <div className="flex justify-center py-8">
+                <Spinner size="sm" />
               </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
+            ) : conversations.length === 0 ? (
+              <p className="text-xs text-center text-light-secondary dark:text-dark-secondary py-8 px-4">
+                Нет диалогов. Начните новый чат.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                {conversations.map((conv) => (
+                  <button
+                    key={conv.id}
+                    onClick={() => selectConversation(conv.id)}
+                    className={`
+                      w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors
+                      ${activeConversationId === conv.id
+                        ? 'bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent'
+                        : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
+                      }
+                    `}
+                  >
+                    <span className="block truncate font-medium">{conv.title}</span>
+                    <span className="block text-xs text-light-secondary dark:text-dark-secondary mt-0.5">
+                      {new Date(conv.createdAt).toLocaleDateString('ru-RU')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
 
         {/* Overlay for mobile sidebar */}
         {sidebarOpen && (
           <div
-            className="md:hidden fixed inset-0 z-10 bg-black/40"
+            className="md:hidden fixed inset-0 z-10 bg-black/40 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -242,8 +258,10 @@ export default function ChatPage(): JSX.Element {
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
-                <div className="text-5xl mb-4 opacity-30">⚖️</div>
-                <h2 className="text-xl font-semibold text-light-text dark:text-dark-text mb-3">
+                <div className="w-14 h-14 rounded-2xl bg-light-accent/8 dark:bg-dark-accent/15 flex items-center justify-center text-light-gold dark:text-dark-gold mb-5">
+                  <ScalesIcon className="w-7 h-7" />
+                </div>
+                <h2 className="font-display text-2xl font-semibold text-light-text dark:text-dark-text mb-3">
                   Задайте вопрос по правовой базе
                 </h2>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed">
@@ -251,18 +269,14 @@ export default function ChatPage(): JSX.Element {
                   Задавайте вопросы на естественном языке.
                 </p>
                 <div className="mt-8 grid grid-cols-1 gap-2 w-full max-w-sm">
-                  {[
-                    'Какой срок исковой давности по договору поставки?',
-                    'Условия расторжения трудового договора по инициативе работодателя',
-                    'Требования к форме доверенности',
-                  ].map((suggestion) => (
+                  {SUGGESTIONS.map((suggestion) => (
                     <button
                       key={suggestion}
                       onClick={() => {
                         setInputValue(suggestion)
                         textareaRef.current?.focus()
                       }}
-                      className="text-left text-sm px-4 py-2.5 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+                      className="text-left text-sm px-4 py-2.5 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:border-light-accent/40 dark:hover:border-dark-accent/40 hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
                     >
                       {suggestion}
                     </button>
@@ -271,7 +285,7 @@ export default function ChatPage(): JSX.Element {
               </div>
             ) : (
               <div className="max-w-3xl mx-auto flex flex-col gap-6">
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {messages.map((message) => (
                     <MessageBubble key={message.id} message={message} />
                   ))}
@@ -294,10 +308,11 @@ export default function ChatPage(): JSX.Element {
                   placeholder="Задайте вопрос... (Enter — отправить, Shift+Enter — новая строка)"
                   rows={1}
                   disabled={isSending}
+                  aria-label="Текст сообщения"
                   className="flex-1 bg-transparent text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary resize-none outline-none text-sm leading-relaxed min-h-[24px] max-h-40 disabled:opacity-50"
                 />
                 <button
-                  onClick={() => void handleSend()}
+                  onClick={handleSend}
                   disabled={!inputValue.trim() || isSending}
                   className="shrink-0 w-9 h-9 rounded-lg bg-light-accent dark:bg-dark-accent text-white flex items-center justify-center hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   aria-label="Отправить"
@@ -312,7 +327,7 @@ export default function ChatPage(): JSX.Element {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-center text-light-secondary dark:text-dark-secondary mt-2 opacity-60">
+              <p className="text-xs text-center text-light-secondary dark:text-dark-secondary mt-2 opacity-70">
                 Ответы генерируются на основе загруженных документов. Проверяйте источники.
               </p>
             </div>
@@ -338,11 +353,11 @@ function MessageBubble({ message }: { message: LocalMessage }): JSX.Element {
           w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5
           ${isUser
             ? 'bg-light-accent dark:bg-dark-accent text-white'
-            : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
+            : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-gold dark:text-dark-gold'
           }
         `}
       >
-        {isUser ? 'Вы' : '⚖'}
+        {isUser ? 'Вы' : <ScalesIcon className="w-4 h-4" />}
       </div>
 
       <div className={`flex flex-col gap-2 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
@@ -358,12 +373,12 @@ function MessageBubble({ message }: { message: LocalMessage }): JSX.Element {
           {message.isStreaming ? (
             <TypingDots />
           ) : (
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
           )}
         </div>
 
         {!message.isStreaming && message.sources && message.sources.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 max-w-full">
+          <div className="flex flex-wrap items-center gap-1.5 max-w-full">
             <span className="text-xs text-light-secondary dark:text-dark-secondary">Источники:</span>
             {message.sources.map((source, idx) => (
               <span

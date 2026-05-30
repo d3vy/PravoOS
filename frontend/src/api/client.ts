@@ -21,7 +21,10 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().clearAuth()
-      window.location.href = '/login'
+      const publicPaths = ['/', '/login', '/apply']
+      if (!publicPaths.includes(window.location.pathname)) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

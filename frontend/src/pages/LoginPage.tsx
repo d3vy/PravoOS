@@ -5,7 +5,8 @@ import { useAuthStore } from '../store/authStore'
 import { authApi } from '../api/auth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { useTheme } from '../hooks/useTheme'
+import { Logo } from '../components/ui/Logo'
+import { ThemeToggle } from '../components/ui/ThemeToggle'
 
 export default function LoginPage(): JSX.Element {
   const [email, setEmail] = useState('')
@@ -14,7 +15,6 @@ export default function LoginPage(): JSX.Element {
   const [loading, setLoading] = useState(false)
 
   const { setAuth, isAuthenticated, user } = useAuthStore()
-  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   if (isAuthenticated()) {
@@ -46,20 +46,10 @@ export default function LoginPage(): JSX.Element {
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
-        <Link
-          to="/"
-          className="flex items-center gap-2 font-semibold text-light-text dark:text-dark-text hover:opacity-80 transition-opacity"
-        >
-          <span>⚖️</span>
-          <span>PravoOS</span>
+        <Link to="/" className="hover:opacity-80 transition-opacity">
+          <Logo />
         </Link>
-        <button
-          onClick={toggleTheme}
-          aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-light-secondary dark:text-dark-secondary hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
-        >
-          {theme === 'dark' ? '☀' : '☾'}
-        </button>
+        <ThemeToggle />
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -69,9 +59,10 @@ export default function LoginPage(): JSX.Element {
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="w-full max-w-md"
         >
-          <div className="bg-light-surface dark:bg-dark-surface rounded-2xl border border-light-border dark:border-dark-border p-8 shadow-sm">
+          <div className="card-elevated rounded-2xl p-8">
             <div className="mb-8">
-              <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2">
+              <div className="gold-rule mb-5" />
+              <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-2">
                 Вход в систему
               </h1>
               <p className="text-sm text-light-secondary dark:text-dark-secondary">

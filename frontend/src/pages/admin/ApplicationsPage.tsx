@@ -71,7 +71,7 @@ export default function ApplicationsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-1">Заявки</h1>
+        <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Заявки</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
           Управление заявками на доступ к платформе
         </p>

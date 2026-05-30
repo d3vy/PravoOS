@@ -8,13 +8,21 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 
 const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
 const POLLING_INTERVAL_MS = 5000
+
+function isAllowedFile(file: File): boolean {
+  if (ALLOWED_TYPES.includes(file.type)) return true
+  const lowerName = file.name.toLowerCase()
+  return ALLOWED_EXTENSIONS.some((ext) => lowerName.endsWith(ext))
+}
 
 export default function DocumentsPage(): JSX.Element {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const dragCounterRef = useRef(0)
   const queryClient = useQueryClient()
 
   const { data: documents = [], isLoading } = useQuery<DocumentResponse[]>({
@@ -45,7 +53,7 @@ export default function DocumentsPage(): JSX.Element {
       if (!files || files.length === 0) return
       setUploadError(null)
 
-      const validFiles = Array.from(files).filter((f) => ALLOWED_TYPES.includes(f.type))
+      const validFiles = Array.from(files).filter(isAllowedFile)
       if (validFiles.length === 0) {
         setUploadError('Поддерживаются только файлы PDF и DOCX')
         return
@@ -70,15 +78,26 @@ export default function DocumentsPage(): JSX.Element {
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
+  }
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    dragCounterRef.current += 1
     setIsDragging(true)
   }
 
-  const handleDragLeave = (): void => {
-    setIsDragging(false)
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    dragCounterRef.current -= 1
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0
+      setIsDragging(false)
+    }
   }
 
   const handleDrop = (e: DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
+    dragCounterRef.current = 0
     setIsDragging(false)
     void handleFiles(e.dataTransfer.files)
   }
@@ -90,7 +109,7 @@ export default function DocumentsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-1">Документы</h1>
+        <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Документы</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
           Загрузите PDF и DOCX-файлы для формирования базы знаний AI-ассистента
         </p>
@@ -98,6 +117,7 @@ export default function DocumentsPage(): JSX.Element {
 
       {/* Upload zone */}
       <div
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -197,7 +217,7 @@ export default function DocumentsPage(): JSX.Element {
               {documents.map((doc, index) => (
                 <DocumentRow
                   key={doc.id}
-                  document={doc}
+                  doc={doc}
                   index={index}
                   onDelete={() => deleteMutation.mutate(doc.id)}
                   isDeleting={deleteMutation.isPending && deleteMutation.variables === doc.id}
@@ -212,13 +232,13 @@ export default function DocumentsPage(): JSX.Element {
 }
 
 interface DocumentRowProps {
-  document: DocumentResponse
+  doc: DocumentResponse
   index: number
   onDelete: () => void
   isDeleting: boolean
 }
 
-function DocumentRow({ document, index, onDelete, isDeleting }: DocumentRowProps): JSX.Element {
+function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const handleDeleteClick = (): void => {
@@ -239,19 +259,19 @@ function DocumentRow({ document, index, onDelete, isDeleting }: DocumentRowProps
       className="flex items-center gap-4 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
     >
       <div className="w-9 h-9 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border flex items-center justify-center text-light-secondary dark:text-dark-secondary shrink-0">
-        <FileIcon fileName={document.fileName} />
+        <FileIcon fileName={doc.fileName} />
       </div>
 
       <div className="flex-1 min-w-0">
         <p className="font-medium text-light-text dark:text-dark-text text-sm truncate">
-          {document.title}
+          {doc.title}
         </p>
         <p className="text-xs text-light-secondary dark:text-dark-secondary truncate mt-0.5">
-          {document.fileName} · {new Date(document.uploadedAt).toLocaleDateString('ru-RU')}
+          {doc.fileName} · {new Date(doc.uploadedAt).toLocaleDateString('ru-RU')}
         </p>
       </div>
 
-      <DocumentStatusBadge status={document.status} />
+      <DocumentStatusBadge status={doc.status} />
 
       <Button
         variant={confirmDelete ? 'danger' : 'ghost'}

@@ -9,6 +9,8 @@
 
   body {
     @apply bg-light-bg text-light-text font-sans antialiased transition-colors duration-200;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
   .dark body {
@@ -21,6 +23,10 @@
 
   .dark * {
     @apply border-dark-border;
+  }
+
+  ::selection {
+    @apply bg-light-accent/20 dark:bg-dark-accent/30;
   }
 }
 
@@ -41,6 +47,19 @@
     @apply border border-light-border dark:border-dark-border;
   }
 
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-widest text-light-gold dark:text-dark-gold;
+  }
+
+  .gold-rule {
+    @apply h-px w-12 bg-gradient-to-r from-light-gold to-transparent dark:from-dark-gold;
+  }
+
+  .card-elevated {
+    @apply bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border
+           rounded-xl shadow-card dark:shadow-card-dark;
+  }
+
   .input-base {
     @apply w-full px-4 py-3 rounded-lg bg-light-surface dark:bg-dark-surface
            border border-light-border dark:border-dark-border
@@ -54,11 +73,11 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #dde1e9 transparent;
+    scrollbar-color: #e3e7ef transparent;
   }
 
   .dark .scrollbar-thin {
-    scrollbar-color: #1a2540 transparent;
+    scrollbar-color: #1d2842 transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {

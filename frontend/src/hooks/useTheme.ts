@@ -1,27 +1,39 @@
-import { useState, useEffect } from 'react'
+import { create } from 'zustand'
 
 type Theme = 'light' | 'dark'
 
+const STORAGE_KEY = 'pravoos-theme'
+
+function getInitialTheme(): Theme {
+  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
+  if (stored === 'light' || stored === 'dark') return stored
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function applyTheme(theme: Theme): void {
+  const root = document.documentElement
+  root.classList.toggle('dark', theme === 'dark')
+  localStorage.setItem(STORAGE_KEY, theme)
+}
+
+interface ThemeState {
+  theme: Theme
+  toggleTheme: () => void
+}
+
+const useThemeStore = create<ThemeState>((set, get) => ({
+  theme: getInitialTheme(),
+  toggleTheme: () => {
+    const next: Theme = get().theme === 'dark' ? 'light' : 'dark'
+    applyTheme(next)
+    set({ theme: next })
+  },
+}))
+
+applyTheme(useThemeStore.getState().theme)
+
 export function useTheme(): { theme: Theme; toggleTheme: () => void } {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('pravoos-theme') as Theme | null
-    if (stored) return stored
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  })
-
-  useEffect(() => {
-    const root = document.documentElement
-    if (theme === 'dark') {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
-    localStorage.setItem('pravoos-theme', theme)
-  }, [theme])
-
-  const toggleTheme = (): void => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
-  }
-
+  const theme = useThemeStore((state) => state.theme)
+  const toggleTheme = useThemeStore((state) => state.toggleTheme)
   return { theme, toggleTheme }
 }

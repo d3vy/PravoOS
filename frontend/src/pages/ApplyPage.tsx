@@ -4,7 +4,8 @@ import { motion } from 'framer-motion'
 import { authApi } from '../api/auth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { useTheme } from '../hooks/useTheme'
+import { Logo } from '../components/ui/Logo'
+import { ThemeToggle } from '../components/ui/ThemeToggle'
 
 interface FormData {
   fullName: string
@@ -24,10 +25,12 @@ interface FormErrors {
   phone?: string
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 function validateForm(data: FormData): FormErrors {
   const errors: FormErrors = {}
   if (!data.fullName.trim()) errors.fullName = 'Укажите полное имя'
-  if (!data.email.includes('@')) errors.email = 'Введите корректный email'
+  if (!EMAIL_REGEX.test(data.email.trim())) errors.email = 'Введите корректный email'
   if (data.password.length < 8) errors.password = 'Пароль — не менее 8 символов'
   if (!data.barNumber.trim()) errors.barNumber = 'Укажите номер адвоката'
   if (!data.specialization.trim()) errors.specialization = 'Укажите специализацию'
@@ -48,8 +51,6 @@ export default function ApplyPage(): JSX.Element {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-
-  const { theme, toggleTheme } = useTheme()
 
   const updateField = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>): void => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }))
@@ -82,20 +83,10 @@ export default function ApplyPage(): JSX.Element {
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
-        <Link
-          to="/"
-          className="flex items-center gap-2 font-semibold text-light-text dark:text-dark-text hover:opacity-80 transition-opacity"
-        >
-          <span>⚖️</span>
-          <span>PravoOS</span>
+        <Link to="/" className="hover:opacity-80 transition-opacity">
+          <Logo />
         </Link>
-        <button
-          onClick={toggleTheme}
-          aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-light-secondary dark:text-dark-secondary hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
-        >
-          {theme === 'dark' ? '☀' : '☾'}
-        </button>
+        <ThemeToggle />
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -106,11 +97,13 @@ export default function ApplyPage(): JSX.Element {
             transition={{ duration: 0.4 }}
             className="w-full max-w-md text-center"
           >
-            <div className="bg-light-surface dark:bg-dark-surface rounded-2xl border border-light-border dark:border-dark-border p-10 shadow-sm">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-3xl mx-auto mb-6">
-                ✓
+            <div className="card-elevated rounded-2xl p-10">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto mb-6">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </div>
-              <h2 className="text-2xl font-bold text-light-text dark:text-dark-text mb-4">
+              <h2 className="font-display text-2xl font-semibold text-light-text dark:text-dark-text mb-4">
                 Заявка подана
               </h2>
               <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
@@ -131,9 +124,10 @@ export default function ApplyPage(): JSX.Element {
             transition={{ duration: 0.4, ease: 'easeOut' }}
             className="w-full max-w-lg"
           >
-            <div className="bg-light-surface dark:bg-dark-surface rounded-2xl border border-light-border dark:border-dark-border p-8 shadow-sm">
+            <div className="card-elevated rounded-2xl p-8">
               <div className="mb-8">
-                <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2">
+                <div className="gold-rule mb-5" />
+                <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-2">
                   Заявка на доступ
                 </h1>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary">

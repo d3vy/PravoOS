@@ -45,26 +45,27 @@ export function Button({
       whileTap={isDisabled ? {} : { scale: 0.98 }}
       transition={{ duration: 0.15 }}
       className={`
-        inline-flex items-center justify-center gap-2 rounded-lg font-medium
-        transition-colors duration-150 focus:outline-none focus:ring-2
-        focus:ring-light-accent dark:focus:ring-dark-accent focus:ring-offset-2
-        focus:ring-offset-light-bg dark:focus:ring-offset-dark-bg
+        relative inline-flex items-center justify-center gap-2 rounded-lg font-medium
+        transition-colors duration-150 focus:outline-none focus-visible:ring-2
+        focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent focus-visible:ring-offset-2
+        focus-visible:ring-offset-light-bg dark:focus-visible:ring-offset-dark-bg
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variantClasses[variant]}
         ${sizeClasses[size]}
         ${className}
       `}
       disabled={isDisabled}
+      aria-busy={loading}
       {...(props as ComponentPropsWithoutRef<typeof motion.button>)}
     >
       {loading && (
-        <span className="inline-flex gap-0.5">
+        <span className="absolute inset-0 inline-flex items-center justify-center gap-1" aria-hidden="true">
           <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:0ms]" />
           <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:150ms]" />
           <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce [animation-delay:300ms]" />
         </span>
       )}
-      {!loading && children}
+      <span className={loading ? 'invisible' : 'contents'}>{children}</span>
     </motion.button>
   )
 }
