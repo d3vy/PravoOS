@@ -13,6 +13,8 @@ services:
   kafka:
     restart: unless-stopped
     ports: !reset []
+    healthcheck:
+      start_period: 120s
 
   user-service:
     restart: unless-stopped
