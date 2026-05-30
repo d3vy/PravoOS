@@ -53,11 +53,20 @@ compose() {
   docker compose "${COMPOSE_FILES[@]}" "$@"
 }
 
-build_sequentially() {
-  log "Building Java services (one Maven run)..."
-  compose build user-service
-  log "Building remaining images..."
-  compose build ai-service api-gateway notification-service frontend
+build_jars() {
+  log "Building JARs (mvn package)..."
+  mkdir -p ~/.m2 docker/jars
+  cp docker/maven/settings.xml ~/.m2/settings.xml
+  mvn package -DskipTests -B -q
+  cp user-service/target/user-service-*.jar docker/jars/user-service.jar
+  cp ai-service/target/ai-service-*.jar docker/jars/ai-service.jar
+  cp api-gateway/target/api-gateway-*.jar docker/jars/api-gateway.jar
+  cp notification-service/target/notification-service-*.jar docker/jars/notification-service.jar
+}
+
+build_images() {
+  log "Building Docker images..."
+  compose build user-service ai-service api-gateway notification-service frontend
 }
 
 wait_for_kafka() {
@@ -103,6 +112,8 @@ obtain_ssl_certificate() {
 main() {
   require_command docker
   require_command envsubst
+  require_command mvn
+  require_command java
   load_env
   validate_env
 
@@ -111,10 +122,11 @@ main() {
     exit 1
   fi
 
-  log "Building images..."
+  log "Building application..."
   mkdir -p logs/{user-service,ai-service,api-gateway,notification-service}
   chmod -R a+rwx logs 2>/dev/null || true
-  build_sequentially
+  build_jars
+  build_images
 
   log "Starting stack (HTTP, certificate bootstrap)..."
   ./scripts/render-nginx.sh init
