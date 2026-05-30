@@ -54,11 +54,10 @@ compose() {
 }
 
 build_sequentially() {
-  local services=(notification-service user-service ai-service api-gateway frontend)
-  for service in "${services[@]}"; do
-    log "Building ${service}..."
-    compose build "$service"
-  done
+  log "Building Java services (one Maven run)..."
+  compose build user-service
+  log "Building remaining images..."
+  compose build ai-service api-gateway notification-service frontend
 }
 
 wait_for_kafka() {

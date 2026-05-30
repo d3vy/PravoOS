@@ -69,7 +69,8 @@ services:
   user-service:
     build:
       context: .
-      dockerfile: user-service/Dockerfile
+      dockerfile: docker/Dockerfile
+      target: user-service
     container_name: pravoos-user-service
     ports:
       - "8081:8081"
@@ -97,7 +98,8 @@ services:
   ai-service:
     build:
       context: .
-      dockerfile: ai-service/Dockerfile
+      dockerfile: docker/Dockerfile
+      target: ai-service
     container_name: pravoos-ai-service
     ports:
       - "8082:8082"
@@ -127,7 +129,8 @@ services:
   notification-service:
     build:
       context: .
-      dockerfile: notification-service/Dockerfile
+      dockerfile: docker/Dockerfile
+      target: notification-service
     container_name: pravoos-notification-service
     ports:
       - "8083:8083"
@@ -144,7 +147,8 @@ services:
   api-gateway:
     build:
       context: .
-      dockerfile: api-gateway/Dockerfile
+      dockerfile: docker/Dockerfile
+      target: api-gateway
     container_name: pravoos-api-gateway
     ports:
       - "8080:8080"
