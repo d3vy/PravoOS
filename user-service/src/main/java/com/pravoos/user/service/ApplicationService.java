@@ -81,10 +81,7 @@ public class ApplicationService {
         User user = buildUserFromApplication(application);
         userRepository.save(user);
 
-        application.setStatus(ApplicationStatus.APPROVED);
-        application.setReviewedAt(LocalDateTime.now());
-        application.setReviewedBy(adminId);
-        applicationRepository.save(application);
+        markReviewed(application, ApplicationStatus.APPROVED, adminId);
 
         log.info("Application approved: {} by admin: {}", applicationId, adminId);
         return toApplicationResponse(application);
@@ -94,13 +91,17 @@ public class ApplicationService {
     public ApplicationResponse rejectApplication(UUID applicationId, UUID adminId) {
         LawyerApplication application = findPendingApplicationOrThrow(applicationId);
 
-        application.setStatus(ApplicationStatus.REJECTED);
-        application.setReviewedAt(LocalDateTime.now());
-        application.setReviewedBy(adminId);
-        applicationRepository.save(application);
+        markReviewed(application, ApplicationStatus.REJECTED, adminId);
 
         log.info("Application rejected: {} by admin: {}", applicationId, adminId);
         return toApplicationResponse(application);
+    }
+
+    private void markReviewed(LawyerApplication application, ApplicationStatus status, UUID adminId) {
+        application.setStatus(status);
+        application.setReviewedAt(LocalDateTime.now());
+        application.setReviewedBy(adminId);
+        applicationRepository.save(application);
     }
 
     @Transactional(readOnly = true)

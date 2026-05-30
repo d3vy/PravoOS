@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +48,9 @@ public class DeepSeekLlmClient implements LlmClient {
             }
             log.debug("LLM completion successful, model: {}", properties.model());
             return response.firstContent();
+        } catch (RestClientResponseException e) {
+            log.error("LLM API returned {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new LlmException("LLM API call failed with status " + e.getStatusCode().value());
         } catch (RestClientException e) {
             log.error("LLM API call failed: {}", e.getMessage());
             throw new LlmException("LLM API call failed: " + e.getMessage());
@@ -71,6 +75,9 @@ public class DeepSeekLlmClient implements LlmClient {
                 throw new LlmException("Empty embedding response from API");
             }
             return response.firstEmbedding();
+        } catch (RestClientResponseException e) {
+            log.error("Embedding API returned {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new LlmException("Embedding API call failed with status " + e.getStatusCode().value());
         } catch (RestClientException e) {
             log.error("Embedding API call failed: {}", e.getMessage());
             throw new LlmException("Embedding API call failed: " + e.getMessage());

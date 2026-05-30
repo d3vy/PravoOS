@@ -19,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +28,6 @@ import java.util.UUID;
 public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
-    private static final int MAX_HISTORY_MESSAGES = 10;
     private static final int TITLE_MAX_LENGTH = 60;
 
     private final ConversationRepository conversationRepository;
@@ -57,8 +58,9 @@ public class ChatService {
         Conversation conversation = resolveConversation(request.conversationId(), lawyerId, request.message());
         log.info("Chat request received: conversation={}, lawyer={}", conversation.getId(), lawyerId);
 
-        List<Message> history = messageRepository.findByConversationIdOrderByCreatedAt(conversation.getId());
-        List<LlmMessage> historyForLlm = buildLlmHistory(history);
+        List<Message> recentHistory =
+                messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId());
+        List<LlmMessage> historyForLlm = buildLlmHistory(recentHistory);
 
         messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
 
@@ -83,7 +85,7 @@ public class ChatService {
     }
 
     public List<ConversationResponse> getConversations(UUID lawyerId) {
-        return conversationRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
+        return conversationRepository.findTop100ByLawyerIdOrderByCreatedAtDesc(lawyerId)
                 .stream()
                 .map(c -> new ConversationResponse(c.getId(), c.getTitle(), c.getCreatedAt()))
                 .toList();
@@ -117,9 +119,16 @@ public class ChatService {
         return conversationRepository.save(new Conversation(lawyerId, title));
     }
 
-    private List<LlmMessage> buildLlmHistory(List<Message> messages) {
-        int from = Math.max(0, messages.size() - MAX_HISTORY_MESSAGES);
-        return messages.subList(from, messages.size())
+    private List<LlmMessage> buildLlmHistory(List<Message> recentDescending) {
+        List<Message> chronological = new ArrayList<>(recentDescending);
+        Collections.reverse(chronological);
+
+        int firstUser = 0;
+        while (firstUser < chronological.size() && chronological.get(firstUser).getRole() != MessageRole.USER) {
+            firstUser++;
+        }
+
+        return chronological.subList(firstUser, chronological.size())
                 .stream()
                 .map(m -> new LlmMessage(m.getRole().name().toLowerCase(), m.getContent()))
                 .toList();

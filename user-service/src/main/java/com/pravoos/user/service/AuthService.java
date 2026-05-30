@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2a$10$7EqJtq98hPqEX7fNZaFWoOa8KxQ8q1xWqU9oN3i6Yk3v1lQ0Q3pK";
 
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
@@ -33,7 +35,13 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmailAndStatus(request.email(), UserStatus.ACTIVE)
-                .orElseThrow(InvalidCredentialsException::new);
+                .orElse(null);
+
+        if (user == null) {
+            passwordEncoder.matches(request.password(), DUMMY_PASSWORD_HASH);
+            log.warn("Failed login attempt for unknown/inactive email: {}", request.email());
+            throw new InvalidCredentialsException();
+        }
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             log.warn("Failed login attempt for email: {}", request.email());

@@ -29,7 +29,15 @@ public class ApplicationEventProducer {
                 application.getEmail(),
                 application.getSpecialization()
         );
-        kafkaTemplate.send(TOPIC_APPLICATION_SUBMITTED, application.getId().toString(), payload);
-        log.info("Published application.submitted for: {}", application.getEmail());
+        String key = application.getId().toString();
+        kafkaTemplate.send(TOPIC_APPLICATION_SUBMITTED, key, payload)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish application.submitted for {}: {}",
+                                application.getEmail(), ex.getMessage(), ex);
+                    } else {
+                        log.info("Published application.submitted for: {}", application.getEmail());
+                    }
+                });
     }
 }

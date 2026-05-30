@@ -9,9 +9,11 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 FROM eclipse-temurin:21-jre-alpine AS ai-service
 RUN apk add --no-cache wget
 WORKDIR /app
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/documents /app/logs/ai-service \
+    && chown -R spring:spring /app
 USER spring
-COPY docker/jars/ai-service.jar app.jar
+COPY --chown=spring:spring docker/jars/ai-service.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
 FROM eclipse-temurin:21-jre-alpine AS api-gateway

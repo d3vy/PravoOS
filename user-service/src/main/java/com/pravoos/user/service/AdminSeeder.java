@@ -37,6 +37,11 @@ public class AdminSeeder implements ApplicationRunner {
             return;
         }
 
+        if (isBlank(adminProperties.email()) || isBlank(adminProperties.password())) {
+            log.warn("Admin credentials not configured (ADMIN_EMAIL/ADMIN_PASSWORD); skipping admin seeding");
+            return;
+        }
+
         User admin = new User();
         admin.setEmail(adminProperties.email());
         admin.setPasswordHash(passwordEncoder.encode(adminProperties.password()));
@@ -45,5 +50,9 @@ public class AdminSeeder implements ApplicationRunner {
         userRepository.save(admin);
 
         log.info("Default admin account created: {}", adminProperties.email());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

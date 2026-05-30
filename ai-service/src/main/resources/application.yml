@@ -30,6 +30,7 @@ spring:
       username: ${MONGO_USERNAME}
       password: ${MONGO_PASSWORD}
       authentication-database: admin
+      auto-index-creation: true
   servlet:
     multipart:
       max-file-size: 50MB

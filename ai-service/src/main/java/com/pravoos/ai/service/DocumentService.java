@@ -7,6 +7,9 @@ import com.pravoos.ai.exception.DocumentProcessingException;
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;
 import com.pravoos.ai.model.entity.Document;
+import com.pravoos.ai.model.entity.DocumentChunk;
+import com.pravoos.ai.model.enums.DocumentStatus;
+import com.pravoos.ai.pipeline.ChunkData;
 import com.pravoos.ai.repository.DocumentChunkRepository;
 import com.pravoos.ai.repository.DocumentRepository;
 import org.slf4j.Logger;
@@ -44,7 +47,7 @@ public class DocumentService {
     }
 
     @Transactional
-    public DocumentUploadResponse upload(MultipartFile file, UUID uploadedBy) {
+    public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy) {
         if (file == null || file.isEmpty()) {
             log.warn("Document upload rejected: empty file from {}", uploadedBy);
             throw new DocumentProcessingException("Uploaded file is empty");
@@ -53,21 +56,50 @@ public class DocumentService {
         String fileType = extractFileType(originalName);
 
         Document document = new Document();
-        document.setTitle(stripExtension(originalName));
+        document.setTitle(resolveTitle(title, originalName));
         document.setFileName(originalName);
         document.setFileType(fileType);
         document.setUploadedBy(uploadedBy);
 
         Document saved = documentRepository.save(document);
 
-        Path filePath = storeFile(file, saved.getId());
+        Path filePath = storeFile(file, saved.getId(), fileType);
         saved.setFilePath(filePath.toString());
         documentRepository.save(saved);
 
         eventPublisher.publishEvent(new DocumentCreatedSpringEvent(saved.getId()));
 
-        log.info("Document uploaded: {} by {}", originalName, uploadedBy);
+        log.info("Document uploaded: '{}' ({}) by {}", saved.getTitle(), originalName, uploadedBy);
         return new DocumentUploadResponse(saved.getId(), saved.getTitle(), saved.getFileName(), saved.getStatus());
+    }
+
+    @Transactional
+    public void completeProcessing(UUID documentId, List<ChunkData> chunkData) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new DocumentNotFoundException(documentId));
+
+        List<DocumentChunk> chunks = chunkData.stream().map(data -> {
+            DocumentChunk chunk = new DocumentChunk();
+            chunk.setDocument(document);
+            chunk.setContent(data.content());
+            chunk.setChunkIndex(data.index());
+            chunk.setEmbedding(data.embedding());
+            return chunk;
+        }).toList();
+
+        documentChunkRepository.saveAll(chunks);
+        document.setStatus(DocumentStatus.READY);
+        documentRepository.save(document);
+        log.info("Document {} marked READY with {} chunk(s)", documentId, chunks.size());
+    }
+
+    @Transactional
+    public void markFailed(UUID documentId) {
+        documentRepository.findById(documentId).ifPresent(document -> {
+            document.setStatus(DocumentStatus.FAILED);
+            documentRepository.save(document);
+            log.warn("Document {} marked FAILED", documentId);
+        });
     }
 
     @Transactional
@@ -75,9 +107,13 @@ public class DocumentService {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
 
+        String filePath = document.getFilePath();
         documentChunkRepository.deleteByDocumentId(documentId);
         documentRepository.delete(document);
-        deleteFile(Paths.get(document.getFilePath()));
+
+        if (filePath != null) {
+            deleteFile(Paths.get(filePath));
+        }
 
         log.info("Document deleted: {}", documentId);
     }
@@ -90,11 +126,11 @@ public class DocumentService {
                 .toList();
     }
 
-    private Path storeFile(MultipartFile file, UUID documentId) {
+    private Path storeFile(MultipartFile file, UUID documentId, String fileType) {
         try {
             Path dir = Paths.get(documentProperties.storagePath(), documentId.toString());
             Files.createDirectories(dir);
-            Path filePath = dir.resolve(file.getOriginalFilename());
+            Path filePath = dir.resolve("document." + fileType);
             file.transferTo(filePath);
             return filePath;
         } catch (IOException e) {
@@ -120,6 +156,13 @@ public class DocumentService {
             throw new DocumentProcessingException("Unsupported file type: " + ext + ". Allowed: pdf, docx");
         }
         return ext;
+    }
+
+    private String resolveTitle(String title, String fileName) {
+        if (title != null && !title.isBlank()) {
+            return title.trim();
+        }
+        return stripExtension(fileName);
     }
 
     private String stripExtension(String fileName) {

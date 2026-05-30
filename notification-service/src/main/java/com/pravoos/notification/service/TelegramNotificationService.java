@@ -57,10 +57,20 @@ public class TelegramNotificationService {
                 ID заявки: <code>%s</code>
 
                 Рассмотреть в панели администратора.""",
-                payload.fullName(),
-                payload.email(),
-                specialization,
+                escapeHtml(payload.fullName()),
+                escapeHtml(payload.email()),
+                escapeHtml(specialization),
                 payload.applicationId()
         );
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 }

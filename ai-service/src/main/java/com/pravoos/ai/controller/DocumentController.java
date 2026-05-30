@@ -26,9 +26,10 @@ public class DocumentController {
     @PostMapping
     public ResponseEntity<DocumentUploadResponse> upload(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title,
             Authentication authentication) {
         UUID adminId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.status(HttpStatus.CREATED).body(documentService.upload(file, adminId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(documentService.upload(file, title, adminId));
     }
 
     @GetMapping
