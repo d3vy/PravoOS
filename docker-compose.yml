@@ -81,6 +81,7 @@ services:
       DB_USER_USERNAME: ${DB_USERNAME}
       DB_USER_PASSWORD: ${DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx200m"
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,6 +112,7 @@ services:
       MONGODB_HOST: mongodb
       MONGODB_PORT: 27017
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx300m"
     depends_on:
       postgres:
         condition: service_healthy
@@ -138,6 +140,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms32m -Xmx100m"
     depends_on:
       kafka:
         condition: service_healthy
@@ -160,6 +163,7 @@ services:
       SERVER_DOMAIN: ${SERVER_DOMAIN:-}
       CORS_INCLUDE_LOCALHOST: ${CORS_INCLUDE_LOCALHOST:-true}
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms32m -Xmx150m"
     depends_on:
       user-service:
         condition: service_healthy
