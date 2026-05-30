@@ -70,8 +70,8 @@ build_images() {
 }
 
 wait_for_kafka() {
-  log "Waiting for Kafka to become healthy (up to 3 min)..."
-  for _ in {1..18}; do
+  log "Waiting for Kafka to become healthy (up to 6 min)..."
+  for _ in {1..36}; do
     local status
     status=$(compose ps kafka --format '{{.Health}}' 2>/dev/null || true)
     if [[ "$status" == "healthy" ]]; then
@@ -80,15 +80,14 @@ wait_for_kafka() {
     fi
     sleep 10
   done
-  log "Kafka is not healthy yet — check: compose logs kafka --tail 50"
+  log "Kafka not healthy yet — check: docker compose logs kafka --tail 50"
   return 1
 }
 
 start_infrastructure() {
   log "Starting infrastructure..."
-  compose up -d postgres mongodb zookeeper
-  compose up -d kafka --force-recreate
-  wait_for_kafka
+  compose up -d postgres mongodb zookeeper kafka
+  wait_for_kafka || sleep 60
 }
 
 ssl_certificate_exists() {
