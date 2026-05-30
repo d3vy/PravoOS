@@ -32,7 +32,7 @@ validate_env() {
   local missing=()
   local key
   for key in SERVER_DOMAIN SERVER_IP ACME_EMAIL JWT_SECRET DB_PASSWORD \
-    DB_USER_PASSWORD DB_AI_PASSWORD MONGO_PASSWORD ADMIN_EMAIL ADMIN_PASSWORD \
+    MONGO_PASSWORD ADMIN_EMAIL ADMIN_PASSWORD \
     DEEPSEEK_API_KEY TELEGRAM_BOT_TOKEN TELEGRAM_ADMIN_CHAT_ID; do
     if [[ -z "${!key:-}" ]]; then
       missing+=("$key")
@@ -51,6 +51,36 @@ validate_env() {
 
 compose() {
   docker compose "${COMPOSE_FILES[@]}" "$@"
+}
+
+build_sequentially() {
+  local services=(notification-service user-service ai-service api-gateway frontend)
+  for service in "${services[@]}"; do
+    log "Building ${service}..."
+    compose build "$service"
+  done
+}
+
+wait_for_kafka() {
+  log "Waiting for Kafka to become healthy (up to 3 min)..."
+  for _ in {1..18}; do
+    local status
+    status=$(compose ps kafka --format '{{.Health}}' 2>/dev/null || true)
+    if [[ "$status" == "healthy" ]]; then
+      log "Kafka is healthy."
+      return 0
+    fi
+    sleep 10
+  done
+  log "Kafka is not healthy yet — check: compose logs kafka --tail 50"
+  return 1
+}
+
+start_infrastructure() {
+  log "Starting infrastructure..."
+  compose up -d postgres mongodb zookeeper
+  compose up -d kafka --force-recreate
+  wait_for_kafka
 }
 
 ssl_certificate_exists() {
@@ -85,10 +115,11 @@ main() {
   log "Building images..."
   mkdir -p logs/{user-service,ai-service,api-gateway,notification-service}
   chmod -R a+rwx logs 2>/dev/null || true
-  compose build --no-parallel
+  build_sequentially
 
   log "Starting stack (HTTP, certificate bootstrap)..."
   ./scripts/render-nginx.sh init
+  start_infrastructure
   compose up -d
 
   log "Waiting for services to start (90s)..."
