@@ -76,6 +76,8 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       DB_USER_URL: jdbc:postgresql://postgres:5432/pravoos_users
+      DB_USER_USERNAME: ${DB_USERNAME}
+      DB_USER_PASSWORD: ${DB_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,7 +102,10 @@ services:
     env_file: .env
     environment:
       DB_AI_URL: jdbc:postgresql://postgres:5432/pravoos_ai
-      MONGODB_URI: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/pravoos_chat?authSource=admin
+      DB_AI_USERNAME: ${DB_USERNAME}
+      DB_AI_PASSWORD: ${DB_PASSWORD}
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
     depends_on:
       postgres:
         condition: service_healthy

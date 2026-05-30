@@ -21,6 +21,11 @@ services:
   ai-service:
     restart: unless-stopped
     ports: !reset []
+    environment:
+      DB_AI_USERNAME: ${DB_USERNAME}
+      DB_AI_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      start_period: 120s
 
   notification-service:
     restart: unless-stopped

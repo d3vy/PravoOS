@@ -24,7 +24,12 @@ spring:
     baseline-on-migrate: true
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/pravoos_chat}
+      host: ${MONGODB_HOST:mongodb}
+      port: ${MONGODB_PORT:27017}
+      database: pravoos_chat
+      username: ${MONGO_USERNAME}
+      password: ${MONGO_PASSWORD}
+      authentication-database: admin
   servlet:
     multipart:
       max-file-size: 50MB
