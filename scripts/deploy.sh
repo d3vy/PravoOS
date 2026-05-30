@@ -85,7 +85,7 @@ main() {
   log "Building images..."
   mkdir -p logs/{user-service,ai-service,api-gateway,notification-service}
   chmod -R a+rwx logs 2>/dev/null || true
-  compose build
+  compose build --no-parallel
 
   log "Starting stack (HTTP, certificate bootstrap)..."
   ./scripts/render-nginx.sh init

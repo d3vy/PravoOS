@@ -1,5 +1,6 @@
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
+COPY docker/maven/settings.xml /root/.m2/settings.xml
 COPY pom.xml .
 COPY api-gateway/pom.xml api-gateway/
 COPY user-service/pom.xml user-service/
