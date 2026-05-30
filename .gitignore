@@ -37,3 +37,11 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+.env
+logs/
+memory/
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+docker/nginx/generated/default.conf
