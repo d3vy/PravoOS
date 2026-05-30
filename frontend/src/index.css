@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-light-bg text-light-text font-sans antialiased transition-colors duration-200;
+  }
+
+  .dark body {
+    @apply bg-dark-bg text-dark-text;
+  }
+
+  * {
+    @apply border-light-border;
+  }
+
+  .dark * {
+    @apply border-dark-border;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .surface {
+    @apply bg-light-surface dark:bg-dark-surface;
+  }
+
+  .text-secondary {
+    @apply text-light-secondary dark:text-dark-secondary;
+  }
+
+  .border-default {
+    @apply border border-light-border dark:border-dark-border;
+  }
+
+  .input-base {
+    @apply w-full px-4 py-3 rounded-lg bg-light-surface dark:bg-dark-surface
+           border border-light-border dark:border-dark-border
+           text-light-text dark:text-dark-text
+           placeholder-light-secondary dark:placeholder-dark-secondary
+           focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent
+           focus:border-transparent transition-all duration-150;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #dde1e9 transparent;
+  }
+
+  .dark .scrollbar-thin {
+    scrollbar-color: #1a2540 transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-light-border dark:bg-dark-border;
+  }
+}

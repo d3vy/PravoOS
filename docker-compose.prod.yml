@@ -1,0 +1,64 @@
+services:
+  postgres:
+    restart: unless-stopped
+    ports: !reset []
+
+  mongodb:
+    restart: unless-stopped
+    ports: !reset []
+
+  zookeeper:
+    restart: unless-stopped
+
+  kafka:
+    restart: unless-stopped
+    ports: !reset []
+
+  user-service:
+    restart: unless-stopped
+    ports: !reset []
+
+  ai-service:
+    restart: unless-stopped
+    ports: !reset []
+
+  notification-service:
+    restart: unless-stopped
+    ports: !reset []
+
+  api-gateway:
+    restart: unless-stopped
+    ports: !reset []
+    environment:
+      CORS_INCLUDE_LOCALHOST: "false"
+      DEPLOY_ENV: production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    restart: unless-stopped
+    ports: !reset
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/generated/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["tools"]
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+volumes:
+  certbot_conf:
+  certbot_www:

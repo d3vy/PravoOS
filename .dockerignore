@@ -1,0 +1,14 @@
+target/
+**/target/
+.git/
+.idea/
+logs/
+memory/
+frontend/node_modules/
+frontend/dist/
+.env
+.env.*
+!/.env.example
+docker/nginx/generated/default.conf
+*.md
+!DEPLOY.md

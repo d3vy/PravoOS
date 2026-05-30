@@ -1,0 +1,26 @@
+package com.pravoos.user.repository;
+
+import com.pravoos.user.model.entity.User;
+import com.pravoos.user.model.enums.UserRole;
+import com.pravoos.user.model.enums.UserStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface UserRepository extends JpaRepository<User, UUID> {
+
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByEmailAndStatus(String email, UserStatus status);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByRole(UserRole role);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.lawyerProfile WHERE u.role = :role AND u.status = :status")
+    List<User> findByRoleAndStatusWithProfile(@Param("role") UserRole role, @Param("status") UserStatus status);
+}
