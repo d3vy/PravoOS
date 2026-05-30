@@ -7,9 +7,11 @@ import com.pravoos.ai.llm.dto.LlmMessage;
 import com.pravoos.ai.model.dto.ChatRequest;
 import com.pravoos.ai.model.dto.ChatResponse;
 import com.pravoos.ai.model.dto.ConversationResponse;
+import com.pravoos.ai.model.dto.MessageResponse;
 import com.pravoos.ai.model.enums.MessageRole;
 import com.pravoos.ai.model.mongo.Conversation;
 import com.pravoos.ai.model.mongo.Message;
+import com.pravoos.ai.repository.ChunkMatch;
 import com.pravoos.ai.repository.ConversationRepository;
 import com.pravoos.ai.repository.MessageRepository;
 import com.pravoos.ai.repository.VectorSearchRepository;
@@ -53,22 +55,31 @@ public class ChatService {
 
     public ChatResponse chat(ChatRequest request, UUID lawyerId) {
         Conversation conversation = resolveConversation(request.conversationId(), lawyerId, request.message());
+        log.info("Chat request received: conversation={}, lawyer={}", conversation.getId(), lawyerId);
 
         List<Message> history = messageRepository.findByConversationIdOrderByCreatedAt(conversation.getId());
         List<LlmMessage> historyForLlm = buildLlmHistory(history);
 
+        messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
+
         float[] queryEmbedding = embeddingService.embed(request.message());
-        List<String> relevantChunks = vectorSearchRepository
-                .findTopKContentBySimilarity(queryEmbedding, documentProperties.topKResults());
+        List<ChunkMatch> matches = vectorSearchRepository
+                .findTopKBySimilarity(queryEmbedding, documentProperties.topKResults());
+
+        List<String> relevantChunks = matches.stream().map(ChunkMatch::content).toList();
+        List<String> sources = matches.stream()
+                .map(ChunkMatch::documentTitle)
+                .filter(title -> title != null && !title.isBlank())
+                .distinct()
+                .toList();
 
         String systemPrompt = ragService.buildSystemPrompt(relevantChunks);
         String answer = llmClient.complete(systemPrompt, historyForLlm, request.message());
 
-        messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
-        messageRepository.save(new Message(conversation.getId(), MessageRole.ASSISTANT, answer, List.of()));
+        messageRepository.save(new Message(conversation.getId(), MessageRole.ASSISTANT, answer, sources));
 
-        log.info("Chat response generated for conversation: {}", conversation.getId());
-        return new ChatResponse(conversation.getId(), answer, List.of());
+        log.info("Chat response generated for conversation: {} ({} source(s))", conversation.getId(), sources.size());
+        return new ChatResponse(conversation.getId(), answer, sources);
     }
 
     public List<ConversationResponse> getConversations(UUID lawyerId) {
@@ -78,15 +89,20 @@ public class ChatService {
                 .toList();
     }
 
-    public List<Message> getMessages(String conversationId, UUID lawyerId) {
+    public List<MessageResponse> getMessages(String conversationId, UUID lawyerId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
         if (!conversation.getLawyerId().equals(lawyerId)) {
+            log.warn("Lawyer {} attempted to access conversation {} owned by another user",
+                    lawyerId, conversationId);
             throw new ConversationNotFoundException(conversationId);
         }
 
-        return messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
+        return messageRepository.findByConversationIdOrderByCreatedAt(conversationId)
+                .stream()
+                .map(MessageResponse::from)
+                .toList();
     }
 
     private Conversation resolveConversation(String conversationId, UUID lawyerId, String firstMessage) {

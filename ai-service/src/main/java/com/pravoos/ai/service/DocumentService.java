@@ -45,6 +45,10 @@ public class DocumentService {
 
     @Transactional
     public DocumentUploadResponse upload(MultipartFile file, UUID uploadedBy) {
+        if (file == null || file.isEmpty()) {
+            log.warn("Document upload rejected: empty file from {}", uploadedBy);
+            throw new DocumentProcessingException("Uploaded file is empty");
+        }
         String originalName = file.getOriginalFilename();
         String fileType = extractFileType(originalName);
 

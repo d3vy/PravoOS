@@ -1,6 +1,7 @@
 package com.pravoos.ai.model.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -24,7 +25,7 @@ public class DocumentChunk {
     private int chunkIndex;
 
     @Column(name = "embedding", columnDefinition = "vector(1536)")
-    @Convert(converter = FloatArrayToVectorConverter.class)
+    @Type(PgVectorType.class)
     private float[] embedding;
 
     @Column(nullable = false)

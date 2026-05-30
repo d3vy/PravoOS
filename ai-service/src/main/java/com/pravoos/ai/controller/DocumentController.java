@@ -2,6 +2,7 @@ package com.pravoos.ai.controller;
 
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;
+import com.pravoos.ai.security.SecurityUtils;
 import com.pravoos.ai.service.DocumentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,7 @@ public class DocumentController {
     public ResponseEntity<DocumentUploadResponse> upload(
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
-        UUID adminId = UUID.fromString((String) authentication.getPrincipal());
+        UUID adminId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(documentService.upload(file, adminId));
     }
 
