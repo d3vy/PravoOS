@@ -6,8 +6,11 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import ApplyPage from './pages/ApplyPage'
 import ChatPage from './pages/chat/ChatPage'
+import CasesPage from './pages/cases/CasesPage'
+import CaseDetailPage from './pages/cases/CaseDetailPage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
+import AiStatsPage from './pages/admin/AiStatsPage'
 
 export default function App(): JSX.Element {
   const { isAuthenticated, user } = useAuthStore()
@@ -28,6 +31,24 @@ export default function App(): JSX.Element {
       />
 
       <Route
+        path="/cases"
+        element={
+          <ProtectedRoute>
+            <CasesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/cases/:caseId"
+        element={
+          <ProtectedRoute>
+            <CaseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/admin"
         element={
           <ProtectedRoute requiredRole="ADMIN">
@@ -38,6 +59,7 @@ export default function App(): JSX.Element {
         <Route index element={<Navigate to="/admin/applications" replace />} />
         <Route path="applications" element={<ApplicationsPage />} />
         <Route path="documents" element={<DocumentsPage />} />
+        <Route path="ai-stats" element={<AiStatsPage />} />
       </Route>
 
       {/* Fallback */}

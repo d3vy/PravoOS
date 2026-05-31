@@ -1,0 +1,31 @@
+package com.pravoos.ai.controller;
+
+import com.pravoos.ai.model.dto.AiResponseDto;
+import com.pravoos.ai.model.dto.RateRequest;
+import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.ai.service.AiResponseService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/ai/responses")
+public class AiResponseController {
+
+    private final AiResponseService aiResponseService;
+
+    public AiResponseController(AiResponseService aiResponseService) {
+        this.aiResponseService = aiResponseService;
+    }
+
+    @PostMapping("/{responseId}/rate")
+    public ResponseEntity<AiResponseDto> rate(@PathVariable UUID responseId,
+                                              @Valid @RequestBody RateRequest request,
+                                              Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(aiResponseService.rate(responseId, request, lawyerId));
+    }
+}

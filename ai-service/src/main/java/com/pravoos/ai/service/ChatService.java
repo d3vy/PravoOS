@@ -2,6 +2,8 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.exception.ConversationNotFoundException;
+import com.pravoos.ai.exception.MessageNotFoundException;
+import com.pravoos.ai.model.dto.RateRequest;
 import com.pravoos.ai.llm.LlmClient;
 import com.pravoos.ai.llm.dto.LlmMessage;
 import com.pravoos.ai.model.dto.ChatRequest;
@@ -66,7 +68,7 @@ public class ChatService {
 
         float[] queryEmbedding = embeddingService.embed(request.message());
         List<ChunkMatch> matches = vectorSearchRepository
-                .findTopKBySimilarity(queryEmbedding, documentProperties.topKResults());
+                .findTopKInKnowledgeBase(queryEmbedding, documentProperties.topKResults());
 
         List<String> relevantChunks = matches.stream().map(ChunkMatch::content).toList();
         List<String> sources = matches.stream()
@@ -93,6 +95,23 @@ public class ChatService {
                 .stream()
                 .map(c -> new ConversationResponse(c.getId(), c.getTitle(), c.getCreatedAt()))
                 .toList();
+    }
+
+    public MessageResponse rateMessage(String messageId, RateRequest request, UUID lawyerId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new MessageNotFoundException(messageId));
+        Conversation conversation = conversationRepository.findById(message.getConversationId())
+                .orElseThrow(() -> new MessageNotFoundException(messageId));
+        if (!conversation.getLawyerId().equals(lawyerId)) {
+            log.warn("Lawyer {} attempted to rate message {} owned by another user", lawyerId, messageId);
+            throw new MessageNotFoundException(messageId);
+        }
+
+        message.setRating(request.rating());
+        message.setRatingComment(request.comment());
+        Message saved = messageRepository.save(message);
+        log.info("Message {} rated {} by lawyer {}", messageId, request.rating(), lawyerId);
+        return MessageResponse.from(saved);
     }
 
     public List<MessageResponse> getMessages(String conversationId, UUID lawyerId) {

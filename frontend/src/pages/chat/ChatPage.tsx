@@ -11,13 +11,21 @@ import type { MessageResponse, ConversationResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import { Navbar } from '../../components/layout/Navbar'
 import { ScalesIcon } from '../../components/ui/Logo'
+import { RatingButtons } from '../../components/ui/RatingButtons'
 
 interface LocalMessage {
   id: string
   role: 'USER' | 'ASSISTANT'
   content: string
   sources?: string[]
+  rating?: number | null
   isStreaming?: boolean
+}
+
+const LOCAL_ID_PREFIXES = ['user-', 'assistant-', 'loading-', 'error-']
+
+function isPersistedId(id: string): boolean {
+  return !LOCAL_ID_PREFIXES.some((prefix) => id.startsWith(prefix))
 }
 
 const SUGGESTIONS = [
@@ -59,6 +67,8 @@ export default function ChatPage(): JSX.Element {
         id: m.id,
         role: m.role,
         content: m.content,
+        sources: m.sources,
+        rating: m.rating,
       }))
     )
   }, [historyMessages])
@@ -100,6 +110,14 @@ export default function ChatPage(): JSX.Element {
     },
     onSettled: () => {
       setIsSending(false)
+    },
+  })
+
+  const rateMutation = useMutation({
+    mutationFn: ({ messageId, rating }: { messageId: string; rating: number }) =>
+      chatApi.rateMessage(messageId, { rating }),
+    onMutate: ({ messageId, rating }) => {
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, rating } : m)))
     },
   })
 
@@ -287,7 +305,11 @@ export default function ChatPage(): JSX.Element {
               <div className="max-w-3xl mx-auto flex flex-col gap-6">
                 <AnimatePresence initial={false}>
                   {messages.map((message) => (
-                    <MessageBubble key={message.id} message={message} />
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      onRate={(rating) => rateMutation.mutate({ messageId: message.id, rating })}
+                    />
                   ))}
                 </AnimatePresence>
                 <div ref={messagesEndRef} />
@@ -338,8 +360,9 @@ export default function ChatPage(): JSX.Element {
   )
 }
 
-function MessageBubble({ message }: { message: LocalMessage }): JSX.Element {
+function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (rating: number) => void }): JSX.Element {
   const isUser = message.role === 'USER'
+  const canRate = !isUser && !message.isStreaming && isPersistedId(message.id)
 
   return (
     <motion.div
@@ -390,6 +413,10 @@ function MessageBubble({ message }: { message: LocalMessage }): JSX.Element {
               </span>
             ))}
           </div>
+        )}
+
+        {canRate && (
+          <RatingButtons rating={message.rating} onRate={onRate} />
         )}
       </div>
     </motion.div>

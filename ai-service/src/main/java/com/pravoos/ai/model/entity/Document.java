@@ -29,6 +29,9 @@ public class Document {
     @Column(nullable = false)
     private UUID uploadedBy;
 
+    @Column(name = "case_id")
+    private UUID caseId;
+
     @Column(nullable = false)
     private LocalDateTime uploadedAt;
 
@@ -60,6 +63,9 @@ public class Document {
 
     public UUID getUploadedBy() { return uploadedBy; }
     public void setUploadedBy(UUID uploadedBy) { this.uploadedBy = uploadedBy; }
+
+    public UUID getCaseId() { return caseId; }
+    public void setCaseId(UUID caseId) { this.caseId = caseId; }
 
     public LocalDateTime getUploadedAt() { return uploadedAt; }
 

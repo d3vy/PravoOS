@@ -48,6 +48,11 @@ public class DocumentService {
 
     @Transactional
     public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy) {
+        return upload(file, title, uploadedBy, null);
+    }
+
+    @Transactional
+    public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy, UUID caseId) {
         if (file == null || file.isEmpty()) {
             log.warn("Document upload rejected: empty file from {}", uploadedBy);
             throw new DocumentProcessingException("Uploaded file is empty");
@@ -60,6 +65,7 @@ public class DocumentService {
         document.setFileName(originalName);
         document.setFileType(fileType);
         document.setUploadedBy(uploadedBy);
+        document.setCaseId(caseId);
 
         Document saved = documentRepository.save(document);
 
@@ -118,9 +124,31 @@ public class DocumentService {
         log.info("Document deleted: {}", documentId);
     }
 
+    @Transactional
+    public void deleteByCase(UUID caseId) {
+        List<Document> documents = documentRepository.findByCaseIdOrderByUploadedAtDesc(caseId);
+        for (Document document : documents) {
+            String filePath = document.getFilePath();
+            documentChunkRepository.deleteByDocumentId(document.getId());
+            documentRepository.delete(document);
+            if (filePath != null) {
+                deleteFile(Paths.get(filePath));
+            }
+        }
+        log.info("Deleted {} document(s) of case {}", documents.size(), caseId);
+    }
+
     @Transactional(readOnly = true)
     public List<DocumentResponse> findAll() {
-        return documentRepository.findAllByOrderByUploadedAtDesc()
+        return documentRepository.findByCaseIdIsNullOrderByUploadedAtDesc()
+                .stream()
+                .map(this::toDocumentResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentResponse> findByCase(UUID caseId) {
+        return documentRepository.findByCaseIdOrderByUploadedAtDesc(caseId)
                 .stream()
                 .map(this::toDocumentResponse)
                 .toList();

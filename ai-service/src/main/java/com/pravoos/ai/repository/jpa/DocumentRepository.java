@@ -12,4 +12,8 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     List<Document> findAllByOrderByUploadedAtDesc();
 
     List<Document> findByStatus(DocumentStatus status);
+
+    List<Document> findByCaseIdIsNullOrderByUploadedAtDesc();
+
+    List<Document> findByCaseIdOrderByUploadedAtDesc(UUID caseId);
 }

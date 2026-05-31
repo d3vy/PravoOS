@@ -23,6 +23,10 @@ public class Message {
 
     private List<String> sources;
 
+    private Integer rating;
+
+    private String ratingComment;
+
     private LocalDateTime createdAt;
 
     public Message() {}
@@ -44,6 +48,12 @@ public class Message {
     public String getContent() { return content; }
 
     public List<String> getSources() { return sources; }
+
+    public Integer getRating() { return rating; }
+    public void setRating(Integer rating) { this.rating = rating; }
+
+    public String getRatingComment() { return ratingComment; }
+    public void setRatingComment(String ratingComment) { this.ratingComment = ratingComment; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

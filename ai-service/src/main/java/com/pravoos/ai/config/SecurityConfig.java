@@ -31,7 +31,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/api/ai/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
+                        .requestMatchers("/api/ai/cases/**").hasAnyRole("LAWYER", "ADMIN")
+                        .requestMatchers("/api/ai/workflows/**").hasAnyRole("LAWYER", "ADMIN")
+                        .requestMatchers("/api/ai/responses/**").hasAnyRole("LAWYER", "ADMIN")
+                        .requestMatchers("/api/ai/messages/**").hasAnyRole("LAWYER", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/ai/conversations/**").hasAnyRole("LAWYER", "ADMIN")
                         .requestMatchers("/api/ai/chat/**").hasAnyRole("LAWYER", "ADMIN")
                         .anyRequest().authenticated()

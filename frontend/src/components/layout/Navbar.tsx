@@ -28,11 +28,27 @@ export function Navbar(): JSX.Element {
 
             {isAuthenticated() ? (
               <>
-                <Link to={dashboardPath} className="hidden sm:block">
-                  <Button variant="ghost" size="sm">
-                    Рабочий стол
-                  </Button>
-                </Link>
+                {user?.role === 'LAWYER' && (
+                  <>
+                    <Link to="/cases" className="hidden sm:block">
+                      <Button variant="ghost" size="sm">
+                        Дела
+                      </Button>
+                    </Link>
+                    <Link to="/chat" className="hidden sm:block">
+                      <Button variant="ghost" size="sm">
+                        AI-чат
+                      </Button>
+                    </Link>
+                  </>
+                )}
+                {user?.role === 'ADMIN' && (
+                  <Link to={dashboardPath} className="hidden sm:block">
+                    <Button variant="ghost" size="sm">
+                      Рабочий стол
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="secondary" size="sm" onClick={handleLogout}>
                   Выйти
                 </Button>

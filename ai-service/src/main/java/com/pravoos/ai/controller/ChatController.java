@@ -4,6 +4,7 @@ import com.pravoos.ai.model.dto.ChatRequest;
 import com.pravoos.ai.model.dto.ChatResponse;
 import com.pravoos.ai.model.dto.ConversationResponse;
 import com.pravoos.ai.model.dto.MessageResponse;
+import com.pravoos.ai.model.dto.RateRequest;
 import com.pravoos.ai.security.SecurityUtils;
 import com.pravoos.ai.service.ChatService;
 import jakarta.validation.Valid;
@@ -40,5 +41,13 @@ public class ChatController {
             @PathVariable String id,
             Authentication authentication) {
         return ResponseEntity.ok(chatService.getMessages(id, SecurityUtils.currentUserId(authentication)));
+    }
+
+    @PostMapping("/messages/{id}/rate")
+    public ResponseEntity<MessageResponse> rateMessage(
+            @PathVariable String id,
+            @Valid @RequestBody RateRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(chatService.rateMessage(id, request, SecurityUtils.currentUserId(authentication)));
     }
 }

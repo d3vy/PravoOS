@@ -60,6 +60,8 @@ export interface MessageResponse {
   id: string
   role: MessageRole
   content: string
+  sources?: string[]
+  rating?: number | null
   createdAt: string
 }
 
@@ -85,4 +87,60 @@ export interface LawyerResponse {
   barNumber: string
   specialization: string
   phone: string
+}
+
+export interface CaseResponse {
+  id: string
+  title: string
+  description: string | null
+  createdAt: string
+}
+
+export interface CreateCaseRequest {
+  title: string
+  description?: string
+}
+
+export interface WorkflowInfo {
+  id: string
+  displayName: string
+  instruction: string
+}
+
+export interface SourceReference {
+  title: string
+  fragment: string
+}
+
+export interface AiResponseDto {
+  id: string
+  caseId: string
+  workflowId: string
+  workflowName: string
+  query: string
+  result: string
+  sources: SourceReference[]
+  rating: number | null
+  ratingComment: string | null
+  createdAt: string
+}
+
+export interface RateRequest {
+  rating: number
+  comment?: string
+}
+
+export interface WorkflowStat {
+  workflowId: string
+  workflowName: string
+  count: number
+  avgRating: number | null
+}
+
+export interface AiStatsResponse {
+  totalResponses: number
+  ratedResponses: number
+  positiveRatings: number
+  negativeRatings: number
+  workflows: WorkflowStat[]
 }
