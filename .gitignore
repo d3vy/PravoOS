@@ -56,7 +56,10 @@ scripts/requirements.txt
 scripts/urls.txt
 scripts/practice_sources/
 scripts/sites.yaml
-scripts/ingest_state.json
+scripts/law127.yaml
+scripts/practice_extra.yaml
+scripts/ingest_state*.json
+scripts/manual_docs/
 
 # Backups
 backups/
