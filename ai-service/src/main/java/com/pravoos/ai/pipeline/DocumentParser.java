@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 @Component
@@ -19,8 +21,17 @@ public class DocumentParser {
         return switch (fileType.toLowerCase()) {
             case "pdf" -> extractPdfText(filePath);
             case "docx" -> extractDocxText(filePath);
+            case "txt" -> extractPlainText(filePath);
             default -> throw new DocumentProcessingException("Unsupported file type: " + fileType);
         };
+    }
+
+    private String extractPlainText(Path filePath) {
+        try {
+            return Files.readString(filePath, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new DocumentProcessingException("Failed to read text file: " + e.getMessage());
+        }
     }
 
     private String extractPdfText(Path filePath) {

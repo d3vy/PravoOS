@@ -1,0 +1,47 @@
+# Конфигурация источников для crawl_practice.py
+#
+# Скопируй в sites.yaml и подставь реальные стартовые страницы (seeds).
+# seeds — страницы со списками/текстами, НЕ обязательно прямые ссылки на файлы.
+#
+# Поля:
+#   name                  — имя источника (для логов)
+#   seeds                 — стартовые URL (обязательно)
+#   allowed_domains       — домены для обхода (по умолчанию из seeds)
+#   allowed_path_prefixes — префиксы пути, чтобы не уйти на весь сайт
+#   max_depth             — глубина перехода по ссылкам (0 = только seed-страницы)
+#   max_pages             — предохранитель: максимум страниц на сайт
+#   render_js             — true для JS-сайтов (нужен Playwright)
+#   mode                  — documents | text | both
+#                           documents = искать и грузить PDF/DOCX-файлы
+#                           text      = извлекать чистый текст страниц и грузить как .txt
+#                           both      = и то, и другое
+#   min_text_chars        — (для text) минимум символов, чтобы не грузить меню-заглушки
+
+sites:
+  # Тексты страниц (законы, обзоры практики) — грузятся как .txt:
+  - name: vsrf-practice
+    seeds:
+      - https://vsrf.ru/documents/
+    allowed_domains: [vsrf.ru]
+    allowed_path_prefixes: [/documents/]
+    max_depth: 2
+    max_pages: 300
+    mode: text
+    min_text_chars: 600
+
+  # Пример страницы с прямыми PDF/DOCX:
+  # - name: some-court
+  #   seeds:
+  #     - https://example-court.ru/practice/
+  #   allowed_domains: [example-court.ru]
+  #   allowed_path_prefixes: [/practice/]
+  #   max_depth: 2
+  #   mode: documents
+
+  # JS-сайт (нужен Playwright: pip install playwright && python -m playwright install chromium):
+  # - name: js-source
+  #   seeds: [https://example.ru/list]
+  #   allowed_domains: [example.ru]
+  #   max_depth: 1
+  #   render_js: true
+  #   mode: both

@@ -180,8 +180,8 @@ public class DocumentService {
             throw new DocumentProcessingException("Invalid file name: " + fileName);
         }
         String ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
-        if (!ext.equals("pdf") && !ext.equals("docx")) {
-            throw new DocumentProcessingException("Unsupported file type: " + ext + ". Allowed: pdf, docx");
+        if (!ext.equals("pdf") && !ext.equals("docx") && !ext.equals("txt")) {
+            throw new DocumentProcessingException("Unsupported file type: " + ext + ". Allowed: pdf, docx, txt");
         }
         return ext;
     }

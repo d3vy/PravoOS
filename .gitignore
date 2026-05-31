@@ -55,6 +55,8 @@ scripts/ingest_practice.py
 scripts/requirements.txt
 scripts/urls.txt
 scripts/practice_sources/
+scripts/sites.yaml
+scripts/ingest_state.json
 
 # Backups
 backups/
