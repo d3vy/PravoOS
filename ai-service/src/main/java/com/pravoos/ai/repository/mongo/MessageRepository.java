@@ -1,4 +1,4 @@
-package com.pravoos.ai.repository;
+package com.pravoos.ai.repository.mongo;
 
 import com.pravoos.ai.model.mongo.Message;
 import org.springframework.data.mongodb.repository.MongoRepository;

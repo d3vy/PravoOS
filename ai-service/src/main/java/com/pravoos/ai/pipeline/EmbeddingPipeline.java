@@ -4,7 +4,7 @@ import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.exception.DocumentNotFoundException;
 import com.pravoos.ai.model.entity.Document;
-import com.pravoos.ai.repository.DocumentRepository;
+import com.pravoos.ai.repository.jpa.DocumentRepository;
 import com.pravoos.ai.service.DocumentService;
 import com.pravoos.ai.service.EmbeddingService;
 import org.slf4j.Logger;

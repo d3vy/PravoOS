@@ -1,4 +1,4 @@
-package com.pravoos.ai.repository;
+package com.pravoos.ai.repository.jpa;
 
 import com.pravoos.ai.model.entity.DocumentChunk;
 import org.springframework.data.jpa.repository.JpaRepository;
