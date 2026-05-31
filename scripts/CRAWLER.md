@@ -60,9 +60,37 @@ python3 crawl_practice.py \
 | `--state FILE` | путь к файлу состояния (для разных наборов источников) |
 | `--render-timeout` | таймаут рендера JS-страницы (сек) |
 
-## JS-сайты (kad.arbitr.ru и подобные)
+## Режим text (тексты законов, обзоры)
 
-Поставь `render_js: true` для такого сайта в `sites.yaml`. Тогда страница
-рендерится headless-браузером Chromium через Playwright. Требует установленного
-`playwright` + `python -m playwright install chromium`. Учти: kad.arbitr.ru
-агрессивно защищён от ботов, может потребоваться ручная подкладка файлов.
+`mode: text` в `sites.yaml` — извлекает чистый текст каждой страницы (режет
+скрипты/меню/футер) и грузит как `.txt`. Бэкенд принимает `.txt` наравне с
+PDF/DOCX. Для прямых PDF-ссылок без расширения (напр. vsrf.ru `/documents/all/{id}/`)
+краулер определяет тип по Content-Type и тянет заголовок из первой страницы PDF.
+
+Пример — полный текст 127-ФЗ постатейно с consultant.ru:
+```yaml
+- name: law-127fz
+  seeds: [https://www.consultant.ru/document/cons_doc_LAW_39331/]
+  allowed_domains: [www.consultant.ru, consultant.ru]
+  allowed_path_prefixes: [/document/cons_doc_LAW_39331/]
+  max_depth: 1
+  mode: text
+```
+
+## Ручная подкладка файлов (kad.arbitr.ru, sudrf — анти-бот)
+
+Эти сайты защищены от ботов (captcha/DDoS-Guard) — автоматом не качаются.
+Скачай нужные дела/решения вручную в папку и залей:
+```bash
+python3 crawl_practice.py --sources-dir ./manual_docs \
+    --base-url https://pravoos.ru --email "$ADMIN_EMAIL" --password "$ADMIN_PASSWORD"
+```
+Поддерживаются `.pdf/.docx/.txt`. Заголовок берётся из имени файла, так что
+называй осмысленно (напр. `Решение АС Москвы А40-12345-2024.pdf`). Можно
+сочетать с `--config` в одном запуске. Дедуп по содержимому работает и тут.
+
+## JS-сайты
+
+`render_js: true` рендерит страницу через Playwright (`pip install playwright &&
+python -m playwright install chromium`). Проверено: kad.arbitr.ru даже так
+отдаёт captcha/DDoS-Guard, bsr.sudrf.ru недоступен — используй `--sources-dir`.

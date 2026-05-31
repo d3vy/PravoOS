@@ -369,6 +369,7 @@ class Crawler:
     def _extract_links(base_url: str, html: str) -> tuple[list[str], str]:
         soup = BeautifulSoup(html, "lxml")
         title = soup.title.string.strip() if soup.title and soup.title.string else ""
+        title = title.split(" \\ ")[0].strip()
         links: set[str] = set()
         for tag, attr in (("a", "href"), ("iframe", "src"), ("embed", "src")):
             for element in soup.find_all(tag):
@@ -476,6 +477,30 @@ def download_document(session: requests.Session, document: DocumentLink,
     return dest_path, hasher.hexdigest()
 
 
+def stage_local_file(document: DocumentLink, dest_dir: Path) -> tuple[Path, str] | None:
+    source = Path(document.url)
+    if not source.is_file():
+        print(f"[skip] {document.url}: файл не найден", file=sys.stderr)
+        return None
+    payload = source.read_bytes()
+    content_hash = hashlib.sha256(payload).hexdigest()
+    dest_path = dest_dir / f"{abs(hash(document.url))}_{source.name}"
+    dest_path.write_bytes(payload)
+    return dest_path, content_hash
+
+
+def collect_local_files(sources_dir: str) -> list[DocumentLink]:
+    path = Path(sources_dir)
+    if not path.is_dir():
+        return []
+    allowed = {".pdf", ".docx", ".txt"}
+    return [
+        DocumentLink(str(file), "local-files", page_title=file.stem, kind="local")
+        for file in sorted(path.iterdir())
+        if file.is_file() and file.suffix.lower() in allowed
+    ]
+
+
 def write_text_document(document: DocumentLink, dest_dir: Path) -> tuple[Path, str]:
     payload = document.text_content.encode("utf-8")
     content_hash = hashlib.sha256(payload).hexdigest()
@@ -493,6 +518,8 @@ def process_document(document: DocumentLink, session: requests.Session,
 
     if document.kind == "text":
         result = write_text_document(document, dest_dir)
+    elif document.kind == "local":
+        result = stage_local_file(document, dest_dir)
     else:
         result = download_document(session, document, dest_dir)
     if result is None:
@@ -537,7 +564,9 @@ def load_sites(config_path: Path) -> list[SiteConfig]:
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Краулер базы практики PravoOS")
-    parser.add_argument("--config", required=True, help="YAML с описанием сайтов")
+    parser.add_argument("--config", help="YAML с описанием сайтов (можно опустить при --sources-dir)")
+    parser.add_argument("--sources-dir",
+                        help="Каталог с локальными PDF/DOCX/TXT для загрузки (kad/sudrf вручную)")
     parser.add_argument("--base-url", default="http://localhost:8080",
                         help="Базовый URL API (через api-gateway)")
     parser.add_argument("--email", help="Email ADMIN-аккаунта (не нужен при --dry-run)")
@@ -568,22 +597,31 @@ def main():
         client.login(args.email, args.password)
         print("[ok]   Аутентификация ADMIN успешна")
 
-    sites = load_sites(Path(args.config))
+    if not args.config and not args.sources_dir:
+        raise SystemExit("Нужен хотя бы один источник: --config и/или --sources-dir")
+
     state = StateStore(Path(args.state))
     robots = RobotsCache(session, enabled=not args.ignore_robots)
     crawler = Crawler(session, robots, args.delay, args.render_timeout)
     stats = CrawlStats()
 
+    all_documents: list[DocumentLink] = []
     try:
-        all_documents: list[DocumentLink] = []
-        for site in sites:
-            print(f"\n=== Обход '{site.name}' ===")
-            found = crawler.discover(site, stats)
-            stats.bump("documents_found", len(found))
-            print(f"    найдено документов: {len(found)}")
-            all_documents.extend(found)
+        if args.config:
+            for site in load_sites(Path(args.config)):
+                print(f"\n=== Обход '{site.name}' ===")
+                found = crawler.discover(site, stats)
+                stats.bump("documents_found", len(found))
+                print(f"    найдено документов: {len(found)}")
+                all_documents.extend(found)
     finally:
         crawler.close()
+
+    if args.sources_dir:
+        local = collect_local_files(args.sources_dir)
+        stats.bump("documents_found", len(local))
+        print(f"\n=== Локальные файлы '{args.sources_dir}': {len(local)} ===")
+        all_documents.extend(local)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         dest_dir = Path(tmp_dir)
