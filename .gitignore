@@ -55,3 +55,6 @@ scripts/ingest_practice.py
 scripts/requirements.txt
 scripts/urls.txt
 scripts/practice_sources/
+
+# Backups
+backups/

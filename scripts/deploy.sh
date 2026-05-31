@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Re-attach to tmux so SSH disconnect doesn't kill the deploy
+if [ -z "${TMUX:-}" ] && [ -z "${STY:-}" ] && command -v tmux >/dev/null 2>&1; then
+    SESSION="pravoos-deploy"
+    if tmux has-session -t "$SESSION" 2>/dev/null; then
+        echo "Deploy already running. Attach with: tmux attach -t $SESSION"
+        exit 0
+    fi
+    exec tmux new-session -s "$SESSION" "$0" "$@"
+fi
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -84,6 +94,33 @@ wait_for_kafka() {
   return 1
 }
 
+wait_for_services() {
+  local services=(user-service ai-service api-gateway notification-service)
+  local timeout=180
+  local elapsed=0
+  log "Waiting for Java services (up to ${timeout}s)..."
+  while [ $elapsed -lt $timeout ]; do
+    local all_up=true
+    for svc in "${services[@]}"; do
+      local status
+      status=$(docker inspect --format='{{.State.Health.Status}}' "pravoos-$svc" 2>/dev/null || echo "missing")
+      if [[ "$status" != "healthy" ]]; then
+        all_up=false
+        break
+      fi
+    done
+    if $all_up; then
+      log "All services healthy."
+      return 0
+    fi
+    sleep 10
+    elapsed=$((elapsed + 10))
+    log "  Still waiting... (${elapsed}s)"
+  done
+  log "Timeout reached. Check status: docker compose ps"
+  log "Continuing anyway — services may still be starting."
+}
+
 start_infrastructure() {
   log "Starting infrastructure..."
   compose up -d postgres mongodb zookeeper kafka
@@ -132,8 +169,8 @@ main() {
   start_infrastructure
   compose up -d
 
-  log "Waiting for services to start (90s)..."
-  sleep 90
+  log "Waiting for services to become healthy..."
+  wait_for_services
 
   if ! ssl_certificate_exists; then
     obtain_ssl_certificate
