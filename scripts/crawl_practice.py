@@ -410,7 +410,27 @@ def resolve_extension(url: str, content_type: str) -> str | None:
 def resolve_title(document: DocumentLink, file_path: Path) -> str:
     if document.page_title:
         return document.page_title[:255]
+    if file_path.suffix.lower() == ".pdf":
+        extracted = extract_pdf_title(file_path)
+        if extracted:
+            return extracted[:255]
     return file_path.stem
+
+
+def extract_pdf_title(file_path: Path) -> str | None:
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return None
+    try:
+        reader = PdfReader(str(file_path))
+        if not reader.pages:
+            return None
+        lines = [line.strip() for line in (reader.pages[0].extract_text() or "").splitlines()]
+        meaningful = [line for line in lines if len(line) > 3]
+        return " ".join(meaningful[:6]) if meaningful else None
+    except Exception:
+        return None
 
 
 def download_document(session: requests.Session, document: DocumentLink,
