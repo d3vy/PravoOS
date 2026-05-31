@@ -60,18 +60,17 @@ public class DocumentService {
         String originalName = file.getOriginalFilename();
         String fileType = extractFileType(originalName);
 
+        Path filePath = storeFile(file, UUID.randomUUID().toString(), fileType);
+
         Document document = new Document();
         document.setTitle(resolveTitle(title, originalName));
         document.setFileName(originalName);
         document.setFileType(fileType);
+        document.setFilePath(filePath.toString());
         document.setUploadedBy(uploadedBy);
         document.setCaseId(caseId);
 
         Document saved = documentRepository.save(document);
-
-        Path filePath = storeFile(file, saved.getId(), fileType);
-        saved.setFilePath(filePath.toString());
-        documentRepository.save(saved);
 
         eventPublisher.publishEvent(new DocumentCreatedSpringEvent(saved.getId()));
 
@@ -154,9 +153,9 @@ public class DocumentService {
                 .toList();
     }
 
-    private Path storeFile(MultipartFile file, UUID documentId, String fileType) {
+    private Path storeFile(MultipartFile file, String storageKey, String fileType) {
         try {
-            Path dir = Paths.get(documentProperties.storagePath(), documentId.toString());
+            Path dir = Paths.get(documentProperties.storagePath(), storageKey);
             Files.createDirectories(dir);
             Path filePath = dir.resolve("document." + fileType);
             file.transferTo(filePath);
