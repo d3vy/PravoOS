@@ -62,8 +62,6 @@ public class ChatService {
                 messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId());
         List<LlmMessage> historyForLlm = buildLlmHistory(recentHistory);
 
-        messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
-
         float[] queryEmbedding = embeddingService.embed(request.message());
         List<ChunkMatch> matches = vectorSearchRepository
                 .findTopKBySimilarity(queryEmbedding, documentProperties.topKResults());
@@ -78,6 +76,7 @@ public class ChatService {
         String systemPrompt = ragService.buildSystemPrompt(relevantChunks);
         String answer = llmClient.complete(systemPrompt, historyForLlm, request.message());
 
+        messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
         messageRepository.save(new Message(conversation.getId(), MessageRole.ASSISTANT, answer, sources));
 
         log.info("Chat response generated for conversation: {} ({} source(s))", conversation.getId(), sources.size());
