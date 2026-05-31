@@ -38,8 +38,8 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 admin:
-  email: ${ADMIN_EMAIL}
-  password: ${ADMIN_PASSWORD}
+  email: ${ADMIN_EMAIL:}
+  password: ${ADMIN_PASSWORD:}
 
 management:
   endpoints:

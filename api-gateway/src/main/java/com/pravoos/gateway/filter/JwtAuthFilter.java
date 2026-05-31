@@ -2,6 +2,7 @@ package com.pravoos.gateway.filter;
 
 import com.pravoos.gateway.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
@@ -33,20 +34,32 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<Object> {
 
             String token = authHeader.substring(BEARER_PREFIX.length());
 
-            if (!jwtTokenProvider.isValid(token)) {
+            Claims claims;
+            try {
+                claims = jwtTokenProvider.extractClaims(token);
+            } catch (JwtException | IllegalArgumentException e) {
                 return unauthorized(exchange);
             }
 
-            Claims claims = jwtTokenProvider.extractClaims(token);
             ServerWebExchange mutatedExchange = exchange.mutate()
-                    .request(r -> r
-                            .header("X-User-Id", claims.getSubject())
-                            .header("X-User-Role", claims.get("role", String.class))
-                            .header("X-User-Email", claims.get("email", String.class)))
+                    .request(r -> r.headers(headers -> {
+                        headers.remove("X-User-Id");
+                        headers.remove("X-User-Role");
+                        headers.remove("X-User-Email");
+                        putIfPresent(headers, "X-User-Id", claims.getSubject());
+                        putIfPresent(headers, "X-User-Role", claims.get("role", String.class));
+                        putIfPresent(headers, "X-User-Email", claims.get("email", String.class));
+                    }))
                     .build();
 
             return chain.filter(mutatedExchange);
         };
+    }
+
+    private void putIfPresent(org.springframework.http.HttpHeaders headers, String name, String value) {
+        if (value != null && !value.isBlank()) {
+            headers.set(name, value);
+        }
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {

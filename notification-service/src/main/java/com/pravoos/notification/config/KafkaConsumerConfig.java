@@ -38,7 +38,7 @@ public class KafkaConsumerConfig {
         JsonDeserializer<ApplicationSubmittedKafkaPayload> jsonDeserializer =
                 new JsonDeserializer<>(ApplicationSubmittedKafkaPayload.class);
         jsonDeserializer.setUseTypeHeaders(false);
-        jsonDeserializer.addTrustedPackages("*");
+        jsonDeserializer.addTrustedPackages(ApplicationSubmittedKafkaPayload.class.getPackageName());
 
         ErrorHandlingDeserializer<ApplicationSubmittedKafkaPayload> valueDeserializer =
                 new ErrorHandlingDeserializer<>(jsonDeserializer);

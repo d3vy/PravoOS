@@ -56,11 +56,13 @@ public class ChatService {
 
     public ChatResponse chat(ChatRequest request, UUID lawyerId) {
         Conversation conversation = resolveConversation(request.conversationId(), lawyerId, request.message());
-        log.info("Chat request received: conversation={}, lawyer={}", conversation.getId(), lawyerId);
+        boolean isNewConversation = conversation.getId() == null;
+        log.info("Chat request received: conversation={}, lawyer={}",
+                isNewConversation ? "new" : conversation.getId(), lawyerId);
 
-        List<Message> recentHistory =
-                messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId());
-        List<LlmMessage> historyForLlm = buildLlmHistory(recentHistory);
+        List<LlmMessage> historyForLlm = isNewConversation
+                ? List.of()
+                : buildLlmHistory(messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId()));
 
         float[] queryEmbedding = embeddingService.embed(request.message());
         List<ChunkMatch> matches = vectorSearchRepository
@@ -76,6 +78,9 @@ public class ChatService {
         String systemPrompt = ragService.buildSystemPrompt(relevantChunks);
         String answer = llmClient.complete(systemPrompt, historyForLlm, request.message());
 
+        if (isNewConversation) {
+            conversation = conversationRepository.save(conversation);
+        }
         messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
         messageRepository.save(new Message(conversation.getId(), MessageRole.ASSISTANT, answer, sources));
 
@@ -115,7 +120,7 @@ public class ChatService {
         String title = firstMessage.length() > TITLE_MAX_LENGTH
                 ? firstMessage.substring(0, TITLE_MAX_LENGTH) + "..."
                 : firstMessage;
-        return conversationRepository.save(new Conversation(lawyerId, title));
+        return new Conversation(lawyerId, title);
     }
 
     private List<LlmMessage> buildLlmHistory(List<Message> recentDescending) {

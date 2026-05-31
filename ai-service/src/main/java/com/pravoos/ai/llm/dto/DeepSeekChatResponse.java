@@ -9,6 +9,8 @@ public record DeepSeekChatResponse(
 
     public String firstContent() {
         if (choices == null || choices.isEmpty()) return "";
-        return choices.get(0).message().content();
+        Choice first = choices.get(0);
+        if (first == null || first.message() == null || first.message().content() == null) return "";
+        return first.message().content();
     }
 }

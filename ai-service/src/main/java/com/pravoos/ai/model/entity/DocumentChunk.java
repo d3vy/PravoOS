@@ -10,6 +10,8 @@ import java.util.UUID;
 @Table(name = "document_chunks")
 public class DocumentChunk {
 
+    public static final int EMBEDDING_DIMENSIONS = 1536;
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

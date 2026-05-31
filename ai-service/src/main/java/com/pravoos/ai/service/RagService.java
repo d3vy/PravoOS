@@ -17,14 +17,13 @@ public class RagService {
             Если ответ не содержится в предоставленном контексте — прямо скажите об этом.
 
             КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:
-            %s
+            {context}
             """;
 
     public String buildSystemPrompt(List<String> relevantChunks) {
-        if (relevantChunks.isEmpty()) {
-            return String.format(SYSTEM_PROMPT_TEMPLATE, "База знаний пуста.");
-        }
-        String context = String.join("\n\n---\n\n", relevantChunks);
-        return String.format(SYSTEM_PROMPT_TEMPLATE, context);
+        String context = relevantChunks.isEmpty()
+                ? "База знаний пуста."
+                : String.join("\n\n---\n\n", relevantChunks);
+        return SYSTEM_PROMPT_TEMPLATE.replace("{context}", context);
     }
 }
