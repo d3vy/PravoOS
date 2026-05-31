@@ -28,7 +28,7 @@ export function Navbar(): JSX.Element {
 
             {isAuthenticated() ? (
               <>
-                <Link to={dashboardPath}>
+                <Link to={dashboardPath} className="hidden sm:block">
                   <Button variant="ghost" size="sm">
                     Рабочий стол
                   </Button>
@@ -44,7 +44,7 @@ export function Navbar(): JSX.Element {
                     Войти
                   </Button>
                 </Link>
-                <Link to="/apply">
+                <Link to="/apply" className="hidden sm:block">
                   <Button variant="primary" size="sm">
                     Подать заявку
                   </Button>

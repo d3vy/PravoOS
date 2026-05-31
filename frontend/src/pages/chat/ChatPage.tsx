@@ -161,10 +161,10 @@ export default function ChatPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
+    <div className="h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
       <Navbar />
 
-      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Mobile sidebar toggle */}
         {!sidebarOpen && (
           <button
@@ -305,7 +305,7 @@ export default function ChatPage(): JSX.Element {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onInput={handleTextareaInput}
-                  placeholder="Задайте вопрос... (Enter — отправить, Shift+Enter — новая строка)"
+                  placeholder="Задайте вопрос... (Enter — отправить)"
                   rows={1}
                   disabled={isSending}
                   aria-label="Текст сообщения"
