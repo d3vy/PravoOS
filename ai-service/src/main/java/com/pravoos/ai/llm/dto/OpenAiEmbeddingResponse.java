@@ -2,7 +2,7 @@ package com.pravoos.ai.llm.dto;
 
 import java.util.List;
 
-public record DeepSeekEmbeddingResponse(
+public record OpenAiEmbeddingResponse(
         List<EmbeddingData> data
 ) {
     public record EmbeddingData(float[] embedding) {}

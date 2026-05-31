@@ -41,7 +41,7 @@ nano .env
 | `ACME_EMAIL` | Email для Let's Encrypt |
 | `JWT_SECRET` | Случайная строка ≥ 64 символов |
 | `DB_*`, `MONGO_*` | Сильные пароли |
-| `DEEPSEEK_API_KEY` | Ключ API |
+| `OPENAI_API_KEY` | Ключ API |
 | `TELEGRAM_*` | Бот и chat id админа |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Первый админ |
 

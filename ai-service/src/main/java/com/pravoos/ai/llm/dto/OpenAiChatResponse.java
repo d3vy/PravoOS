@@ -2,7 +2,7 @@ package com.pravoos.ai.llm.dto;
 
 import java.util.List;
 
-public record DeepSeekChatResponse(
+public record OpenAiChatResponse(
         List<Choice> choices
 ) {
     public record Choice(LlmMessage message) {}

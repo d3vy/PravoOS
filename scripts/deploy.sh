@@ -33,7 +33,7 @@ validate_env() {
   local key
   for key in SERVER_DOMAIN SERVER_IP ACME_EMAIL JWT_SECRET DB_PASSWORD \
     MONGO_PASSWORD ADMIN_EMAIL ADMIN_PASSWORD \
-    DEEPSEEK_API_KEY TELEGRAM_BOT_TOKEN TELEGRAM_ADMIN_CHAT_ID; do
+    OPENAI_API_KEY TELEGRAM_BOT_TOKEN TELEGRAM_ADMIN_CHAT_ID; do
     if [[ -z "${!key:-}" ]]; then
       missing+=("$key")
     fi

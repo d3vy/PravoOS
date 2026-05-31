@@ -17,7 +17,7 @@ Telegram bot handles admin notifications. Single backend serves both web and Tel
 | DB (documents) | MongoDB |
 | Migrations | Flyway |
 | Messaging | Apache Kafka |
-| LLM (current) | DeepSeek-V3 (swappable via `LlmClient` interface) |
+| LLM (current) | OpenAI gpt-4o-mini (swappable via `LlmClient` interface) |
 | Doc parsing | Apache PDFBox (PDF), Apache POI (DOCX) |
 | Frontend | React 18 + TypeScript + Vite + Tailwind CSS + React Query |
 | Infra | Docker Compose (dev/VPS) → Kubernetes (prod) |
@@ -109,7 +109,7 @@ com.pravoos.ai/
 ├── config/       VectorDbConfig, MongoConfig, LlmConfig
 ├── llm/
 │   ├── LlmClient.java              (interface — key swap point)
-│   ├── DeepSeekLlmClient.java
+│   ├── OpenAiLlmClient.java
 │   └── dto/      LlmRequest, LlmResponse
 └── pipeline/     DocumentParser, TextChunker, EmbeddingPipeline
 ```

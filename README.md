@@ -14,7 +14,7 @@ B2B SaaS для юристов. AI отвечает на вопросы на о�
 | БД | PostgreSQL + pgvector, MongoDB |
 | Миграции | Flyway |
 | Очередь | Apache Kafka |
-| LLM | DeepSeek-V3 (swappable via `LlmClient`) |
+| LLM | OpenAI gpt-4o-mini (swappable via `LlmClient`) |
 | Парсинг | Apache PDFBox 3.x, Apache POI 5.x |
 | Уведомления | Telegram Bot |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, React Query |
@@ -52,7 +52,7 @@ PravoOS/
 
 1. Админ загружает PDF/DOCX → `DocumentParser` извлекает текст
 2. `TextChunker` разбивает на чанки ~512 токенов (50 токенов перекрытие)
-3. `EmbeddingService` генерирует векторы через DeepSeek Embedding API
+3. `EmbeddingService` генерирует векторы через OpenAI Embedding API
 4. Чанки + векторы сохраняются в `document_chunks` (pgvector)
 5. Вопрос юриста → embed → cosine similarity → top-5 чанков
 6. Промпт = системный контекст + top-5 чанков + история + вопрос
@@ -78,7 +78,7 @@ cd frontend && npm run dev
 | Переменная | Описание |
 |------------|----------|
 | `JWT_SECRET` | Случайная строка ≥ 64 символов |
-| `DEEPSEEK_API_KEY` | API ключ DeepSeek |
+| `OPENAI_API_KEY` | API ключ OpenAI |
 | `TELEGRAM_BOT_TOKEN` | Токен Telegram бота |
 | `TELEGRAM_ADMIN_CHAT_ID` | Chat ID для уведомлений |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Первый администратор |

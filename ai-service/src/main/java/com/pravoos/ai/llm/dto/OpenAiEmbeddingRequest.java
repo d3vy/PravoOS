@@ -1,6 +1,6 @@
 package com.pravoos.ai.llm.dto;
 
-public record DeepSeekEmbeddingRequest(
+public record OpenAiEmbeddingRequest(
         String model,
         String input
 ) {}

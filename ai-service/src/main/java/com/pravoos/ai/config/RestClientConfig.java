@@ -14,7 +14,7 @@ public class RestClientConfig {
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(120);
 
     @Bean
-    public RestClient deepSeekRestClient(DeepSeekProperties properties) {
+    public RestClient openAiRestClient(OpenAiProperties properties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
         requestFactory.setReadTimeout(READ_TIMEOUT);

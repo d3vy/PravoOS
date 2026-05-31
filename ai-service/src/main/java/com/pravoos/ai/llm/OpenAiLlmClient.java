@@ -1,6 +1,6 @@
 package com.pravoos.ai.llm;
 
-import com.pravoos.ai.config.DeepSeekProperties;
+import com.pravoos.ai.config.OpenAiProperties;
 import com.pravoos.ai.exception.LlmException;
 import com.pravoos.ai.llm.dto.*;
 import org.slf4j.Logger;
@@ -14,22 +14,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class DeepSeekLlmClient implements LlmClient {
+public class OpenAiLlmClient implements LlmClient {
 
-    private static final Logger log = LoggerFactory.getLogger(DeepSeekLlmClient.class);
+    private static final Logger log = LoggerFactory.getLogger(OpenAiLlmClient.class);
 
     private final RestClient restClient;
-    private final DeepSeekProperties properties;
+    private final OpenAiProperties properties;
 
-    public DeepSeekLlmClient(RestClient deepSeekRestClient, DeepSeekProperties properties) {
-        this.restClient = deepSeekRestClient;
+    public OpenAiLlmClient(RestClient openAiRestClient, OpenAiProperties properties) {
+        this.restClient = openAiRestClient;
         this.properties = properties;
     }
 
     @Override
     public String complete(String systemPrompt, List<LlmMessage> history, String userMessage) {
         List<LlmMessage> messages = buildMessages(systemPrompt, history, userMessage);
-        DeepSeekChatRequest request = new DeepSeekChatRequest(
+        OpenAiChatRequest request = new OpenAiChatRequest(
                 properties.model(),
                 messages,
                 properties.maxTokens(),
@@ -37,11 +37,11 @@ public class DeepSeekLlmClient implements LlmClient {
         );
 
         try {
-            DeepSeekChatResponse response = restClient.post()
+            OpenAiChatResponse response = restClient.post()
                     .uri("/chat/completions")
                     .body(request)
                     .retrieve()
-                    .body(DeepSeekChatResponse.class);
+                    .body(OpenAiChatResponse.class);
 
             if (response == null) {
                 throw new LlmException("Empty response from LLM API");
@@ -59,17 +59,17 @@ public class DeepSeekLlmClient implements LlmClient {
 
     @Override
     public float[] embed(String text) {
-        DeepSeekEmbeddingRequest request = new DeepSeekEmbeddingRequest(
+        OpenAiEmbeddingRequest request = new OpenAiEmbeddingRequest(
                 properties.embeddingModel(),
                 text
         );
 
         try {
-            DeepSeekEmbeddingResponse response = restClient.post()
+            OpenAiEmbeddingResponse response = restClient.post()
                     .uri("/embeddings")
                     .body(request)
                     .retrieve()
-                    .body(DeepSeekEmbeddingResponse.class);
+                    .body(OpenAiEmbeddingResponse.class);
 
             if (response == null || response.firstEmbedding().length == 0) {
                 throw new LlmException("Empty embedding response from API");
