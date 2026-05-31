@@ -6,23 +6,15 @@ interface LogoProps {
 export function ScalesIcon({ className = '' }: { className?: string }): JSX.Element {
   return (
     <svg
-      viewBox="0 0 24 24"
+      viewBox="0 0 32 32"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth="2.4"
+      strokeLinecap="square"
       className={className}
       aria-hidden="true"
     >
-      <path d="M12 3.5v17" />
-      <path d="M7.5 20.5h9" />
-      <path d="M4 7.5h16" />
-      <circle cx="12" cy="5" r="1" fill="currentColor" stroke="none" />
-      <path d="M4 7.5 1.5 13h5L4 7.5z" />
-      <path d="M20 7.5 17.5 13h5L20 7.5z" />
-      <path d="M1.5 13a2.5 2.5 0 0 0 5 0" />
-      <path d="M17.5 13a2.5 2.5 0 0 0 5 0" />
+      <path d="M7 8.5 L7 24 M25 8.5 L25 24 M5.5 8.5 L26.5 8.5 M5.5 24 L9 24 M23 24 L26.5 24" />
     </svg>
   )
 }
