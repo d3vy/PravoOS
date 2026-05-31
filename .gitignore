@@ -50,8 +50,3 @@ docker/jars/*
 
 ARCHITECTURE.md
 claude.md
-
-# Practice base source files (uploaded via ingest_practice.py, not versioned)
-scripts/practice_sources/*
-!scripts/practice_sources/README.md
-scripts/urls.txt
