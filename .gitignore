@@ -47,3 +47,6 @@ frontend/.env
 docker/nginx/generated/default.conf
 docker/jars/*
 !docker/jars/.gitkeep
+
+ARCHITECTURE.md
+claude.md
