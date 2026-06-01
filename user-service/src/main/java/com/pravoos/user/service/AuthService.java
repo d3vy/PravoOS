@@ -4,6 +4,7 @@ import com.pravoos.user.exception.AccountLockedException;
 import com.pravoos.user.exception.InvalidCredentialsException;
 import com.pravoos.user.exception.InvalidRefreshTokenException;
 import com.pravoos.user.model.dto.LoginRequest;
+import com.pravoos.user.util.EmailNormalizer;
 import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserStatus;
@@ -44,30 +45,31 @@ public class AuthService {
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        loginAttemptService.remainingLockSeconds(request.email())
+        String email = EmailNormalizer.normalize(request.email());
+        loginAttemptService.remainingLockSeconds(email)
                 .ifPresent(seconds -> {
-                    log.warn("Blocked login attempt for locked account: {}", request.email());
+                    log.warn("Blocked login attempt for locked account: {}", email);
                     throw new AccountLockedException(seconds);
                 });
 
-        User user = userRepository.findByEmailAndStatus(request.email(), UserStatus.ACTIVE)
+        User user = userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE)
                 .orElse(null);
 
         if (user == null) {
             passwordEncoder.matches(request.password(), DUMMY_PASSWORD_HASH);
-            loginAttemptService.recordFailure(request.email());
-            log.warn("Failed login attempt for unknown/inactive email: {}", request.email());
+            loginAttemptService.recordFailure(email);
+            log.warn("Failed login attempt for unknown/inactive email: {}", email);
             throw new InvalidCredentialsException();
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            loginAttemptService.recordFailure(request.email());
-            log.warn("Failed login attempt for email: {}", request.email());
+            loginAttemptService.recordFailure(email);
+            log.warn("Failed login attempt for email: {}", email);
             throw new InvalidCredentialsException();
         }
 
-        loginAttemptService.reset(request.email());
-        log.info("User authenticated: {}", request.email());
+        loginAttemptService.reset(email);
+        log.info("User authenticated: {}", email);
         return issueTokens(user);
     }
 

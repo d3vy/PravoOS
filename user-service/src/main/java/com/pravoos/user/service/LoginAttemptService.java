@@ -1,13 +1,13 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.config.BruteForceProperties;
+import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -66,14 +66,10 @@ public class LoginAttemptService {
     }
 
     private String attemptsKey(String email) {
-        return ATTEMPTS_KEY_PREFIX + normalize(email);
+        return ATTEMPTS_KEY_PREFIX + EmailNormalizer.normalize(email);
     }
 
     private String lockKey(String email) {
-        return LOCK_KEY_PREFIX + normalize(email);
-    }
-
-    private String normalize(String email) {
-        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        return LOCK_KEY_PREFIX + EmailNormalizer.normalize(email);
     }
 }

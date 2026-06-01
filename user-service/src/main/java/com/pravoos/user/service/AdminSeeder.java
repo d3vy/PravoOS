@@ -5,6 +5,7 @@ import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -42,14 +43,15 @@ public class AdminSeeder implements ApplicationRunner {
             return;
         }
 
+        String email = EmailNormalizer.normalize(adminProperties.email());
         User admin = new User();
-        admin.setEmail(adminProperties.email());
+        admin.setEmail(email);
         admin.setPasswordHash(passwordEncoder.encode(adminProperties.password()));
         admin.setRole(UserRole.ADMIN);
         admin.setStatus(UserStatus.ACTIVE);
         userRepository.save(admin);
 
-        log.info("Default admin account created: {}", adminProperties.email());
+        log.info("Default admin account created: {}", email);
     }
 
     private boolean isBlank(String value) {

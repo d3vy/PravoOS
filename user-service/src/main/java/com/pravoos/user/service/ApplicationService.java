@@ -15,6 +15,7 @@ import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
 import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -48,15 +49,16 @@ public class ApplicationService {
 
     @Transactional
     public ApplicationResponse submitApplication(ApplyRequest request) {
-        if (applicationRepository.existsByEmailAndStatus(request.email(), ApplicationStatus.PENDING)) {
-            throw new ApplicationAlreadyExistsException(request.email());
+        String email = EmailNormalizer.normalize(request.email());
+        if (applicationRepository.existsByEmailAndStatus(email, ApplicationStatus.PENDING)) {
+            throw new ApplicationAlreadyExistsException(email);
         }
-        if (userRepository.existsByEmail(request.email())) {
-            throw new EmailAlreadyExistsException(request.email());
+        if (userRepository.existsByEmail(email)) {
+            throw new EmailAlreadyExistsException(email);
         }
 
         LawyerApplication application = new LawyerApplication();
-        application.setEmail(request.email());
+        application.setEmail(email);
         application.setFullName(request.fullName());
         application.setPasswordHash(passwordEncoder.encode(request.password()));
         application.setBarNumber(request.barNumber());
@@ -66,7 +68,7 @@ public class ApplicationService {
         LawyerApplication saved = applicationRepository.save(application);
         eventPublisher.publishEvent(new ApplicationSubmittedSpringEvent(saved));
 
-        log.info("Lawyer application submitted: {}", request.email());
+        log.info("Lawyer application submitted: {}", email);
         return toApplicationResponse(saved);
     }
 
