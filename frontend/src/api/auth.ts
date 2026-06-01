@@ -1,9 +1,9 @@
 import apiClient from './client'
-import type { LoginRequest, LoginResponse, ApplyRequest, ApplicationResponse } from '../types'
+import type { LoginRequest, AuthResponse, ApplyRequest, ApplicationResponse } from '../types'
 
 export const authApi = {
-  login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>('/api/auth/login', data)
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/api/auth/login', data)
     return response.data
   },
 
@@ -12,7 +12,7 @@ export const authApi = {
     return response.data
   },
 
-  logout: async (refreshToken: string): Promise<void> => {
-    await apiClient.post('/api/auth/logout', { refreshToken })
+  logout: async (): Promise<void> => {
+    await apiClient.post('/api/auth/logout')
   },
 }

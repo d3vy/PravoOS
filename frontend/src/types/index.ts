@@ -11,16 +11,11 @@ export interface LoginRequest {
   password: string
 }
 
-export interface LoginResponse {
+export interface AuthResponse {
   accessToken: string
-  refreshToken: string
   userId: string
   email: string
   role: UserRole
-}
-
-export interface RefreshRequest {
-  refreshToken: string
 }
 
 export interface ApplyRequest {

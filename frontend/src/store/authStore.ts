@@ -10,10 +10,11 @@ interface AuthUser {
 
 interface AuthState {
   accessToken: string | null
-  refreshToken: string | null
   user: AuthUser | null
-  setAuth: (accessToken: string, refreshToken: string, user: AuthUser) => void
-  setTokens: (accessToken: string, refreshToken: string) => void
+  bootstrapped: boolean
+  setSession: (accessToken: string, user: AuthUser) => void
+  setAccessToken: (accessToken: string) => void
+  setBootstrapped: (value: boolean) => void
   clearAuth: () => void
   isAuthenticated: () => boolean
   hasRole: (role: UserRole) => boolean
@@ -23,16 +24,18 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       accessToken: null,
-      refreshToken: null,
       user: null,
-      setAuth: (accessToken, refreshToken, user) => set({ accessToken, refreshToken, user }),
-      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-      clearAuth: () => set({ accessToken: null, refreshToken: null, user: null }),
+      bootstrapped: false,
+      setSession: (accessToken, user) => set({ accessToken, user }),
+      setAccessToken: (accessToken) => set({ accessToken }),
+      setBootstrapped: (value) => set({ bootstrapped: value }),
+      clearAuth: () => set({ accessToken: null, user: null }),
       isAuthenticated: () => get().accessToken !== null,
       hasRole: (role) => get().user?.role === role,
     }),
     {
       name: 'pravoos-auth',
+      partialize: (state) => ({ user: state.user }),
     }
   )
 )

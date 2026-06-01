@@ -1,16 +1,19 @@
 package com.pravoos.user.controller;
 
+import com.pravoos.user.exception.InvalidRefreshTokenException;
 import com.pravoos.user.model.dto.ApplyRequest;
 import com.pravoos.user.model.dto.ApplicationResponse;
+import com.pravoos.user.model.dto.AuthResponse;
 import com.pravoos.user.model.dto.LoginRequest;
-import com.pravoos.user.model.dto.LogoutRequest;
-import com.pravoos.user.model.dto.RefreshRequest;
 import com.pravoos.user.model.dto.TokenResponse;
+import com.pravoos.user.security.RefreshCookieFactory;
 import com.pravoos.user.service.ApplicationService;
 import com.pravoos.user.service.AuthService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,30 +25,49 @@ public class AuthController {
 
     private final AuthService authService;
     private final ApplicationService applicationService;
+    private final RefreshCookieFactory refreshCookieFactory;
 
-    public AuthController(AuthService authService, ApplicationService applicationService) {
+    public AuthController(AuthService authService,
+                          ApplicationService applicationService,
+                          RefreshCookieFactory refreshCookieFactory) {
         this.authService = authService;
         this.applicationService = applicationService;
+        this.refreshCookieFactory = refreshCookieFactory;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return authResponse(authService.login(request));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshRequest request) {
-        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
+    public ResponseEntity<AuthResponse> refresh(
+            @CookieValue(name = RefreshCookieFactory.COOKIE_NAME, required = false) String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new InvalidRefreshTokenException();
+        }
+        return authResponse(authService.refresh(refreshToken));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
-        authService.logout(request.refreshToken());
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = RefreshCookieFactory.COOKIE_NAME, required = false) String refreshToken) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            authService.logout(refreshToken);
+        }
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.clear().toString())
+                .build();
     }
 
     @PostMapping("/apply")
     public ResponseEntity<ApplicationResponse> apply(@Valid @RequestBody ApplyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.submitApplication(request));
+    }
+
+    private ResponseEntity<AuthResponse> authResponse(TokenResponse tokens) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.create(tokens.refreshToken()).toString())
+                .body(new AuthResponse(tokens.accessToken(), tokens.userId(), tokens.email(), tokens.role()));
     }
 }

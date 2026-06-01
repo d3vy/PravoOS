@@ -14,7 +14,7 @@ export default function LoginPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const { setAuth, isAuthenticated, user } = useAuthStore()
+  const { setSession, isAuthenticated, user } = useAuthStore()
   const navigate = useNavigate()
 
   if (isAuthenticated()) {
@@ -29,7 +29,7 @@ export default function LoginPage(): JSX.Element {
 
     try {
       const response = await authApi.login({ email, password })
-      setAuth(response.accessToken, response.refreshToken, {
+      setSession(response.accessToken, {
         userId: response.userId,
         email: response.email,
         role: response.role,

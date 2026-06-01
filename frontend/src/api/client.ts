@@ -1,11 +1,12 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
-import type { LoginResponse } from '../types'
+import type { AuthResponse } from '../types'
 
 const baseURL = import.meta.env.VITE_API_URL || ''
 
 const apiClient = axios.create({
   baseURL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,19 +22,24 @@ apiClient.interceptors.request.use((config) => {
 
 let refreshPromise: Promise<string> | null = null
 
-async function refreshAccessToken(): Promise<string> {
-  const refreshToken = useAuthStore.getState().refreshToken
-  if (!refreshToken) {
-    throw new Error('No refresh token available')
-  }
-  const response = await axios.post<LoginResponse>(
+export async function refreshSession(): Promise<string> {
+  const response = await axios.post<AuthResponse>(
     '/api/auth/refresh',
-    { refreshToken },
-    { baseURL, headers: { 'Content-Type': 'application/json' } }
+    null,
+    { baseURL, withCredentials: true }
   )
-  const { accessToken, refreshToken: rotatedToken } = response.data
-  useAuthStore.getState().setTokens(accessToken, rotatedToken)
+  const { accessToken, userId, email, role } = response.data
+  useAuthStore.getState().setSession(accessToken, { userId, email, role })
   return accessToken
+}
+
+function runSingleFlightRefresh(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = refreshSession().finally(() => {
+      refreshPromise = null
+    })
+  }
+  return refreshPromise
 }
 
 function redirectToLogin(): void {
@@ -49,18 +55,13 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     const isUnauthorized = error.response?.status === 401
-    const canRetry = isUnauthorized && originalRequest && !originalRequest._retry
-    const hasRefreshToken = useAuthStore.getState().refreshToken !== null
+    const isAuthEndpoint = typeof originalRequest?.url === 'string' && originalRequest.url.includes('/api/auth/')
+    const canRetry = isUnauthorized && originalRequest && !originalRequest._retry && !isAuthEndpoint
 
-    if (canRetry && hasRefreshToken) {
+    if (canRetry) {
       originalRequest._retry = true
       try {
-        if (!refreshPromise) {
-          refreshPromise = refreshAccessToken().finally(() => {
-            refreshPromise = null
-          })
-        }
-        const newAccessToken = await refreshPromise
+        const newAccessToken = await runSingleFlightRefresh()
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
         return apiClient(originalRequest)
       } catch {

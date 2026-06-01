@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import { useAuthBootstrap } from './hooks/useAuthBootstrap'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
+import { FullScreenLoader } from './components/ui/FullScreenLoader'
 import { AdminLayout } from './components/layout/AdminLayout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -13,7 +15,12 @@ import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
 
 export default function App(): JSX.Element {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, bootstrapped } = useAuthStore()
+  useAuthBootstrap()
+
+  if (!bootstrapped) {
+    return <FullScreenLoader />
+  }
 
   return (
     <Routes>

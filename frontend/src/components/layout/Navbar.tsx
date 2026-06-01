@@ -6,20 +6,17 @@ import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 
 export function Navbar(): JSX.Element {
-  const { user, refreshToken, clearAuth, isAuthenticated } = useAuthStore()
+  const { user, clearAuth, isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
 
   const handleLogout = async (): Promise<void> => {
-    const tokenToRevoke = refreshToken
+    try {
+      await authApi.logout()
+    } catch {
+      // best-effort revocation; local session is cleared regardless
+    }
     clearAuth()
     navigate('/')
-    if (tokenToRevoke) {
-      try {
-        await authApi.logout(tokenToRevoke)
-      } catch {
-        // best-effort revocation; local session is already cleared
-      }
-    }
   }
 
   const dashboardPath = user?.role === 'ADMIN' ? '/admin/applications' : '/chat'
