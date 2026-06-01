@@ -47,7 +47,7 @@ public class RefreshTokenService {
         return rawToken;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public UUID rotate(String rawToken) {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))
                 .orElseThrow(InvalidRefreshTokenException::new);

@@ -181,6 +181,7 @@ main() {
   log "Enabling HTTPS..."
   ./scripts/render-nginx.sh prod
   compose up -d frontend
+  compose exec -T frontend nginx -s reload
 
   log "Deployment complete."
   echo ""
