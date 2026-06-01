@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.stream.Collectors;
 
@@ -61,6 +62,12 @@ public class GlobalExceptionHandler {
         log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("Operation conflicts with existing data"));
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException ex) {
+        log.warn("No handler for {} {}", ex.getHttpMethod(), ex.getRequestURL());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse("Not found"));
     }
 
     @ExceptionHandler(Exception.class)

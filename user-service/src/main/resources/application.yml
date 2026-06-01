@@ -1,6 +1,11 @@
 spring:
   application:
     name: user-service
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
   datasource:
     url: ${DB_USER_URL:jdbc:postgresql://localhost:5432/pravoos_users}
     username: ${DB_USER_USERNAME:postgres}
