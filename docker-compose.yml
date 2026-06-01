@@ -33,6 +33,20 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: pravoos-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     container_name: pravoos-zookeeper
@@ -80,12 +94,16 @@ services:
       DB_USER_URL: jdbc:postgresql://postgres:5432/pravoos_users
       DB_USER_USERNAME: ${DB_USERNAME}
       DB_USER_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx200m"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/actuator/health/liveness || exit 1"]
@@ -193,3 +211,4 @@ volumes:
   mongo_data:
   zookeeper_data:
   documents_data:
+  redis_data:

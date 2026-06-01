@@ -9,6 +9,11 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
   jpa:
     hibernate:
       ddl-auto: validate
@@ -43,6 +48,10 @@ app:
     refresh-cookie:
       secure: ${REFRESH_COOKIE_SECURE:true}
       same-site: ${REFRESH_COOKIE_SAMESITE:Strict}
+    brute-force:
+      max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
+      lockout-duration: ${LOGIN_LOCKOUT_DURATION:PT15M}
+      attempt-window: ${LOGIN_ATTEMPT_WINDOW:PT15M}
 
 admin:
   email: ${ADMIN_EMAIL:}

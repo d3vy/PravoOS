@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { authApi } from '../api/auth'
 import { Button } from '../components/ui/Button'
@@ -12,15 +13,24 @@ export default function LoginPage(): JSX.Element {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [lockSeconds, setLockSeconds] = useState(0)
   const [loading, setLoading] = useState(false)
 
   const { setSession, isAuthenticated, user } = useAuthStore()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    if (lockSeconds <= 0) return
+    const timer = setInterval(() => setLockSeconds((seconds) => seconds - 1), 1000)
+    return () => clearInterval(timer)
+  }, [lockSeconds])
+
   if (isAuthenticated()) {
     const path = user?.role === 'ADMIN' ? '/admin/applications' : '/chat'
     return <Navigate to={path} replace />
   }
+
+  const isLocked = lockSeconds > 0
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
@@ -36,11 +46,22 @@ export default function LoginPage(): JSX.Element {
       })
       const path = response.role === 'ADMIN' ? '/admin/applications' : '/chat'
       navigate(path, { replace: true })
-    } catch {
-      setError('Неверный email или пароль. Проверьте данные и попробуйте снова.')
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const retryAfter = Number(err.response.headers['retry-after'])
+        setLockSeconds(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 900)
+      } else {
+        setError('Неверный email или пароль. Проверьте данные и попробуйте снова.')
+      }
     } finally {
       setLoading(false)
     }
+  }
+
+  const formatLockTime = (totalSeconds: number): string => {
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
   return (
@@ -94,7 +115,19 @@ export default function LoginPage(): JSX.Element {
                 autoComplete="current-password"
               />
 
-              {error && (
+              {isLocked && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                >
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Слишком много неудачных попыток. Повторите через {formatLockTime(lockSeconds)}.
+                  </p>
+                </motion.div>
+              )}
+
+              {!isLocked && error && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -109,6 +142,7 @@ export default function LoginPage(): JSX.Element {
                 variant="primary"
                 size="lg"
                 loading={loading}
+                disabled={isLocked}
                 className="w-full mt-1"
               >
                 Войти

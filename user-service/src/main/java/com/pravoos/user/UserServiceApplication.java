@@ -1,6 +1,7 @@
 package com.pravoos.user;
 
 import com.pravoos.user.config.AdminProperties;
+import com.pravoos.user.config.BruteForceProperties;
 import com.pravoos.user.config.JwtProperties;
 import com.pravoos.user.config.RefreshCookieProperties;
 import org.springframework.boot.SpringApplication;
@@ -10,7 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-@EnableConfigurationProperties({JwtProperties.class, AdminProperties.class, RefreshCookieProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, AdminProperties.class, RefreshCookieProperties.class, BruteForceProperties.class})
 @EnableScheduling
 public class UserServiceApplication {
 
