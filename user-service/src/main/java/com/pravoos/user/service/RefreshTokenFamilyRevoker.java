@@ -1,0 +1,24 @@
+package com.pravoos.user.service;
+
+import com.pravoos.user.repository.RefreshTokenRepository;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Component
+public class RefreshTokenFamilyRevoker {
+
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    public RefreshTokenFamilyRevoker(RefreshTokenRepository refreshTokenRepository) {
+        this.refreshTokenRepository = refreshTokenRepository;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int revokeAllActive(UUID userId) {
+        return refreshTokenRepository.revokeAllActiveByUserId(userId, LocalDateTime.now());
+    }
+}

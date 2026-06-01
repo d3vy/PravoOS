@@ -24,14 +24,17 @@ public class RefreshTokenService {
     private static final int TOKEN_BYTE_LENGTH = 32;
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenFamilyRevoker refreshTokenFamilyRevoker;
     private final TokenHasher tokenHasher;
     private final SecureRandom secureRandom = new SecureRandom();
     private final long refreshExpirationMs;
 
     public RefreshTokenService(RefreshTokenRepository refreshTokenRepository,
+                               RefreshTokenFamilyRevoker refreshTokenFamilyRevoker,
                                TokenHasher tokenHasher,
                                JwtProperties jwtProperties) {
         this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenFamilyRevoker = refreshTokenFamilyRevoker;
         this.tokenHasher = tokenHasher;
         this.refreshExpirationMs = jwtProperties.refreshExpirationMs();
     }
@@ -47,14 +50,14 @@ public class RefreshTokenService {
         return rawToken;
     }
 
-    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
+    @Transactional
     public UUID rotate(String rawToken) {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         if (stored.getRevokedAt() != null) {
-            refreshTokenRepository.revokeAllActiveByUserId(stored.getUserId(), LocalDateTime.now());
-            log.warn("Refresh token reuse detected for user {}; revoked all active tokens", stored.getUserId());
+            int revoked = refreshTokenFamilyRevoker.revokeAllActive(stored.getUserId());
+            log.warn("Refresh token reuse detected for user {}; revoked {} active tokens", stored.getUserId(), revoked);
             throw new InvalidRefreshTokenException();
         }
 
