@@ -20,7 +20,7 @@ log "Dumping PostgreSQL..."
 docker exec pravoos-postgres pg_dumpall -U postgres > "$TMP_DIR/postgres.sql"
 
 log "Dumping MongoDB..."
-docker exec pravoos-mongodb mongodump --archive > "$TMP_DIR/mongo.archive"
+docker exec pravoos-mongodb sh -c 'mongodump --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive' > "$TMP_DIR/mongo.archive"
 
 log "Compressing..."
 tar -czf "$BACKUP_FILE" -C "$TMP_DIR" .
