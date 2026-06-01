@@ -4,8 +4,9 @@ import com.pravoos.user.model.enums.UserRole;
 
 import java.util.UUID;
 
-public record LoginResponse(
-        String token,
+public record TokenResponse(
+        String accessToken,
+        String refreshToken,
         UUID userId,
         String email,
         UserRole role

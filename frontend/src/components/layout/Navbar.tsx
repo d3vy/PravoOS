@@ -1,16 +1,25 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { authApi } from '../../api/auth'
 import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 
 export function Navbar(): JSX.Element {
-  const { user, clearAuth, isAuthenticated } = useAuthStore()
+  const { user, refreshToken, clearAuth, isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
 
-  const handleLogout = (): void => {
+  const handleLogout = async (): Promise<void> => {
+    const tokenToRevoke = refreshToken
     clearAuth()
     navigate('/')
+    if (tokenToRevoke) {
+      try {
+        await authApi.logout(tokenToRevoke)
+      } catch {
+        // best-effort revocation; local session is already cleared
+      }
+    }
   }
 
   const dashboardPath = user?.role === 'ADMIN' ? '/admin/applications' : '/chat'
@@ -49,7 +58,7 @@ export function Navbar(): JSX.Element {
                     </Button>
                   </Link>
                 )}
-                <Button variant="secondary" size="sm" onClick={handleLogout}>
+                <Button variant="secondary" size="sm" onClick={() => void handleLogout()}>
                   Выйти
                 </Button>
               </>

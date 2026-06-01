@@ -17,11 +17,11 @@ import java.util.UUID;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final long expirationMs;
+    private final long accessExpirationMs;
 
     public JwtTokenProvider(JwtProperties jwtProperties) {
         this.secretKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
-        this.expirationMs = jwtProperties.expirationMs();
+        this.accessExpirationMs = jwtProperties.accessExpirationMs();
     }
 
     public String generateToken(UUID userId, String email, UserRole role) {
@@ -30,7 +30,7 @@ public class JwtTokenProvider {
                 .claim("email", email)
                 .claim("role", role.name())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .expiration(new Date(System.currentTimeMillis() + accessExpirationMs))
                 .signWith(secretKey)
                 .compact();
     }

@@ -11,4 +11,8 @@ export const authApi = {
     const response = await apiClient.post<ApplicationResponse>('/api/auth/apply', data)
     return response.data
   },
+
+  logout: async (refreshToken: string): Promise<void> => {
+    await apiClient.post('/api/auth/logout', { refreshToken })
+  },
 }

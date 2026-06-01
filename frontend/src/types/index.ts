@@ -12,10 +12,15 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string
+  accessToken: string
+  refreshToken: string
   userId: string
   email: string
   role: UserRole
+}
+
+export interface RefreshRequest {
+  refreshToken: string
 }
 
 export interface ApplyRequest {

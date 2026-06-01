@@ -29,7 +29,7 @@ export default function LoginPage(): JSX.Element {
 
     try {
       const response = await authApi.login({ email, password })
-      setAuth(response.token, {
+      setAuth(response.accessToken, response.refreshToken, {
         userId: response.userId,
         email: response.email,
         role: response.role,

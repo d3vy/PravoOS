@@ -1,8 +1,9 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.exception.InvalidCredentialsException;
+import com.pravoos.user.exception.InvalidRefreshTokenException;
 import com.pravoos.user.model.dto.LoginRequest;
-import com.pravoos.user.model.dto.LoginResponse;
+import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.UserRepository;
@@ -12,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -23,17 +26,20 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService(UserRepository userRepository,
                        JwtTokenProvider jwtTokenProvider,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
+        this.refreshTokenService = refreshTokenService;
     }
 
-    @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest request) {
+    @Transactional
+    public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByEmailAndStatus(request.email(), UserStatus.ACTIVE)
                 .orElse(null);
 
@@ -49,7 +55,26 @@ public class AuthService {
         }
 
         log.info("User authenticated: {}", request.email());
-        String token = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole());
-        return new LoginResponse(token, user.getId(), user.getEmail(), user.getRole());
+        return issueTokens(user);
+    }
+
+    @Transactional
+    public TokenResponse refresh(String rawRefreshToken) {
+        UUID userId = refreshTokenService.rotate(rawRefreshToken);
+        User user = userRepository.findById(userId)
+                .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
+                .orElseThrow(InvalidRefreshTokenException::new);
+        return issueTokens(user);
+    }
+
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        refreshTokenService.revoke(rawRefreshToken);
+    }
+
+    private TokenResponse issueTokens(User user) {
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole());
+        String refreshToken = refreshTokenService.issue(user.getId());
+        return new TokenResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
     }
 }

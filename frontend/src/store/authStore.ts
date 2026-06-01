@@ -9,9 +9,11 @@ interface AuthUser {
 }
 
 interface AuthState {
-  token: string | null
+  accessToken: string | null
+  refreshToken: string | null
   user: AuthUser | null
-  setAuth: (token: string, user: AuthUser) => void
+  setAuth: (accessToken: string, refreshToken: string, user: AuthUser) => void
+  setTokens: (accessToken: string, refreshToken: string) => void
   clearAuth: () => void
   isAuthenticated: () => boolean
   hasRole: (role: UserRole) => boolean
@@ -20,11 +22,13 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       user: null,
-      setAuth: (token, user) => set({ token, user }),
-      clearAuth: () => set({ token: null, user: null }),
-      isAuthenticated: () => get().token !== null,
+      setAuth: (accessToken, refreshToken, user) => set({ accessToken, refreshToken, user }),
+      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+      clearAuth: () => set({ accessToken: null, refreshToken: null, user: null }),
+      isAuthenticated: () => get().accessToken !== null,
       hasRole: (role) => get().user?.role === role,
     }),
     {

@@ -3,7 +3,9 @@ package com.pravoos.user.controller;
 import com.pravoos.user.model.dto.ApplyRequest;
 import com.pravoos.user.model.dto.ApplicationResponse;
 import com.pravoos.user.model.dto.LoginRequest;
-import com.pravoos.user.model.dto.LoginResponse;
+import com.pravoos.user.model.dto.LogoutRequest;
+import com.pravoos.user.model.dto.RefreshRequest;
+import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.service.ApplicationService;
 import com.pravoos.user.service.AuthService;
 import jakarta.validation.Valid;
@@ -27,8 +29,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
+        authService.logout(request.refreshToken());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/apply")
