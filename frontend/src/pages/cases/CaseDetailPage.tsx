@@ -4,12 +4,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
 import { workflowsApi } from '../../api/workflows'
-import type { AiResponseDto, CaseResponse, DocumentResponse, WorkflowInfo } from '../../types'
+import type { AiResponseDto, CaseDraftDto, CaseResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { RatingButtons } from '../../components/ui/RatingButtons'
+
+const WORKFLOW_TABS = [
+  { id: 'analysis', label: 'Анализ', ids: ['DEBTOR_SOLVENCY_ANALYSIS', 'CHALLENGE_TRANSACTIONS', 'CREDITOR_CLAIMS', 'SUBSIDIARY_LIABILITY', 'BANKRUPTCY_ESTATE'] },
+  { id: 'documents', label: 'Документы', ids: ['DOCUMENT_CHECKLIST', 'DATA_EXTRACTION'] },
+  { id: 'summary', label: 'Итоги', ids: ['CASE_SUMMARY', 'RISK_MAP', 'CHRONOLOGY'] },
+] as const
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
 const POLLING_INTERVAL_MS = 5000
@@ -35,6 +41,17 @@ export default function CaseDetailPage(): JSX.Element {
   const { data: workflows = [] } = useQuery<WorkflowInfo[]>({
     queryKey: ['workflows'],
     queryFn: workflowsApi.getAll,
+  })
+
+  const { data: drafts = [] } = useQuery<CaseDraftDto[]>({
+    queryKey: ['case-drafts', caseId],
+    queryFn: () => casesApi.getDrafts(caseId),
+    enabled: caseId !== '',
+  })
+
+  const { data: draftTypes = [] } = useQuery<DraftTypeInfo[]>({
+    queryKey: ['draft-types'],
+    queryFn: casesApi.getDraftTypes,
   })
 
   const { data: responses = [] } = useQuery<AiResponseDto[]>({
@@ -86,6 +103,8 @@ export default function CaseDetailPage(): JSX.Element {
         <DocumentsSection caseId={caseId} documents={documents} queryClient={queryClient} />
 
         <WorkflowSection caseId={caseId} workflows={workflows} queryClient={queryClient} />
+
+        <DraftSection caseId={caseId} draftTypes={draftTypes} drafts={drafts} queryClient={queryClient} />
 
         <ResponsesSection caseId={caseId} responses={responses} queryClient={queryClient} />
       </div>
@@ -179,6 +198,7 @@ function DocumentsSection({ caseId, documents, queryClient }: SectionProps & { d
 }
 
 function WorkflowSection({ caseId, workflows, queryClient }: SectionProps & { workflows: WorkflowInfo[] }): JSX.Element {
+  const [activeTab, setActiveTab] = useState<string>('analysis')
   const [selectedId, setSelectedId] = useState('')
   const [question, setQuestion] = useState('')
 
@@ -190,15 +210,39 @@ function WorkflowSection({ caseId, workflows, queryClient }: SectionProps & { wo
     },
   })
 
-  const selectedWorkflow = workflows.find((w) => w.id === selectedId)
+  const currentTab = WORKFLOW_TABS.find((t) => t.id === activeTab)
+  const visibleWorkflows = workflows.filter((w) => currentTab?.ids.includes(w.id as never))
+  const selectedWorkflow = visibleWorkflows.find((w) => w.id === selectedId)
+
+  const handleTabChange = (tabId: string): void => {
+    setActiveTab(tabId)
+    setSelectedId('')
+  }
 
   return (
     <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
       <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">AI-анализ дела</h2>
 
+      <div className="flex gap-1 mb-4 p-1 rounded-lg bg-light-bg dark:bg-dark-bg">
+        {WORKFLOW_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => handleTabChange(tab.id)}
+            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeTab === tab.id
+                ? 'bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text shadow-sm'
+                : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-3">
         <div className="grid gap-2 sm:grid-cols-2">
-          {workflows.map((workflow) => (
+          {visibleWorkflows.map((workflow) => (
             <button
               key={workflow.id}
               type="button"
@@ -241,6 +285,92 @@ function WorkflowSection({ caseId, workflows, queryClient }: SectionProps & { wo
             Запустить анализ
           </Button>
         </div>
+      </div>
+    </section>
+  )
+}
+
+function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps & { draftTypes: DraftTypeInfo[]; drafts: CaseDraftDto[] }): JSX.Element {
+  const [selectedDraftType, setSelectedDraftType] = useState('')
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  const generateMutation = useMutation({
+    mutationFn: () => casesApi.generateDraft(caseId, { draftType: selectedDraftType }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case-drafts', caseId] })
+    },
+  })
+
+  const handleDownload = async (draft: CaseDraftDto): Promise<void> => {
+    setDownloadingId(draft.id)
+    try {
+      await casesApi.downloadDraft(draft.id, draft.title)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  return (
+    <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Черновик документа</h2>
+
+      <div className="flex flex-col gap-3">
+        <select
+          value={selectedDraftType}
+          onChange={(e) => setSelectedDraftType(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+        >
+          <option value="">Выберите тип документа</option>
+          {draftTypes.map((type) => (
+            <option key={type.id} value={type.id}>
+              {type.displayName}
+            </option>
+          ))}
+        </select>
+
+        {generateMutation.isError && (
+          <p className="text-sm text-red-600 dark:text-red-400">Ошибка генерации. Попробуйте снова.</p>
+        )}
+
+        <div>
+          <Button
+            variant="primary"
+            disabled={!selectedDraftType}
+            loading={generateMutation.isPending}
+            onClick={() => generateMutation.mutate()}
+          >
+            Сгенерировать
+          </Button>
+        </div>
+
+        {drafts.length > 0 && (
+          <div className="flex flex-col gap-2 mt-2">
+            {drafts.map((draft) => (
+              <div
+                key={draft.id}
+                className="p-3 rounded-lg border border-light-border dark:border-dark-border"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-light-text dark:text-dark-text">{draft.draftTypeName}</span>
+                  <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                    {new Date(draft.createdAt).toLocaleString('ru-RU')}
+                  </span>
+                </div>
+                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2 line-clamp-2">
+                  {draft.content.substring(0, 200)}...
+                </p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={downloadingId === draft.id}
+                  onClick={() => void handleDownload(draft)}
+                >
+                  Скачать .docx
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

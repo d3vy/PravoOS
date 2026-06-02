@@ -144,3 +144,38 @@ export interface AiStatsResponse {
   negativeRatings: number
   workflows: WorkflowStat[]
 }
+
+export interface DraftTypeInfo {
+  id: string
+  displayName: string
+}
+
+export interface CaseDraftDto {
+  id: string
+  caseId: string
+  draftType: string
+  draftTypeName: string
+  title: string
+  content: string
+  createdAt: string
+}
+
+export interface GenerateDraftRequest {
+  draftType: string
+}
+
+export interface LawyerProfileResponse {
+  userId: string
+  email: string
+  fullName: string
+  barNumber: string | null
+  specialization: string | null
+  phone: string | null
+}
+
+export interface UpdateProfileRequest {
+  fullName: string
+  barNumber?: string
+  specialization?: string
+  phone?: string
+}

@@ -2,9 +2,12 @@ import apiClient from './client'
 import type {
   AiResponseDto,
   CaseResponse,
+  CaseDraftDto,
   CreateCaseRequest,
   DocumentResponse,
   DocumentUploadResponse,
+  DraftTypeInfo,
+  GenerateDraftRequest,
 } from '../types'
 
 export const casesApi = {
@@ -55,5 +58,32 @@ export const casesApi = {
       { question: question ?? null }
     )
     return response.data
+  },
+
+  getDraftTypes: async (): Promise<DraftTypeInfo[]> => {
+    const response = await apiClient.get<DraftTypeInfo[]>('/api/ai/draft-types')
+    return response.data
+  },
+
+  generateDraft: async (caseId: string, data: GenerateDraftRequest): Promise<CaseDraftDto> => {
+    const response = await apiClient.post<CaseDraftDto>(`/api/ai/cases/${caseId}/drafts`, data)
+    return response.data
+  },
+
+  getDrafts: async (caseId: string): Promise<CaseDraftDto[]> => {
+    const response = await apiClient.get<CaseDraftDto[]>(`/api/ai/cases/${caseId}/drafts`)
+    return response.data
+  },
+
+  downloadDraft: async (draftId: string, fileName: string): Promise<void> => {
+    const response = await apiClient.get<Blob>(`/api/ai/drafts/${draftId}/download`, {
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${fileName}.docx`
+    link.click()
+    window.URL.revokeObjectURL(url)
   },
 }

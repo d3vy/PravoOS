@@ -13,6 +13,7 @@ import CaseDetailPage from './pages/cases/CaseDetailPage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
+import ProfilePage from './pages/profile/ProfilePage'
 
 export default function App(): JSX.Element {
   const { isAuthenticated, user, bootstrapped } = useAuthStore()
@@ -51,6 +52,15 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute>
             <CaseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

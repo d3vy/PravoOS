@@ -46,6 +46,11 @@ export function Navbar(): JSX.Element {
                         AI-чат
                       </Button>
                     </Link>
+                    <Link to="/profile" className="hidden sm:block">
+                      <Button variant="ghost" size="sm">
+                        Профиль
+                      </Button>
+                    </Link>
                   </>
                 )}
                 {user?.role === 'ADMIN' && (
