@@ -27,12 +27,16 @@ public class TelegramNotificationService {
     }
 
     public void notifyNewApplication(ApplicationSubmittedKafkaPayload payload) {
-        SendMessage message = new SendMessage();
-        message.setChatId(botProperties.adminChatId());
-        message.setText(formatApplicationMessage(payload));
-        message.setParseMode("HTML");
-        message.setReplyMarkup(buildApprovalKeyboard(payload));
-        sendSafely(message, payload.applicationId().toString());
+        String text = formatApplicationMessage(payload);
+        String context = payload.applicationId().toString();
+        for (String adminChatId : botProperties.adminChatIds()) {
+            SendMessage message = new SendMessage();
+            message.setChatId(adminChatId);
+            message.setText(text);
+            message.setParseMode("HTML");
+            message.setReplyMarkup(buildApprovalKeyboard(payload));
+            sendSafely(message, context);
+        }
     }
 
     private void sendSafely(SendMessage message, String context) {

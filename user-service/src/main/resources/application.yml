@@ -59,8 +59,11 @@ app:
       attempt-window: ${LOGIN_ATTEMPT_WINDOW:PT15M}
 
 admin:
-  email: ${ADMIN_EMAIL:}
-  password: ${ADMIN_PASSWORD:}
+  accounts:
+    - email: ${ADMIN_EMAIL:}
+      password: ${ADMIN_PASSWORD:}
+    - email: ${ADMIN_EMAIL_2:}
+      password: ${ADMIN_PASSWORD_2:}
 
 internal:
   secret: ${INTERNAL_SERVICE_SECRET}

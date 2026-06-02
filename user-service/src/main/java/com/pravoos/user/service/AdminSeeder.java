@@ -34,24 +34,31 @@ public class AdminSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (userRepository.existsByRole(UserRole.ADMIN)) {
+        if (adminProperties.accounts() == null || adminProperties.accounts().isEmpty()) {
+            log.warn("No admin accounts configured (ADMIN_EMAIL/ADMIN_PASSWORD); skipping admin seeding");
+            return;
+        }
+        adminProperties.accounts().forEach(this::seedAdmin);
+    }
+
+    private void seedAdmin(AdminProperties.Account account) {
+        if (isBlank(account.email()) || isBlank(account.password())) {
             return;
         }
 
-        if (isBlank(adminProperties.email()) || isBlank(adminProperties.password())) {
-            log.warn("Admin credentials not configured (ADMIN_EMAIL/ADMIN_PASSWORD); skipping admin seeding");
+        String email = EmailNormalizer.normalize(account.email());
+        if (userRepository.existsByEmail(email)) {
             return;
         }
 
-        String email = EmailNormalizer.normalize(adminProperties.email());
         User admin = new User();
         admin.setEmail(email);
-        admin.setPasswordHash(passwordEncoder.encode(adminProperties.password()));
+        admin.setPasswordHash(passwordEncoder.encode(account.password()));
         admin.setRole(UserRole.ADMIN);
         admin.setStatus(UserStatus.ACTIVE);
         userRepository.save(admin);
 
-        log.info("Default admin account created: {}", email);
+        log.info("Admin account created: {}", email);
     }
 
     private boolean isBlank(String value) {

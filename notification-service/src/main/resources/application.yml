@@ -14,7 +14,7 @@ telegram:
   bot:
     token: ${TELEGRAM_BOT_TOKEN}
     username: ${TELEGRAM_BOT_USERNAME}
-    admin-chat-id: ${TELEGRAM_ADMIN_CHAT_ID}
+    admin-chat-ids: ${TELEGRAM_ADMIN_CHAT_IDS}
 
 user-service:
   base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}

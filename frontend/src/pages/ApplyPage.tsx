@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import axios from 'axios'
 import { authApi } from '../api/auth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -73,8 +74,25 @@ export default function ApplyPage(): JSX.Element {
     try {
       await authApi.apply(formData)
       setSubmitted(true)
-    } catch {
-      setSubmitError('Произошла ошибка при отправке заявки. Попробуйте позже или свяжитесь с администратором.')
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status
+        const message = error.response?.data?.message as string | undefined
+        if (status === 409 && message?.includes('Pending application')) {
+          setSubmitError('Заявка с этим email уже находится на рассмотрении.')
+        } else if (status === 409) {
+          setSubmitError(
+            'Пользователь с таким email уже зарегистрирован. ' +
+            'Попробуйте войти в аккаунт или восстановить пароль.'
+          )
+        } else if (status === 400 && message) {
+          setSubmitError(message)
+        } else {
+          setSubmitError('Произошла ошибка при отправке заявки. Попробуйте позже или свяжитесь с администратором.')
+        }
+      } else {
+        setSubmitError('Произошла ошибка при отправке заявки. Попробуйте позже или свяжитесь с администратором.')
+      }
     } finally {
       setLoading(false)
     }
