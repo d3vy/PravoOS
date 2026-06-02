@@ -7,6 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 import java.util.UUID;
 
 @RestController
@@ -39,7 +42,9 @@ public class InternalApplicationController {
     }
 
     private void verifySecret(String secret) {
-        if (!secretProperties.secret().equals(secret)) {
+        byte[] expected = secretProperties.secret().getBytes(StandardCharsets.UTF_8);
+        byte[] actual = secret.getBytes(StandardCharsets.UTF_8);
+        if (!MessageDigest.isEqual(expected, actual)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
     }

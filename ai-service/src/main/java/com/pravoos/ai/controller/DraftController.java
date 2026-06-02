@@ -1,6 +1,7 @@
 package com.pravoos.ai.controller;
 
 import com.pravoos.ai.model.dto.CaseDraftDto;
+import com.pravoos.ai.model.dto.CaseDraftSummaryDto;
 import com.pravoos.ai.model.dto.DraftTypeInfo;
 import com.pravoos.ai.model.dto.GenerateDraftRequest;
 import com.pravoos.ai.model.entity.CaseDraft;
@@ -12,6 +13,8 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
+import java.nio.charset.StandardCharsets;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,7 +47,7 @@ public class DraftController {
     }
 
     @GetMapping("/api/ai/cases/{caseId}/drafts")
-    public ResponseEntity<List<CaseDraftDto>> listDrafts(
+    public ResponseEntity<List<CaseDraftSummaryDto>> listDrafts(
             @PathVariable UUID caseId,
             Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
@@ -61,7 +64,7 @@ public class DraftController {
 
         String fileName = draft.getTitle().replaceAll("[^а-яА-Яa-zA-Z0-9]", "_") + ".docx";
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentDisposition(ContentDisposition.attachment().filename(fileName).build());
+        headers.setContentDisposition(ContentDisposition.attachment().filename(fileName, StandardCharsets.UTF_8).build());
 
         return ResponseEntity.ok()
                 .headers(headers)

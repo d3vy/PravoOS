@@ -4,6 +4,7 @@ import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.exception.DraftNotFoundException;
 import com.pravoos.ai.llm.LlmClient;
 import com.pravoos.ai.model.dto.CaseDraftDto;
+import com.pravoos.ai.model.dto.CaseDraftSummaryDto;
 import com.pravoos.ai.model.dto.DraftTypeInfo;
 import com.pravoos.ai.model.dto.GenerateDraftRequest;
 import com.pravoos.ai.model.entity.CaseDraft;
@@ -14,7 +15,6 @@ import com.pravoos.ai.repository.jpa.CaseDraftRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
@@ -55,7 +55,6 @@ public class DraftService {
                 .toList();
     }
 
-    @Transactional
     public CaseDraftDto generate(UUID caseId, GenerateDraftRequest request, UUID lawyerId) {
         caseService.requireOwnedCase(caseId, lawyerId);
         DraftType draftType = DraftType.fromId(request.draftType());
@@ -67,7 +66,7 @@ public class DraftService {
 
         List<String> chunks = matches.stream().map(ChunkMatch::content).toList();
         String systemPrompt = ragService.buildWorkflowPrompt(draftType.instruction(), chunks);
-        String content = llmClient.complete(systemPrompt, List.of(), draftType.instruction());
+        String content = llmClient.complete(systemPrompt, List.of(), "Выполни задачу.");
 
         CaseDraft draft = new CaseDraft();
         draft.setCaseId(caseId);
@@ -81,11 +80,11 @@ public class DraftService {
         return CaseDraftDto.from(saved);
     }
 
-    public List<CaseDraftDto> findByCase(UUID caseId, UUID lawyerId) {
+    public List<CaseDraftSummaryDto> findByCase(UUID caseId, UUID lawyerId) {
         caseService.requireOwnedCase(caseId, lawyerId);
         return caseDraftRepository.findByCaseIdOrderByCreatedAtDesc(caseId)
                 .stream()
-                .map(CaseDraftDto::from)
+                .map(CaseDraftSummaryDto::from)
                 .toList();
     }
 

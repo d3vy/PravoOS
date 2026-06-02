@@ -36,7 +36,7 @@ public class DocxExportService {
     }
 
     private void addContent(XWPFDocument document, String content) {
-        for (String line : content.split("\n")) {
+        for (String line : content.split("\\r?\\n")) {
             XWPFParagraph paragraph = document.createParagraph();
             XWPFRun run = paragraph.createRun();
             run.setText(line);

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
 import { workflowsApi } from '../../api/workflows'
-import type { AiResponseDto, CaseDraftDto, CaseResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
+import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
@@ -43,7 +43,7 @@ export default function CaseDetailPage(): JSX.Element {
     queryFn: workflowsApi.getAll,
   })
 
-  const { data: drafts = [] } = useQuery<CaseDraftDto[]>({
+  const { data: drafts = [] } = useQuery<CaseDraftSummaryDto[]>({
     queryKey: ['case-drafts', caseId],
     queryFn: () => casesApi.getDrafts(caseId),
     enabled: caseId !== '',
@@ -290,7 +290,7 @@ function WorkflowSection({ caseId, workflows, queryClient }: SectionProps & { wo
   )
 }
 
-function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps & { draftTypes: DraftTypeInfo[]; drafts: CaseDraftDto[] }): JSX.Element {
+function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps & { draftTypes: DraftTypeInfo[]; drafts: CaseDraftSummaryDto[] }): JSX.Element {
   const [selectedDraftType, setSelectedDraftType] = useState('')
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
@@ -301,7 +301,7 @@ function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps 
     },
   })
 
-  const handleDownload = async (draft: CaseDraftDto): Promise<void> => {
+  const handleDownload = async (draft: CaseDraftSummaryDto): Promise<void> => {
     setDownloadingId(draft.id)
     try {
       await casesApi.downloadDraft(draft.id, draft.title)
@@ -357,7 +357,7 @@ function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps 
                   </span>
                 </div>
                 <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2 line-clamp-2">
-                  {draft.content.substring(0, 200)}...
+                  {draft.title}
                 </p>
                 <Button
                   variant="secondary"

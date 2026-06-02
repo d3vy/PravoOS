@@ -84,7 +84,8 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
         editMessage.setChatId(chatId);
         editMessage.setMessageId(messageId);
         editMessage.setParseMode("HTML");
-        editMessage.setText(originalText + "\n\n<b>Статус:</b> " + statusText);
+        String safeOriginalText = originalText != null ? originalText : "";
+        editMessage.setText(safeOriginalText + "\n\n<b>Статус:</b> " + statusText);
         try {
             execute(editMessage);
         } catch (TelegramApiException e) {

@@ -160,6 +160,15 @@ export interface CaseDraftDto {
   createdAt: string
 }
 
+export interface CaseDraftSummaryDto {
+  id: string
+  caseId: string
+  draftType: string
+  draftTypeName: string
+  title: string
+  createdAt: string
+}
+
 export interface GenerateDraftRequest {
   draftType: string
 }
