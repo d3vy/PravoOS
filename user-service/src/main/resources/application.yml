@@ -62,6 +62,9 @@ admin:
   email: ${ADMIN_EMAIL:}
   password: ${ADMIN_PASSWORD:}
 
+internal:
+  secret: ${INTERNAL_SERVICE_SECRET}
+
 management:
   endpoints:
     web:

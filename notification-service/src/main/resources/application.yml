@@ -16,6 +16,10 @@ telegram:
     username: ${TELEGRAM_BOT_USERNAME}
     admin-chat-id: ${TELEGRAM_ADMIN_CHAT_ID}
 
+user-service:
+  base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
+  internal-secret: ${INTERNAL_SERVICE_SECRET}
+
 management:
   endpoints:
     web:

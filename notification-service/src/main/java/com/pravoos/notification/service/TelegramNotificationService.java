@@ -7,7 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.util.List;
 
 @Service
 public class TelegramNotificationService {
@@ -23,7 +27,11 @@ public class TelegramNotificationService {
     }
 
     public void notifyNewApplication(ApplicationSubmittedKafkaPayload payload) {
-        SendMessage message = buildMessage(botProperties.adminChatId(), formatApplicationMessage(payload));
+        SendMessage message = new SendMessage();
+        message.setChatId(botProperties.adminChatId());
+        message.setText(formatApplicationMessage(payload));
+        message.setParseMode("HTML");
+        message.setReplyMarkup(buildApprovalKeyboard(payload));
         sendSafely(message, payload.applicationId().toString());
     }
 
@@ -35,12 +43,18 @@ public class TelegramNotificationService {
         }
     }
 
-    private SendMessage buildMessage(String chatId, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText(text);
-        message.setParseMode("HTML");
-        return message;
+    private InlineKeyboardMarkup buildApprovalKeyboard(ApplicationSubmittedKafkaPayload payload) {
+        InlineKeyboardButton approveButton = new InlineKeyboardButton();
+        approveButton.setText("Принять");
+        approveButton.setCallbackData("approve:" + payload.applicationId());
+
+        InlineKeyboardButton rejectButton = new InlineKeyboardButton();
+        rejectButton.setText("Отклонить");
+        rejectButton.setCallbackData("reject:" + payload.applicationId());
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(List.of(List.of(approveButton, rejectButton)));
+        return markup;
     }
 
     private String formatApplicationMessage(ApplicationSubmittedKafkaPayload payload) {
@@ -54,9 +68,7 @@ public class TelegramNotificationService {
                 <b>Email:</b> %s
                 <b>Специализация:</b> %s
 
-                ID заявки: <code>%s</code>
-
-                Рассмотреть в панели администратора.""",
+                ID заявки: <code>%s</code>""",
                 escapeHtml(payload.fullName()),
                 escapeHtml(payload.email()),
                 escapeHtml(specialization),
