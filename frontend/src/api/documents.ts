@@ -20,4 +20,11 @@ export const documentsApi = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/api/ai/documents/${id}`)
   },
+
+  getContent: async (id: string): Promise<Blob> => {
+    const response = await apiClient.get(`/api/ai/documents/${id}/content`, {
+      responseType: 'blob',
+    })
+    return response.data
+  },
 }

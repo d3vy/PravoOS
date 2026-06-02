@@ -240,6 +240,26 @@ interface DocumentRowProps {
 
 function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isOpening, setIsOpening] = useState(false)
+
+  const handleOpen = async (): Promise<void> => {
+    const newWindow = window.open('', '_blank')
+    setIsOpening(true)
+    try {
+      const blob = await documentsApi.getContent(doc.id)
+      const url = URL.createObjectURL(blob)
+      if (newWindow) {
+        newWindow.location.href = url
+      } else {
+        window.location.href = url
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch {
+      newWindow?.close()
+    } finally {
+      setIsOpening(false)
+    }
+  }
 
   const handleDeleteClick = (): void => {
     if (confirmDelete) {
@@ -272,6 +292,17 @@ function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JS
       </div>
 
       <DocumentStatusBadge status={doc.status} />
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => void handleOpen()}
+        loading={isOpening}
+        disabled={isOpening}
+        className="shrink-0"
+      >
+        Открыть
+      </Button>
 
       <Button
         variant={confirmDelete ? 'danger' : 'ghost'}

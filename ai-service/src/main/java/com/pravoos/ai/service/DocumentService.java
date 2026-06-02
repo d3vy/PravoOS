@@ -4,6 +4,7 @@ import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.exception.DocumentNotFoundException;
 import com.pravoos.ai.exception.DocumentProcessingException;
+import com.pravoos.ai.model.dto.DocumentContent;
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;
 import com.pravoos.ai.model.entity.Document;
@@ -15,6 +16,7 @@ import com.pravoos.ai.repository.jpa.DocumentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -143,6 +145,28 @@ public class DocumentService {
                 .stream()
                 .map(this::toDocumentResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public DocumentContent loadContent(UUID documentId) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new DocumentNotFoundException(documentId));
+
+        Path path = Paths.get(document.getFilePath());
+        if (!Files.isReadable(path)) {
+            log.warn("Document {} has missing file on disk: {}", documentId, path);
+            throw new DocumentNotFoundException(documentId);
+        }
+
+        try {
+            return new DocumentContent(
+                    new FileSystemResource(path),
+                    document.getFileName(),
+                    document.getFileType(),
+                    Files.size(path));
+        } catch (IOException e) {
+            throw new DocumentProcessingException("Failed to read file: " + e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
