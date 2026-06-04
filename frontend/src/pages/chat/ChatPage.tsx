@@ -12,7 +12,7 @@ import { documentsApi } from '../../api/documents'
 import type { MessageResponse, ConversationResponse, DocumentResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import { Navbar } from '../../components/layout/Navbar'
-import { ScalesIcon } from '../../components/ui/Logo'
+import { PravoIcon } from '../../components/ui/Logo'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 
 interface LocalMessage {
@@ -314,7 +314,7 @@ export default function ChatPage(): JSX.Element {
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
                 <div className="w-14 h-14 rounded-2xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border flex items-center justify-center text-light-secondary dark:text-dark-secondary mb-5">
-                  <ScalesIcon className="w-7 h-7" />
+                  <PravoIcon className="w-7 h-7" />
                 </div>
                 <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-3">
                   Задайте вопрос по правовой базе
@@ -533,7 +533,7 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
             : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
         }`}
       >
-        {isUser ? 'Вы' : <ScalesIcon className="w-4 h-4" />}
+        {isUser ? 'Вы' : <PravoIcon className="w-4 h-4" />}
       </div>
 
       <div className={`flex flex-col gap-2 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
