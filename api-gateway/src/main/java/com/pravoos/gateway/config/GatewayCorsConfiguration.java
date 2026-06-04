@@ -28,7 +28,7 @@ public class GatewayCorsConfiguration {
             @Value("${CORS_INCLUDE_LOCALHOST:true}") boolean includeLocalhostOrigins
     ) {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("*"));
         corsConfig.setAllowCredentials(true);
         corsConfig.setMaxAge(3600L);
