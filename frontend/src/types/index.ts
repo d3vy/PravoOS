@@ -42,12 +42,14 @@ export interface ApplicationResponse {
 export interface ChatRequest {
   conversationId?: string
   message: string
+  attachedDocumentIds?: string[]
 }
 
 export interface ChatResponse {
   conversationId: string
   answer: string
   sources: string[]
+  followUps: string[]
 }
 
 export interface ConversationResponse {
@@ -123,6 +125,7 @@ export interface AiResponseDto {
   rating: number | null
   ratingComment: string | null
   createdAt: string
+  followUps: string[]
 }
 
 export interface RateRequest {

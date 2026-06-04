@@ -17,9 +17,14 @@ public record AiResponseDto(
         List<SourceReference> sources,
         Short rating,
         String ratingComment,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<String> followUps
 ) {
     public static AiResponseDto from(AiResponse response) {
+        return from(response, List.of());
+    }
+
+    public static AiResponseDto from(AiResponse response, List<String> followUps) {
         String workflowName = resolveWorkflowName(response.getWorkflowId());
         return new AiResponseDto(
                 response.getId(),
@@ -31,7 +36,8 @@ public record AiResponseDto(
                 response.getSources() != null ? response.getSources() : List.of(),
                 response.getRating(),
                 response.getRatingComment(),
-                response.getCreatedAt()
+                response.getCreatedAt(),
+                followUps
         );
     }
 

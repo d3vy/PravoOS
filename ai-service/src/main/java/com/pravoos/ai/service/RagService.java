@@ -7,6 +7,13 @@ import java.util.List;
 @Service
 public class RagService {
 
+    private static final String FOLLOW_UP_INSTRUCTION = """
+
+            После ответа выведи на отдельной строке ровно этот разделитель: ##FOLLOWUPS##
+            Затем выведи ровно 3 уточняющих вопроса, которые юрист может захотеть задать следующими, \
+            по одному на строке, пронумерованных 1. 2. 3.
+            """;
+
     private static final String SYSTEM_PROMPT_TEMPLATE = """
             Вы — юридический ИИ-ассистент платформы PravoOS. \
             Вы помогаете юристам, отвечая на их вопросы на основе предоставленных \
@@ -18,7 +25,7 @@ public class RagService {
 
             КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:
             {context}
-            """;
+            """ + FOLLOW_UP_INSTRUCTION;
 
     private static final String WORKFLOW_PROMPT_TEMPLATE = """
             Вы — юридический ИИ-ассистент платформы PravoOS, специализирующийся на делах о банкротстве. \
@@ -33,7 +40,7 @@ public class RagService {
 
             КОНТЕКСТ (ДОКУМЕНТЫ ДЕЛА И СУДЕБНАЯ ПРАКТИКА):
             {context}
-            """;
+            """ + FOLLOW_UP_INSTRUCTION;
 
     public String buildSystemPrompt(List<String> relevantChunks) {
         return SYSTEM_PROMPT_TEMPLATE.replace("{context}", joinContext(relevantChunks));

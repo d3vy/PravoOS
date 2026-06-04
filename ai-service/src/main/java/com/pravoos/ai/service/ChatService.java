@@ -14,6 +14,7 @@ import com.pravoos.ai.model.enums.MessageRole;
 import com.pravoos.ai.model.mongo.Conversation;
 import com.pravoos.ai.model.mongo.Message;
 import com.pravoos.ai.repository.ChunkMatch;
+import com.pravoos.ai.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
 import com.pravoos.ai.repository.VectorSearchRepository;
@@ -35,6 +36,7 @@ public class ChatService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final VectorSearchRepository vectorSearchRepository;
+    private final DocumentChunkRepository documentChunkRepository;
     private final EmbeddingService embeddingService;
     private final RagService ragService;
     private final LlmClient llmClient;
@@ -43,6 +45,7 @@ public class ChatService {
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
                        VectorSearchRepository vectorSearchRepository,
+                       DocumentChunkRepository documentChunkRepository,
                        EmbeddingService embeddingService,
                        RagService ragService,
                        LlmClient llmClient,
@@ -50,6 +53,7 @@ public class ChatService {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.vectorSearchRepository = vectorSearchRepository;
+        this.documentChunkRepository = documentChunkRepository;
         this.embeddingService = embeddingService;
         this.ragService = ragService;
         this.llmClient = llmClient;
@@ -70,29 +74,38 @@ public class ChatService {
         List<ChunkMatch> matches = vectorSearchRepository
                 .findTopKInKnowledgeBase(queryEmbedding, documentProperties.topKResults());
 
-        List<String> relevantChunks = matches.stream().map(ChunkMatch::content).toList();
-        List<String> sources = matches.stream()
+        List<String> relevantChunks = new ArrayList<>(matches.stream().map(ChunkMatch::content).toList());
+        List<String> sources = new ArrayList<>(matches.stream()
                 .map(ChunkMatch::documentTitle)
                 .filter(title -> title != null && !title.isBlank())
                 .distinct()
-                .toList();
+                .toList());
+
+        if (request.attachedDocumentIds() != null && !request.attachedDocumentIds().isEmpty()) {
+            List<String> attachedChunks = documentChunkRepository
+                    .findContentByDocumentIdIn(request.attachedDocumentIds());
+            relevantChunks.addAll(0, attachedChunks);
+        }
 
         String systemPrompt = ragService.buildSystemPrompt(relevantChunks);
-        String answer = llmClient.complete(systemPrompt, historyForLlm, request.message());
+        String rawAnswer = llmClient.complete(systemPrompt, historyForLlm, request.message());
+        FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(rawAnswer);
 
         if (isNewConversation) {
             conversation = conversationRepository.save(conversation);
         }
         messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
-        messageRepository.save(new Message(conversation.getId(), MessageRole.ASSISTANT, answer, sources));
+        messageRepository.save(new Message(conversation.getId(), MessageRole.ASSISTANT, parsed.answer(), sources));
 
         log.info("Chat response generated for conversation: {} ({} source(s))", conversation.getId(), sources.size());
-        return new ChatResponse(conversation.getId(), answer, sources);
+        return new ChatResponse(conversation.getId(), parsed.answer(), sources, parsed.followUps());
     }
 
-    public List<ConversationResponse> getConversations(UUID lawyerId) {
-        return conversationRepository.findTop100ByLawyerIdOrderByCreatedAtDesc(lawyerId)
-                .stream()
+    public List<ConversationResponse> getConversations(UUID lawyerId, String query) {
+        List<Conversation> conversations = (query != null && !query.isBlank())
+                ? conversationRepository.findTop50ByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(lawyerId, query.trim())
+                : conversationRepository.findTop100ByLawyerIdOrderByCreatedAtDesc(lawyerId);
+        return conversations.stream()
                 .map(c -> new ConversationResponse(c.getId(), c.getTitle(), c.getCreatedAt()))
                 .toList();
     }

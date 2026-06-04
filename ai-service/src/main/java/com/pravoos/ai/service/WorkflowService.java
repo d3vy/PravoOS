@@ -73,19 +73,20 @@ public class WorkflowService {
         List<SourceReference> sources = toSourceReferences(matches);
 
         String systemPrompt = ragService.buildWorkflowPrompt(instruction, chunks);
-        String answer = llmClient.complete(systemPrompt, List.of(), instruction);
+        String rawAnswer = llmClient.complete(systemPrompt, List.of(), instruction);
+        FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(rawAnswer);
 
         AiResponse response = new AiResponse();
         response.setCaseId(caseId);
         response.setLawyerId(lawyerId);
         response.setWorkflowId(workflow.name());
         response.setQuery(question != null && !question.isBlank() ? question : workflow.displayName());
-        response.setResult(answer);
+        response.setResult(parsed.answer());
         response.setSources(sources);
 
         AiResponse saved = aiResponseRepository.save(response);
         log.info("Workflow {} produced response {} with {} source(s)", workflow.name(), saved.getId(), sources.size());
-        return AiResponseDto.from(saved);
+        return AiResponseDto.from(saved, parsed.followUps());
     }
 
     private String buildInstruction(BankruptcyWorkflow workflow, String question) {

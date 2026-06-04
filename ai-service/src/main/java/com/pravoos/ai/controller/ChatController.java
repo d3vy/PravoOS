@@ -32,8 +32,10 @@ public class ChatController {
     }
 
     @GetMapping("/conversations")
-    public ResponseEntity<List<ConversationResponse>> getConversations(Authentication authentication) {
-        return ResponseEntity.ok(chatService.getConversations(SecurityUtils.currentUserId(authentication)));
+    public ResponseEntity<List<ConversationResponse>> getConversations(
+            @RequestParam(required = false) String q,
+            Authentication authentication) {
+        return ResponseEntity.ok(chatService.getConversations(SecurityUtils.currentUserId(authentication), q));
     }
 
     @GetMapping("/conversations/{id}/messages")

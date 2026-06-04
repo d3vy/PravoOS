@@ -7,8 +7,10 @@ export const chatApi = {
     return response.data
   },
 
-  getConversations: async (): Promise<ConversationResponse[]> => {
-    const response = await apiClient.get<ConversationResponse[]>('/api/ai/conversations')
+  getConversations: async (q?: string): Promise<ConversationResponse[]> => {
+    const response = await apiClient.get<ConversationResponse[]>('/api/ai/conversations', {
+      params: q ? { q } : undefined,
+    })
     return response.data
   },
 

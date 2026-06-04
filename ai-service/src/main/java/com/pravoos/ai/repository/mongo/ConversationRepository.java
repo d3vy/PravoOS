@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface ConversationRepository extends MongoRepository<Conversation, String> {
 
     List<Conversation> findTop100ByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
+
+    List<Conversation> findTop50ByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(UUID lawyerId, String title);
 }
