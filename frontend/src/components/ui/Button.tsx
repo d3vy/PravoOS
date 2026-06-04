@@ -13,19 +13,19 @@ interface ButtonProps extends Omit<ComponentPropsWithoutRef<'button'>, 'children
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-light-accent hover:bg-light-accent-hover dark:bg-dark-accent dark:hover:bg-dark-accent-hover text-white shadow-sm',
+    'bg-light-accent hover:bg-light-accent-hover dark:bg-dark-accent dark:hover:bg-dark-accent-hover text-white dark:text-dark-bg shadow-sm',
   secondary:
-    'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg',
+    'bg-transparent border border-light-border dark:border-dark-border text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface',
   ghost:
-    'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg',
+    'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface',
   danger:
     'bg-red-600 hover:bg-red-700 text-white shadow-sm',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2.5 text-sm',
-  lg: 'px-6 py-3 text-base',
+  sm: 'px-3.5 py-1.5 text-sm',
+  md: 'px-5 py-2.5 text-sm',
+  lg: 'px-7 py-3.5 text-base',
 }
 
 export function Button({
@@ -41,15 +41,15 @@ export function Button({
 
   return (
     <motion.button
-      whileHover={isDisabled ? {} : { scale: 1.02 }}
-      whileTap={isDisabled ? {} : { scale: 0.98 }}
-      transition={{ duration: 0.15 }}
+      whileHover={isDisabled ? {} : { scale: 1.01 }}
+      whileTap={isDisabled ? {} : { scale: 0.99 }}
+      transition={{ duration: 0.1 }}
       className={`
         relative inline-flex items-center justify-center gap-2 rounded-lg font-medium
         transition-colors duration-150 focus:outline-none focus-visible:ring-2
-        focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent focus-visible:ring-offset-2
+        focus-visible:ring-light-text/30 dark:focus-visible:ring-dark-text/30 focus-visible:ring-offset-2
         focus-visible:ring-offset-light-bg dark:focus-visible:ring-offset-dark-bg
-        disabled:opacity-50 disabled:cursor-not-allowed
+        disabled:opacity-40 disabled:cursor-not-allowed
         ${variantClasses[variant]}
         ${sizeClasses[size]}
         ${className}

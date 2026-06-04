@@ -121,7 +121,7 @@ export default function ApplyPage(): JSX.Element {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <h2 className="font-display text-2xl font-semibold text-light-text dark:text-dark-text mb-4">
+              <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">
                 Заявка подана
               </h2>
               <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
@@ -144,8 +144,7 @@ export default function ApplyPage(): JSX.Element {
           >
             <div className="card-elevated rounded-2xl p-8">
               <div className="mb-8">
-                <div className="gold-rule mb-5" />
-                <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-2">
+                <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
                   Заявка на доступ
                 </h1>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary">

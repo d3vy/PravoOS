@@ -22,7 +22,7 @@ export function Navbar(): JSX.Element {
   const dashboardPath = user?.role === 'ADMIN' ? '/admin/applications' : '/chat'
 
   return (
-    <header className="sticky top-0 z-50 bg-light-surface/85 dark:bg-dark-surface/85 backdrop-blur-md border-b border-light-border dark:border-dark-border">
+    <header className="sticky top-0 z-50 bg-light-bg/90 dark:bg-dark-bg/90 backdrop-blur-md border-b border-light-border dark:border-dark-border">
       <div className="page-container">
         <nav className="flex items-center justify-between h-16">
           <Link to="/" className="hover:opacity-80 transition-opacity">

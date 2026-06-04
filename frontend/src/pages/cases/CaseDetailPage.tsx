@@ -93,7 +93,7 @@ export default function CaseDetailPage(): JSX.Element {
           ← Ко всем делам
         </Link>
 
-        <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-2">
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-2">
           {caseItem.title}
         </h1>
         {caseItem.description && (

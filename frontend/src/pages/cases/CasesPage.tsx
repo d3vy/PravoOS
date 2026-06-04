@@ -48,7 +48,7 @@ export default function CasesPage(): JSX.Element {
       <div className="page-container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-1">
+            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">
               Дела
             </h1>
             <p className="text-sm text-light-secondary dark:text-dark-secondary">

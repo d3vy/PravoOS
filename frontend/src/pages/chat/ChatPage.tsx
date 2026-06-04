@@ -313,10 +313,10 @@ export default function ChatPage(): JSX.Element {
               <div className="flex justify-center py-12"><Spinner size="md" /></div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
-                <div className="w-14 h-14 rounded-2xl bg-light-accent/8 dark:bg-dark-accent/15 flex items-center justify-center text-light-gold dark:text-dark-gold mb-5">
+                <div className="w-14 h-14 rounded-2xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border flex items-center justify-center text-light-secondary dark:text-dark-secondary mb-5">
                   <ScalesIcon className="w-7 h-7" />
                 </div>
-                <h2 className="font-display text-2xl font-semibold text-light-text dark:text-dark-text mb-3">
+                <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-3">
                   Задайте вопрос по правовой базе
                 </h2>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed">
@@ -530,7 +530,7 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 ${
           isUser
             ? 'bg-light-accent dark:bg-dark-accent text-white'
-            : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-gold dark:text-dark-gold'
+            : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
         }`}
       >
         {isUser ? 'Вы' : <ScalesIcon className="w-4 h-4" />}

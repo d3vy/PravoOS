@@ -25,7 +25,7 @@ export default function AiStatsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-1">AI-метрики</h1>
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">AI-метрики</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
           Использование AI-анализа и оценки юристов по workflow
         </p>
@@ -108,7 +108,7 @@ function StatCard({ label, value, accent }: StatCardProps): JSX.Element {
         : 'text-light-text dark:text-dark-text'
   return (
     <div className="p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <p className={`font-display text-2xl font-semibold ${valueColor}`}>{value}</p>
+      <p className={`text-2xl font-semibold ${valueColor}`}>{value}</p>
       <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">{label}</p>
     </div>
   )

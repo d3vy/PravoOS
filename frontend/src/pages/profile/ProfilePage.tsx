@@ -41,7 +41,7 @@ export default function ProfilePage(): JSX.Element {
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
       <Navbar />
       <div className="page-container py-8 max-w-lg">
-        <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-8">
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-8">
           Профиль
         </h1>
         <ProfileForm profile={profile} queryClient={queryClient} />

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { AnimatedSection } from '../components/ui/AnimatedSection'
 import { Button } from '../components/ui/Button'
 import { Navbar } from '../components/layout/Navbar'
-import { Logo, ScalesIcon } from '../components/ui/Logo'
 
 const painPoints = [
   {
@@ -67,65 +66,60 @@ export default function LandingPage(): JSX.Element {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-light-accent/5 via-transparent to-transparent dark:from-dark-accent/10" />
-        <div className="page-container py-24 md:py-36 relative">
+        <div className="page-container pt-28 pb-32 md:pt-36 md:pb-44">
           <motion.div
-            initial={{ opacity: 0, y: 32 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="max-w-3xl"
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-4xl"
           >
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-light-gold/30 dark:border-dark-gold/30 bg-light-gold/5 dark:bg-dark-gold/10 text-light-gold dark:text-dark-gold text-sm font-medium mb-8">
-              <ScalesIcon className="w-4 h-4" />
-              <span className="tracking-wide">AI-платформа для юристов</span>
-            </div>
+            <p className="eyebrow mb-7 tracking-[0.2em]">AI-платформа для юристов</p>
 
-            <h1 className="font-display text-5xl md:text-7xl font-semibold text-light-text dark:text-dark-text leading-[1.05] mb-6">
-              Юрист должен заниматься
-              <br />
-              <span className="text-light-accent dark:text-dark-accent">правом. Не рутиной.</span>
+            <h1 className="font-sans text-5xl md:text-7xl lg:text-8xl font-black text-light-text dark:text-dark-text leading-[1.0] tracking-tight mb-8">
+              Юрист должен<br />
+              заниматься правом.
             </h1>
 
-            <p className="text-lg md:text-xl text-light-secondary dark:text-dark-secondary leading-relaxed mb-10 max-w-2xl">
-              PravoOS автоматизирует поиск по правовой базе, анализ документов и подготовку типовых ответов.
-              Вы фокусируетесь на стратегии и клиентах — рутину берёт на себя AI.
+            <p className="text-lg md:text-xl text-light-secondary dark:text-dark-secondary leading-relaxed mb-12 max-w-xl font-light">
+              PravoOS автоматизирует поиск по правовой базе, анализ документов
+              и подготовку типовых ответов. Рутину берёт на себя AI.
             </p>
 
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <Link to="/apply">
                 <Button variant="primary" size="lg">
                   Подать заявку
                 </Button>
               </Link>
               <Link to="/login">
-                <Button variant="secondary" size="lg">
+                <Button variant="ghost" size="lg">
                   Войти в систему →
                 </Button>
               </Link>
             </div>
 
-            <p className="mt-6 text-sm text-light-secondary dark:text-dark-secondary">
-              Доступ по заявке. Администратор рассматривает заявки в течение рабочего дня.
+            <p className="mt-8 text-sm text-light-secondary dark:text-dark-secondary">
+              Доступ по заявке — рассматривается в течение рабочего дня.
             </p>
           </motion.div>
         </div>
       </section>
 
       {/* Stats bar */}
-      <section className="border-y border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
-        <div className="page-container py-8">
-          <AnimatedSection className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <section className="border-y border-light-border dark:border-dark-border">
+        <div className="page-container py-12">
+          <AnimatedSection className="grid grid-cols-2 md:grid-cols-4 gap-10">
             {[
-              { value: '30–40%', label: 'рабочего времени юриста — документный анализ' },
-              { value: '~3 ч', label: 'в среднем уходит на поиск одного прецедента' },
-              { value: '2× быстрее', label: 'подготовка позиций с AI-ассистентом' },
+              { value: '30–40%', label: 'рабочего времени — документный анализ' },
+              { value: '~3 ч', label: 'в среднем на поиск одного прецедента' },
+              { value: '2×', label: 'быстрее подготовка позиций с AI' },
               { value: '100%', label: 'ответов со ссылками на источники' },
             ].map((stat) => (
-              <div key={stat.value} className="text-center">
-                <div className="font-display text-3xl md:text-4xl font-semibold text-light-accent dark:text-dark-accent mb-1">
+              <div key={stat.value}>
+                <div className="font-sans text-3xl md:text-4xl font-black text-light-text dark:text-dark-text mb-2 tracking-tight">
                   {stat.value}
                 </div>
-                <div className="text-sm text-light-secondary dark:text-dark-secondary leading-snug">
+                <div className="text-sm text-light-secondary dark:text-dark-secondary leading-snug font-light">
                   {stat.label}
                 </div>
               </div>
@@ -135,39 +129,37 @@ export default function LandingPage(): JSX.Element {
       </section>
 
       {/* Pain Points */}
-      <section className="py-24">
+      <section className="py-28">
         <div className="page-container">
           <AnimatedSection className="mb-16">
-            <p className="eyebrow mb-4">
-              Проблема
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-semibold text-light-text dark:text-dark-text max-w-2xl leading-tight">
+            <p className="eyebrow mb-5">Проблема</p>
+            <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight">
               Где теряется время квалифицированного юриста
             </h2>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {painPoints.map((point, index) => (
-              <AnimatedSection key={point.title} delay={index * 0.1}>
-                <div className="p-6 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface h-full flex flex-col gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <AnimatedSection key={point.title} delay={index * 0.08}>
+                <div className="p-7 rounded-2xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface h-full flex flex-col gap-5">
+                  <div className="w-8 h-8 rounded-lg bg-light-surface-elevated dark:bg-dark-surface-elevated border border-light-border dark:border-dark-border flex items-center justify-center text-light-secondary dark:text-dark-secondary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                       <line x1="18" y1="6" x2="6" y2="18" />
                       <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
                   </div>
-                  <h3 className="font-display font-semibold text-light-text dark:text-dark-text text-lg">
+                  <h3 className="font-sans font-semibold text-light-text dark:text-dark-text text-base tracking-tight">
                     {point.title}
                   </h3>
-                  <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed flex-1">
+                  <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed flex-1 font-light">
                     {point.problem}
                   </p>
-                  <div className="pt-3 border-t border-light-border dark:border-dark-border">
-                    <div className="flex items-start gap-2">
-                      <svg className="text-emerald-500 mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <div className="pt-4 border-t border-light-border dark:border-dark-border">
+                    <div className="flex items-start gap-3">
+                      <svg className="text-light-text dark:text-dark-text mt-0.5 shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      <p className="text-sm text-light-text dark:text-dark-text leading-relaxed">
+                      <p className="text-sm text-light-text dark:text-dark-text leading-relaxed font-light">
                         {point.solution}
                       </p>
                     </div>
@@ -180,30 +172,28 @@ export default function LandingPage(): JSX.Element {
       </section>
 
       {/* How it works */}
-      <section className="py-24 bg-light-surface dark:bg-dark-surface border-y border-light-border dark:border-dark-border">
+      <section className="py-28 bg-light-surface dark:bg-dark-surface border-y border-light-border dark:border-dark-border">
         <div className="page-container">
           <AnimatedSection className="mb-16">
-            <p className="eyebrow mb-4">
-              Как это работает
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-semibold text-light-text dark:text-dark-text max-w-2xl leading-tight">
+            <p className="eyebrow mb-5">Как это работает</p>
+            <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight">
               Три шага до ответа по правовой базе
             </h2>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-8 left-[16.666%] right-[16.666%] h-px bg-gradient-to-r from-transparent via-light-border dark:via-dark-border to-transparent" />
+          <div className="grid md:grid-cols-3 gap-12 relative">
+            <div className="hidden md:block absolute top-7 left-[16.666%] right-[16.666%] h-px bg-light-border dark:bg-dark-border" />
 
             {steps.map((step, index) => (
-              <AnimatedSection key={step.number} delay={index * 0.15}>
+              <AnimatedSection key={step.number} delay={index * 0.12}>
                 <div className="flex flex-col gap-4">
-                  <div className="font-display text-5xl font-semibold text-light-gold/70 dark:text-dark-gold/70 select-none">
+                  <div className="font-sans text-4xl font-black text-light-border dark:text-dark-border select-none tracking-tight">
                     {step.number}
                   </div>
-                  <h3 className="font-display text-xl font-semibold text-light-text dark:text-dark-text">
+                  <h3 className="font-sans text-lg font-semibold text-light-text dark:text-dark-text tracking-tight">
                     {step.title}
                   </h3>
-                  <p className="text-light-secondary dark:text-dark-secondary leading-relaxed">
+                  <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed font-light">
                     {step.description}
                   </p>
                 </div>
@@ -214,30 +204,25 @@ export default function LandingPage(): JSX.Element {
       </section>
 
       {/* Features */}
-      <section className="py-24">
+      <section className="py-28">
         <div className="page-container">
           <AnimatedSection className="mb-16">
-            <p className="eyebrow mb-4">
-              Возможности
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-semibold text-light-text dark:text-dark-text max-w-2xl leading-tight">
-              Инструмент, разработанный для правовой практики
+            <p className="eyebrow mb-5">Возможности</p>
+            <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight">
+              Инструмент для правовой практики
             </h2>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4">
             {features.map((feature, index) => (
-              <AnimatedSection key={feature.title} delay={index * 0.08}>
-                <div className="p-6 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-card dark:shadow-card-dark flex gap-4 h-full">
-                  <div className="w-1 rounded-full bg-gradient-to-b from-light-gold to-light-accent dark:from-dark-gold dark:to-dark-accent shrink-0" />
-                  <div>
-                    <h3 className="font-display font-semibold text-light-text dark:text-dark-text mb-2">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </div>
+              <AnimatedSection key={feature.title} delay={index * 0.07}>
+                <div className="p-7 rounded-2xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface h-full">
+                  <h3 className="font-sans font-semibold text-light-text dark:text-dark-text mb-3 tracking-tight">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed font-light">
+                    {feature.description}
+                  </p>
                 </div>
               </AnimatedSection>
             ))}
@@ -246,15 +231,15 @@ export default function LandingPage(): JSX.Element {
       </section>
 
       {/* CTA */}
-      <section className="py-24 border-t border-light-border dark:border-dark-border">
+      <section className="py-28 border-t border-light-border dark:border-dark-border">
         <div className="page-container">
           <AnimatedSection>
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="gold-rule mx-auto mb-6" />
-              <h2 className="font-display text-4xl md:text-5xl font-semibold text-light-text dark:text-dark-text mb-6 leading-tight">
+            <div className="max-w-xl">
+              <p className="eyebrow mb-6">Начать работу</p>
+              <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text mb-6 leading-tight tracking-tight">
                 Готовы освободиться от рутины?
               </h2>
-              <p className="text-light-secondary dark:text-dark-secondary mb-10 text-lg leading-relaxed">
+              <p className="text-light-secondary dark:text-dark-secondary mb-10 text-lg leading-relaxed font-light">
                 Подайте заявку — администратор платформы свяжется с вами в течение рабочего дня
                 и предоставит доступ к системе.
               </p>
@@ -269,11 +254,13 @@ export default function LandingPage(): JSX.Element {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+      <footer className="border-t border-light-border dark:border-dark-border">
         <div className="page-container py-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <Logo />
-            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <span className="font-sans text-sm font-semibold tracking-tight text-light-text dark:text-dark-text">
+              Pravo<span className="font-light">OS</span>
+            </span>
+            <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
               © {new Date().getFullYear()} PravoOS. AI-платформа для юристов.
             </p>
           </div>

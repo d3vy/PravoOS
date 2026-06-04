@@ -6,28 +6,28 @@ interface LogoProps {
 export function ScalesIcon({ className = '' }: { className?: string }): JSX.Element {
   return (
     <svg
-      viewBox="0 0 32 32"
+      viewBox="0 0 28 28"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="square"
       className={className}
       aria-hidden="true"
     >
-      <path d="M7 8.5 L7 24 M25 8.5 L25 24 M5.5 8.5 L26.5 8.5 M5.5 24 L9 24 M23 24 L26.5 24" />
+      <rect x="13" y="3" width="2" height="22" fill="currentColor" rx="1" />
+      <rect x="4" y="8" width="20" height="1.5" fill="currentColor" rx="0.75" />
+      <circle cx="7.5" cy="16" r="3.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <circle cx="20.5" cy="16" r="3.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
     </svg>
   )
 }
 
 export function Logo({ className = '', withWordmark = true }: LogoProps): JSX.Element {
   return (
-    <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <span className="text-light-gold dark:text-dark-gold">
-        <ScalesIcon className="w-[22px] h-[22px]" />
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <span className="text-light-text dark:text-dark-text">
+        <ScalesIcon className="w-[20px] h-[20px]" />
       </span>
       {withWordmark && (
-        <span className="font-display text-lg font-semibold tracking-tight text-light-text dark:text-dark-text">
-          Pravo<span className="text-light-accent dark:text-dark-accent">OS</span>
+        <span className="font-sans text-base font-semibold tracking-tight text-light-text dark:text-dark-text">
+          Pravo<span className="font-light">OS</span>
         </span>
       )}
     </span>

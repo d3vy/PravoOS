@@ -109,7 +109,7 @@ export default function DocumentsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Документы</h1>
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Документы</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
           Загрузите PDF и DOCX-файлы для формирования базы знаний AI-ассистента
         </p>

@@ -26,7 +26,7 @@
   }
 
   ::selection {
-    @apply bg-light-accent/20 dark:bg-dark-accent/30;
+    @apply bg-light-text/10 dark:bg-dark-text/20;
   }
 }
 
@@ -48,11 +48,7 @@
   }
 
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-widest text-light-gold dark:text-dark-gold;
-  }
-
-  .gold-rule {
-    @apply h-px w-12 bg-gradient-to-r from-light-gold to-transparent dark:from-dark-gold;
+    @apply text-xs font-semibold uppercase tracking-[0.15em] text-light-secondary dark:text-dark-secondary;
   }
 
   .card-elevated {
@@ -61,23 +57,24 @@
   }
 
   .input-base {
-    @apply w-full px-4 py-3 rounded-lg bg-light-surface dark:bg-dark-surface
+    @apply w-full px-4 py-3 rounded-lg bg-light-bg dark:bg-dark-surface
            border border-light-border dark:border-dark-border
            text-light-text dark:text-dark-text
            placeholder-light-secondary dark:placeholder-dark-secondary
-           focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent
-           focus:border-transparent transition-all duration-150;
+           focus:outline-none focus:ring-2 focus:ring-light-text/20 dark:focus:ring-dark-text/20
+           focus:border-light-text/30 dark:focus:border-dark-text/30
+           transition-all duration-150;
   }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #e3e7ef transparent;
+    scrollbar-color: #e4e4e7 transparent;
   }
 
   .dark .scrollbar-thin {
-    scrollbar-color: #1d2842 transparent;
+    scrollbar-color: #27272a transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {

@@ -82,11 +82,10 @@ export default function LoginPage(): JSX.Element {
         >
           <div className="card-elevated rounded-2xl p-8">
             <div className="mb-8">
-              <div className="gold-rule mb-5" />
-              <h1 className="font-display text-3xl font-semibold text-light-text dark:text-dark-text mb-2">
+              <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
                 Вход в систему
               </h1>
-              <p className="text-sm text-light-secondary dark:text-dark-secondary">
+              <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
                 Введите ваши данные для доступа к PravoOS
               </p>
             </div>
@@ -154,7 +153,7 @@ export default function LoginPage(): JSX.Element {
                 Нет доступа?{' '}
                 <Link
                   to="/apply"
-                  className="text-light-accent dark:text-dark-accent hover:underline font-medium"
+                  className="text-light-text dark:text-dark-text hover:underline font-medium"
                 >
                   Подать заявку
                 </Link>
