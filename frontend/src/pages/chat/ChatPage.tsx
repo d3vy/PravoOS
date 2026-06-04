@@ -48,6 +48,7 @@ export default function ChatPage(): JSX.Element {
   const [attachPickerOpen, setAttachPickerOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const attachPickerRef = useRef<HTMLDivElement>(null)
   const skipNextHistorySyncRef = useRef(false)
   const queryClient = useQueryClient()
 
@@ -88,6 +89,17 @@ export default function ChatPage(): JSX.Element {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!attachPickerOpen) return
+    const handleClickOutside = (e: MouseEvent): void => {
+      if (attachPickerRef.current && !attachPickerRef.current.contains(e.target as Node)) {
+        setAttachPickerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [attachPickerOpen])
 
   const sendMessageMutation = useMutation({
     mutationFn: chatApi.sendMessage,
@@ -392,7 +404,7 @@ export default function ChatPage(): JSX.Element {
 
               <div className="flex gap-3 items-end rounded-xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg focus-within:border-light-accent dark:focus-within:border-dark-accent focus-within:ring-1 focus-within:ring-light-accent dark:focus-within:ring-dark-accent transition-all px-4 py-3">
                 {/* Attach button */}
-                <div className="relative shrink-0">
+                <div className="relative shrink-0" ref={attachPickerRef}>
                   <button
                     type="button"
                     onClick={() => setAttachPickerOpen((v) => !v)}

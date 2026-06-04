@@ -12,6 +12,9 @@ public final class FollowUpParser {
     public record ParsedAnswer(String answer, List<String> followUps) {}
 
     public static ParsedAnswer parse(String rawContent) {
+        if (rawContent == null || rawContent.isBlank()) {
+            return new ParsedAnswer("", List.of());
+        }
         int delimiterIdx = rawContent.indexOf(DELIMITER);
         if (delimiterIdx == -1) {
             return new ParsedAnswer(rawContent.trim(), List.of());

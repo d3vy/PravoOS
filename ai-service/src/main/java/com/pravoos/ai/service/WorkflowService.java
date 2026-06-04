@@ -56,7 +56,6 @@ public class WorkflowService {
                 .toList();
     }
 
-    @Transactional
     public AiResponseDto run(UUID caseId, String workflowId, RunWorkflowRequest request, UUID lawyerId) {
         caseService.requireOwnedCase(caseId, lawyerId);
         BankruptcyWorkflow workflow = BankruptcyWorkflow.fromId(workflowId);
@@ -76,17 +75,23 @@ public class WorkflowService {
         String rawAnswer = llmClient.complete(systemPrompt, List.of(), instruction);
         FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(rawAnswer);
 
+        String query = question != null && !question.isBlank() ? question : workflow.displayName();
+        AiResponse saved = saveResponse(caseId, lawyerId, workflow.name(), query, parsed.answer(), sources);
+        log.info("Workflow {} produced response {} with {} source(s)", workflow.name(), saved.getId(), sources.size());
+        return AiResponseDto.from(saved, parsed.followUps());
+    }
+
+    @Transactional
+    protected AiResponse saveResponse(UUID caseId, UUID lawyerId, String workflowId,
+                                      String query, String result, List<SourceReference> sources) {
         AiResponse response = new AiResponse();
         response.setCaseId(caseId);
         response.setLawyerId(lawyerId);
-        response.setWorkflowId(workflow.name());
-        response.setQuery(question != null && !question.isBlank() ? question : workflow.displayName());
-        response.setResult(parsed.answer());
+        response.setWorkflowId(workflowId);
+        response.setQuery(query);
+        response.setResult(result);
         response.setSources(sources);
-
-        AiResponse saved = aiResponseRepository.save(response);
-        log.info("Workflow {} produced response {} with {} source(s)", workflow.name(), saved.getId(), sources.size());
-        return AiResponseDto.from(saved, parsed.followUps());
+        return aiResponseRepository.save(response);
     }
 
     private String buildInstruction(BankruptcyWorkflow workflow, String question) {
