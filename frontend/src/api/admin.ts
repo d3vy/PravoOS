@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { ApplicationResponse, LawyerResponse } from '../types'
+import type { ApplicationResponse, LawyerProfileResponse } from '../types'
 
 export const adminApi = {
   getAllApplications: async (): Promise<ApplicationResponse[]> => {
@@ -20,8 +20,8 @@ export const adminApi = {
     await apiClient.post(`/api/admin/applications/${id}/reject`)
   },
 
-  getLawyers: async (): Promise<LawyerResponse[]> => {
-    const response = await apiClient.get<LawyerResponse[]>('/api/admin/users/lawyers')
+  getLawyers: async (): Promise<LawyerProfileResponse[]> => {
+    const response = await apiClient.get<LawyerProfileResponse[]>('/api/admin/users/lawyers')
     return response.data
   },
 }

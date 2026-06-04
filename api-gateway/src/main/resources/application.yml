@@ -14,6 +14,12 @@ spring:
             - Path=/api/admin/**
           filters:
             - name: JwtAuthFilter
+        - id: user-service-user
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - name: JwtAuthFilter
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://localhost:8082}
           predicates:

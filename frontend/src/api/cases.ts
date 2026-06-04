@@ -3,6 +3,7 @@ import type {
   AiResponseDto,
   CaseResponse,
   CaseDraftDto,
+  CaseDraftSummaryDto,
   CreateCaseRequest,
   DocumentResponse,
   DocumentUploadResponse,
@@ -70,8 +71,8 @@ export const casesApi = {
     return response.data
   },
 
-  getDrafts: async (caseId: string): Promise<CaseDraftDto[]> => {
-    const response = await apiClient.get<CaseDraftDto[]>(`/api/ai/cases/${caseId}/drafts`)
+  getDrafts: async (caseId: string): Promise<CaseDraftSummaryDto[]> => {
+    const response = await apiClient.get<CaseDraftSummaryDto[]>(`/api/ai/cases/${caseId}/drafts`)
     return response.data
   },
 

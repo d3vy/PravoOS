@@ -8,6 +8,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: '/admin/applications', label: 'Заявки' },
+  { path: '/admin/users', label: 'Юристы' },
   { path: '/admin/documents', label: 'Документы' },
   { path: '/admin/ai-stats', label: 'AI-метрики' },
   { path: '/chat', label: 'AI-ассистент' },

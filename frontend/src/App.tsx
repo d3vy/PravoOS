@@ -13,6 +13,7 @@ import CaseDetailPage from './pages/cases/CaseDetailPage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
+import UsersPage from './pages/admin/UsersPage'
 import ProfilePage from './pages/profile/ProfilePage'
 
 export default function App(): JSX.Element {
@@ -75,6 +76,7 @@ export default function App(): JSX.Element {
       >
         <Route index element={<Navigate to="/admin/applications" replace />} />
         <Route path="applications" element={<ApplicationsPage />} />
+        <Route path="users" element={<UsersPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="ai-stats" element={<AiStatsPage />} />
       </Route>

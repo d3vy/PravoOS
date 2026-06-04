@@ -1,7 +1,7 @@
 package com.pravoos.user.controller;
 
 import com.pravoos.user.model.dto.ApplicationResponse;
-import com.pravoos.user.model.dto.UserResponse;
+import com.pravoos.user.model.dto.LawyerProfileResponse;
 import com.pravoos.user.security.SecurityUtils;
 import com.pravoos.user.service.AdminService;
 import com.pravoos.user.service.ApplicationService;
@@ -47,7 +47,7 @@ public class AdminController {
     }
 
     @GetMapping("/users/lawyers")
-    public ResponseEntity<List<UserResponse>> getActiveLawyers() {
+    public ResponseEntity<List<LawyerProfileResponse>> getActiveLawyers() {
         return ResponseEntity.ok(adminService.getActiveLawyers());
     }
 }
