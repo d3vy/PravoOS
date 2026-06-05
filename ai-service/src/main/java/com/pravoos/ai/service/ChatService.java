@@ -41,6 +41,7 @@ public class ChatService {
     private final RagService ragService;
     private final LlmClient llmClient;
     private final DocumentProperties documentProperties;
+    private final LegalDomainGuard legalDomainGuard;
 
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
@@ -49,7 +50,8 @@ public class ChatService {
                        EmbeddingService embeddingService,
                        RagService ragService,
                        LlmClient llmClient,
-                       DocumentProperties documentProperties) {
+                       DocumentProperties documentProperties,
+                       LegalDomainGuard legalDomainGuard) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.vectorSearchRepository = vectorSearchRepository;
@@ -58,9 +60,12 @@ public class ChatService {
         this.ragService = ragService;
         this.llmClient = llmClient;
         this.documentProperties = documentProperties;
+        this.legalDomainGuard = legalDomainGuard;
     }
 
     public ChatResponse chat(ChatRequest request, UUID lawyerId) {
+        legalDomainGuard.assertLegalQuery(request.message());
+
         Conversation conversation = resolveConversation(request.conversationId(), lawyerId, request.message());
         boolean isNewConversation = conversation.getId() == null;
         log.info("Chat request received: conversation={}, lawyer={}",

@@ -7,6 +7,7 @@ public record OpenAiProperties(
         String apiKey,
         String baseUrl,
         String model,
+        String guardModel,
         String embeddingModel,
         int embeddingDimensions,
         int maxTokens
