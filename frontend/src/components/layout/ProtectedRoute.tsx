@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps): JSX.Element {
-  const { isAuthenticated, user, bootstrapped } = useAuthStore()
+  const { isAuthenticated, bootstrapped, effectiveRole } = useAuthStore()
 
   if (!bootstrapped) {
     return <FullScreenLoader />
@@ -20,8 +20,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps):
     return <Navigate to="/login" replace />
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    const fallback = user?.role === 'ADMIN' ? '/admin/applications' : '/chat'
+  if (requiredRole && effectiveRole() !== requiredRole) {
+    const fallback = effectiveRole() === 'ADMIN' ? '/admin/applications' : '/chat'
     return <Navigate to={fallback} replace />
   }
 

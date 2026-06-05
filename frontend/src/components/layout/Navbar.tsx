@@ -6,7 +6,7 @@ import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 
 export function Navbar(): JSX.Element {
-  const { user, clearAuth, isAuthenticated } = useAuthStore()
+  const { user, clearAuth, isAuthenticated, effectiveRole, viewAsLawyer, toggleViewAsLawyer } = useAuthStore()
   const navigate = useNavigate()
 
   const handleLogout = async (): Promise<void> => {
@@ -19,7 +19,8 @@ export function Navbar(): JSX.Element {
     navigate('/')
   }
 
-  const dashboardPath = user?.role === 'ADMIN' ? '/admin/applications' : '/chat'
+  const role = effectiveRole()
+  const dashboardPath = role === 'ADMIN' ? '/admin/applications' : '/chat'
 
   return (
     <header className="sticky top-0 z-50 bg-light-bg/90 dark:bg-dark-bg/90 backdrop-blur-md border-b border-light-border dark:border-dark-border">
@@ -34,7 +35,7 @@ export function Navbar(): JSX.Element {
 
             {isAuthenticated() ? (
               <>
-                {user?.role === 'LAWYER' && (
+                {role === 'LAWYER' && (
                   <>
                     <Link to="/cases" className="hidden sm:block">
                       <Button variant="ghost" size="sm">
@@ -53,12 +54,23 @@ export function Navbar(): JSX.Element {
                     </Link>
                   </>
                 )}
-                {user?.role === 'ADMIN' && (
+                {role === 'ADMIN' && (
                   <Link to={dashboardPath} className="hidden sm:block">
                     <Button variant="ghost" size="sm">
                       Рабочий стол
                     </Button>
                   </Link>
+                )}
+                {user?.role === 'ADMIN' && viewAsLawyer && (
+                  <button
+                    onClick={() => {
+                      toggleViewAsLawyer()
+                      navigate('/admin/applications')
+                    }}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                  >
+                    <span>← Вернуться в админку</span>
+                  </button>
                 )}
                 <Button variant="secondary" size="sm" onClick={() => void handleLogout()}>
                   Выйти

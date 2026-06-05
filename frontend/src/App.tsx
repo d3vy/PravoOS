@@ -17,7 +17,7 @@ import UsersPage from './pages/admin/UsersPage'
 import ProfilePage from './pages/profile/ProfilePage'
 
 export default function App(): JSX.Element {
-  const { isAuthenticated, user, bootstrapped } = useAuthStore()
+  const { isAuthenticated, bootstrapped, effectiveRole } = useAuthStore()
   useAuthBootstrap()
 
   if (!bootstrapped) {
@@ -86,7 +86,7 @@ export default function App(): JSX.Element {
         path="*"
         element={
           isAuthenticated() ? (
-            <Navigate to={user?.role === 'ADMIN' ? '/admin/applications' : '/chat'} replace />
+            <Navigate to={effectiveRole() === 'ADMIN' ? '/admin/applications' : '/chat'} replace />
           ) : (
             <Navigate to="/" replace />
           )
