@@ -65,7 +65,7 @@ export default function LoginPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
+    <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85 flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />

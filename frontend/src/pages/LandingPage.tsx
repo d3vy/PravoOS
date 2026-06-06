@@ -61,7 +61,7 @@ const features = [
 
 export default function LandingPage(): JSX.Element {
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
+    <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85">
       <Navbar />
 
       {/* Hero */}

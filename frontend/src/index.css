@@ -8,9 +8,14 @@
   }
 
   body {
-    @apply bg-light-bg text-light-text font-sans antialiased transition-colors duration-200;
+    @apply text-light-text font-sans antialiased transition-colors duration-200;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    background-image: url('/hero-bg.jpg');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-color: #09090b;
   }
 
   .dark body {
