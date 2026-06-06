@@ -4,6 +4,7 @@ import com.pravoos.user.config.ResendProperties;
 import com.pravoos.user.event.PasswordResetRequestedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -21,6 +22,7 @@ public class PasswordResetEmailSender {
         this.resendProperties = resendProperties;
     }
 
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPasswordResetRequested(PasswordResetRequestedEvent event) {
         String resetLink = resendProperties.frontendBaseUrl() + "/reset-password?token=" + event.rawToken();

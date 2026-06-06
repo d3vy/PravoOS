@@ -34,6 +34,7 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final TokenHasher tokenHasher;
     private final RefreshTokenFamilyRevoker refreshTokenFamilyRevoker;
+    private final LoginAttemptService loginAttemptService;
     private final ApplicationEventPublisher eventPublisher;
     private final ResendProperties resendProperties;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -43,6 +44,7 @@ public class PasswordResetService {
                                 PasswordEncoder passwordEncoder,
                                 TokenHasher tokenHasher,
                                 RefreshTokenFamilyRevoker refreshTokenFamilyRevoker,
+                                LoginAttemptService loginAttemptService,
                                 ApplicationEventPublisher eventPublisher,
                                 ResendProperties resendProperties) {
         this.userRepository = userRepository;
@@ -50,6 +52,7 @@ public class PasswordResetService {
         this.passwordEncoder = passwordEncoder;
         this.tokenHasher = tokenHasher;
         this.refreshTokenFamilyRevoker = refreshTokenFamilyRevoker;
+        this.loginAttemptService = loginAttemptService;
         this.eventPublisher = eventPublisher;
         this.resendProperties = resendProperties;
     }
@@ -89,6 +92,7 @@ public class PasswordResetService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         token.setUsedAt(LocalDateTime.now(ZoneOffset.UTC));
         refreshTokenFamilyRevoker.revokeAllActive(user.getId());
+        loginAttemptService.reset(user.getEmail());
 
         log.info("Password reset completed for {}", user.getEmail());
     }

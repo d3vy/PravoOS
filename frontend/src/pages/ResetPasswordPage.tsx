@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import axios from 'axios'
@@ -15,8 +15,14 @@ interface FieldErrors {
 
 export default function ResetPasswordPage(): JSX.Element {
   const [searchParams] = useSearchParams()
-  const token = searchParams.get('token') ?? ''
   const navigate = useNavigate()
+  const [token] = useState(() => searchParams.get('token') ?? '')
+
+  useEffect(() => {
+    if (searchParams.has('token')) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [searchParams])
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
