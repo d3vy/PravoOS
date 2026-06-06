@@ -28,6 +28,10 @@ public class RefreshToken {
     @Column(name = "revoked_at")
     private LocalDateTime revokedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
+
     @PrePersist
     void prePersist() {
         if (createdAt == null) {

@@ -9,6 +9,7 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.PasswordResetTokenRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.security.TokenHasher;
+import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,8 @@ public class PasswordResetService {
     private final TokenHasher tokenHasher;
     private final RefreshTokenFamilyRevoker refreshTokenFamilyRevoker;
     private final LoginAttemptService loginAttemptService;
+    private final EmailRateLimiter emailRateLimiter;
+    private final TokenDenylistService tokenDenylistService;
     private final ApplicationEventPublisher eventPublisher;
     private final ResendProperties resendProperties;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -45,6 +48,8 @@ public class PasswordResetService {
                                 TokenHasher tokenHasher,
                                 RefreshTokenFamilyRevoker refreshTokenFamilyRevoker,
                                 LoginAttemptService loginAttemptService,
+                                EmailRateLimiter emailRateLimiter,
+                                TokenDenylistService tokenDenylistService,
                                 ApplicationEventPublisher eventPublisher,
                                 ResendProperties resendProperties) {
         this.userRepository = userRepository;
@@ -53,6 +58,8 @@ public class PasswordResetService {
         this.tokenHasher = tokenHasher;
         this.refreshTokenFamilyRevoker = refreshTokenFamilyRevoker;
         this.loginAttemptService = loginAttemptService;
+        this.emailRateLimiter = emailRateLimiter;
+        this.tokenDenylistService = tokenDenylistService;
         this.eventPublisher = eventPublisher;
         this.resendProperties = resendProperties;
     }
@@ -60,6 +67,9 @@ public class PasswordResetService {
     @Transactional
     public void requestReset(String rawEmail) {
         String email = EmailNormalizer.normalize(rawEmail);
+        if (!emailRateLimiter.allow("password-reset", email)) {
+            return;
+        }
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         userRepository.findByEmailAndStatus(email, UserStatus.ACTIVE).ifPresentOrElse(user -> {
@@ -73,8 +83,8 @@ public class PasswordResetService {
             passwordResetTokenRepository.save(token);
 
             eventPublisher.publishEvent(new PasswordResetRequestedEvent(email, rawToken));
-            log.info("Password reset requested for {}", email);
-        }, () -> log.info("Password reset requested for unknown/inactive email: {}", email));
+            log.info("Password reset requested for {}", EmailMasker.mask(email));
+        }, () -> log.info("Password reset requested for unknown/inactive email: {}", EmailMasker.mask(email)));
     }
 
     @Transactional
@@ -92,9 +102,10 @@ public class PasswordResetService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         token.setUsedAt(LocalDateTime.now(ZoneOffset.UTC));
         refreshTokenFamilyRevoker.revokeAllActive(user.getId());
+        tokenDenylistService.revokeAccessTokensFor(user.getId());
         loginAttemptService.reset(user.getEmail());
 
-        log.info("Password reset completed for {}", user.getEmail());
+        log.info("Password reset completed for {}", EmailMasker.mask(user.getEmail()));
     }
 
     @Scheduled(cron = "0 30 3 * * *")

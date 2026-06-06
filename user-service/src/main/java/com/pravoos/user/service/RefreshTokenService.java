@@ -7,6 +7,7 @@ import com.pravoos.user.repository.RefreshTokenRepository;
 import com.pravoos.user.security.TokenHasher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,7 +67,12 @@ public class RefreshTokenService {
         }
 
         stored.setRevokedAt(LocalDateTime.now());
-        refreshTokenRepository.save(stored);
+        try {
+            refreshTokenRepository.saveAndFlush(stored);
+        } catch (OptimisticLockingFailureException ex) {
+            log.warn("Concurrent refresh token rotation detected for user {}", stored.getUserId());
+            throw new InvalidRefreshTokenException();
+        }
         return stored.getUserId();
     }
 

@@ -10,6 +10,7 @@ import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.security.JwtTokenProvider;
+import com.pravoos.user.util.EmailMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,7 +49,7 @@ public class AuthService {
         String email = EmailNormalizer.normalize(request.email());
         loginAttemptService.remainingLockSeconds(email)
                 .ifPresent(seconds -> {
-                    log.warn("Blocked login attempt for locked account: {}", email);
+                    log.warn("Blocked login attempt for locked account: {}", EmailMasker.mask(email));
                     throw new AccountLockedException(seconds);
                 });
 
@@ -58,18 +59,18 @@ public class AuthService {
         if (user == null) {
             passwordEncoder.matches(request.password(), DUMMY_PASSWORD_HASH);
             loginAttemptService.recordFailure(email);
-            log.warn("Failed login attempt for unknown/inactive email: {}", email);
+            log.warn("Failed login attempt for unknown/inactive email: {}", EmailMasker.mask(email));
             throw new InvalidCredentialsException();
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             loginAttemptService.recordFailure(email);
-            log.warn("Failed login attempt for email: {}", email);
+            log.warn("Failed login attempt for email: {}", EmailMasker.mask(email));
             throw new InvalidCredentialsException();
         }
 
         loginAttemptService.reset(email);
-        log.info("User authenticated: {}", email);
+        log.info("User authenticated: {}", EmailMasker.mask(email));
         return issueTokens(user);
     }
 

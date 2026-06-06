@@ -1,7 +1,6 @@
 package com.pravoos.ai.service;
 
 import com.pravoos.ai.config.OpenAiProperties;
-import com.pravoos.ai.exception.LlmException;
 import com.pravoos.ai.exception.NonLegalQueryException;
 import com.pravoos.ai.llm.dto.LlmMessage;
 import com.pravoos.ai.llm.dto.OpenAiChatRequest;
@@ -56,12 +55,13 @@ public class LegalDomainGuard {
                     .body(OpenAiChatResponse.class);
 
             if (response == null) {
-                throw new LlmException("Empty response from guard classifier");
+                log.warn("Guard classifier returned empty response, allowing query (fail-open)");
+                return;
             }
             verdict = response.firstContent().trim().toUpperCase();
         } catch (RestClientException e) {
-            log.error("Guard classifier call failed: {}", e.getMessage());
-            throw new LlmException("Guard classifier unavailable: " + e.getMessage());
+            log.warn("Guard classifier unavailable, allowing query (fail-open): {}", e.getMessage());
+            return;
         }
 
         log.debug("Guard verdict '{}' for message: {}", verdict, userMessage.substring(0, Math.min(50, userMessage.length())));

@@ -6,6 +6,7 @@ import com.pravoos.user.exception.InvalidVerificationTokenException;
 import com.pravoos.user.model.entity.LawyerApplication;
 import com.pravoos.user.model.enums.ApplicationStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
+import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,13 +28,16 @@ public class EmailVerificationService {
 
     private final LawyerApplicationRepository applicationRepository;
     private final ResendProperties resendProperties;
+    private final EmailRateLimiter emailRateLimiter;
     private final ApplicationEventPublisher eventPublisher;
 
     public EmailVerificationService(LawyerApplicationRepository applicationRepository,
                                     ResendProperties resendProperties,
+                                    EmailRateLimiter emailRateLimiter,
                                     ApplicationEventPublisher eventPublisher) {
         this.applicationRepository = applicationRepository;
         this.resendProperties = resendProperties;
+        this.emailRateLimiter = emailRateLimiter;
         this.eventPublisher = eventPublisher;
     }
 
@@ -66,6 +70,9 @@ public class EmailVerificationService {
     @Transactional
     public void resendVerification(String rawEmail) {
         String email = EmailNormalizer.normalize(rawEmail);
+        if (!emailRateLimiter.allow("verification", email)) {
+            return;
+        }
         applicationRepository.findByEmailAndStatusAndEmailVerifiedFalse(email, ApplicationStatus.PENDING)
                 .ifPresent(application -> {
                     String newToken = generateToken();
@@ -73,7 +80,7 @@ public class EmailVerificationService {
                     application.setEmailVerificationExpiresAt(tokenExpiry());
                     applicationRepository.save(application);
                     eventPublisher.publishEvent(new VerificationEmailRequestedEvent(email, newToken));
-                    log.info("Verification email resent to {}", email);
+                    log.info("Verification email resent to {}", EmailMasker.mask(email));
                 });
     }
 

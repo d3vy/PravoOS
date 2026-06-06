@@ -5,6 +5,7 @@ import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class AdminSeeder implements ApplicationRunner {
         admin.setStatus(UserStatus.ACTIVE);
         userRepository.save(admin);
 
-        log.info("Admin account created: {}", email);
+        log.info("Admin account created: {}", EmailMasker.mask(email));
     }
 
     private boolean isBlank(String value) {

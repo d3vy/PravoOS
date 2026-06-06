@@ -40,7 +40,6 @@ public class GatewayCorsConfiguration {
         if (deploy.hasServerDomain()) {
             String domain = deploy.serverDomain().trim();
             origins.add("https://" + domain);
-            origins.add("http://" + domain);
         }
         if (deploy.hasServerIp()) {
             String ip = deploy.serverIp().trim();

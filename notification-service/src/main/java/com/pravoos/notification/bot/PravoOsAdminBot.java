@@ -4,6 +4,9 @@ import com.pravoos.notification.config.TelegramBotProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Set;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
@@ -21,11 +24,14 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
 
     private final String botUsername;
     private final ApplicationCallbackHandler callbackHandler;
+    private final Set<String> allowedChatIds;
 
     public PravoOsAdminBot(TelegramBotProperties botProperties, ApplicationCallbackHandler callbackHandler) {
         super(botProperties.token());
         this.botUsername = botProperties.username();
         this.callbackHandler = callbackHandler;
+        List<String> configuredChatIds = botProperties.adminChatIds();
+        this.allowedChatIds = configuredChatIds == null ? Set.of() : Set.copyOf(configuredChatIds);
     }
 
     @Override
@@ -49,6 +55,12 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
         }
         String chatId = originalMessage.getChatId().toString();
         Integer messageId = originalMessage.getMessageId();
+
+        if (!allowedChatIds.contains(chatId)) {
+            log.warn("Rejected callback from unauthorized chat {}: {}", chatId, data);
+            answerCallbackQuery(callbackQuery.getId(), "Доступ запрещён");
+            return;
+        }
 
         if (!callbackHandler.supports(data)) {
             answerCallbackQuery(callbackQuery.getId(), "Неизвестная команда");

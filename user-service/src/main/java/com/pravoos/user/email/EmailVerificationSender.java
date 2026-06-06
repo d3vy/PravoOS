@@ -3,6 +3,7 @@ package com.pravoos.user.email;
 import com.pravoos.user.config.ResendProperties;
 import com.pravoos.user.event.ApplicationSubmittedSpringEvent;
 import com.pravoos.user.event.VerificationEmailRequestedEvent;
+import com.pravoos.user.util.EmailMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -30,7 +31,7 @@ public class EmailVerificationSender {
         String token = event.application().getEmailVerificationToken();
 
         if (token == null) {
-            log.warn("No verification token on application for {}, skipping email", email);
+            log.warn("No verification token on application for {}, skipping email", EmailMasker.mask(email));
             return;
         }
 
@@ -48,7 +49,7 @@ public class EmailVerificationSender {
         try {
             resendEmailClient.sendVerificationEmail(email, verificationLink);
         } catch (Exception e) {
-            log.error("Failed to send verification email to {}: {}", email, e.getMessage());
+            log.error("Failed to send verification email to {}: {}", EmailMasker.mask(email), e.getMessage());
         }
     }
 }

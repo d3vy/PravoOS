@@ -8,5 +8,6 @@ public record ResendProperties(
         String from,
         String frontendBaseUrl,
         int verificationExpiryHours,
-        int passwordResetExpiryHours
+        int passwordResetExpiryHours,
+        int maxEmailsPerHour
 ) {}

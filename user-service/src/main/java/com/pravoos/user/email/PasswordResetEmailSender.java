@@ -2,6 +2,7 @@ package com.pravoos.user.email;
 
 import com.pravoos.user.config.ResendProperties;
 import com.pravoos.user.event.PasswordResetRequestedEvent;
+import com.pravoos.user.util.EmailMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -30,7 +31,7 @@ public class PasswordResetEmailSender {
         try {
             resendEmailClient.sendPasswordResetEmail(event.email(), resetLink);
         } catch (Exception e) {
-            log.error("Failed to send password reset email to {}: {}", event.email(), e.getMessage());
+            log.error("Failed to send password reset email to {}: {}", EmailMasker.mask(event.email()), e.getMessage());
         }
     }
 }

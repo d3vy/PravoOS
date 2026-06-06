@@ -1,6 +1,8 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.config.BruteForceProperties;
+import com.pravoos.user.exception.BruteForceProtectionUnavailableException;
+import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +33,7 @@ public class LoginAttemptService {
             Long ttl = redisTemplate.getExpire(lockKey(email), TimeUnit.SECONDS);
             return ttl != null && ttl > 0 ? Optional.of(ttl) : Optional.empty();
         } catch (DataAccessException ex) {
-            log.warn("Redis unavailable during lock check, failing open", ex);
-            return Optional.empty();
+            return onRedisFailure("lock check", ex);
         }
     }
 
@@ -49,11 +50,20 @@ public class LoginAttemptService {
             if (attempts >= properties.maxAttempts()) {
                 redisTemplate.opsForValue().set(lockKey(email), "1", properties.lockoutDuration());
                 redisTemplate.delete(attemptsKey);
-                log.warn("Account locked after {} failed login attempts: {}", attempts, email);
+                log.warn("Account locked after {} failed login attempts: {}", attempts, EmailMasker.mask(email));
             }
         } catch (DataAccessException ex) {
-            log.warn("Redis unavailable while recording failed login, failing open", ex);
+            onRedisFailure("record failure", ex);
         }
+    }
+
+    private Optional<Long> onRedisFailure(String operation, DataAccessException ex) {
+        if (properties.failOpen()) {
+            log.warn("Redis unavailable during {}, failing open", operation, ex);
+            return Optional.empty();
+        }
+        log.error("Redis unavailable during {}, failing closed", operation, ex);
+        throw new BruteForceProtectionUnavailableException();
     }
 
     public void reset(String email) {

@@ -61,6 +61,7 @@ public class DocumentService {
         }
         String originalName = file.getOriginalFilename();
         String fileType = extractFileType(originalName);
+        validateContentMatchesType(file, fileType);
 
         Path filePath = storeFile(file, UUID.randomUUID().toString(), fileType);
 
@@ -196,6 +197,42 @@ public class DocumentService {
         } catch (IOException e) {
             log.warn("Failed to delete file: {}", filePath, e);
         }
+    }
+
+    private static final byte[] PDF_SIGNATURE = {0x25, 0x50, 0x44, 0x46};
+    private static final byte[] ZIP_SIGNATURE = {0x50, 0x4B, 0x03, 0x04};
+
+    private void validateContentMatchesType(MultipartFile file, String fileType) {
+        byte[] header = readHeader(file);
+        boolean matches = switch (fileType) {
+            case "pdf" -> startsWith(header, PDF_SIGNATURE);
+            case "docx" -> startsWith(header, ZIP_SIGNATURE);
+            case "txt" -> true;
+            default -> false;
+        };
+        if (!matches) {
+            throw new DocumentProcessingException("File content does not match its extension ." + fileType);
+        }
+    }
+
+    private byte[] readHeader(MultipartFile file) {
+        try (var inputStream = file.getInputStream()) {
+            return inputStream.readNBytes(ZIP_SIGNATURE.length);
+        } catch (IOException e) {
+            throw new DocumentProcessingException("Failed to read uploaded file: " + e.getMessage());
+        }
+    }
+
+    private boolean startsWith(byte[] data, byte[] prefix) {
+        if (data.length < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String extractFileType(String fileName) {

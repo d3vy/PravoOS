@@ -9,6 +9,7 @@ import com.pravoos.user.model.dto.LoginRequest;
 import com.pravoos.user.model.dto.ResendVerificationRequest;
 import com.pravoos.user.model.dto.ResetPasswordRequest;
 import com.pravoos.user.model.dto.TokenResponse;
+import com.pravoos.user.model.dto.VerifyEmailRequest;
 import com.pravoos.user.security.RefreshCookieFactory;
 import com.pravoos.user.service.ApplicationService;
 import com.pravoos.user.service.AuthService;
@@ -19,11 +20,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -80,9 +79,9 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.submitApplication(request));
     }
 
-    @GetMapping("/verify-email")
-    public ResponseEntity<Map<String, Boolean>> verifyEmail(@RequestParam String token) {
-        emailVerificationService.verifyToken(token);
+    @PostMapping("/verify-email")
+    public ResponseEntity<Map<String, Boolean>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        emailVerificationService.verifyToken(request.token());
         return ResponseEntity.ok(Map.of("verified", true));
     }
 

@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage'
 import ApplyPage from './pages/ApplyPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import ChatPage from './pages/chat/ChatPage'
 import CasesPage from './pages/cases/CasesPage'
 import CaseDetailPage from './pages/cases/CaseDetailPage'
@@ -33,6 +34,7 @@ export default function App(): JSX.Element {
       <Route path="/apply" element={<ApplyPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route
         path="/chat"

@@ -8,5 +8,6 @@ import java.time.Duration;
 public record BruteForceProperties(
         int maxAttempts,
         Duration lockoutDuration,
-        Duration attemptWindow
+        Duration attemptWindow,
+        boolean failOpen
 ) {}

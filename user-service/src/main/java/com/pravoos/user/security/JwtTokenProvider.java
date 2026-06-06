@@ -16,11 +16,18 @@ import java.util.UUID;
 @Component
 public class JwtTokenProvider {
 
+    private static final int MIN_SECRET_BYTES = 32;
+
     private final SecretKey secretKey;
     private final long accessExpirationMs;
 
     public JwtTokenProvider(JwtProperties jwtProperties) {
-        this.secretKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
+        byte[] secretBytes = jwtProperties.secret().getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "JWT secret must be at least " + MIN_SECRET_BYTES + " bytes for HS256");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(secretBytes);
         this.accessExpirationMs = jwtProperties.accessExpirationMs();
     }
 

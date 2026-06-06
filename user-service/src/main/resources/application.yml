@@ -57,6 +57,7 @@ app:
       max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
       lockout-duration: ${LOGIN_LOCKOUT_DURATION:PT15M}
       attempt-window: ${LOGIN_ATTEMPT_WINDOW:PT15M}
+      fail-open: ${LOGIN_BRUTE_FORCE_FAIL_OPEN:false}
 
 admin:
   accounts:
@@ -74,12 +75,13 @@ resend:
   frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   verification-expiry-hours: ${RESEND_VERIFICATION_EXPIRY_HOURS:24}
   password-reset-expiry-hours: ${RESEND_PASSWORD_RESET_EXPIRY_HOURS:1}
+  max-emails-per-hour: ${RESEND_MAX_EMAILS_PER_HOUR:3}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health
   endpoint:
     health:
       probes:

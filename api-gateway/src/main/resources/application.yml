@@ -1,6 +1,11 @@
 spring:
   application:
     name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
   cloud:
     gateway:
       routes:
@@ -8,12 +13,20 @@ spring:
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${AUTH_RATE_REPLENISH:5}
+                redis-rate-limiter.burstCapacity: ${AUTH_RATE_BURST:10}
+                key-resolver: "#{@ipKeyResolver}"
         - id: user-service-admin
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/admin/**
           filters:
             - name: JwtAuthFilter
+              args:
+                requiredRole: ADMIN
         - id: user-service-user
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:
@@ -26,6 +39,11 @@ spring:
             - Path=/api/ai/**
           filters:
             - name: JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${AI_RATE_REPLENISH:10}
+                redis-rate-limiter.burstCapacity: ${AI_RATE_BURST:20}
+                key-resolver: "#{@ipKeyResolver}"
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 
@@ -43,7 +61,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health
   endpoint:
     health:
       probes:

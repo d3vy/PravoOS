@@ -17,6 +17,7 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.service.EmailVerificationService;
+import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +76,7 @@ public class ApplicationService {
         LawyerApplication saved = applicationRepository.save(application);
         eventPublisher.publishEvent(new ApplicationSubmittedSpringEvent(saved));
 
-        log.info("Lawyer application submitted: {}", email);
+        log.info("Lawyer application submitted: {}", EmailMasker.mask(email));
         return toApplicationResponse(saved);
     }
 

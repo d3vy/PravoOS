@@ -1,6 +1,7 @@
 package com.pravoos.user.email;
 
 import com.pravoos.user.config.ResendProperties;
+import com.pravoos.user.util.EmailMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -33,7 +34,7 @@ public class ResendEmailClient {
                 verificationLink,
                 "Ссылка действительна 24 часа. Если вы не регистрировались в PravoOS — проигнорируйте это письмо."
         ));
-        log.info("Verification email sent to {}", to);
+        log.info("Verification email sent to {}", EmailMasker.mask(to));
     }
 
     public void sendPasswordResetEmail(String to, String resetLink) {
@@ -43,7 +44,7 @@ public class ResendEmailClient {
                 resetLink,
                 "Если вы не запрашивали сброс пароля — проигнорируйте это письмо, ваш пароль останется прежним."
         ));
-        log.info("Password reset email sent to {}", to);
+        log.info("Password reset email sent to {}", EmailMasker.mask(to));
     }
 
     private void send(String to, String subject, String html) {
