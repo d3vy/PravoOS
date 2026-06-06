@@ -1,9 +1,16 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.config.ResendProperties;
+import com.pravoos.user.event.VerificationEmailRequestedEvent;
 import com.pravoos.user.exception.InvalidVerificationTokenException;
 import com.pravoos.user.model.entity.LawyerApplication;
+import com.pravoos.user.model.enums.ApplicationStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
+import com.pravoos.user.util.EmailNormalizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,15 +22,19 @@ import java.util.HexFormat;
 @Service
 public class EmailVerificationService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmailVerificationService.class);
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final LawyerApplicationRepository applicationRepository;
     private final ResendProperties resendProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     public EmailVerificationService(LawyerApplicationRepository applicationRepository,
-                                    ResendProperties resendProperties) {
+                                    ResendProperties resendProperties,
+                                    ApplicationEventPublisher eventPublisher) {
         this.applicationRepository = applicationRepository;
         this.resendProperties = resendProperties;
+        this.eventPublisher = eventPublisher;
     }
 
     public String generateToken() {
@@ -41,7 +52,8 @@ public class EmailVerificationService {
         LawyerApplication application = applicationRepository.findByEmailVerificationToken(token)
                 .orElseThrow(InvalidVerificationTokenException::new);
 
-        if (application.getEmailVerificationExpiresAt().isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
+        LocalDateTime expiresAt = application.getEmailVerificationExpiresAt();
+        if (expiresAt == null || expiresAt.isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
             throw new InvalidVerificationTokenException();
         }
 
@@ -49,5 +61,28 @@ public class EmailVerificationService {
         application.setEmailVerificationToken(null);
         application.setEmailVerificationExpiresAt(null);
         applicationRepository.save(application);
+    }
+
+    @Transactional
+    public void resendVerification(String rawEmail) {
+        String email = EmailNormalizer.normalize(rawEmail);
+        applicationRepository.findByEmailAndStatusAndEmailVerifiedFalse(email, ApplicationStatus.PENDING)
+                .ifPresent(application -> {
+                    String newToken = generateToken();
+                    application.setEmailVerificationToken(newToken);
+                    application.setEmailVerificationExpiresAt(tokenExpiry());
+                    applicationRepository.save(application);
+                    eventPublisher.publishEvent(new VerificationEmailRequestedEvent(email, newToken));
+                    log.info("Verification email resent to {}", email);
+                });
+    }
+
+    @Scheduled(cron = "0 0 4 * * *")
+    @Transactional
+    public void purgeExpiredVerificationTokens() {
+        int cleared = applicationRepository.clearExpiredVerificationTokens(LocalDateTime.now(ZoneOffset.UTC));
+        if (cleared > 0) {
+            log.info("Cleared {} expired email verification tokens", cleared);
+        }
     }
 }

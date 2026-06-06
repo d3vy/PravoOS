@@ -3,8 +3,13 @@ package com.pravoos.user.repository;
 import com.pravoos.user.model.entity.LawyerApplication;
 import com.pravoos.user.model.enums.ApplicationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface LawyerApplicationRepository extends JpaRepository<LawyerApplication, UUID> {
@@ -15,5 +20,12 @@ public interface LawyerApplicationRepository extends JpaRepository<LawyerApplica
 
     boolean existsByEmailAndStatus(String email, ApplicationStatus status);
 
-    java.util.Optional<LawyerApplication> findByEmailVerificationToken(String token);
+    Optional<LawyerApplication> findByEmailVerificationToken(String token);
+
+    Optional<LawyerApplication> findByEmailAndStatusAndEmailVerifiedFalse(String email, ApplicationStatus status);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE LawyerApplication a SET a.emailVerificationToken = null, a.emailVerificationExpiresAt = null " +
+            "WHERE a.emailVerificationExpiresAt < :now AND a.emailVerified = false")
+    int clearExpiredVerificationTokens(@Param("now") LocalDateTime now);
 }

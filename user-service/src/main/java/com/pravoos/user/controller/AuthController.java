@@ -6,6 +6,7 @@ import com.pravoos.user.model.dto.ApplicationResponse;
 import com.pravoos.user.model.dto.AuthResponse;
 import com.pravoos.user.model.dto.ForgotPasswordRequest;
 import com.pravoos.user.model.dto.LoginRequest;
+import com.pravoos.user.model.dto.ResendVerificationRequest;
 import com.pravoos.user.model.dto.ResetPasswordRequest;
 import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.security.RefreshCookieFactory;
@@ -83,6 +84,12 @@ public class AuthController {
     public ResponseEntity<Map<String, Boolean>> verifyEmail(@RequestParam String token) {
         emailVerificationService.verifyToken(token);
         return ResponseEntity.ok(Map.of("verified", true));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        emailVerificationService.resendVerification(request.email());
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/forgot-password")

@@ -2,6 +2,7 @@ package com.pravoos.user.email;
 
 import com.pravoos.user.config.ResendProperties;
 import com.pravoos.user.event.ApplicationSubmittedSpringEvent;
+import com.pravoos.user.event.VerificationEmailRequestedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -33,8 +34,17 @@ public class EmailVerificationSender {
             return;
         }
 
-        String verificationLink = resendProperties.frontendBaseUrl() + "/verify-email?token=" + token;
+        sendVerificationEmail(email, token);
+    }
 
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onVerificationEmailRequested(VerificationEmailRequestedEvent event) {
+        sendVerificationEmail(event.email(), event.rawToken());
+    }
+
+    private void sendVerificationEmail(String email, String token) {
+        String verificationLink = resendProperties.frontendBaseUrl() + "/verify-email?token=" + token;
         try {
             resendEmailClient.sendVerificationEmail(email, verificationLink);
         } catch (Exception e) {
