@@ -14,5 +14,6 @@ public record ApplicationResponse(
         String phone,
         ApplicationStatus status,
         LocalDateTime submittedAt,
-        LocalDateTime reviewedAt
+        LocalDateTime reviewedAt,
+        boolean emailVerified
 ) {}

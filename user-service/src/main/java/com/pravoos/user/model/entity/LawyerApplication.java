@@ -43,6 +43,14 @@ public class LawyerApplication {
 
     private UUID reviewedBy;
 
+    @Column(unique = true)
+    private String emailVerificationToken;
+
+    private LocalDateTime emailVerificationExpiresAt;
+
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
     @PrePersist
     void prePersist() {
         submittedAt = LocalDateTime.now();
@@ -81,4 +89,13 @@ public class LawyerApplication {
 
     public UUID getReviewedBy() { return reviewedBy; }
     public void setReviewedBy(UUID reviewedBy) { this.reviewedBy = reviewedBy; }
+
+    public String getEmailVerificationToken() { return emailVerificationToken; }
+    public void setEmailVerificationToken(String emailVerificationToken) { this.emailVerificationToken = emailVerificationToken; }
+
+    public LocalDateTime getEmailVerificationExpiresAt() { return emailVerificationExpiresAt; }
+    public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) { this.emailVerificationExpiresAt = emailVerificationExpiresAt; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 }

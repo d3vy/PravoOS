@@ -37,6 +37,7 @@ export interface ApplicationResponse {
   status: ApplicationStatus
   submittedAt: string
   reviewedAt: string | null
+  emailVerified: boolean
 }
 
 export interface ChatRequest {

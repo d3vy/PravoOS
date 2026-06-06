@@ -9,15 +9,20 @@ import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.security.RefreshCookieFactory;
 import com.pravoos.user.service.ApplicationService;
 import com.pravoos.user.service.AuthService;
+import com.pravoos.user.service.EmailVerificationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,13 +31,16 @@ public class AuthController {
     private final AuthService authService;
     private final ApplicationService applicationService;
     private final RefreshCookieFactory refreshCookieFactory;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthController(AuthService authService,
                           ApplicationService applicationService,
-                          RefreshCookieFactory refreshCookieFactory) {
+                          RefreshCookieFactory refreshCookieFactory,
+                          EmailVerificationService emailVerificationService) {
         this.authService = authService;
         this.applicationService = applicationService;
         this.refreshCookieFactory = refreshCookieFactory;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @PostMapping("/login")
@@ -63,6 +71,12 @@ public class AuthController {
     @PostMapping("/apply")
     public ResponseEntity<ApplicationResponse> apply(@Valid @RequestBody ApplyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.submitApplication(request));
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<Map<String, Boolean>> verifyEmail(@RequestParam String token) {
+        emailVerificationService.verifyToken(token);
+        return ResponseEntity.ok(Map.of("verified", true));
     }
 
     private ResponseEntity<AuthResponse> authResponse(TokenResponse tokens) {

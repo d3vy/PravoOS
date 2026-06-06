@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import axios from 'axios'
 import { adminApi } from '../../api/admin'
 import type { ApplicationResponse } from '../../types'
 import { ApplicationStatusBadge } from '../../components/ui/Badge'
@@ -12,6 +13,7 @@ type Tab = 'all' | 'pending'
 export default function ApplicationsPage(): JSX.Element {
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [approveError, setApproveError] = useState<{ id: string; message: string } | null>(null)
   const queryClient = useQueryClient()
 
   const { data: allApplications = [], isLoading: allLoading } = useQuery<ApplicationResponse[]>({
@@ -37,6 +39,14 @@ export default function ApplicationsPage(): JSX.Element {
       queryClient.setQueryData(['applications', 'pending'], (old: ApplicationResponse[] | undefined) =>
         old ? old.filter((a) => a.id !== id) : old
       )
+    },
+    onError: (error, id) => {
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.message
+          ? error.response.data.message
+          : 'Ошибка при одобрении заявки'
+      setApproveError({ id, message })
+      setTimeout(() => setApproveError(null), 6000)
     },
     onSettled: () => {
       setProcessingId(null)
@@ -128,6 +138,7 @@ export default function ApplicationsPage(): JSX.Element {
                 onApprove={() => approveMutation.mutate(app.id)}
                 onReject={() => rejectMutation.mutate(app.id)}
                 isProcessing={processingId === app.id}
+                approveErrorMessage={approveError?.id === app.id ? approveError.message : null}
               />
             ))}
           </AnimatePresence>
@@ -143,6 +154,7 @@ interface ApplicationCardProps {
   onApprove: () => void
   onReject: () => void
   isProcessing: boolean
+  approveErrorMessage: string | null
 }
 
 function ApplicationCard({
@@ -151,6 +163,7 @@ function ApplicationCard({
   onApprove,
   onReject,
   isProcessing,
+  approveErrorMessage,
 }: ApplicationCardProps): JSX.Element {
   return (
     <motion.div
@@ -170,7 +183,17 @@ function ApplicationCard({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1 mt-3">
-            <InfoField label="Email" value={application.email} />
+            <div>
+              <span className="text-xs text-light-secondary dark:text-dark-secondary">Email</span>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm text-light-text dark:text-dark-text truncate">{application.email}</p>
+                {application.emailVerified ? (
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>
+                ) : (
+                  <span className="text-xs text-amber-500 dark:text-amber-400 shrink-0" title="Email не подтверждён">!</span>
+                )}
+              </div>
+            </div>
             <InfoField label="Телефон" value={application.phone} />
             <InfoField label="Номер адвоката" value={application.barNumber} />
             <InfoField label="Специализация" value={application.specialization} />
@@ -182,6 +205,20 @@ function ApplicationCard({
               <> · Рассмотрена: {new Date(application.reviewedAt).toLocaleString('ru-RU')}</>
             )}
           </p>
+
+          <AnimatePresence>
+            {approveErrorMessage && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="mt-2 text-xs text-amber-600 dark:text-amber-400"
+              >
+                {approveErrorMessage}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
 
         {application.status === 'PENDING' && (

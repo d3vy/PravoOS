@@ -38,6 +38,8 @@ public class ApplicationCallbackHandler {
             return "Заявка не найдена";
         } catch (HttpClientErrorException.Conflict e) {
             return "Заявка уже обработана или email занят";
+        } catch (HttpClientErrorException.UnprocessableEntity e) {
+            return "Email не подтверждён — юрист должен перейти по ссылке в письме";
         } catch (HttpClientErrorException e) {
             throw e;
         }

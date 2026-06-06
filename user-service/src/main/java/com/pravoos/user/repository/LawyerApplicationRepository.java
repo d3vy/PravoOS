@@ -14,4 +14,6 @@ public interface LawyerApplicationRepository extends JpaRepository<LawyerApplica
     List<LawyerApplication> findAllByOrderBySubmittedAtDesc();
 
     boolean existsByEmailAndStatus(String email, ApplicationStatus status);
+
+    java.util.Optional<LawyerApplication> findByEmailVerificationToken(String token);
 }

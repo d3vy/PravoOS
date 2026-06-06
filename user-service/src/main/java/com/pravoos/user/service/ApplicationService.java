@@ -5,6 +5,7 @@ import com.pravoos.user.exception.ApplicationAlreadyExistsException;
 import com.pravoos.user.exception.ApplicationNotFoundException;
 import com.pravoos.user.exception.ApplicationStatusException;
 import com.pravoos.user.exception.EmailAlreadyExistsException;
+import com.pravoos.user.exception.EmailNotVerifiedException;
 import com.pravoos.user.model.dto.ApplyRequest;
 import com.pravoos.user.model.dto.ApplicationResponse;
 import com.pravoos.user.model.entity.LawyerApplication;
@@ -15,6 +16,7 @@ import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
 import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.service.EmailVerificationService;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,15 +38,18 @@ public class ApplicationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final EmailVerificationService emailVerificationService;
 
     public ApplicationService(LawyerApplicationRepository applicationRepository,
                                UserRepository userRepository,
                                PasswordEncoder passwordEncoder,
-                               ApplicationEventPublisher eventPublisher) {
+                               ApplicationEventPublisher eventPublisher,
+                               EmailVerificationService emailVerificationService) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
@@ -64,6 +69,8 @@ public class ApplicationService {
         application.setBarNumber(request.barNumber());
         application.setSpecialization(request.specialization());
         application.setPhone(request.phone());
+        application.setEmailVerificationToken(emailVerificationService.generateToken());
+        application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
 
         LawyerApplication saved = applicationRepository.save(application);
         eventPublisher.publishEvent(new ApplicationSubmittedSpringEvent(saved));
@@ -75,6 +82,10 @@ public class ApplicationService {
     @Transactional
     public ApplicationResponse approveApplication(UUID applicationId, UUID adminId) {
         LawyerApplication application = findPendingApplicationOrThrow(applicationId);
+
+        if (!application.isEmailVerified()) {
+            throw new EmailNotVerifiedException();
+        }
 
         if (userRepository.existsByEmail(application.getEmail())) {
             throw new EmailAlreadyExistsException(application.getEmail());
@@ -161,7 +172,8 @@ public class ApplicationService {
                 application.getPhone(),
                 application.getStatus(),
                 application.getSubmittedAt(),
-                application.getReviewedAt()
+                application.getReviewedAt(),
+                application.isEmailVerified()
         );
     }
 }
