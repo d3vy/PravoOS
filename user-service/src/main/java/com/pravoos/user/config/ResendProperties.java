@@ -7,5 +7,6 @@ public record ResendProperties(
         String apiKey,
         String from,
         String frontendBaseUrl,
-        int verificationExpiryHours
+        int verificationExpiryHours,
+        int passwordResetExpiryHours
 ) {}

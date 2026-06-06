@@ -73,6 +73,7 @@ resend:
   from: ${RESEND_FROM:onboarding@resend.dev}
   frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
   verification-expiry-hours: ${RESEND_VERIFICATION_EXPIRY_HOURS:24}
+  password-reset-expiry-hours: ${RESEND_PASSWORD_RESET_EXPIRY_HOURS:1}
 
 management:
   endpoints:

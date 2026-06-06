@@ -103,16 +103,26 @@ export default function LoginPage(): JSX.Element {
                 autoFocus
               />
 
-              <Input
-                id="password"
-                label="Пароль"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  id="password"
+                  label="Пароль"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <div className="text-right">
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:underline"
+                  >
+                    Забыли пароль?
+                  </Link>
+                </div>
+              </div>
 
               {isLocked && (
                 <motion.div

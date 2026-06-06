@@ -27,11 +27,31 @@ public class ResendEmailClient {
     }
 
     public void sendVerificationEmail(String to, String verificationLink) {
+        send(to, "Подтвердите вашу почту — PravoOS", buildHtml(
+                "Подтвердите вашу электронную почту, чтобы завершить регистрацию.",
+                "Подтвердить почту",
+                verificationLink,
+                "Ссылка действительна 24 часа. Если вы не регистрировались в PravoOS — проигнорируйте это письмо."
+        ));
+        log.info("Verification email sent to {}", to);
+    }
+
+    public void sendPasswordResetEmail(String to, String resetLink) {
+        send(to, "Сброс пароля — PravoOS", buildHtml(
+                "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",
+                "Сбросить пароль",
+                resetLink,
+                "Если вы не запрашивали сброс пароля — проигнорируйте это письмо, ваш пароль останется прежним."
+        ));
+        log.info("Password reset email sent to {}", to);
+    }
+
+    private void send(String to, String subject, String html) {
         Map<String, Object> body = Map.of(
                 "from", properties.from(),
                 "to", List.of(to),
-                "subject", "Подтвердите вашу почту — PravoOS",
-                "html", buildHtml(verificationLink)
+                "subject", subject,
+                "html", html
         );
 
         restClient.post()
@@ -41,26 +61,22 @@ public class ResendEmailClient {
                 .body(body)
                 .retrieve()
                 .toBodilessEntity();
-
-        log.info("Verification email sent to {}", to);
     }
 
-    private String buildHtml(String verificationLink) {
+    private String buildHtml(String bodyText, String buttonText, String link, String footnote) {
         return """
                 <!DOCTYPE html>
                 <html>
                 <body style="font-family: Inter, Arial, sans-serif; color: #09090b; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
                   <h2 style="font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px;">PravoOS</h2>
-                  <p style="font-size: 16px; margin-bottom: 24px;">Подтвердите вашу электронную почту, чтобы завершить регистрацию.</p>
+                  <p style="font-size: 16px; margin-bottom: 24px;">%s</p>
                   <a href="%s"
                      style="display: inline-block; background: #09090b; color: #ffffff; padding: 12px 24px; text-decoration: none; font-weight: 600; font-size: 14px;">
-                    Подтвердить почту
+                    %s
                   </a>
-                  <p style="margin-top: 24px; font-size: 13px; color: #71717a;">
-                    Ссылка действительна 24 часа. Если вы не регистрировались в PravoOS — проигнорируйте это письмо.
-                  </p>
+                  <p style="margin-top: 24px; font-size: 13px; color: #71717a;">%s</p>
                 </body>
                 </html>
-                """.formatted(verificationLink);
+                """.formatted(bodyText, link, buttonText, footnote);
     }
 }

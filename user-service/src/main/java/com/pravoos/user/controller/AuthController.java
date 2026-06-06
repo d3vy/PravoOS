@@ -4,12 +4,15 @@ import com.pravoos.user.exception.InvalidRefreshTokenException;
 import com.pravoos.user.model.dto.ApplyRequest;
 import com.pravoos.user.model.dto.ApplicationResponse;
 import com.pravoos.user.model.dto.AuthResponse;
+import com.pravoos.user.model.dto.ForgotPasswordRequest;
 import com.pravoos.user.model.dto.LoginRequest;
+import com.pravoos.user.model.dto.ResetPasswordRequest;
 import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.security.RefreshCookieFactory;
 import com.pravoos.user.service.ApplicationService;
 import com.pravoos.user.service.AuthService;
 import com.pravoos.user.service.EmailVerificationService;
+import com.pravoos.user.service.PasswordResetService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -32,15 +35,18 @@ public class AuthController {
     private final ApplicationService applicationService;
     private final RefreshCookieFactory refreshCookieFactory;
     private final EmailVerificationService emailVerificationService;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(AuthService authService,
                           ApplicationService applicationService,
                           RefreshCookieFactory refreshCookieFactory,
-                          EmailVerificationService emailVerificationService) {
+                          EmailVerificationService emailVerificationService,
+                          PasswordResetService passwordResetService) {
         this.authService = authService;
         this.applicationService = applicationService;
         this.refreshCookieFactory = refreshCookieFactory;
         this.emailVerificationService = emailVerificationService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/login")
@@ -77,6 +83,18 @@ public class AuthController {
     public ResponseEntity<Map<String, Boolean>> verifyEmail(@RequestParam String token) {
         emailVerificationService.verifyToken(token);
         return ResponseEntity.ok(Map.of("verified", true));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestReset(request.email());
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.token(), request.password());
+        return ResponseEntity.noContent().build();
     }
 
     private ResponseEntity<AuthResponse> authResponse(TokenResponse tokens) {
