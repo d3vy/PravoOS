@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { ApplicationResponse, LawyerProfileResponse } from '../types'
+import type { ApplicationResponse, ClientStatsResponse, LawyerProfileResponse } from '../types'
 
 export const adminApi = {
   getAllApplications: async (): Promise<ApplicationResponse[]> => {
@@ -22,6 +22,11 @@ export const adminApi = {
 
   getLawyers: async (): Promise<LawyerProfileResponse[]> => {
     const response = await apiClient.get<LawyerProfileResponse[]>('/api/admin/users/lawyers')
+    return response.data
+  },
+
+  getClientStats: async (): Promise<ClientStatsResponse> => {
+    const response = await apiClient.get<ClientStatsResponse>('/api/admin/stats/clients')
     return response.data
   },
 }

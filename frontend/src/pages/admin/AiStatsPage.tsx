@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { aiStatsApi } from '../../api/aiStats'
-import type { AiResponseDto, AiStatsResponse } from '../../types'
+import { adminApi } from '../../api/admin'
+import type { AiResponseDto, AiStatsResponse, ClientStatsResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 
 export default function AiStatsPage(): JSX.Element {
@@ -12,6 +13,11 @@ export default function AiStatsPage(): JSX.Element {
   const { data: recent = [] } = useQuery<AiResponseDto[]>({
     queryKey: ['ai-recent-responses'],
     queryFn: aiStatsApi.getRecentResponses,
+  })
+
+  const { data: clientStats } = useQuery<ClientStatsResponse>({
+    queryKey: ['client-stats'],
+    queryFn: adminApi.getClientStats,
   })
 
   if (isLoading || !stats) {
@@ -31,6 +37,27 @@ export default function AiStatsPage(): JSX.Element {
         </p>
       </div>
 
+      {clientStats && (
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Клиенты</h2>
+          <div className="p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border max-w-xs">
+            <div className="flex items-center gap-2 text-sm text-light-secondary dark:text-dark-secondary mb-2">
+              Новые клиенты
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-semibold text-light-text dark:text-dark-text">
+                +{clientStats.newThisWeek}
+              </span>
+              <span className="text-xs text-light-accent dark:text-dark-accent">за неделю</span>
+            </div>
+            <p className="text-xs text-light-secondary dark:text-dark-secondary mt-2">
+              Всего активных: {clientStats.totalActive}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">AI</h2>
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard label="Всего заключений" value={stats.totalResponses} />
         <StatCard label="Оценено" value={stats.ratedResponses} />

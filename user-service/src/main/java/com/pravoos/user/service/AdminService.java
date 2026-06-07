@@ -1,5 +1,6 @@
 package com.pravoos.user.service;
 
+import com.pravoos.user.model.dto.ClientStatsResponse;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
 import com.pravoos.user.model.entity.LawyerProfile;
 import com.pravoos.user.model.entity.User;
@@ -9,6 +10,7 @@ import com.pravoos.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -26,6 +28,14 @@ public class AdminService {
                 .stream()
                 .map(this::toLawyerProfileResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ClientStatsResponse getClientStats() {
+        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+        long totalActive = userRepository.countByRoleAndStatus(UserRole.LAWYER, UserStatus.ACTIVE);
+        long newThisWeek = userRepository.countByRoleAndStatusAndCreatedAtAfter(UserRole.LAWYER, UserStatus.ACTIVE, weekAgo);
+        return new ClientStatsResponse(newThisWeek, totalActive);
     }
 
     private LawyerProfileResponse toLawyerProfileResponse(User user) {

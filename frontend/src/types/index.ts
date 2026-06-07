@@ -149,6 +149,11 @@ export interface AiStatsResponse {
   workflows: WorkflowStat[]
 }
 
+export interface ClientStatsResponse {
+  newThisWeek: number
+  totalActive: number
+}
+
 export interface DraftTypeInfo {
   id: string
   displayName: string
