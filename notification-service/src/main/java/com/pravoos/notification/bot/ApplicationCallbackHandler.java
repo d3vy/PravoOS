@@ -9,6 +9,7 @@ import java.util.UUID;
 @Component
 public class ApplicationCallbackHandler {
 
+    private static final String APPROVE_FORCE_PREFIX = "approve_force:";
     private static final String APPROVE_PREFIX = "approve:";
     private static final String REJECT_PREFIX = "reject:";
 
@@ -20,12 +21,18 @@ public class ApplicationCallbackHandler {
 
     public boolean supports(String callbackData) {
         return callbackData != null &&
-                (callbackData.startsWith(APPROVE_PREFIX) || callbackData.startsWith(REJECT_PREFIX));
+                (callbackData.startsWith(APPROVE_FORCE_PREFIX)
+                        || callbackData.startsWith(APPROVE_PREFIX)
+                        || callbackData.startsWith(REJECT_PREFIX));
     }
 
     public String handle(String callbackData) {
         try {
-            if (callbackData.startsWith(APPROVE_PREFIX)) {
+            if (callbackData.startsWith(APPROVE_FORCE_PREFIX)) {
+                UUID id = UUID.fromString(callbackData.substring(APPROVE_FORCE_PREFIX.length()));
+                userServiceClient.approveApplicationForce(id);
+                return "Заявка принята без подтверждения почты";
+            } else if (callbackData.startsWith(APPROVE_PREFIX)) {
                 UUID id = UUID.fromString(callbackData.substring(APPROVE_PREFIX.length()));
                 userServiceClient.approveApplication(id);
                 return "Заявка принята";
@@ -39,7 +46,7 @@ public class ApplicationCallbackHandler {
         } catch (HttpClientErrorException.Conflict e) {
             return "Заявка уже обработана или email занят";
         } catch (HttpClientErrorException.UnprocessableEntity e) {
-            return "Email не подтверждён — юрист должен перейти по ссылке в письме";
+            return "Email не подтверждён — используйте кнопку «Принять без почты»";
         } catch (HttpClientErrorException e) {
             throw e;
         }

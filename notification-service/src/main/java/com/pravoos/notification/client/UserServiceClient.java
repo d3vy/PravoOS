@@ -32,6 +32,15 @@ public class UserServiceClient {
         log.info("Application approved via internal API: {}", applicationId);
     }
 
+    public void approveApplicationForce(UUID applicationId) {
+        restClient.post()
+                .uri("/internal/applications/{id}/approve-force", applicationId)
+                .header("X-Internal-Secret", internalSecret)
+                .retrieve()
+                .toBodilessEntity();
+        log.info("Application force-approved via internal API: {}", applicationId);
+    }
+
     public void rejectApplication(UUID applicationId) {
         restClient.post()
                 .uri("/internal/applications/{id}/reject", applicationId)

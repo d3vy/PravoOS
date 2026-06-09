@@ -56,8 +56,12 @@ public class TelegramNotificationService {
         rejectButton.setText("Отклонить");
         rejectButton.setCallbackData("reject:" + payload.applicationId());
 
+        InlineKeyboardButton approveForceButton = new InlineKeyboardButton();
+        approveForceButton.setText("Принять без почты");
+        approveForceButton.setCallbackData("approve_force:" + payload.applicationId());
+
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        markup.setKeyboard(List.of(List.of(approveButton, rejectButton)));
+        markup.setKeyboard(List.of(List.of(approveButton, rejectButton), List.of(approveForceButton)));
         return markup;
     }
 
