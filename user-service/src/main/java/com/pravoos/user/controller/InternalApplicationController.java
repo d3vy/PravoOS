@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import java.util.UUID;
 
@@ -33,6 +34,14 @@ public class InternalApplicationController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/{id}/approve-force")
+    public ResponseEntity<Void> approveForce(@PathVariable UUID id,
+                                             @RequestHeader("X-Internal-Secret") String secret) {
+        verifySecret(secret);
+        applicationService.approveApplication(id, null, true);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/{id}/reject")
     public ResponseEntity<Void> reject(@PathVariable UUID id,
                                         @RequestHeader("X-Internal-Secret") String secret) {
@@ -42,10 +51,16 @@ public class InternalApplicationController {
     }
 
     private void verifySecret(String secret) {
-        byte[] expected = secretProperties.secret().getBytes(StandardCharsets.UTF_8);
-        byte[] actual = secret.getBytes(StandardCharsets.UTF_8);
-        if (!MessageDigest.isEqual(expected, actual)) {
+        if (secret == null || !MessageDigest.isEqual(sha256(secretProperties.secret()), sha256(secret))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+    }
+
+    private byte[] sha256(String value) {
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
         }
     }
 }

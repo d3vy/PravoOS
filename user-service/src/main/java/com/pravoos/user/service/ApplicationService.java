@@ -146,7 +146,7 @@ public class ApplicationService {
     }
 
     private LawyerApplication findPendingApplicationOrThrow(UUID applicationId) {
-        LawyerApplication application = applicationRepository.findById(applicationId)
+        LawyerApplication application = applicationRepository.findByIdForUpdate(applicationId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
         if (application.getStatus() != ApplicationStatus.PENDING) {

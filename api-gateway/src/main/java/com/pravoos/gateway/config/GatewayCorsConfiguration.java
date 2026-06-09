@@ -25,7 +25,7 @@ public class GatewayCorsConfiguration {
     public CorsWebFilter corsWebFilter(
             DeployProperties deploy,
             @Value("${ALLOWED_ORIGINS:}") String allowedOriginsOverride,
-            @Value("${CORS_INCLUDE_LOCALHOST:true}") boolean includeLocalhostOrigins
+            @Value("${CORS_INCLUDE_LOCALHOST:false}") boolean includeLocalhostOrigins
     ) {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

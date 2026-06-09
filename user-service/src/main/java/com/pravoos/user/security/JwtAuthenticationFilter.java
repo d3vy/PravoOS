@@ -11,16 +11,21 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.pravoos.user.service.TokenDenylistService;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenDenylistService tokenDenylistService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
+                                   TokenDenylistService tokenDenylistService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenDenylistService = tokenDenylistService;
     }
 
     @Override
@@ -33,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Claims claims = jwtTokenProvider.extractClaims(token);
             String role = claims.get("role", String.class);
 
-            if (role != null && !role.isBlank()) {
+            if (role != null && !role.isBlank() && !isRevoked(claims)) {
                 List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
                 UsernamePasswordAuthenticationToken authentication =
@@ -44,6 +49,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private boolean isRevoked(Claims claims) {
+        Date issuedAt = claims.getIssuedAt();
+        long issuedAtSeconds = issuedAt != null ? issuedAt.toInstant().getEpochSecond() : 0L;
+        return tokenDenylistService.isAccessTokenRevoked(claims.getSubject(), issuedAtSeconds);
     }
 
     private String extractBearerToken(HttpServletRequest request) {

@@ -80,7 +80,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
         return redisTemplate.opsForValue().get(DENYLIST_KEY_PREFIX + userId)
                 .map(value -> {
                     try {
-                        return issuedAtSeconds < Long.parseLong(value.trim());
+                        return issuedAtSeconds <= Long.parseLong(value.trim());
                     } catch (NumberFormatException e) {
                         return false;
                     }

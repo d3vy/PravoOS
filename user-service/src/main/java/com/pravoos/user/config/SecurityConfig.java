@@ -2,6 +2,7 @@ package com.pravoos.user.config;
 
 import com.pravoos.user.security.JwtAuthenticationFilter;
 import com.pravoos.user.security.JwtTokenProvider;
+import com.pravoos.user.service.TokenDenylistService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -20,9 +21,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenDenylistService tokenDenylistService;
 
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider) {
+    public SecurityConfig(JwtTokenProvider jwtTokenProvider, TokenDenylistService tokenDenylistService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenDenylistService = tokenDenylistService;
     }
 
     @Bean
@@ -36,7 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, tokenDenylistService),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

@@ -35,4 +35,17 @@ public class TokenDenylistService {
             log.error("Failed to write access-token denylist entry for user {}", userId, ex);
         }
     }
+
+    public boolean isAccessTokenRevoked(String userId, long issuedAtEpochSeconds) {
+        if (userId == null) {
+            return false;
+        }
+        try {
+            String cutoff = redisTemplate.opsForValue().get(KEY_PREFIX + userId);
+            return cutoff != null && issuedAtEpochSeconds <= Long.parseLong(cutoff.trim());
+        } catch (DataAccessException | NumberFormatException ex) {
+            log.warn("Failed to read access-token denylist for user {}", userId, ex);
+            return false;
+        }
+    }
 }

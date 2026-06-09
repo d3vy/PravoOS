@@ -63,6 +63,8 @@ public class RefreshTokenService {
         }
 
         if (stored.getExpiresAt().isBefore(LocalDateTime.now())) {
+            stored.setRevokedAt(LocalDateTime.now());
+            refreshTokenRepository.save(stored);
             throw new InvalidRefreshTokenException();
         }
 

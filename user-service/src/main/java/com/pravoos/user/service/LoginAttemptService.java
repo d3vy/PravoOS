@@ -44,7 +44,8 @@ public class LoginAttemptService {
             if (attempts == null) {
                 return;
             }
-            if (attempts == 1L) {
+            Long ttl = redisTemplate.getExpire(attemptsKey, TimeUnit.SECONDS);
+            if (attempts == 1L || ttl == null || ttl < 0) {
                 redisTemplate.expire(attemptsKey, properties.attemptWindow());
             }
             if (attempts >= properties.maxAttempts()) {
