@@ -14,7 +14,6 @@ import com.pravoos.ai.repository.jpa.AiResponseRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
@@ -81,9 +80,8 @@ public class WorkflowService {
         return AiResponseDto.from(saved, parsed.followUps());
     }
 
-    @Transactional
-    protected AiResponse saveResponse(UUID caseId, UUID lawyerId, String workflowId,
-                                      String query, String result, List<SourceReference> sources) {
+    private AiResponse saveResponse(UUID caseId, UUID lawyerId, String workflowId,
+                                    String query, String result, List<SourceReference> sources) {
         AiResponse response = new AiResponse();
         response.setCaseId(caseId);
         response.setLawyerId(lawyerId);

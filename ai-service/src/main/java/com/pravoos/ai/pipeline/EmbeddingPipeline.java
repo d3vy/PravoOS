@@ -23,6 +23,7 @@ import java.util.UUID;
 public class EmbeddingPipeline {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingPipeline.class);
+    private static final int EMBEDDING_BATCH_SIZE = 64;
 
     private final DocumentRepository documentRepository;
     private final DocumentService documentService;
@@ -67,9 +68,13 @@ public class EmbeddingPipeline {
             );
 
             List<ChunkData> chunkData = new ArrayList<>(chunkTexts.size());
-            for (int i = 0; i < chunkTexts.size(); i++) {
-                float[] embedding = embeddingService.embed(chunkTexts.get(i));
-                chunkData.add(new ChunkData(chunkTexts.get(i), i, embedding));
+            for (int start = 0; start < chunkTexts.size(); start += EMBEDDING_BATCH_SIZE) {
+                int end = Math.min(start + EMBEDDING_BATCH_SIZE, chunkTexts.size());
+                List<String> batch = chunkTexts.subList(start, end);
+                List<float[]> embeddings = embeddingService.embedBatch(batch);
+                for (int i = 0; i < batch.size(); i++) {
+                    chunkData.add(new ChunkData(batch.get(i), start + i, embeddings.get(i)));
+                }
             }
 
             documentService.completeProcessing(documentId, chunkData);

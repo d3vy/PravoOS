@@ -9,4 +9,6 @@ public interface LlmClient {
     String complete(String systemPrompt, List<LlmMessage> history, String userMessage);
 
     float[] embed(String text);
+
+    List<float[]> embedBatch(List<String> texts);
 }

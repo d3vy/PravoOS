@@ -59,9 +59,17 @@ public class OpenAiLlmClient implements LlmClient {
 
     @Override
     public float[] embed(String text) {
+        return embedBatch(List.of(text)).get(0);
+    }
+
+    @Override
+    public List<float[]> embedBatch(List<String> texts) {
+        if (texts == null || texts.isEmpty()) {
+            return List.of();
+        }
         OpenAiEmbeddingRequest request = new OpenAiEmbeddingRequest(
                 properties.embeddingModel(),
-                text
+                texts
         );
 
         try {
@@ -71,10 +79,10 @@ public class OpenAiLlmClient implements LlmClient {
                     .retrieve()
                     .body(OpenAiEmbeddingResponse.class);
 
-            if (response == null || response.firstEmbedding().length == 0) {
-                throw new LlmException("Empty embedding response from API");
+            if (response == null || response.allEmbeddings().size() != texts.size()) {
+                throw new LlmException("Incomplete embedding response from API");
             }
-            return response.firstEmbedding();
+            return response.allEmbeddings();
         } catch (RestClientResponseException e) {
             log.error("Embedding API returned {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new LlmException("Embedding API call failed with status " + e.getStatusCode().value());

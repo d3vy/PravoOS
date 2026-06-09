@@ -3,9 +3,14 @@ package com.pravoos.ai.service;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class RagService {
+
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{(instruction|context)\\}");
 
     private static final String FOLLOW_UP_INSTRUCTION = """
 
@@ -43,13 +48,24 @@ public class RagService {
             """ + FOLLOW_UP_INSTRUCTION;
 
     public String buildSystemPrompt(List<String> relevantChunks) {
-        return SYSTEM_PROMPT_TEMPLATE.replace("{context}", joinContext(relevantChunks));
+        return fill(SYSTEM_PROMPT_TEMPLATE, Map.of("context", joinContext(relevantChunks)));
     }
 
     public String buildWorkflowPrompt(String instruction, List<String> relevantChunks) {
-        return WORKFLOW_PROMPT_TEMPLATE
-                .replace("{instruction}", instruction)
-                .replace("{context}", joinContext(relevantChunks));
+        return fill(WORKFLOW_PROMPT_TEMPLATE, Map.of(
+                "instruction", instruction,
+                "context", joinContext(relevantChunks)));
+    }
+
+    private String fill(String template, Map<String, String> values) {
+        Matcher matcher = PLACEHOLDER.matcher(template);
+        StringBuilder result = new StringBuilder();
+        while (matcher.find()) {
+            String replacement = values.getOrDefault(matcher.group(1), matcher.group());
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(result);
+        return result.toString();
     }
 
     private String joinContext(List<String> relevantChunks) {

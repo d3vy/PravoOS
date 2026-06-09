@@ -114,6 +114,7 @@ public class DocumentService {
     public void delete(UUID documentId) {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
+        requireKnowledgeBaseDocument(document);
 
         String filePath = document.getFilePath();
         documentChunkRepository.deleteByDocumentId(documentId);
@@ -152,6 +153,7 @@ public class DocumentService {
     public DocumentContent loadContent(UUID documentId) {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
+        requireKnowledgeBaseDocument(document);
 
         Path path = Paths.get(document.getFilePath());
         if (!Files.isReadable(path)) {
@@ -178,6 +180,13 @@ public class DocumentService {
                 .toList();
     }
 
+    private void requireKnowledgeBaseDocument(Document document) {
+        if (document.getCaseId() != null) {
+            log.warn("Rejected knowledge-base operation on case-bound document {}", document.getId());
+            throw new DocumentNotFoundException(document.getId());
+        }
+    }
+
     private Path storeFile(MultipartFile file, String storageKey, String fileType) {
         try {
             Path dir = Paths.get(documentProperties.storagePath(), storageKey);
@@ -202,16 +211,31 @@ public class DocumentService {
     private static final byte[] PDF_SIGNATURE = {0x25, 0x50, 0x44, 0x46};
     private static final byte[] ZIP_SIGNATURE = {0x50, 0x4B, 0x03, 0x04};
 
+    private static final String DOCX_CONTENT_TYPES_ENTRY = "[Content_Types].xml";
+
     private void validateContentMatchesType(MultipartFile file, String fileType) {
-        byte[] header = readHeader(file);
         boolean matches = switch (fileType) {
-            case "pdf" -> startsWith(header, PDF_SIGNATURE);
-            case "docx" -> startsWith(header, ZIP_SIGNATURE);
+            case "pdf" -> startsWith(readHeader(file), PDF_SIGNATURE);
+            case "docx" -> isValidDocx(file);
             case "txt" -> true;
             default -> false;
         };
         if (!matches) {
             throw new DocumentProcessingException("File content does not match its extension ." + fileType);
+        }
+    }
+
+    private boolean isValidDocx(MultipartFile file) {
+        try (var zipInputStream = new java.util.zip.ZipInputStream(file.getInputStream())) {
+            java.util.zip.ZipEntry entry;
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                if (DOCX_CONTENT_TYPES_ENTRY.equals(entry.getName())) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (IOException e) {
+            throw new DocumentProcessingException("Failed to read uploaded file: " + e.getMessage());
         }
     }
 

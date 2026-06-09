@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class EmbeddingService {
 
@@ -29,7 +31,16 @@ public class EmbeddingService {
     }
 
     public float[] embed(String text) {
-        float[] embedding = llmClient.embed(text);
+        return validateDimensions(llmClient.embed(text));
+    }
+
+    public List<float[]> embedBatch(List<String> texts) {
+        List<float[]> embeddings = llmClient.embedBatch(texts);
+        embeddings.forEach(this::validateDimensions);
+        return embeddings;
+    }
+
+    private float[] validateDimensions(float[] embedding) {
         if (embedding.length != expectedDimensions) {
             log.error("Embedding dimension mismatch: expected {}, got {}", expectedDimensions, embedding.length);
             throw new LlmException(

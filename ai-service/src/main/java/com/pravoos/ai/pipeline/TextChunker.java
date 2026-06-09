@@ -18,10 +18,12 @@ public class TextChunker {
                     "overlap must be in [0, chunkSize), got overlap=" + overlap + ", chunkSize=" + chunkSize);
         }
 
-        String[] words = text.trim().split("\\s+");
         List<String> chunks = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            return chunks;
+        }
 
-        if (words.length == 0) return chunks;
+        String[] words = text.trim().split("\\s+");
 
         int step = chunkSize - overlap;
         for (int i = 0; i < words.length; i += step) {

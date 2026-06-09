@@ -87,7 +87,11 @@ public class ChatService {
         log.info("Chat request received: conversation={}, lawyer={}",
                 isNewConversation ? "new" : conversation.getId(), lawyerId);
 
-        List<String> attachedChunks = loadOwnedAttachedChunks(request.attachedDocumentIds(), lawyerId);
+        List<Document> attachedDocuments = loadOwnedAttachedDocuments(request.attachedDocumentIds(), lawyerId);
+        List<String> attachedChunks = attachedDocuments.isEmpty()
+                ? List.of()
+                : documentChunkRepository.findContentByDocumentIdIn(
+                        attachedDocuments.stream().map(Document::getId).collect(Collectors.toSet()));
 
         List<LlmMessage> historyForLlm = isNewConversation
                 ? List.of()
@@ -110,6 +114,12 @@ public class ChatService {
                 .toList());
         relevantChunks.addAll(0, attachedChunks);
 
+        attachedDocuments.stream()
+                .map(Document::getTitle)
+                .filter(title -> title != null && !title.isBlank())
+                .filter(title -> !sources.contains(title))
+                .forEach(sources::add);
+
         String systemPrompt = ragService.buildSystemPrompt(relevantChunks);
         String rawAnswer = llmClient.complete(systemPrompt, historyForLlm, request.message());
         FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(rawAnswer);
@@ -120,7 +130,7 @@ public class ChatService {
         return new ChatResponse(conversation.getId(), parsed.answer(), sources, parsed.followUps());
     }
 
-    private List<String> loadOwnedAttachedChunks(List<UUID> attachedDocumentIds, UUID lawyerId) {
+    private List<Document> loadOwnedAttachedDocuments(List<UUID> attachedDocumentIds, UUID lawyerId) {
         if (attachedDocumentIds == null || attachedDocumentIds.isEmpty()) {
             return List.of();
         }
@@ -153,7 +163,7 @@ public class ChatService {
             }
         }
 
-        return documentChunkRepository.findContentByDocumentIdIn(requestedIds);
+        return documents;
     }
 
     private UUID firstMissing(Set<UUID> requestedIds, List<Document> documents) {

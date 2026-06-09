@@ -13,6 +13,10 @@ public final class SecurityUtils {
         if (authentication == null || !(authentication.getPrincipal() instanceof String principal)) {
             throw new IllegalStateException("No authenticated user in security context");
         }
-        return UUID.fromString(principal);
+        try {
+            return UUID.fromString(principal);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("Authenticated principal is not a valid user id");
+        }
     }
 }
