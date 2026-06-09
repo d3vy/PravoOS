@@ -41,6 +41,12 @@ public class AdminController {
         return ResponseEntity.ok(applicationService.approveApplication(id, SecurityUtils.currentUserId(authentication)));
     }
 
+    @PostMapping("/applications/{id}/approve-force")
+    public ResponseEntity<ApplicationResponse> approveForce(@PathVariable UUID id,
+                                                            Authentication authentication) {
+        return ResponseEntity.ok(applicationService.approveApplication(id, SecurityUtils.currentUserId(authentication), true));
+    }
+
     @PostMapping("/applications/{id}/reject")
     public ResponseEntity<ApplicationResponse> reject(@PathVariable UUID id,
                                                        Authentication authentication) {

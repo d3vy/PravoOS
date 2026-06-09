@@ -54,6 +54,34 @@ export default function ApplicationsPage(): JSX.Element {
     },
   })
 
+  const forceApproveMutation = useMutation({
+    mutationFn: (id: string) => adminApi.approveApplicationForce(id),
+    onMutate: async (id) => {
+      setProcessingId(id)
+      await queryClient.cancelQueries({ queryKey: ['applications'] })
+      const updateStatus = (apps: ApplicationResponse[]): ApplicationResponse[] =>
+        apps.map((a) => (a.id === id ? { ...a, status: 'APPROVED' as const, emailVerified: true } : a))
+      queryClient.setQueryData(['applications', 'all'], (old: ApplicationResponse[] | undefined) =>
+        old ? updateStatus(old) : old
+      )
+      queryClient.setQueryData(['applications', 'pending'], (old: ApplicationResponse[] | undefined) =>
+        old ? old.filter((a) => a.id !== id) : old
+      )
+    },
+    onError: (error, id) => {
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.message
+          ? error.response.data.message
+          : 'Ошибка при одобрении заявки'
+      setApproveError({ id, message })
+      setTimeout(() => setApproveError(null), 6000)
+    },
+    onSettled: () => {
+      setProcessingId(null)
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+    },
+  })
+
   const rejectMutation = useMutation({
     mutationFn: (id: string) => adminApi.rejectApplication(id),
     onMutate: async (id) => {
@@ -136,6 +164,7 @@ export default function ApplicationsPage(): JSX.Element {
                 application={app}
                 index={index}
                 onApprove={() => approveMutation.mutate(app.id)}
+                onApproveForce={() => forceApproveMutation.mutate(app.id)}
                 onReject={() => rejectMutation.mutate(app.id)}
                 isProcessing={processingId === app.id}
                 approveErrorMessage={approveError?.id === app.id ? approveError.message : null}
@@ -152,6 +181,7 @@ interface ApplicationCardProps {
   application: ApplicationResponse
   index: number
   onApprove: () => void
+  onApproveForce: () => void
   onReject: () => void
   isProcessing: boolean
   approveErrorMessage: string | null
@@ -161,6 +191,7 @@ function ApplicationCard({
   application,
   index,
   onApprove,
+  onApproveForce,
   onReject,
   isProcessing,
   approveErrorMessage,
@@ -222,25 +253,39 @@ function ApplicationCard({
         </div>
 
         {application.status === 'PENDING' && (
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onApprove}
-              loading={isProcessing}
-              disabled={isProcessing}
-            >
-              Одобрить
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={onReject}
-              loading={isProcessing}
-              disabled={isProcessing}
-            >
-              Отклонить
-            </Button>
+          <div className="flex flex-col items-stretch gap-2 shrink-0">
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onApprove}
+                loading={isProcessing}
+                disabled={isProcessing}
+              >
+                Одобрить
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={onReject}
+                loading={isProcessing}
+                disabled={isProcessing}
+              >
+                Отклонить
+              </Button>
+            </div>
+            {!application.emailVerified && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onApproveForce}
+                loading={isProcessing}
+                disabled={isProcessing}
+                title="Одобрить без подтверждения email — почта будет помечена подтверждённой"
+              >
+                Одобрить без подтверждения почты
+              </Button>
+            )}
           </div>
         )}
       </div>

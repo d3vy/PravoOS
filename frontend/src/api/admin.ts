@@ -16,6 +16,10 @@ export const adminApi = {
     await apiClient.post(`/api/admin/applications/${id}/approve`)
   },
 
+  approveApplicationForce: async (id: string): Promise<void> => {
+    await apiClient.post(`/api/admin/applications/${id}/approve-force`)
+  },
+
   rejectApplication: async (id: string): Promise<void> => {
     await apiClient.post(`/api/admin/applications/${id}/reject`)
   },

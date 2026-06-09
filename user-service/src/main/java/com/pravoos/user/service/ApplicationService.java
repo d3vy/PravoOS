@@ -82,10 +82,21 @@ public class ApplicationService {
 
     @Transactional
     public ApplicationResponse approveApplication(UUID applicationId, UUID adminId) {
+        return approveApplication(applicationId, adminId, false);
+    }
+
+    @Transactional
+    public ApplicationResponse approveApplication(UUID applicationId, UUID adminId, boolean skipEmailVerification) {
         LawyerApplication application = findPendingApplicationOrThrow(applicationId);
 
         if (!application.isEmailVerified()) {
-            throw new EmailNotVerifiedException();
+            if (!skipEmailVerification) {
+                throw new EmailNotVerifiedException();
+            }
+            application.setEmailVerified(true);
+            application.setEmailVerificationToken(null);
+            application.setEmailVerificationExpiresAt(null);
+            log.info("Email verification bypassed by admin for application: {}", applicationId);
         }
 
         if (userRepository.existsByEmail(application.getEmail())) {
