@@ -40,6 +40,20 @@ export interface ApplicationResponse {
   emailVerified: boolean
 }
 
+export interface ApplicationSubmissionResponse {
+  application: ApplicationResponse
+  statusToken: string
+}
+
+export interface UpdateApplicationRequest {
+  email: string
+  fullName: string
+  password?: string
+  barNumber: string
+  specialization: string
+  phone: string
+}
+
 export interface ChatRequest {
   conversationId?: string
   message: string

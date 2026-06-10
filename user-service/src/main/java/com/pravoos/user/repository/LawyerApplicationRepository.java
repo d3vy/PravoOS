@@ -28,6 +28,8 @@ public interface LawyerApplicationRepository extends JpaRepository<LawyerApplica
 
     Optional<LawyerApplication> findByEmailVerificationToken(String token);
 
+    Optional<LawyerApplication> findByStatusToken(String statusToken);
+
     Optional<LawyerApplication> findByEmailAndStatusAndEmailVerifiedFalse(String email, ApplicationStatus status);
 
     @Modifying(clearAutomatically = true)

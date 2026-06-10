@@ -1,13 +1,18 @@
 package com.pravoos.user.service;
 
+import com.pravoos.user.event.ApplicationApprovedSpringEvent;
 import com.pravoos.user.event.ApplicationSubmittedSpringEvent;
+import com.pravoos.user.event.VerificationEmailRequestedEvent;
 import com.pravoos.user.exception.ApplicationAlreadyExistsException;
 import com.pravoos.user.exception.ApplicationNotFoundException;
 import com.pravoos.user.exception.ApplicationStatusException;
+import com.pravoos.user.exception.ApplicationTokenNotFoundException;
 import com.pravoos.user.exception.EmailAlreadyExistsException;
 import com.pravoos.user.exception.EmailNotVerifiedException;
 import com.pravoos.user.model.dto.ApplyRequest;
 import com.pravoos.user.model.dto.ApplicationResponse;
+import com.pravoos.user.model.dto.ApplicationSubmissionResponse;
+import com.pravoos.user.model.dto.UpdateApplicationRequest;
 import com.pravoos.user.model.entity.LawyerApplication;
 import com.pravoos.user.model.entity.LawyerProfile;
 import com.pravoos.user.model.entity.User;
@@ -17,6 +22,7 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.service.EmailVerificationService;
+import com.pravoos.user.util.EmailDeliverabilityValidator;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import com.pravoos.user.util.PhoneNormalizer;
@@ -41,22 +47,26 @@ public class ApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final EmailVerificationService emailVerificationService;
+    private final EmailDeliverabilityValidator emailDeliverabilityValidator;
 
     public ApplicationService(LawyerApplicationRepository applicationRepository,
                                UserRepository userRepository,
                                PasswordEncoder passwordEncoder,
                                ApplicationEventPublisher eventPublisher,
-                               EmailVerificationService emailVerificationService) {
+                               EmailVerificationService emailVerificationService,
+                               EmailDeliverabilityValidator emailDeliverabilityValidator) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
         this.emailVerificationService = emailVerificationService;
+        this.emailDeliverabilityValidator = emailDeliverabilityValidator;
     }
 
     @Transactional
-    public ApplicationResponse submitApplication(ApplyRequest request) {
+    public ApplicationSubmissionResponse submitApplication(ApplyRequest request) {
         String email = EmailNormalizer.normalize(request.email());
+        emailDeliverabilityValidator.validate(email);
         if (applicationRepository.existsByEmailAndStatus(email, ApplicationStatus.PENDING)) {
             throw new ApplicationAlreadyExistsException(email);
         }
@@ -71,6 +81,7 @@ public class ApplicationService {
         application.setBarNumber(request.barNumber());
         application.setSpecialization(request.specialization());
         application.setPhone(PhoneNormalizer.normalize(request.phone()));
+        application.setStatusToken(emailVerificationService.generateToken());
         application.setEmailVerificationToken(emailVerificationService.generateToken());
         application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
 
@@ -78,7 +89,59 @@ public class ApplicationService {
         eventPublisher.publishEvent(new ApplicationSubmittedSpringEvent(saved));
 
         log.info("Lawyer application submitted: {}", EmailMasker.mask(email));
-        return toApplicationResponse(saved);
+        return new ApplicationSubmissionResponse(toApplicationResponse(saved), saved.getStatusToken());
+    }
+
+    @Transactional(readOnly = true)
+    public ApplicationResponse getApplicationByStatusToken(String statusToken) {
+        return applicationRepository.findByStatusToken(statusToken)
+                .map(this::toApplicationResponse)
+                .orElseThrow(ApplicationTokenNotFoundException::new);
+    }
+
+    @Transactional
+    public ApplicationResponse updateApplication(String statusToken, UpdateApplicationRequest request) {
+        LawyerApplication application = applicationRepository.findByStatusToken(statusToken)
+                .orElseThrow(ApplicationTokenNotFoundException::new);
+
+        if (application.getStatus() != ApplicationStatus.PENDING) {
+            throw new ApplicationStatusException(application.getId(), application.getStatus());
+        }
+
+        String newEmail = EmailNormalizer.normalize(request.email());
+        boolean emailChanged = !newEmail.equals(application.getEmail());
+        if (emailChanged) {
+            emailDeliverabilityValidator.validate(newEmail);
+            if (applicationRepository.existsByEmailAndStatus(newEmail, ApplicationStatus.PENDING)) {
+                throw new ApplicationAlreadyExistsException(newEmail);
+            }
+            if (userRepository.existsByEmail(newEmail)) {
+                throw new EmailAlreadyExistsException(newEmail);
+            }
+            application.setEmail(newEmail);
+        }
+
+        application.setFullName(request.fullName());
+        application.setBarNumber(request.barNumber());
+        application.setSpecialization(request.specialization());
+        application.setPhone(PhoneNormalizer.normalize(request.phone()));
+        if (request.password() != null && !request.password().isBlank()) {
+            application.setPasswordHash(passwordEncoder.encode(request.password()));
+        }
+
+        if (emailChanged) {
+            String verificationToken = emailVerificationService.generateToken();
+            application.setEmailVerified(false);
+            application.setEmailVerificationToken(verificationToken);
+            application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
+            applicationRepository.save(application);
+            eventPublisher.publishEvent(new VerificationEmailRequestedEvent(newEmail, verificationToken));
+            log.info("Application email changed, re-verification sent: {}", EmailMasker.mask(newEmail));
+        } else {
+            applicationRepository.save(application);
+        }
+
+        return toApplicationResponse(application);
     }
 
     @Transactional
@@ -108,6 +171,7 @@ public class ApplicationService {
         userRepository.save(user);
 
         markReviewed(application, ApplicationStatus.APPROVED, adminId);
+        eventPublisher.publishEvent(new ApplicationApprovedSpringEvent(application.getEmail(), application.getFullName()));
 
         log.info("Application approved: {} by admin: {}", applicationId, adminId);
         return toApplicationResponse(application);

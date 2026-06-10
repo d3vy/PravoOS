@@ -7,6 +7,8 @@ import { AdminLayout } from './components/layout/AdminLayout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import ApplyPage from './pages/ApplyPage'
+import ApplicationStatusPage from './pages/ApplicationStatusPage'
+import EditApplicationPage from './pages/EditApplicationPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
@@ -32,6 +34,8 @@ export default function App(): JSX.Element {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/apply" element={<ApplyPage />} />
+      <Route path="/application/:token" element={<ApplicationStatusPage />} />
+      <Route path="/application/:token/edit" element={<EditApplicationPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />

@@ -43,6 +43,9 @@ public class LawyerApplication {
 
     private UUID reviewedBy;
 
+    @Column(nullable = false, unique = true, length = 64)
+    private String statusToken;
+
     @Column(unique = true)
     private String emailVerificationToken;
 
@@ -89,6 +92,9 @@ public class LawyerApplication {
 
     public UUID getReviewedBy() { return reviewedBy; }
     public void setReviewedBy(UUID reviewedBy) { this.reviewedBy = reviewedBy; }
+
+    public String getStatusToken() { return statusToken; }
+    public void setStatusToken(String statusToken) { this.statusToken = statusToken; }
 
     public String getEmailVerificationToken() { return emailVerificationToken; }
     public void setEmailVerificationToken(String emailVerificationToken) { this.emailVerificationToken = emailVerificationToken; }

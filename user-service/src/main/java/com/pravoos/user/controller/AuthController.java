@@ -3,12 +3,14 @@ package com.pravoos.user.controller;
 import com.pravoos.user.exception.InvalidRefreshTokenException;
 import com.pravoos.user.model.dto.ApplyRequest;
 import com.pravoos.user.model.dto.ApplicationResponse;
+import com.pravoos.user.model.dto.ApplicationSubmissionResponse;
 import com.pravoos.user.model.dto.AuthResponse;
 import com.pravoos.user.model.dto.ForgotPasswordRequest;
 import com.pravoos.user.model.dto.LoginRequest;
 import com.pravoos.user.model.dto.ResendVerificationRequest;
 import com.pravoos.user.model.dto.ResetPasswordRequest;
 import com.pravoos.user.model.dto.TokenResponse;
+import com.pravoos.user.model.dto.UpdateApplicationRequest;
 import com.pravoos.user.model.dto.VerifyEmailRequest;
 import com.pravoos.user.security.RefreshCookieFactory;
 import com.pravoos.user.service.ApplicationService;
@@ -20,9 +22,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -75,8 +80,19 @@ public class AuthController {
     }
 
     @PostMapping("/apply")
-    public ResponseEntity<ApplicationResponse> apply(@Valid @RequestBody ApplyRequest request) {
+    public ResponseEntity<ApplicationSubmissionResponse> apply(@Valid @RequestBody ApplyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.submitApplication(request));
+    }
+
+    @GetMapping("/application")
+    public ResponseEntity<ApplicationResponse> getApplicationByStatusToken(@RequestParam("token") String token) {
+        return ResponseEntity.ok(applicationService.getApplicationByStatusToken(token));
+    }
+
+    @PutMapping("/application")
+    public ResponseEntity<ApplicationResponse> updateApplication(@RequestParam("token") String token,
+                                                                 @Valid @RequestBody UpdateApplicationRequest request) {
+        return ResponseEntity.ok(applicationService.updateApplication(token, request));
     }
 
     @PostMapping("/verify-email")

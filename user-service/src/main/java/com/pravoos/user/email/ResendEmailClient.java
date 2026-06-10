@@ -37,6 +37,19 @@ public class ResendEmailClient {
         log.info("Verification email sent to {}", EmailMasker.mask(to));
     }
 
+    public void sendApprovalEmail(String to, String fullName, String loginLink) {
+        String greeting = (fullName == null || fullName.isBlank())
+                ? "Ваша заявка одобрена."
+                : fullName + ", ваша заявка одобрена.";
+        send(to, "Заявка одобрена — PravoOS", buildHtml(
+                greeting + " Доступ к системе предоставлен — войдите в личный кабинет, используя email и пароль из заявки.",
+                "Перейти в личный кабинет",
+                loginLink,
+                "Если кнопка не работает, откройте адрес в браузере: " + loginLink
+        ));
+        log.info("Approval email sent to {}", EmailMasker.mask(to));
+    }
+
     public void sendPasswordResetEmail(String to, String resetLink) {
         send(to, "Сброс пароля — PravoOS", buildHtml(
                 "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",

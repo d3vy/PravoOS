@@ -1,5 +1,12 @@
 import apiClient from './client'
-import type { LoginRequest, AuthResponse, ApplyRequest, ApplicationResponse } from '../types'
+import type {
+  LoginRequest,
+  AuthResponse,
+  ApplyRequest,
+  ApplicationResponse,
+  ApplicationSubmissionResponse,
+  UpdateApplicationRequest,
+} from '../types'
 
 export const authApi = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
@@ -7,8 +14,25 @@ export const authApi = {
     return response.data
   },
 
-  apply: async (data: ApplyRequest): Promise<ApplicationResponse> => {
-    const response = await apiClient.post<ApplicationResponse>('/api/auth/apply', data)
+  apply: async (data: ApplyRequest): Promise<ApplicationSubmissionResponse> => {
+    const response = await apiClient.post<ApplicationSubmissionResponse>('/api/auth/apply', data)
+    return response.data
+  },
+
+  getApplicationStatus: async (token: string): Promise<ApplicationResponse> => {
+    const response = await apiClient.get<ApplicationResponse>('/api/auth/application', {
+      params: { token },
+    })
+    return response.data
+  },
+
+  updateApplication: async (
+    token: string,
+    data: UpdateApplicationRequest,
+  ): Promise<ApplicationResponse> => {
+    const response = await apiClient.put<ApplicationResponse>('/api/auth/application', data, {
+      params: { token },
+    })
     return response.data
   },
 
