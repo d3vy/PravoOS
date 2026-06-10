@@ -7,6 +7,7 @@ import com.pravoos.user.exception.ApplicationAlreadyExistsException;
 import com.pravoos.user.exception.ApplicationNotFoundException;
 import com.pravoos.user.exception.ApplicationStatusException;
 import com.pravoos.user.exception.ApplicationTokenNotFoundException;
+import com.pravoos.user.exception.BarNumberAlreadyExistsException;
 import com.pravoos.user.exception.EmailAlreadyExistsException;
 import com.pravoos.user.exception.EmailNotVerifiedException;
 import com.pravoos.user.model.dto.ApplyRequest;
@@ -70,6 +71,12 @@ public class ApplicationService {
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException(email);
         }
+        if (applicationRepository.existsByBarNumberAndStatus(request.barNumber(), ApplicationStatus.PENDING)) {
+            throw new BarNumberAlreadyExistsException(request.barNumber());
+        }
+        if (userRepository.existsByLawyerProfileBarNumber(request.barNumber())) {
+            throw new BarNumberAlreadyExistsException(request.barNumber());
+        }
 
         LawyerApplication application = new LawyerApplication();
         application.setEmail(email);
@@ -128,7 +135,18 @@ public class ApplicationService {
         }
 
         application.setFullName(request.fullName());
-        application.setBarNumber(request.barNumber());
+
+        String newBarNumber = request.barNumber();
+        if (!newBarNumber.equals(application.getBarNumber())) {
+            if (applicationRepository.existsByBarNumberAndStatus(newBarNumber, ApplicationStatus.PENDING)) {
+                throw new BarNumberAlreadyExistsException(newBarNumber);
+            }
+            if (userRepository.existsByLawyerProfileBarNumber(newBarNumber)) {
+                throw new BarNumberAlreadyExistsException(newBarNumber);
+            }
+            application.setBarNumber(newBarNumber);
+        }
+
         application.setSpecialization(request.specialization());
         application.setPhone(PhoneNormalizer.normalize(request.phone()));
         if (request.password() != null && !request.password().isBlank()) {

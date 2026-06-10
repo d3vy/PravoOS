@@ -26,6 +26,8 @@ public interface LawyerApplicationRepository extends JpaRepository<LawyerApplica
 
     boolean existsByEmailAndStatus(String email, ApplicationStatus status);
 
+    boolean existsByBarNumberAndStatus(String barNumber, ApplicationStatus status);
+
     Optional<LawyerApplication> findByEmailVerificationToken(String token);
 
     Optional<LawyerApplication> findByStatusToken(String statusToken);
