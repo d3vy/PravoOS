@@ -21,7 +21,7 @@ export const authApi = {
 
   getApplicationStatus: async (token: string): Promise<ApplicationResponse> => {
     const response = await apiClient.get<ApplicationResponse>('/api/auth/application', {
-      params: { token },
+      headers: { 'X-Application-Token': token },
     })
     return response.data
   },
@@ -31,7 +31,7 @@ export const authApi = {
     data: UpdateApplicationRequest,
   ): Promise<ApplicationResponse> => {
     const response = await apiClient.put<ApplicationResponse>('/api/auth/application', data, {
-      params: { token },
+      headers: { 'X-Application-Token': token },
     })
     return response.data
   },

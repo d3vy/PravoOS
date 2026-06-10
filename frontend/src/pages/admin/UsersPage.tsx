@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import axios from 'axios'
 import { adminApi } from '../../api/admin'
 import type { LawyerProfileResponse } from '../../types'
 import { Button } from '../../components/ui/Button'
@@ -21,13 +20,18 @@ export default function UsersPage(): JSX.Element {
 
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      await Promise.all(ids.map((id) => adminApi.deleteLawyer(id)))
+      const results = await Promise.allSettled(ids.map((id) => adminApi.deleteLawyer(id)))
+      const failed = results.filter((r) => r.status === 'rejected').length
+      if (failed > 0) {
+        throw new Error(
+          failed === ids.length
+            ? 'Не удалось удалить выбранных юристов.'
+            : `Удалено ${ids.length - failed} из ${ids.length}. Часть юристов удалить не удалось.`,
+        )
+      }
     },
     onError: (error) => {
-      const message =
-        axios.isAxiosError(error) && error.response?.data?.message
-          ? error.response.data.message
-          : 'Ошибка при удалении юриста'
+      const message = error instanceof Error ? error.message : 'Ошибка при удалении юриста'
       setDeleteError(message)
       setTimeout(() => setDeleteError(null), 6000)
     },
@@ -58,6 +62,9 @@ export default function UsersPage(): JSX.Element {
   }
 
   const selectedCount = selectedIds.size
+  const selectedNames = lawyers
+    .filter((lawyer) => selectedIds.has(lawyer.userId))
+    .map((lawyer) => lawyer.fullName ?? lawyer.email)
 
   return (
     <div className="p-6 lg:p-8">
@@ -137,6 +144,7 @@ export default function UsersPage(): JSX.Element {
         {confirmOpen && (
           <ConfirmDeleteModal
             count={selectedCount}
+            names={selectedNames}
             loading={deleteMutation.isPending}
             onCancel={() => setConfirmOpen(false)}
             onConfirm={() => deleteMutation.mutate([...selectedIds])}
@@ -230,11 +238,13 @@ function InfoField({ label, value }: { label: string; value: string | null }): J
 
 function ConfirmDeleteModal({
   count,
+  names,
   loading,
   onCancel,
   onConfirm,
 }: {
   count: number
+  names: string[]
   loading: boolean
   onCancel: () => void
   onConfirm: () => void
@@ -258,9 +268,16 @@ function ConfirmDeleteModal({
         <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-2">
           Удалить {count === 1 ? 'юриста' : `юристов (${count})`}?
         </h2>
+        <ul className="mb-4 max-h-40 overflow-y-auto rounded-lg border border-light-border dark:border-dark-border divide-y divide-light-border dark:divide-dark-border text-sm">
+          {names.map((name, i) => (
+            <li key={`${name}-${i}`} className="px-3 py-2 text-light-text dark:text-dark-text truncate">
+              {name}
+            </li>
+          ))}
+        </ul>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
-          Учётные записи и персональные данные будут удалены без возможности восстановления.
-          Дела юриста останутся в системе.
+          Учётные записи, персональные данные, а также дела, черновики и чаты юриста будут удалены
+          без возможности восстановления.
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={loading}>

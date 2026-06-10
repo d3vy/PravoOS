@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface CaseRepository extends JpaRepository<Case, UUID> {
 
     List<Case> findByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
+
+    int deleteByLawyerId(UUID lawyerId);
 }

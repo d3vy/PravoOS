@@ -11,4 +11,8 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
     List<Conversation> findTop100ByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
     List<Conversation> findTop50ByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(UUID lawyerId, String title);
+
+    List<Conversation> findByLawyerId(UUID lawyerId);
+
+    void deleteByLawyerId(UUID lawyerId);
 }

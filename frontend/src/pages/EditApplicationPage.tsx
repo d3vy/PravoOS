@@ -15,13 +15,7 @@ function updateErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status
     const message = error.response?.data?.message as string | undefined
-    if (status === 409 && message?.includes('Pending application')) {
-      return 'Заявка с этим email уже находится на рассмотрении.'
-    }
-    if (status === 409) {
-      return 'Пользователь с таким email уже зарегистрирован.'
-    }
-    if (status === 400 && message) {
+    if (message && (status === 400 || status === 404 || status === 409)) {
       return message
     }
   }

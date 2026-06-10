@@ -12,4 +12,6 @@ public interface CaseDraftRepository extends JpaRepository<CaseDraft, UUID> {
     List<CaseDraft> findByCaseIdOrderByCreatedAtDesc(UUID caseId);
 
     Optional<CaseDraft> findByIdAndLawyerId(UUID id, UUID lawyerId);
+
+    int deleteByLawyerId(UUID lawyerId);
 }

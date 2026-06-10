@@ -59,8 +59,8 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/lawyers/{id}")
-    public ResponseEntity<Void> deleteLawyer(@PathVariable UUID id) {
-        adminService.deleteLawyer(id);
+    public ResponseEntity<Void> deleteLawyer(@PathVariable UUID id, Authentication authentication) {
+        adminService.deleteLawyer(id, SecurityUtils.currentUserId(authentication));
         return ResponseEntity.noContent().build();
     }
 

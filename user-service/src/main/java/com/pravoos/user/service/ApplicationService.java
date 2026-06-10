@@ -22,7 +22,6 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.service.EmailVerificationService;
-import com.pravoos.user.util.EmailDeliverabilityValidator;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import com.pravoos.user.util.PhoneNormalizer;
@@ -33,6 +32,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -41,32 +41,29 @@ import java.util.UUID;
 public class ApplicationService {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
+    private static final Duration STATUS_TOKEN_TTL = Duration.ofDays(30);
 
     private final LawyerApplicationRepository applicationRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final EmailVerificationService emailVerificationService;
-    private final EmailDeliverabilityValidator emailDeliverabilityValidator;
 
     public ApplicationService(LawyerApplicationRepository applicationRepository,
                                UserRepository userRepository,
                                PasswordEncoder passwordEncoder,
                                ApplicationEventPublisher eventPublisher,
-                               EmailVerificationService emailVerificationService,
-                               EmailDeliverabilityValidator emailDeliverabilityValidator) {
+                               EmailVerificationService emailVerificationService) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
         this.emailVerificationService = emailVerificationService;
-        this.emailDeliverabilityValidator = emailDeliverabilityValidator;
     }
 
     @Transactional
     public ApplicationSubmissionResponse submitApplication(ApplyRequest request) {
         String email = EmailNormalizer.normalize(request.email());
-        emailDeliverabilityValidator.validate(email);
         if (applicationRepository.existsByEmailAndStatus(email, ApplicationStatus.PENDING)) {
             throw new ApplicationAlreadyExistsException(email);
         }
@@ -82,6 +79,7 @@ public class ApplicationService {
         application.setSpecialization(request.specialization());
         application.setPhone(PhoneNormalizer.normalize(request.phone()));
         application.setStatusToken(emailVerificationService.generateToken());
+        application.setStatusTokenExpiresAt(LocalDateTime.now().plus(STATUS_TOKEN_TTL));
         application.setEmailVerificationToken(emailVerificationService.generateToken());
         application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
 
@@ -94,15 +92,24 @@ public class ApplicationService {
 
     @Transactional(readOnly = true)
     public ApplicationResponse getApplicationByStatusToken(String statusToken) {
-        return applicationRepository.findByStatusToken(statusToken)
-                .map(this::toApplicationResponse)
+        return toApplicationResponse(findByValidStatusToken(statusToken));
+    }
+
+    private LawyerApplication findByValidStatusToken(String statusToken) {
+        LawyerApplication application = applicationRepository.findByStatusToken(statusToken)
                 .orElseThrow(ApplicationTokenNotFoundException::new);
+
+        LocalDateTime expiresAt = application.getStatusTokenExpiresAt();
+        if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now())) {
+            throw new ApplicationTokenNotFoundException();
+        }
+
+        return application;
     }
 
     @Transactional
     public ApplicationResponse updateApplication(String statusToken, UpdateApplicationRequest request) {
-        LawyerApplication application = applicationRepository.findByStatusToken(statusToken)
-                .orElseThrow(ApplicationTokenNotFoundException::new);
+        LawyerApplication application = findByValidStatusToken(statusToken);
 
         if (application.getStatus() != ApplicationStatus.PENDING) {
             throw new ApplicationStatusException(application.getId(), application.getStatus());
@@ -111,7 +118,6 @@ public class ApplicationService {
         String newEmail = EmailNormalizer.normalize(request.email());
         boolean emailChanged = !newEmail.equals(application.getEmail());
         if (emailChanged) {
-            emailDeliverabilityValidator.validate(newEmail);
             if (applicationRepository.existsByEmailAndStatus(newEmail, ApplicationStatus.PENDING)) {
                 throw new ApplicationAlreadyExistsException(newEmail);
             }

@@ -10,4 +10,6 @@ public interface MessageRepository extends MongoRepository<Message, String> {
     List<Message> findByConversationIdOrderByCreatedAt(String conversationId);
 
     List<Message> findTop10ByConversationIdOrderByCreatedAtDesc(String conversationId);
+
+    void deleteByConversationIdIn(List<String> conversationIds);
 }

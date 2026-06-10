@@ -43,8 +43,10 @@ public class LawyerApplication {
 
     private UUID reviewedBy;
 
-    @Column(nullable = false, unique = true, length = 64)
+    @Column(nullable = false, unique = true, length = 128)
     private String statusToken;
+
+    private LocalDateTime statusTokenExpiresAt;
 
     @Column(unique = true)
     private String emailVerificationToken;
@@ -95,6 +97,9 @@ public class LawyerApplication {
 
     public String getStatusToken() { return statusToken; }
     public void setStatusToken(String statusToken) { this.statusToken = statusToken; }
+
+    public LocalDateTime getStatusTokenExpiresAt() { return statusTokenExpiresAt; }
+    public void setStatusTokenExpiresAt(LocalDateTime statusTokenExpiresAt) { this.statusTokenExpiresAt = statusTokenExpiresAt; }
 
     public String getEmailVerificationToken() { return emailVerificationToken; }
     public void setEmailVerificationToken(String emailVerificationToken) { this.emailVerificationToken = emailVerificationToken; }

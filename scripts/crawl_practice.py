@@ -80,6 +80,10 @@ class SiteConfig:
     max_pages: int = 500
     mode: str = "documents"
     min_text_chars: int = 400
+    auto_scroll: bool = False
+    next_page_selector: str = ""
+    wait_for_selector: str = ""
+    pre_actions: list[dict] = field(default_factory=list)
 
     @staticmethod
     def from_dict(raw: dict) -> "SiteConfig":
@@ -102,6 +106,10 @@ class SiteConfig:
             max_pages=int(raw.get("max_pages", 500)),
             mode=mode,
             min_text_chars=int(raw.get("min_text_chars", 400)),
+            auto_scroll=bool(raw.get("auto_scroll", False)),
+            next_page_selector=raw.get("next_page_selector") or "",
+            wait_for_selector=raw.get("wait_for_selector") or "",
+            pre_actions=raw.get("pre_actions") or [],
         )
 
 
@@ -189,9 +197,9 @@ class PravoOsClient:
         )
         if response.status_code != 200:
             raise AuthError(f"Логин не удался: HTTP {response.status_code} {response.text}")
-        token = response.json().get("token")
+        token = response.json().get("accessToken") or response.json().get("token")
         if not token:
-            raise AuthError("В ответе логина нет поля token")
+            raise AuthError("В ответе логина нет поля accessToken")
         self.token = token
 
     def upload(self, file_path: Path, title: str) -> str | None:
@@ -276,6 +284,14 @@ class Crawler:
             if not self.robots.allowed(url):
                 continue
 
+            is_seed = depth == 0 and url in site.seeds
+            if site.render_js and site.next_page_selector and is_seed:
+                html_pages = self.fetch_rendered_all_pages(url, site)
+                for html in html_pages:
+                    stats.bump("pages_visited")
+                    self._process_html(url, html, site, documents, queue, depth)
+                continue
+
             kind, payload = self._fetch(url, site)
             if kind is None:
                 continue
@@ -288,22 +304,26 @@ class Crawler:
                 continue
 
             stats.bump("pages_visited")
-            page_links, page_title = self._extract_links(url, payload)
-
-            if site.mode in ("text", "both") and url not in documents:
-                text = self._extract_clean_text(payload)
-                if len(text) >= site.min_text_chars:
-                    documents[url] = DocumentLink(url, site.name, page_title,
-                                                  kind="text", text_content=text)
-
-            for link in page_links:
-                if site.mode in ("documents", "both") and self._looks_like_document(link):
-                    if link not in documents:
-                        documents[link] = DocumentLink(link, site.name, page_title)
-                elif depth < site.max_depth and self._in_scope(link, site):
-                    queue.append((link, depth + 1))
+            self._process_html(url, payload, site, documents, queue, depth)
 
         return list(documents.values())
+
+    def _process_html(self, url: str, html: str, site: SiteConfig,
+                      documents: dict, queue: deque, depth: int) -> None:
+        page_links, page_title = self._extract_links(url, html)
+
+        if site.mode in ("text", "both") and url not in documents:
+            text = self._extract_clean_text(html)
+            if len(text) >= site.min_text_chars:
+                documents[url] = DocumentLink(url, site.name, page_title,
+                                              kind="text", text_content=text)
+
+        for link in page_links:
+            if site.mode in ("documents", "both") and self._looks_like_document(link):
+                if link not in documents:
+                    documents[link] = DocumentLink(link, site.name, page_title)
+            elif depth < site.max_depth and self._in_scope(link, site):
+                queue.append((link, depth + 1))
 
     def _in_scope(self, url: str, site: SiteConfig) -> bool:
         parsed = urlparse(url)
@@ -315,7 +335,7 @@ class Crawler:
 
     def _fetch(self, url: str, site: SiteConfig) -> tuple[str | None, str | None]:
         if site.render_js:
-            rendered = self._fetch_rendered(url)
+            rendered = self._fetch_rendered(url, site)
             return ("html", rendered) if rendered is not None else (None, None)
         try:
             response = self.session.get(url, timeout=REQUEST_TIMEOUT, stream=True)
@@ -334,14 +354,84 @@ class Crawler:
         finally:
             response.close()
 
-    def _fetch_rendered(self, url: str) -> str | None:
+    def _fetch_rendered(self, url: str, site: SiteConfig | None = None) -> str | None:
         page = self._ensure_playwright()
         try:
             page.goto(url, timeout=self.render_timeout * 1000, wait_until="networkidle")
+            if site and site.wait_for_selector:
+                try:
+                    page.wait_for_selector(site.wait_for_selector, timeout=self.render_timeout * 1000)
+                except Exception:
+                    pass
+            if site and site.auto_scroll:
+                self._scroll_to_bottom(page)
             return page.content()
         except Exception as exc:
             print(f"[skip] {url}: render failed ({exc})", file=sys.stderr)
             return None
+
+    def fetch_rendered_all_pages(self, url: str, site: SiteConfig) -> list[str]:
+        """Загружает страницу и кликает next_page_selector пока он есть, возвращает HTML каждой страницы."""
+        page = self._ensure_playwright()
+        pages_html: list[str] = []
+        try:
+            page.goto(url, timeout=self.render_timeout * 1000, wait_until="domcontentloaded")
+            for action in site.pre_actions:
+                if "click" in action:
+                    try:
+                        page.click(action["click"], timeout=self.render_timeout * 1000)
+                    except Exception as exc:
+                        print(f"[warn] pre_action click '{action['click']}' failed: {exc}", file=sys.stderr)
+                elif "wait" in action:
+                    try:
+                        page.wait_for_selector(action["wait"], timeout=self.render_timeout * 1000)
+                    except Exception as exc:
+                        print(f"[warn] pre_action wait '{action['wait']}' failed: {exc}", file=sys.stderr)
+            if site.wait_for_selector:
+                try:
+                    page.wait_for_selector(site.wait_for_selector, timeout=self.render_timeout * 1000)
+                except Exception:
+                    pass
+            if site.auto_scroll:
+                self._scroll_to_bottom(page)
+            pages_html.append(page.content())
+
+            if not site.next_page_selector:
+                return pages_html
+
+            while len(pages_html) < site.max_pages:
+                next_btn = page.query_selector(site.next_page_selector)
+                if not next_btn or not next_btn.is_visible() or not next_btn.is_enabled():
+                    break
+                previous_html = pages_html[-1]
+                next_btn.click()
+                if site.wait_for_selector:
+                    try:
+                        page.wait_for_selector(site.wait_for_selector, timeout=self.render_timeout * 1000)
+                    except Exception:
+                        pass
+                if site.auto_scroll:
+                    self._scroll_to_bottom(page)
+                current_html = page.content()
+                if current_html == previous_html:
+                    break
+                pages_html.append(current_html)
+                if self.delay:
+                    time.sleep(self.delay)
+        except Exception as exc:
+            print(f"[skip] {url}: render failed ({exc})", file=sys.stderr)
+        return pages_html
+
+    @staticmethod
+    def _scroll_to_bottom(page) -> None:
+        prev_height = -1
+        for _ in range(20):
+            height = page.evaluate("document.body.scrollHeight")
+            if height == prev_height:
+                break
+            prev_height = height
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            page.wait_for_timeout(800)
 
     def _ensure_playwright(self):
         if self._playwright_page is not None:
@@ -353,10 +443,26 @@ class Crawler:
                 "render_js=true требует Playwright. Установи: "
                 "pip install playwright && python -m playwright install chromium"
             ) from exc
+        try:
+            from playwright_stealth import stealth_sync
+            self._stealth_fn = stealth_sync
+        except ImportError:
+            self._stealth_fn = None
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.launch(headless=True)
-        context = self._browser.new_context(user_agent=USER_AGENT)
+        context = self._browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            locale="ru-RU",
+            timezone_id="Europe/Moscow",
+            viewport={"width": 1280, "height": 800},
+        )
         self._playwright_page = context.new_page()
+        if self._stealth_fn:
+            self._stealth_fn(self._playwright_page)
         return self._playwright_page
 
     def close(self) -> None:
@@ -577,7 +683,7 @@ def parse_args():
                         help="Параллельных скачиваний/загрузок")
     parser.add_argument("--delay", type=float, default=0.5,
                         help="Пауза между запросами страниц (сек)")
-    parser.add_argument("--render-timeout", type=int, default=30,
+    parser.add_argument("--render-timeout", type=int, default=60,
                         help="Таймаут рендера JS-страницы (сек)")
     parser.add_argument("--ignore-robots", action="store_true",
                         help="Игнорировать robots.txt")

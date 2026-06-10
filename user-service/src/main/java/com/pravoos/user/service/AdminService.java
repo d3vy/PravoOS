@@ -1,5 +1,6 @@
 package com.pravoos.user.service;
 
+import com.pravoos.user.event.LawyerDeletedSpringEvent;
 import com.pravoos.user.exception.LawyerNotFoundException;
 import com.pravoos.user.model.dto.ClientStatsResponse;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
@@ -8,8 +9,11 @@ import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
-import com.pravoos.user.repository.RefreshTokenRepository;
 import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.util.EmailMasker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,16 +24,18 @@ import java.util.UUID;
 @Service
 public class AdminService {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminService.class);
+
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final LawyerApplicationRepository lawyerApplicationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AdminService(UserRepository userRepository,
-                        RefreshTokenRepository refreshTokenRepository,
-                        LawyerApplicationRepository lawyerApplicationRepository) {
+                        LawyerApplicationRepository lawyerApplicationRepository,
+                        ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
-        this.refreshTokenRepository = refreshTokenRepository;
         this.lawyerApplicationRepository = lawyerApplicationRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -41,14 +47,20 @@ public class AdminService {
     }
 
     @Transactional
-    public void deleteLawyer(UUID userId) {
+    public void deleteLawyer(UUID userId, UUID adminId) {
         User lawyer = userRepository.findById(userId)
                 .filter(user -> user.getRole() == UserRole.LAWYER)
                 .orElseThrow(LawyerNotFoundException::new);
 
-        refreshTokenRepository.deleteByUserId(userId);
-        lawyerApplicationRepository.deleteByEmail(lawyer.getEmail());
+        String email = lawyer.getEmail();
+
         userRepository.delete(lawyer);
+        userRepository.flush();
+        lawyerApplicationRepository.deleteByEmail(email);
+
+        eventPublisher.publishEvent(new LawyerDeletedSpringEvent(userId));
+
+        log.warn("Lawyer {} ({}) deleted by admin {}", userId, EmailMasker.mask(email), adminId);
     }
 
     @Transactional(readOnly = true)

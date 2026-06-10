@@ -13,10 +13,11 @@ public class ApplicationEventProducer {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationEventProducer.class);
     private static final String TOPIC_APPLICATION_SUBMITTED = "application.submitted";
+    private static final String TOPIC_LAWYER_DELETED = "lawyer.deleted";
 
-    private final KafkaTemplate<String, ApplicationSubmittedKafkaPayload> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public ApplicationEventProducer(KafkaTemplate<String, ApplicationSubmittedKafkaPayload> kafkaTemplate) {
+    public ApplicationEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -37,6 +38,19 @@ public class ApplicationEventProducer {
                                 application.getEmail(), ex.getMessage(), ex);
                     } else {
                         log.info("Published application.submitted for: {}", application.getEmail());
+                    }
+                });
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onLawyerDeleted(LawyerDeletedSpringEvent event) {
+        String key = event.userId().toString();
+        kafkaTemplate.send(TOPIC_LAWYER_DELETED, key, new LawyerDeletedKafkaPayload(event.userId()))
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish lawyer.deleted for {}: {}", key, ex.getMessage(), ex);
+                    } else {
+                        log.info("Published lawyer.deleted for: {}", key);
                     }
                 });
     }

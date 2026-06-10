@@ -15,8 +15,14 @@ import com.pravoos.user.model.dto.VerifyEmailRequest;
 import com.pravoos.user.security.RefreshCookieFactory;
 import com.pravoos.user.service.ApplicationService;
 import com.pravoos.user.service.AuthService;
+import com.pravoos.user.exception.TooManyRequestsException;
 import com.pravoos.user.service.EmailVerificationService;
+import com.pravoos.user.service.IpRateLimiter;
 import com.pravoos.user.service.PasswordResetService;
+import com.pravoos.user.util.ClientIpResolver;
+import com.pravoos.user.util.EmailDeliverabilityValidator;
+import com.pravoos.user.util.EmailNormalizer;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -26,32 +32,42 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
+    private static final int APPLY_MAX_PER_IP = 5;
+    private static final Duration APPLY_WINDOW = Duration.ofHours(1);
+
     private final AuthService authService;
     private final ApplicationService applicationService;
     private final RefreshCookieFactory refreshCookieFactory;
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
+    private final EmailDeliverabilityValidator emailDeliverabilityValidator;
+    private final IpRateLimiter ipRateLimiter;
 
     public AuthController(AuthService authService,
                           ApplicationService applicationService,
                           RefreshCookieFactory refreshCookieFactory,
                           EmailVerificationService emailVerificationService,
-                          PasswordResetService passwordResetService) {
+                          PasswordResetService passwordResetService,
+                          EmailDeliverabilityValidator emailDeliverabilityValidator,
+                          IpRateLimiter ipRateLimiter) {
         this.authService = authService;
         this.applicationService = applicationService;
         this.refreshCookieFactory = refreshCookieFactory;
         this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
+        this.emailDeliverabilityValidator = emailDeliverabilityValidator;
+        this.ipRateLimiter = ipRateLimiter;
     }
 
     @PostMapping("/login")
@@ -80,18 +96,27 @@ public class AuthController {
     }
 
     @PostMapping("/apply")
-    public ResponseEntity<ApplicationSubmissionResponse> apply(@Valid @RequestBody ApplyRequest request) {
+    public ResponseEntity<ApplicationSubmissionResponse> apply(@Valid @RequestBody ApplyRequest request,
+                                                               HttpServletRequest httpRequest) {
+        String clientIp = ClientIpResolver.resolve(httpRequest);
+        if (!ipRateLimiter.allow("apply", clientIp, APPLY_MAX_PER_IP, APPLY_WINDOW)) {
+            throw new TooManyRequestsException();
+        }
+        emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
         return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.submitApplication(request));
     }
 
     @GetMapping("/application")
-    public ResponseEntity<ApplicationResponse> getApplicationByStatusToken(@RequestParam("token") String token) {
+    public ResponseEntity<ApplicationResponse> getApplicationByStatusToken(
+            @RequestHeader("X-Application-Token") String token) {
         return ResponseEntity.ok(applicationService.getApplicationByStatusToken(token));
     }
 
     @PutMapping("/application")
-    public ResponseEntity<ApplicationResponse> updateApplication(@RequestParam("token") String token,
-                                                                 @Valid @RequestBody UpdateApplicationRequest request) {
+    public ResponseEntity<ApplicationResponse> updateApplication(
+            @RequestHeader("X-Application-Token") String token,
+            @Valid @RequestBody UpdateApplicationRequest request) {
+        emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
         return ResponseEntity.ok(applicationService.updateApplication(token, request));
     }
 

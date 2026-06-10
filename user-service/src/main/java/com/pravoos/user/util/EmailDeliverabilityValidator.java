@@ -12,20 +12,27 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class EmailDeliverabilityValidator {
 
     private static final Logger log = LoggerFactory.getLogger(EmailDeliverabilityValidator.class);
-    private static final String[] MAIL_RECORD_TYPES = {"MX", "A"};
+    private static final String[] MAIL_RECORD_TYPES = {"MX", "A", "AAAA"};
     private static final Duration CACHE_TTL = Duration.ofHours(12);
     private static final int CACHE_MAX_SIZE = 10_000;
 
-    private final Map<String, CacheEntry> deliverabilityCache = new ConcurrentHashMap<>();
+    private final Map<String, CacheEntry> deliverabilityCache = Collections.synchronizedMap(
+            new LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, CacheEntry> eldest) {
+                    return size() > CACHE_MAX_SIZE;
+                }
+            });
 
     private record CacheEntry(boolean deliverable, Instant expiresAt) {
         boolean isFresh() {
@@ -69,7 +76,9 @@ public class EmailDeliverabilityValidator {
         try {
             context = new InitialDirContext(env);
             Attributes attributes = context.getAttributes(domain, MAIL_RECORD_TYPES);
-            return attributes.get("MX") != null || attributes.get("A") != null;
+            return attributes.get("MX") != null
+                    || attributes.get("A") != null
+                    || attributes.get("AAAA") != null;
         } catch (NameNotFoundException e) {
             return false;
         } catch (NamingException e) {
@@ -81,9 +90,6 @@ public class EmailDeliverabilityValidator {
     }
 
     private void cacheResult(String domain, boolean deliverable) {
-        if (deliverabilityCache.size() >= CACHE_MAX_SIZE) {
-            deliverabilityCache.clear();
-        }
         deliverabilityCache.put(domain, new CacheEntry(deliverable, Instant.now().plus(CACHE_TTL)));
     }
 

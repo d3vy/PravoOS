@@ -23,14 +23,31 @@ public class ApplicationApprovedEmailSender {
         this.resendProperties = resendProperties;
     }
 
+    private static final int MAX_EMAIL_ATTEMPTS = 3;
+
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApplicationApproved(ApplicationApprovedSpringEvent event) {
         String loginLink = resendProperties.frontendBaseUrl() + "/login";
-        try {
-            resendEmailClient.sendApprovalEmail(event.email(), event.fullName(), loginLink);
-        } catch (Exception e) {
-            log.error("Failed to send approval email to {}: {}", EmailMasker.mask(event.email()), e.getMessage());
+        for (int attempt = 1; attempt <= MAX_EMAIL_ATTEMPTS; attempt++) {
+            try {
+                resendEmailClient.sendApprovalEmail(event.email(), event.fullName(), loginLink);
+                return;
+            } catch (Exception e) {
+                if (attempt == MAX_EMAIL_ATTEMPTS) {
+                    log.error("Failed to send approval email to {} after {} attempts: {}",
+                            EmailMasker.mask(event.email()), MAX_EMAIL_ATTEMPTS, e.getMessage());
+                    return;
+                }
+                log.warn("Approval email attempt {}/{} failed for {}: {}",
+                        attempt, MAX_EMAIL_ATTEMPTS, EmailMasker.mask(event.email()), e.getMessage());
+                try {
+                    Thread.sleep(1000L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
         }
     }
 }
