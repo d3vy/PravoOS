@@ -29,6 +29,10 @@ export const adminApi = {
     return response.data
   },
 
+  deleteLawyer: async (userId: string): Promise<void> => {
+    await apiClient.delete(`/api/admin/users/lawyers/${userId}`)
+  },
+
   getClientStats: async (): Promise<ClientStatsResponse> => {
     const response = await apiClient.get<ClientStatsResponse>('/api/admin/stats/clients')
     return response.data

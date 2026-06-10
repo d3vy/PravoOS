@@ -36,4 +36,8 @@ public interface LawyerApplicationRepository extends JpaRepository<LawyerApplica
     @Query("UPDATE LawyerApplication a SET a.emailVerificationToken = null, a.emailVerificationExpiresAt = null " +
             "WHERE a.emailVerificationExpiresAt < :now AND a.emailVerified = false")
     int clearExpiredVerificationTokens(@Param("now") LocalDateTime now);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM LawyerApplication a WHERE a.email = :email")
+    int deleteByEmail(@Param("email") String email);
 }

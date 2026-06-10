@@ -58,6 +58,12 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getActiveLawyers());
     }
 
+    @DeleteMapping("/users/lawyers/{id}")
+    public ResponseEntity<Void> deleteLawyer(@PathVariable UUID id) {
+        adminService.deleteLawyer(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/stats/clients")
     public ResponseEntity<ClientStatsResponse> getClientStats() {
         return ResponseEntity.ok(adminService.getClientStats());
