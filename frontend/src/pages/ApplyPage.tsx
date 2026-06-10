@@ -27,15 +27,39 @@ interface FormErrors {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const BAR_NUMBER_REGEX = /^\d{1,3}\/\d{1,6}$/
+const PHONE_MAX_DIGITS = 11
+
+function sanitizePhone(value: string): string {
+  const hasPlus = value.trimStart().startsWith('+')
+  const digits = value.replace(/\D/g, '').slice(0, PHONE_MAX_DIGITS)
+  return hasPlus ? `+${digits}` : digits
+}
+
+function validatePhone(phone: string): string | undefined {
+  const digits = phone.replace(/\D/g, '')
+  if (!digits) return 'Укажите контактный телефон'
+  if (digits.length < 11) return 'Введите корректный телефон'
+  return undefined
+}
+
+function validateBarNumber(barNumber: string): string | undefined {
+  const trimmed = barNumber.trim()
+  if (!trimmed) return 'Укажите номер адвоката'
+  if (!BAR_NUMBER_REGEX.test(trimmed)) return 'Некорректный номер адвоката (пример: 77/1234)'
+  return undefined
+}
 
 function validateForm(data: FormData): FormErrors {
   const errors: FormErrors = {}
   if (!data.fullName.trim()) errors.fullName = 'Укажите полное имя'
   if (!EMAIL_REGEX.test(data.email.trim())) errors.email = 'Введите корректный email'
   if (data.password.length < 8) errors.password = 'Пароль — не менее 8 символов'
-  if (!data.barNumber.trim()) errors.barNumber = 'Укажите номер адвоката'
+  const barNumberError = validateBarNumber(data.barNumber)
+  if (barNumberError) errors.barNumber = barNumberError
   if (!data.specialization.trim()) errors.specialization = 'Укажите специализацию'
-  if (!data.phone.trim()) errors.phone = 'Укажите контактный телефон'
+  const phoneError = validatePhone(data.phone)
+  if (phoneError) errors.phone = phoneError
   return errors
 }
 
@@ -54,10 +78,19 @@ export default function ApplyPage(): JSX.Element {
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const updateField = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>): void => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }))
+    const value = field === 'phone' ? sanitizePhone(e.target.value) : e.target.value
+    setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }))
     }
+  }
+
+  const handlePhoneBlur = (): void => {
+    setErrors((prev) => ({ ...prev, phone: validatePhone(formData.phone) }))
+  }
+
+  const handleBarNumberBlur = (): void => {
+    setErrors((prev) => ({ ...prev, barNumber: validateBarNumber(formData.barNumber) }))
   }
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
@@ -178,9 +211,11 @@ export default function ApplyPage(): JSX.Element {
                     id="phone"
                     label="Телефон"
                     type="tel"
+                    inputMode="tel"
                     placeholder="+7 999 000-00-00"
                     value={formData.phone}
                     onChange={updateField('phone')}
+                    onBlur={handlePhoneBlur}
                     error={errors.phone}
                   />
                 </div>
@@ -203,6 +238,7 @@ export default function ApplyPage(): JSX.Element {
                     placeholder="77/1234"
                     value={formData.barNumber}
                     onChange={updateField('barNumber')}
+                    onBlur={handleBarNumberBlur}
                     error={errors.barNumber}
                   />
                   <Input

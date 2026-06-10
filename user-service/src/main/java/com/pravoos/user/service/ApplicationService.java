@@ -19,6 +19,7 @@ import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.service.EmailVerificationService;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
+import com.pravoos.user.util.PhoneNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -69,7 +70,7 @@ public class ApplicationService {
         application.setPasswordHash(passwordEncoder.encode(request.password()));
         application.setBarNumber(request.barNumber());
         application.setSpecialization(request.specialization());
-        application.setPhone(request.phone());
+        application.setPhone(PhoneNormalizer.normalize(request.phone()));
         application.setEmailVerificationToken(emailVerificationService.generateToken());
         application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
 
