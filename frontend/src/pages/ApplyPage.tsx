@@ -101,9 +101,20 @@ export default function ApplyPage(): JSX.Element {
               <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">
                 Заявка подана
               </h2>
+
+              <div className="text-left rounded-xl border border-light-accent/30 dark:border-dark-accent/30 bg-light-accent/5 dark:bg-dark-accent/10 p-5 mb-6">
+                <p className="font-semibold text-light-text dark:text-dark-text mb-1">
+                  Подтвердите email
+                </p>
+                <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed">
+                  Мы отправили письмо на {submission.application.email} — перейдите по ссылке в
+                  нём, иначе мы не сможем выдать вам доступ.
+                </p>
+              </div>
+
               <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-6">
-                Администратор рассмотрит её и свяжется с вами. Обычно это занимает не более одного
-                рабочего дня.
+                Администратор рассмотрит заявку и свяжется с вами. Обычно это занимает не более
+                одного рабочего дня.
               </p>
 
               <div className="text-left rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-5 mb-4">
@@ -120,8 +131,7 @@ export default function ApplyPage(): JSX.Element {
               </div>
 
               <p className="text-xs text-light-secondary dark:text-dark-secondary mb-4">
-                Проверьте email — на него придёт письмо с доступом. Если в данных ошибка, откройте
-                заявку по ссылке ниже и нажмите «Редактировать».
+                Если в данных ошибка, откройте заявку по ссылке ниже и нажмите «Редактировать».
               </p>
 
               <div className="text-left rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-4 mb-6">

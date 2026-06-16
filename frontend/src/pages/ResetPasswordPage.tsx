@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { validatePassword } from '../utils/password'
 
 interface FieldErrors {
   password?: string
@@ -33,7 +34,8 @@ export default function ResetPasswordPage(): JSX.Element {
 
   const validate = (): boolean => {
     const next: FieldErrors = {}
-    if (password.length < 8) next.password = 'Пароль — не менее 8 символов'
+    const passwordError = validatePassword(password)
+    if (passwordError) next.password = passwordError
     if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают'
     setErrors(next)
     return Object.keys(next).length === 0
@@ -142,7 +144,7 @@ export default function ResetPasswordPage(): JSX.Element {
                   id="password"
                   label="Новый пароль"
                   type="password"
-                  placeholder="Не менее 8 символов"
+                  placeholder="Не менее 8 символов, буква и цифра"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value)

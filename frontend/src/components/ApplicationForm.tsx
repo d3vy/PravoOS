@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
+import { validatePassword } from '../utils/password'
 
 export interface ApplicationFormData {
   fullName: string
@@ -34,9 +35,25 @@ const BAR_NUMBER_REGEX = /^\d{1,3}\/\d{1,6}$/
 const PHONE_MAX_DIGITS = 11
 
 function sanitizePhone(value: string): string {
-  const hasPlus = value.trimStart().startsWith('+')
-  const digits = value.replace(/\D/g, '').slice(0, PHONE_MAX_DIGITS)
-  return hasPlus ? `+${digits}` : digits
+  const raw = value.replace(/\D/g, '')
+  if (!raw) return ''
+
+  let digits = raw[0] === '8' ? `7${raw.slice(1)}` : raw
+  if (digits[0] !== '7') digits = `7${digits}`
+  digits = digits.slice(0, PHONE_MAX_DIGITS)
+
+  const area = digits.slice(1, 4)
+  const part1 = digits.slice(4, 7)
+  const part2 = digits.slice(7, 9)
+  const part3 = digits.slice(9, 11)
+
+  let formatted = '+7'
+  if (area) formatted += ` (${area}`
+  if (area.length === 3) formatted += ')'
+  if (part1) formatted += ` ${part1}`
+  if (part2) formatted += `-${part2}`
+  if (part3) formatted += `-${part3}`
+  return formatted
 }
 
 function sanitizeBarNumber(value: string): string {
@@ -72,7 +89,8 @@ function validate(data: ApplicationFormData, passwordRequired: boolean): FormErr
   if (!data.fullName.trim()) errors.fullName = 'Укажите полное имя'
   if (!EMAIL_REGEX.test(data.email.trim())) errors.email = 'Введите корректный email'
   if (passwordRequired || data.password.length > 0) {
-    if (data.password.length < 8) errors.password = 'Пароль — не менее 8 символов'
+    const passwordError = validatePassword(data.password)
+    if (passwordError) errors.password = passwordError
   }
   const barNumberError = validateBarNumber(data.barNumber)
   if (barNumberError) errors.barNumber = barNumberError
@@ -161,7 +179,7 @@ export function ApplicationForm({
           label="Телефон"
           type="tel"
           inputMode="tel"
-          placeholder="+7 999 000-00-00"
+          placeholder="+7 (999) 000-00-00"
           value={formData.phone}
           onChange={updateField('phone')}
           onBlur={handlePhoneBlur}
@@ -173,7 +191,7 @@ export function ApplicationForm({
         id="password"
         label="Пароль"
         type="password"
-        placeholder={passwordRequired ? 'Не менее 8 символов' : passwordHint ?? 'Оставьте пустым, чтобы не менять'}
+        placeholder={passwordRequired ? 'Не менее 8 символов, буква и цифра' : passwordHint ?? 'Оставьте пустым, чтобы не менять'}
         value={formData.password}
         onChange={updateField('password')}
         error={errors.password}
