@@ -93,4 +93,17 @@ export const casesApi = {
     link.click()
     window.URL.revokeObjectURL(url)
   },
+
+  exportCase: async (caseId: string, format: 'docx' | 'pdf', fileName: string): Promise<void> => {
+    const response = await apiClient.get<Blob>(`/api/ai/cases/${caseId}/export`, {
+      params: { format },
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${fileName}.${format}`
+    link.click()
+    window.URL.revokeObjectURL(url)
+  },
 }

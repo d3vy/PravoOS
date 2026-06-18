@@ -3,15 +3,20 @@ package com.pravoos.ai.controller;
 import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.security.SecurityUtils;
 import com.pravoos.ai.service.AiResponseService;
+import com.pravoos.ai.service.CaseExportService;
 import com.pravoos.ai.service.CaseService;
 import com.pravoos.ai.service.WorkflowService;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,13 +27,16 @@ public class CaseController {
     private final CaseService caseService;
     private final WorkflowService workflowService;
     private final AiResponseService aiResponseService;
+    private final CaseExportService caseExportService;
 
     public CaseController(CaseService caseService,
                           WorkflowService workflowService,
-                          AiResponseService aiResponseService) {
+                          AiResponseService aiResponseService,
+                          CaseExportService caseExportService) {
         this.caseService = caseService;
         this.workflowService = workflowService;
         this.aiResponseService = aiResponseService;
+        this.caseExportService = caseExportService;
     }
 
     @PostMapping
@@ -93,5 +101,22 @@ public class CaseController {
     public ResponseEntity<List<AiResponseDto>> responses(@PathVariable UUID caseId,
                                                          Authentication authentication) {
         return ResponseEntity.ok(aiResponseService.findByCase(caseId, SecurityUtils.currentUserId(authentication)));
+    }
+
+    @GetMapping("/{caseId}/export")
+    public ResponseEntity<byte[]> export(@PathVariable UUID caseId,
+                                         @RequestParam(defaultValue = "docx") String format,
+                                         Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        ExportedFile file = caseExportService.export(caseId, lawyerId, format);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentDisposition(
+                ContentDisposition.attachment().filename(file.fileName(), StandardCharsets.UTF_8).build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .body(file.content());
     }
 }

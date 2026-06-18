@@ -120,6 +120,21 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
   const [description, setDescription] = useState(caseItem.description ?? '')
   const [clientId, setClientId] = useState(caseItem.clientId ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState<'docx' | 'pdf' | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
+
+  const handleExport = async (format: 'docx' | 'pdf'): Promise<void> => {
+    setExporting(format)
+    setExportError(null)
+    try {
+      const safeTitle = caseItem.title.replace(/[^\wА-Яа-яёЁ]+/g, '_').slice(0, 80)
+      await casesApi.exportCase(caseItem.id, format, `Дело_${safeTitle}`)
+    } catch {
+      setExportError('Не удалось сформировать файл. Попробуйте снова.')
+    } finally {
+      setExporting(null)
+    }
+  }
 
   const { data: clients = [] } = useQuery<ClientResponse[]>({
     queryKey: ['clients'],
@@ -206,9 +221,29 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
     <div className="mb-8">
       <div className="flex items-start justify-between gap-4 mb-2">
         <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{caseItem.title}</h1>
-        <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
-          Редактировать
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
+            Редактировать
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={exporting === 'docx'}
+            disabled={exporting !== null}
+            onClick={() => void handleExport('docx')}
+          >
+            Экспорт .docx
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={exporting === 'pdf'}
+            disabled={exporting !== null}
+            onClick={() => void handleExport('pdf')}
+          >
+            Экспорт .pdf
+          </Button>
+        </div>
       </div>
       {caseItem.clientId && caseItem.clientName && (
         <Link
@@ -221,6 +256,7 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
       {caseItem.description && (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">{caseItem.description}</p>
       )}
+      {exportError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{exportError}</p>}
     </div>
   )
 }
