@@ -3,6 +3,7 @@ package com.pravoos.ai.service;
 import com.pravoos.ai.model.mongo.Conversation;
 import com.pravoos.ai.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
+import com.pravoos.ai.repository.jpa.ClientRepository;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
 import org.slf4j.Logger;
@@ -20,15 +21,18 @@ public class LawyerDataCleanupService {
 
     private final CaseRepository caseRepository;
     private final CaseDraftRepository caseDraftRepository;
+    private final ClientRepository clientRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
 
     public LawyerDataCleanupService(CaseRepository caseRepository,
                                     CaseDraftRepository caseDraftRepository,
+                                    ClientRepository clientRepository,
                                     ConversationRepository conversationRepository,
                                     MessageRepository messageRepository) {
         this.caseRepository = caseRepository;
         this.caseDraftRepository = caseDraftRepository;
+        this.clientRepository = clientRepository;
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
     }
@@ -43,7 +47,8 @@ public class LawyerDataCleanupService {
     public void purgeRelationalData(UUID lawyerId) {
         int drafts = caseDraftRepository.deleteByLawyerId(lawyerId);
         int cases = caseRepository.deleteByLawyerId(lawyerId);
-        log.info("Deleted {} drafts and {} cases for lawyer {}", drafts, cases, lawyerId);
+        int clients = clientRepository.deleteByLawyerId(lawyerId);
+        log.info("Deleted {} drafts, {} cases and {} clients for lawyer {}", drafts, cases, clients, lawyerId);
     }
 
     private void purgeChatData(UUID lawyerId) {

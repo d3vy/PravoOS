@@ -22,6 +22,9 @@ public class Case {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "client_id")
+    private UUID clientId;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -40,6 +43,9 @@ public class Case {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public UUID getClientId() { return clientId; }
+    public void setClientId(UUID clientId) { this.clientId = clientId; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

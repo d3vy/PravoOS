@@ -48,6 +48,14 @@ public class CaseController {
         return ResponseEntity.ok(caseService.get(caseId, SecurityUtils.currentUserId(authentication)));
     }
 
+    @PatchMapping("/{caseId}")
+    public ResponseEntity<CaseResponse> update(@PathVariable UUID caseId,
+                                               @Valid @RequestBody UpdateCaseRequest request,
+                                               Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseService.update(caseId, request, lawyerId));
+    }
+
     @DeleteMapping("/{caseId}")
     public ResponseEntity<Void> delete(@PathVariable UUID caseId, Authentication authentication) {
         caseService.delete(caseId, SecurityUtils.currentUserId(authentication));

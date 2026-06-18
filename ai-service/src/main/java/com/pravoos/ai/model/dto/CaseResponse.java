@@ -9,13 +9,17 @@ public record CaseResponse(
         UUID id,
         String title,
         String description,
+        UUID clientId,
+        String clientName,
         LocalDateTime createdAt
 ) {
-    public static CaseResponse from(Case caseEntity) {
+    public static CaseResponse from(Case caseEntity, String clientName) {
         return new CaseResponse(
                 caseEntity.getId(),
                 caseEntity.getTitle(),
                 caseEntity.getDescription(),
+                caseEntity.getClientId(),
+                clientName,
                 caseEntity.getCreatedAt()
         );
     }

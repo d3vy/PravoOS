@@ -15,6 +15,8 @@ import VerifyEmailPage from './pages/VerifyEmailPage'
 import ChatPage from './pages/chat/ChatPage'
 import CasesPage from './pages/cases/CasesPage'
 import CaseDetailPage from './pages/cases/CaseDetailPage'
+import ClientsPage from './pages/clients/ClientsPage'
+import ClientDetailPage from './pages/clients/ClientDetailPage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
@@ -63,6 +65,24 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute>
             <CaseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/clients"
+        element={
+          <ProtectedRoute>
+            <ClientsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/clients/:clientId"
+        element={
+          <ProtectedRoute>
+            <ClientDetailPage />
           </ProtectedRoute>
         }
       />

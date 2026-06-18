@@ -3,10 +3,12 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
+import { clientsApi } from '../../api/clients'
 import { workflowsApi } from '../../api/workflows'
-import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
+import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, ClientResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { RatingButtons } from '../../components/ui/RatingButtons'
@@ -93,12 +95,7 @@ export default function CaseDetailPage(): JSX.Element {
           ← Ко всем делам
         </Link>
 
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-2">
-          {caseItem.title}
-        </h1>
-        {caseItem.description && (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary mb-8">{caseItem.description}</p>
-        )}
+        <CaseHeaderSection caseItem={caseItem} queryClient={queryClient} />
 
         <DocumentsSection caseId={caseId} documents={documents} queryClient={queryClient} />
 
@@ -115,6 +112,117 @@ export default function CaseDetailPage(): JSX.Element {
 interface SectionProps {
   caseId: string
   queryClient: ReturnType<typeof useQueryClient>
+}
+
+function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; queryClient: ReturnType<typeof useQueryClient> }): JSX.Element {
+  const [isEditing, setIsEditing] = useState(false)
+  const [title, setTitle] = useState(caseItem.title)
+  const [description, setDescription] = useState(caseItem.description ?? '')
+  const [clientId, setClientId] = useState(caseItem.clientId ?? '')
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: clients = [] } = useQuery<ClientResponse[]>({
+    queryKey: ['clients'],
+    queryFn: clientsApi.getAll,
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      casesApi.update(caseItem.id, {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        clientId: clientId || null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+      setIsEditing(false)
+      setError(null)
+    },
+    onError: () => setError('Не удалось сохранить изменения. Попробуйте снова.'),
+  })
+
+  const handleSave = (): void => {
+    if (!title.trim()) {
+      setError('Укажите название дела')
+      return
+    }
+    updateMutation.mutate()
+  }
+
+  const handleCancel = (): void => {
+    setTitle(caseItem.title)
+    setDescription(caseItem.description ?? '')
+    setClientId(caseItem.clientId ?? '')
+    setError(null)
+    setIsEditing(false)
+  }
+
+  if (isEditing) {
+    return (
+      <section className="mb-8 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+        <div className="flex flex-col gap-4">
+          <Input label="Название дела" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={500} />
+          <div>
+            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">Описание</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              maxLength={5000}
+              className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">Клиент</label>
+            <select
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+            >
+              <option value="">Без клиента</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name} ({client.typeName})
+                </option>
+              ))}
+            </select>
+          </div>
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <div className="flex gap-2">
+            <Button variant="primary" loading={updateMutation.isPending} onClick={handleSave}>
+              Сохранить
+            </Button>
+            <Button variant="ghost" onClick={handleCancel}>
+              Отмена
+            </Button>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <div className="mb-8">
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{caseItem.title}</h1>
+        <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
+          Редактировать
+        </Button>
+      </div>
+      {caseItem.clientId && caseItem.clientName && (
+        <Link
+          to={`/clients/${caseItem.clientId}`}
+          className="inline-block text-sm text-light-accent dark:text-dark-accent hover:underline mb-2"
+        >
+          Клиент: {caseItem.clientName}
+        </Link>
+      )}
+      {caseItem.description && (
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">{caseItem.description}</p>
+      )}
+    </div>
+  )
 }
 
 function DocumentsSection({ caseId, documents, queryClient }: SectionProps & { documents: DocumentResponse[] }): JSX.Element {

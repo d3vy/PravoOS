@@ -42,6 +42,11 @@ export function Navbar(): JSX.Element {
                         Дела
                       </Button>
                     </Link>
+                    <Link to="/clients" className="hidden sm:block">
+                      <Button variant="ghost" size="sm">
+                        Клиенты
+                      </Button>
+                    </Link>
                     <Link to="/chat" className="hidden sm:block">
                       <Button variant="ghost" size="sm">
                         AI-чат

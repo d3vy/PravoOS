@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
-import type { CaseResponse } from '../../types'
+import { clientsApi } from '../../api/clients'
+import type { CaseResponse, ClientResponse } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -13,12 +14,18 @@ export default function CasesPage(): JSX.Element {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [clientId, setClientId] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data: cases = [], isLoading } = useQuery<CaseResponse[]>({
     queryKey: ['cases'],
     queryFn: casesApi.getAll,
+  })
+
+  const { data: clients = [] } = useQuery<ClientResponse[]>({
+    queryKey: ['clients'],
+    queryFn: clientsApi.getAll,
   })
 
   const createMutation = useMutation({
@@ -28,6 +35,7 @@ export default function CasesPage(): JSX.Element {
       setShowForm(false)
       setTitle('')
       setDescription('')
+      setClientId('')
       setFormError(null)
     },
     onError: () => setFormError('Не удалось создать дело. Попробуйте снова.'),
@@ -39,7 +47,11 @@ export default function CasesPage(): JSX.Element {
       setFormError('Укажите название дела')
       return
     }
-    createMutation.mutate({ title: title.trim(), description: description.trim() || undefined })
+    createMutation.mutate({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      clientId: clientId || undefined,
+    })
   }
 
   return (
@@ -90,6 +102,23 @@ export default function CasesPage(): JSX.Element {
                     className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
+                    Клиент <span className="text-light-secondary dark:text-dark-secondary font-normal">(опционально)</span>
+                  </label>
+                  <select
+                    value={clientId}
+                    onChange={(e) => setClientId(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  >
+                    <option value="">Без клиента</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name} ({client.typeName})
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
                 <div>
                   <Button type="submit" variant="primary" loading={createMutation.isPending}>
@@ -127,6 +156,11 @@ export default function CasesPage(): JSX.Element {
                   <h3 className="font-medium text-light-text dark:text-dark-text mb-2 line-clamp-2">
                     {caseItem.title}
                   </h3>
+                  {caseItem.clientName && (
+                    <p className="text-xs text-light-accent dark:text-dark-accent mb-2 truncate">
+                      {caseItem.clientName}
+                    </p>
+                  )}
                   {caseItem.description && (
                     <p className="text-sm text-light-secondary dark:text-dark-secondary line-clamp-2 mb-3">
                       {caseItem.description}

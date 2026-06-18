@@ -9,6 +9,7 @@ import type {
   DocumentUploadResponse,
   DraftTypeInfo,
   GenerateDraftRequest,
+  UpdateCaseRequest,
 } from '../types'
 
 export const casesApi = {
@@ -24,6 +25,11 @@ export const casesApi = {
 
   create: async (data: CreateCaseRequest): Promise<CaseResponse> => {
     const response = await apiClient.post<CaseResponse>('/api/ai/cases', data)
+    return response.data
+  },
+
+  update: async (caseId: string, data: UpdateCaseRequest): Promise<CaseResponse> => {
+    const response = await apiClient.patch<CaseResponse>(`/api/ai/cases/${caseId}`, data)
     return response.data
   },
 

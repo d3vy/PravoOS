@@ -110,13 +110,53 @@ export interface CaseResponse {
   id: string
   title: string
   description: string | null
+  clientId: string | null
+  clientName: string | null
   createdAt: string
 }
 
 export interface CreateCaseRequest {
   title: string
   description?: string
+  clientId?: string | null
 }
+
+export interface UpdateCaseRequest {
+  title: string
+  description?: string
+  clientId?: string | null
+}
+
+export type ClientType = 'INDIVIDUAL' | 'COMPANY'
+
+export interface ClientResponse {
+  id: string
+  name: string
+  type: ClientType
+  typeName: string
+  phone: string | null
+  email: string | null
+  inn: string | null
+  notes: string | null
+  createdAt: string
+  caseCount: number
+}
+
+export interface ClientDetailResponse {
+  client: ClientResponse
+  cases: CaseResponse[]
+}
+
+export interface CreateClientRequest {
+  name: string
+  type: ClientType
+  phone?: string
+  email?: string
+  inn?: string
+  notes?: string
+}
+
+export type UpdateClientRequest = CreateClientRequest
 
 export interface WorkflowInfo {
   id: string

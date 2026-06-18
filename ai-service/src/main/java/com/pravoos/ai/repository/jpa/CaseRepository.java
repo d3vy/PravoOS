@@ -10,5 +10,7 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
     List<Case> findByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
+    List<Case> findByClientIdAndLawyerIdOrderByCreatedAtDesc(UUID clientId, UUID lawyerId);
+
     int deleteByLawyerId(UUID lawyerId);
 }
