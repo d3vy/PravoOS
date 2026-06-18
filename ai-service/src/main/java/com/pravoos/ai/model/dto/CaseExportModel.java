@@ -6,6 +6,7 @@ import java.util.List;
 public record CaseExportModel(
         String title,
         String description,
+        String status,
         LocalDateTime createdAt,
         ClientSection client,
         List<DocumentSection> documents,

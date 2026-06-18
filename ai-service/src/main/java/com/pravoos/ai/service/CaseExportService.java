@@ -107,6 +107,7 @@ public class CaseExportService {
         return new CaseExportModel(
                 caseEntity.getTitle(),
                 caseEntity.getDescription(),
+                caseEntity.getStatus().getDisplayName(),
                 caseEntity.getCreatedAt(),
                 client,
                 documents,

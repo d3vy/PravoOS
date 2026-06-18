@@ -7,13 +7,13 @@
 
 ## Tier 1 — Критично (без этого не CRM)
 
-### 1. Статус дела + Pipeline
-- [ ] Flyway-миграция: `ALTER TABLE cases ADD COLUMN status VARCHAR(20) DEFAULT 'INTAKE'`
-- [ ] Java enum `CaseStatus`: `INTAKE → IN_PROGRESS → SUBMITTED → CLOSED_WON / CLOSED_LOST`
-- [ ] `CaseService`: update status, валидация переходов
-- [ ] `GET /api/ai/cases?status=` — фильтрация по статусу
-- [ ] Фронт: фильтр по статусу на `/cases`, цветные бейджи, смена статуса из карточки дела
-- [ ] Фронт: Kanban-доска или колонки на `/cases`
+### 1. Статус дела + Pipeline ✅
+- [x] Flyway V7: `cases.status VARCHAR(20) NOT NULL DEFAULT 'INTAKE'` + индекс `(lawyer_id, status)`
+- [x] Java enum `CaseStatus`: `INTAKE → IN_PROGRESS → SUBMITTED → CLOSED_WON / CLOSED_LOST`
+- [x] `PATCH /api/ai/cases/{id}/status` (гибкие переходы — валидация только enum) + статус в экспорте
+- [x] `GET /api/ai/cases?status=` — фильтрация по статусу
+- [x] Фронт: фильтр-чипы на `/cases`, цветные бейджи, смена статуса из карточки и из карточки дела
+- [x] Фронт: Kanban-доска (переключатель Список/Доска, drag-drop смены статуса)
 
 ### 2. Дедлайны и напоминания
 - [ ] Flyway-миграция: добавить `filing_deadline DATE`, `next_hearing_date DATE`, `expires_at DATE` в `cases`

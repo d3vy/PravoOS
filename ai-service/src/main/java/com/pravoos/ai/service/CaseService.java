@@ -9,6 +9,7 @@ import com.pravoos.ai.model.dto.DocumentUploadResponse;
 import com.pravoos.ai.model.dto.UpdateCaseRequest;
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.model.entity.Client;
+import com.pravoos.ai.model.enums.CaseStatus;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
 import org.slf4j.Logger;
@@ -69,12 +70,26 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<CaseResponse> findByLawyer(UUID lawyerId) {
+    public List<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status) {
         Map<UUID, String> clientNames = clientNamesFor(lawyerId);
-        return caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
-                .stream()
+        List<Case> cases = status == null
+                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
+                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status);
+        return cases.stream()
                 .map(caseEntity -> CaseResponse.from(caseEntity, clientName(clientNames, caseEntity.getClientId())))
                 .toList();
+    }
+
+    @Transactional
+    public CaseResponse updateStatus(UUID caseId, CaseStatus status, UUID lawyerId) {
+        Case caseEntity = requireOwnedCase(caseId, lawyerId);
+        CaseStatus previous = caseEntity.getStatus();
+        caseEntity.setStatus(status);
+        log.info("Case {} status changed {} -> {} by lawyer {}", caseId, previous, status, lawyerId);
+        String clientName = caseEntity.getClientId() == null
+                ? null
+                : clientRepository.findById(caseEntity.getClientId()).map(Client::getName).orElse(null);
+        return CaseResponse.from(caseEntity, clientName);
     }
 
     @Transactional(readOnly = true)

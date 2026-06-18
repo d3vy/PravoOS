@@ -41,7 +41,7 @@ public class CasePdfWriter {
             Renderer renderer = new Renderer(document, regular, bold);
 
             renderer.title(model.title());
-            renderer.muted("Дело создано: " + ExportDateFormatter.format(model.createdAt()));
+            renderer.muted("Статус: " + model.status() + "  ·  Создано: " + ExportDateFormatter.format(model.createdAt()));
             if (isPresent(model.description())) {
                 renderer.body(model.description());
             }

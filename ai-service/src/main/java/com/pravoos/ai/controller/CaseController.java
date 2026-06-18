@@ -1,6 +1,7 @@
 package com.pravoos.ai.controller;
 
 import com.pravoos.ai.model.dto.*;
+import com.pravoos.ai.model.enums.CaseStatus;
 import com.pravoos.ai.security.SecurityUtils;
 import com.pravoos.ai.service.AiResponseService;
 import com.pravoos.ai.service.CaseExportService;
@@ -47,8 +48,9 @@ public class CaseController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CaseResponse>> list(Authentication authentication) {
-        return ResponseEntity.ok(caseService.findByLawyer(SecurityUtils.currentUserId(authentication)));
+    public ResponseEntity<List<CaseResponse>> list(@RequestParam(required = false) CaseStatus status,
+                                                   Authentication authentication) {
+        return ResponseEntity.ok(caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status));
     }
 
     @GetMapping("/{caseId}")
@@ -62,6 +64,14 @@ public class CaseController {
                                                Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.ok(caseService.update(caseId, request, lawyerId));
+    }
+
+    @PatchMapping("/{caseId}/status")
+    public ResponseEntity<CaseResponse> updateStatus(@PathVariable UUID caseId,
+                                                     @Valid @RequestBody UpdateCaseStatusRequest request,
+                                                     Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseService.updateStatus(caseId, request.status(), lawyerId));
     }
 
     @DeleteMapping("/{caseId}")

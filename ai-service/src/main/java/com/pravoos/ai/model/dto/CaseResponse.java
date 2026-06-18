@@ -1,6 +1,7 @@
 package com.pravoos.ai.model.dto;
 
 import com.pravoos.ai.model.entity.Case;
+import com.pravoos.ai.model.enums.CaseStatus;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,6 +12,8 @@ public record CaseResponse(
         String description,
         UUID clientId,
         String clientName,
+        CaseStatus status,
+        String statusName,
         LocalDateTime createdAt
 ) {
     public static CaseResponse from(Case caseEntity, String clientName) {
@@ -20,6 +23,8 @@ public record CaseResponse(
                 caseEntity.getDescription(),
                 caseEntity.getClientId(),
                 clientName,
+                caseEntity.getStatus(),
+                caseEntity.getStatus().getDisplayName(),
                 caseEntity.getCreatedAt()
         );
     }

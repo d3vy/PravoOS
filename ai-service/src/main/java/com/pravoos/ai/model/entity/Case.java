@@ -1,5 +1,6 @@
 package com.pravoos.ai.model.entity;
 
+import com.pravoos.ai.model.enums.CaseStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -25,6 +26,10 @@ public class Case {
     @Column(name = "client_id")
     private UUID clientId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CaseStatus status = CaseStatus.INTAKE;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -46,6 +51,9 @@ public class Case {
 
     public UUID getClientId() { return clientId; }
     public void setClientId(UUID clientId) { this.clientId = clientId; }
+
+    public CaseStatus getStatus() { return status; }
+    public void setStatus(CaseStatus status) { this.status = status; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

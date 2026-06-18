@@ -11,7 +11,9 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
+import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 import { RatingButtons } from '../../components/ui/RatingButtons'
+import type { CaseStatus } from '../../types'
 
 const WORKFLOW_TABS = [
   { id: 'analysis', label: 'Анализ', ids: ['DEBTOR_SOLVENCY_ANALYSIS', 'CHALLENGE_TRANSACTIONS', 'CREDITOR_CLAIMS', 'SUBSIDIARY_LIABILITY', 'BANKRUPTCY_ESTATE'] },
@@ -122,6 +124,14 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState<'docx' | 'pdf' | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
+
+  const statusMutation = useMutation({
+    mutationFn: (status: CaseStatus) => casesApi.updateStatus(caseItem.id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
 
   const handleExport = async (format: 'docx' | 'pdf'): Promise<void> => {
     setExporting(format)
@@ -245,14 +255,21 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
           </Button>
         </div>
       </div>
-      {caseItem.clientId && caseItem.clientName && (
-        <Link
-          to={`/clients/${caseItem.clientId}`}
-          className="inline-block text-sm text-light-accent dark:text-dark-accent hover:underline mb-2"
-        >
-          Клиент: {caseItem.clientName}
-        </Link>
-      )}
+      <div className="flex items-center gap-3 mb-2">
+        <CaseStatusSelect
+          value={caseItem.status}
+          disabled={statusMutation.isPending}
+          onChange={(status) => statusMutation.mutate(status)}
+        />
+        {caseItem.clientId && caseItem.clientName && (
+          <Link
+            to={`/clients/${caseItem.clientId}`}
+            className="text-sm text-light-accent dark:text-dark-accent hover:underline"
+          >
+            Клиент: {caseItem.clientName}
+          </Link>
+        )}
+      </div>
       {caseItem.description && (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">{caseItem.description}</p>
       )}

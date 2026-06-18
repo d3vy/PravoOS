@@ -4,6 +4,7 @@ import type {
   CaseResponse,
   CaseDraftDto,
   CaseDraftSummaryDto,
+  CaseStatus,
   CreateCaseRequest,
   DocumentResponse,
   DocumentUploadResponse,
@@ -13,8 +14,15 @@ import type {
 } from '../types'
 
 export const casesApi = {
-  getAll: async (): Promise<CaseResponse[]> => {
-    const response = await apiClient.get<CaseResponse[]>('/api/ai/cases')
+  getAll: async (status?: CaseStatus): Promise<CaseResponse[]> => {
+    const response = await apiClient.get<CaseResponse[]>('/api/ai/cases', {
+      params: status ? { status } : undefined,
+    })
+    return response.data
+  },
+
+  updateStatus: async (caseId: string, status: CaseStatus): Promise<CaseResponse> => {
+    const response = await apiClient.patch<CaseResponse>(`/api/ai/cases/${caseId}/status`, { status })
     return response.data
   },
 

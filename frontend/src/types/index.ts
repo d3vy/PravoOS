@@ -106,12 +106,16 @@ export interface LawyerResponse {
   phone: string
 }
 
+export type CaseStatus = 'INTAKE' | 'IN_PROGRESS' | 'SUBMITTED' | 'CLOSED_WON' | 'CLOSED_LOST'
+
 export interface CaseResponse {
   id: string
   title: string
   description: string | null
   clientId: string | null
   clientName: string | null
+  status: CaseStatus
+  statusName: string
   createdAt: string
 }
 
@@ -125,6 +129,10 @@ export interface UpdateCaseRequest {
   title: string
   description?: string
   clientId?: string | null
+}
+
+export interface UpdateCaseStatusRequest {
+  status: CaseStatus
 }
 
 export type ClientType = 'INDIVIDUAL' | 'COMPANY'

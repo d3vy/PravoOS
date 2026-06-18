@@ -24,7 +24,7 @@ public class CaseDocxWriter {
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
             title(document, model.title());
-            mutedLine(document, "Дело создано: " + ExportDateFormatter.format(model.createdAt()));
+            mutedLine(document, "Статус: " + model.status() + "  ·  Создано: " + ExportDateFormatter.format(model.createdAt()));
             if (isPresent(model.description())) {
                 bodyParagraph(document, model.description());
             }

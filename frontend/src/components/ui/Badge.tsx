@@ -1,7 +1,23 @@
 import type { ReactNode } from 'react'
-import type { ApplicationStatus, DocumentStatus } from '../../types'
+import type { ApplicationStatus, CaseStatus, DocumentStatus } from '../../types'
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'neutral' | 'info'
+
+export const CASE_STATUS_CONFIG: Record<CaseStatus, { variant: BadgeVariant; label: string }> = {
+  INTAKE: { variant: 'neutral', label: 'Приём' },
+  IN_PROGRESS: { variant: 'info', label: 'В работе' },
+  SUBMITTED: { variant: 'warning', label: 'Подано в суд' },
+  CLOSED_WON: { variant: 'success', label: 'Выиграно' },
+  CLOSED_LOST: { variant: 'danger', label: 'Проиграно' },
+}
+
+export const CASE_STATUS_ORDER: CaseStatus[] = [
+  'INTAKE',
+  'IN_PROGRESS',
+  'SUBMITTED',
+  'CLOSED_WON',
+  'CLOSED_LOST',
+]
 
 interface BadgeProps {
   variant: BadgeVariant
@@ -46,5 +62,10 @@ export function DocumentStatusBadge({ status }: { status: DocumentStatus }): JSX
     FAILED: { variant: 'danger', label: 'Ошибка' },
   }
   const { variant, label } = config[status]
+  return <Badge variant={variant}>{label}</Badge>
+}
+
+export function CaseStatusBadge({ status }: { status: CaseStatus }): JSX.Element {
+  const { variant, label } = CASE_STATUS_CONFIG[status]
   return <Badge variant={variant}>{label}</Badge>
 }
