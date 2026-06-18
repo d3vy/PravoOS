@@ -59,10 +59,10 @@
 - [ ] Kafka topic `case.hearing.updated` — уведомить юриста при изменении даты заседания
 - [ ] Фронт: отображение истории событий по делу из КАД, ссылка на карточку дела на kad.arbitr.ru
 
-### 7. Поиск по делам
+### 7. Поиск по делам ✅
 - [x] Backend: `GET /api/ai/cases?q=` — `ILIKE` по title/description + EXISTS по client name (комбинируется с `?status=`)
 - [x] Фронт: поле поиска на `/cases` (debounce 300мс, работает в обоих видах)
-- [ ] Глобальный поиск: дела + беседы + документы — единый `/api/ai/search?q=`
+- [x] Глобальный поиск: дела + беседы + документы — единый `GET /api/ai/search?q=` (страница `/search`)
 
 ### 8. Уведомления для юриста (Telegram)
 - [ ] Flyway-миграция: `telegram_chat_id BIGINT` в таблице `users`

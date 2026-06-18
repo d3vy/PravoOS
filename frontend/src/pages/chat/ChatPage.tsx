@@ -5,6 +5,7 @@ import {
   useCallback,
   type KeyboardEvent,
 } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { chatApi } from '../../api/chat'
@@ -38,7 +39,10 @@ const SUGGESTIONS = [
 ]
 
 export default function ChatPage(): JSX.Element {
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    () => searchParams.get('conversation')
+  )
   const [messages, setMessages] = useState<LocalMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -51,6 +55,12 @@ export default function ChatPage(): JSX.Element {
   const attachPickerRef = useRef<HTMLDivElement>(null)
   const skipNextHistorySyncRef = useRef(false)
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (searchParams.has('conversation')) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery<ConversationResponse[]>({
     queryKey: ['conversations', searchQuery],

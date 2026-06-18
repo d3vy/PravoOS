@@ -12,6 +12,7 @@ import com.pravoos.ai.model.entity.Client;
 import com.pravoos.ai.model.enums.CaseStatus;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
+import com.pravoos.ai.util.LikePattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -88,11 +89,7 @@ public class CaseService {
     }
 
     private String likePattern(String query) {
-        String escaped = query.toLowerCase()
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
-        return "%" + escaped + "%";
+        return LikePattern.contains(query);
     }
 
     @Transactional

@@ -155,6 +155,32 @@ export interface UpdateCaseTaskRequest {
   done: boolean
 }
 
+export interface SearchCaseHit {
+  id: string
+  title: string
+  status: CaseStatus
+  statusName: string
+  clientName: string | null
+}
+
+export interface SearchConversationHit {
+  id: string
+  title: string
+}
+
+export interface SearchDocumentHit {
+  id: string
+  title: string
+  fileName: string
+  caseId: string | null
+}
+
+export interface GlobalSearchResponse {
+  cases: SearchCaseHit[]
+  conversations: SearchConversationHit[]
+  documents: SearchDocumentHit[]
+}
+
 export type ClientType = 'INDIVIDUAL' | 'COMPANY'
 
 export interface ClientResponse {
