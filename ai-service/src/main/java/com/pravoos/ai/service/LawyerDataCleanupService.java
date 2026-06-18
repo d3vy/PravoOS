@@ -3,6 +3,7 @@ package com.pravoos.ai.service;
 import com.pravoos.ai.model.mongo.Conversation;
 import com.pravoos.ai.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
+import com.pravoos.ai.repository.jpa.CaseTaskRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
@@ -20,17 +21,20 @@ public class LawyerDataCleanupService {
     private static final Logger log = LoggerFactory.getLogger(LawyerDataCleanupService.class);
 
     private final CaseRepository caseRepository;
+    private final CaseTaskRepository caseTaskRepository;
     private final CaseDraftRepository caseDraftRepository;
     private final ClientRepository clientRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
 
     public LawyerDataCleanupService(CaseRepository caseRepository,
+                                    CaseTaskRepository caseTaskRepository,
                                     CaseDraftRepository caseDraftRepository,
                                     ClientRepository clientRepository,
                                     ConversationRepository conversationRepository,
                                     MessageRepository messageRepository) {
         this.caseRepository = caseRepository;
+        this.caseTaskRepository = caseTaskRepository;
         this.caseDraftRepository = caseDraftRepository;
         this.clientRepository = clientRepository;
         this.conversationRepository = conversationRepository;
@@ -45,10 +49,12 @@ public class LawyerDataCleanupService {
 
     @Transactional
     public void purgeRelationalData(UUID lawyerId) {
+        int tasks = caseTaskRepository.deleteByLawyerId(lawyerId);
         int drafts = caseDraftRepository.deleteByLawyerId(lawyerId);
         int cases = caseRepository.deleteByLawyerId(lawyerId);
         int clients = clientRepository.deleteByLawyerId(lawyerId);
-        log.info("Deleted {} drafts, {} cases and {} clients for lawyer {}", drafts, cases, clients, lawyerId);
+        log.info("Deleted {} tasks, {} drafts, {} cases and {} clients for lawyer {}",
+                tasks, drafts, cases, clients, lawyerId);
     }
 
     private void purgeChatData(UUID lawyerId) {

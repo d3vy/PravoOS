@@ -46,11 +46,11 @@
 
 ## Tier 2 — Важно (продукт становится удобным)
 
-### 5. Задачи внутри дела
-- [ ] Flyway-миграция: таблица `case_tasks` (id, case_id, text, due_date, done, created_at)
-- [ ] CRUD `/api/ai/cases/{id}/tasks`
-- [ ] AI-генерация чеклиста задач из результата workflow `DOCUMENT_CHECKLIST` → превращать текст в реальные `case_tasks`
-- [ ] Фронт: чеклист задач на странице дела, quick-add задачи, dueDate + done
+### 5. Задачи внутри дела ✅
+- [x] Flyway-миграция V8: таблица `case_tasks` (id, case_id, text, due_date, done, created_at)
+- [x] CRUD `/api/ai/cases/{id}/tasks` (+ PATCH toggle done, DELETE)
+- [x] AI-генерация: `POST /api/ai/cases/{id}/tasks/generate` — прогон `DOCUMENT_CHECKLIST`, парс markdown-таблицы → задачи для missing/partial документов
+- [x] Фронт: чеклист задач на странице дела, quick-add задачи, dueDate + done
 
 ### 6. Интеграция с КАД.Арбитр
 - [ ] Поле `arbitr_case_number VARCHAR(50)` в таблице `cases`

@@ -135,6 +135,26 @@ export interface UpdateCaseStatusRequest {
   status: CaseStatus
 }
 
+export interface CaseTaskResponse {
+  id: string
+  caseId: string
+  text: string
+  dueDate: string | null
+  done: boolean
+  createdAt: string
+}
+
+export interface CreateCaseTaskRequest {
+  text: string
+  dueDate?: string | null
+}
+
+export interface UpdateCaseTaskRequest {
+  text: string
+  dueDate?: string | null
+  done: boolean
+}
+
 export type ClientType = 'INDIVIDUAL' | 'COMPANY'
 
 export interface ClientResponse {
