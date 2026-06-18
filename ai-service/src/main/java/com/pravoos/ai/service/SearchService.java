@@ -5,11 +5,14 @@ import com.pravoos.ai.model.dto.GlobalSearchResponse.CaseHit;
 import com.pravoos.ai.model.dto.GlobalSearchResponse.ConversationHit;
 import com.pravoos.ai.model.dto.GlobalSearchResponse.DocumentHit;
 import com.pravoos.ai.model.entity.Client;
+import com.pravoos.ai.model.entity.Document;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
+import com.pravoos.ai.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.repository.jpa.DocumentRepository;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.util.LikePattern;
+import com.pravoos.ai.util.SnippetExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -26,20 +29,24 @@ public class SearchService {
 
     private static final Logger log = LoggerFactory.getLogger(SearchService.class);
     private static final int MAX_HITS_PER_SOURCE = 10;
+    private static final int SNIPPET_RADIUS = 80;
 
     private final CaseRepository caseRepository;
     private final ClientRepository clientRepository;
     private final ConversationRepository conversationRepository;
     private final DocumentRepository documentRepository;
+    private final DocumentChunkRepository documentChunkRepository;
 
     public SearchService(CaseRepository caseRepository,
                          ClientRepository clientRepository,
                          ConversationRepository conversationRepository,
-                         DocumentRepository documentRepository) {
+                         DocumentRepository documentRepository,
+                         DocumentChunkRepository documentChunkRepository) {
         this.caseRepository = caseRepository;
         this.clientRepository = clientRepository;
         this.conversationRepository = conversationRepository;
         this.documentRepository = documentRepository;
+        this.documentChunkRepository = documentChunkRepository;
     }
 
     @Transactional(readOnly = true)
@@ -53,7 +60,7 @@ public class SearchService {
 
         List<CaseHit> cases = searchCases(lawyerId, pattern);
         List<ConversationHit> conversations = searchConversations(lawyerId, trimmed);
-        List<DocumentHit> documents = searchDocuments(lawyerId, pattern);
+        List<DocumentHit> documents = searchDocuments(lawyerId, trimmed, pattern);
 
         log.info("Global search by lawyer {} for '{}': {} cases, {} conversations, {} documents",
                 lawyerId, trimmed, cases.size(), conversations.size(), documents.size());
@@ -81,11 +88,21 @@ public class SearchService {
                 .toList();
     }
 
-    private List<DocumentHit> searchDocuments(UUID lawyerId, String pattern) {
+    private List<DocumentHit> searchDocuments(UUID lawyerId, String query, String pattern) {
         return documentRepository
                 .searchOwnedByLawyer(lawyerId, pattern, PageRequest.of(0, MAX_HITS_PER_SOURCE)).stream()
-                .map(d -> new DocumentHit(d.getId(), d.getTitle(), d.getFileName(), d.getCaseId()))
+                .map(d -> new DocumentHit(d.getId(), d.getTitle(), d.getFileName(), d.getCaseId(),
+                        contentSnippet(d, query, pattern)))
                 .toList();
+    }
+
+    private String contentSnippet(Document document, String query, String pattern) {
+        List<String> matchingChunk = documentChunkRepository
+                .findMatchingContent(document.getId(), pattern, PageRequest.of(0, 1));
+        if (matchingChunk.isEmpty()) {
+            return null;
+        }
+        return SnippetExtractor.around(matchingChunk.get(0), query, SNIPPET_RADIUS);
     }
 
     private Map<UUID, String> clientNamesFor(UUID lawyerId) {

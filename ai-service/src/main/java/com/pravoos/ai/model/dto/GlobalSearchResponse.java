@@ -27,6 +27,7 @@ public record GlobalSearchResponse(
             UUID id,
             String title,
             String fileName,
-            UUID caseId
+            UUID caseId,
+            String snippet
     ) {}
 }

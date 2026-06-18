@@ -106,12 +106,19 @@ export default function SearchPage(): JSX.Element {
                     <Link
                       key={hit.id}
                       to={hit.caseId ? `/cases/${hit.caseId}` : '#'}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+                      className="flex items-start gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
                     >
-                      <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-9 shrink-0">
+                      <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-9 shrink-0 mt-0.5">
                         {hit.fileName.split('.').pop()}
                       </span>
-                      <p className="flex-1 min-w-0 text-sm text-light-text dark:text-dark-text truncate">{hit.title}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-light-text dark:text-dark-text truncate">{hit.title}</p>
+                        {hit.snippet && (
+                          <p className="text-xs text-light-secondary dark:text-dark-secondary mt-0.5 line-clamp-2">
+                            {hit.snippet}
+                          </p>
+                        )}
+                      </div>
                     </Link>
                   ))}
                 </ResultGroup>

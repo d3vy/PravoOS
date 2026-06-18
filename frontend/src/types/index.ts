@@ -173,6 +173,7 @@ export interface SearchDocumentHit {
   title: string
   fileName: string
   caseId: string | null
+  snippet: string | null
 }
 
 export interface GlobalSearchResponse {
