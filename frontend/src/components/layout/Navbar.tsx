@@ -37,6 +37,11 @@ export function Navbar(): JSX.Element {
               <>
                 {role === 'LAWYER' && (
                   <>
+                    <Link to="/search" className="hidden sm:block">
+                      <Button variant="ghost" size="sm">
+                        Поиск
+                      </Button>
+                    </Link>
                     <Link to="/cases" className="hidden sm:block">
                       <Button variant="ghost" size="sm">
                         Дела

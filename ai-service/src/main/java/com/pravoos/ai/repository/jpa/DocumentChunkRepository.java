@@ -1,6 +1,7 @@
 package com.pravoos.ai.repository.jpa;
 
 import com.pravoos.ai.model.entity.DocumentChunk;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -18,4 +19,13 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UU
 
     @Query("SELECT dc.content FROM DocumentChunk dc WHERE dc.document.id IN :documentIds ORDER BY dc.document.id ASC, dc.chunkIndex ASC")
     List<String> findContentByDocumentIdIn(@Param("documentIds") Collection<UUID> documentIds);
+
+    @Query("""
+            SELECT dc.content FROM DocumentChunk dc
+            WHERE dc.document.id = :documentId AND LOWER(dc.content) LIKE :pattern ESCAPE '\\'
+            ORDER BY dc.chunkIndex ASC
+            """)
+    List<String> findMatchingContent(@Param("documentId") UUID documentId,
+                                     @Param("pattern") String pattern,
+                                     Pageable pageable);
 }

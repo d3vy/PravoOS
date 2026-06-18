@@ -12,6 +12,7 @@ import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
+import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 import type { CaseStatus } from '../../types'
 
@@ -100,6 +101,8 @@ export default function CaseDetailPage(): JSX.Element {
         <CaseHeaderSection caseItem={caseItem} queryClient={queryClient} />
 
         <DocumentsSection caseId={caseId} documents={documents} queryClient={queryClient} />
+
+        <CaseTasksSection caseId={caseId} />
 
         <WorkflowSection caseId={caseId} workflows={workflows} queryClient={queryClient} />
 

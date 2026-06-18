@@ -17,6 +17,7 @@ import CasesPage from './pages/cases/CasesPage'
 import CaseDetailPage from './pages/cases/CaseDetailPage'
 import ClientsPage from './pages/clients/ClientsPage'
 import ClientDetailPage from './pages/clients/ClientDetailPage'
+import SearchPage from './pages/search/SearchPage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
@@ -83,6 +84,15 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute>
             <ClientDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/search"
+        element={
+          <ProtectedRoute>
+            <SearchPage />
           </ProtectedRoute>
         }
       />

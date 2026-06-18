@@ -6,6 +6,7 @@ import com.pravoos.ai.security.SecurityUtils;
 import com.pravoos.ai.service.AiResponseService;
 import com.pravoos.ai.service.CaseExportService;
 import com.pravoos.ai.service.CaseService;
+import com.pravoos.ai.service.CaseTaskService;
 import com.pravoos.ai.service.WorkflowService;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
@@ -29,15 +30,18 @@ public class CaseController {
     private final WorkflowService workflowService;
     private final AiResponseService aiResponseService;
     private final CaseExportService caseExportService;
+    private final CaseTaskService caseTaskService;
 
     public CaseController(CaseService caseService,
                           WorkflowService workflowService,
                           AiResponseService aiResponseService,
-                          CaseExportService caseExportService) {
+                          CaseExportService caseExportService,
+                          CaseTaskService caseTaskService) {
         this.caseService = caseService;
         this.workflowService = workflowService;
         this.aiResponseService = aiResponseService;
         this.caseExportService = caseExportService;
+        this.caseTaskService = caseTaskService;
     }
 
     @PostMapping
@@ -49,8 +53,9 @@ public class CaseController {
 
     @GetMapping
     public ResponseEntity<List<CaseResponse>> list(@RequestParam(required = false) CaseStatus status,
+                                                   @RequestParam(required = false) String q,
                                                    Authentication authentication) {
-        return ResponseEntity.ok(caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status));
+        return ResponseEntity.ok(caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status, q));
     }
 
     @GetMapping("/{caseId}")
@@ -111,6 +116,44 @@ public class CaseController {
     public ResponseEntity<List<AiResponseDto>> responses(@PathVariable UUID caseId,
                                                          Authentication authentication) {
         return ResponseEntity.ok(aiResponseService.findByCase(caseId, SecurityUtils.currentUserId(authentication)));
+    }
+
+    @GetMapping("/{caseId}/tasks")
+    public ResponseEntity<List<CaseTaskResponse>> tasks(@PathVariable UUID caseId,
+                                                        Authentication authentication) {
+        return ResponseEntity.ok(caseTaskService.findByCase(caseId, SecurityUtils.currentUserId(authentication)));
+    }
+
+    @PostMapping("/{caseId}/tasks")
+    public ResponseEntity<CaseTaskResponse> createTask(@PathVariable UUID caseId,
+                                                       @Valid @RequestBody CreateCaseTaskRequest request,
+                                                       Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).body(caseTaskService.create(caseId, request, lawyerId));
+    }
+
+    @PatchMapping("/{caseId}/tasks/{taskId}")
+    public ResponseEntity<CaseTaskResponse> updateTask(@PathVariable UUID caseId,
+                                                       @PathVariable UUID taskId,
+                                                       @Valid @RequestBody UpdateCaseTaskRequest request,
+                                                       Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseTaskService.update(caseId, taskId, request, lawyerId));
+    }
+
+    @DeleteMapping("/{caseId}/tasks/{taskId}")
+    public ResponseEntity<Void> deleteTask(@PathVariable UUID caseId,
+                                           @PathVariable UUID taskId,
+                                           Authentication authentication) {
+        caseTaskService.delete(caseId, taskId, SecurityUtils.currentUserId(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{caseId}/tasks/generate")
+    public ResponseEntity<List<CaseTaskResponse>> generateTasks(@PathVariable UUID caseId,
+                                                                Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseTaskService.generateFromChecklist(caseId, lawyerId));
     }
 
     @GetMapping("/{caseId}/export")

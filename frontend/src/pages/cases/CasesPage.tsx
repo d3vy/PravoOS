@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -22,13 +22,20 @@ export default function CasesPage(): JSX.Element {
   const [formError, setFormError] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('list')
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'ALL'>('ALL')
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(timer)
+  }, [search])
 
   const serverStatus = view === 'list' && statusFilter !== 'ALL' ? statusFilter : undefined
 
   const { data: cases = [], isLoading } = useQuery<CaseResponse[]>({
-    queryKey: ['cases', view, serverStatus ?? 'all'],
-    queryFn: () => casesApi.getAll(serverStatus),
+    queryKey: ['cases', view, serverStatus ?? 'all', debouncedSearch],
+    queryFn: () => casesApi.getAll(serverStatus, debouncedSearch || undefined),
   })
 
   const { data: clients = [] } = useQuery<ClientResponse[]>({
@@ -160,6 +167,16 @@ export default function CasesPage(): JSX.Element {
           )}
         </AnimatePresence>
 
+        <div className="mb-4">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по названию, описанию или клиенту…"
+            className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+          />
+        </div>
+
         {view === 'list' && (
           <div className="flex flex-wrap gap-2 mb-6">
             <FilterChip label="Все" active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
@@ -186,9 +203,11 @@ export default function CasesPage(): JSX.Element {
         ) : cases.length === 0 ? (
           <div className="text-center py-16 rounded-xl border border-dashed border-light-border dark:border-dark-border">
             <p className="text-light-secondary dark:text-dark-secondary text-sm">
-              {statusFilter === 'ALL'
-                ? 'Пока нет дел. Создайте первое дело, чтобы загрузить документы и запустить AI-анализ.'
-                : 'Нет дел с этим статусом.'}
+              {debouncedSearch
+                ? 'Ничего не найдено по запросу.'
+                : statusFilter === 'ALL'
+                  ? 'Пока нет дел. Создайте первое дело, чтобы загрузить документы и запустить AI-анализ.'
+                  : 'Нет дел с этим статусом.'}
             </p>
           </div>
         ) : (

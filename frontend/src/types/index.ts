@@ -135,6 +135,53 @@ export interface UpdateCaseStatusRequest {
   status: CaseStatus
 }
 
+export interface CaseTaskResponse {
+  id: string
+  caseId: string
+  text: string
+  dueDate: string | null
+  done: boolean
+  createdAt: string
+}
+
+export interface CreateCaseTaskRequest {
+  text: string
+  dueDate?: string | null
+}
+
+export interface UpdateCaseTaskRequest {
+  text: string
+  dueDate?: string | null
+  done: boolean
+}
+
+export interface SearchCaseHit {
+  id: string
+  title: string
+  status: CaseStatus
+  statusName: string
+  clientName: string | null
+}
+
+export interface SearchConversationHit {
+  id: string
+  title: string
+}
+
+export interface SearchDocumentHit {
+  id: string
+  title: string
+  fileName: string
+  caseId: string | null
+  snippet: string | null
+}
+
+export interface GlobalSearchResponse {
+  cases: SearchCaseHit[]
+  conversations: SearchConversationHit[]
+  documents: SearchDocumentHit[]
+}
+
 export type ClientType = 'INDIVIDUAL' | 'COMPANY'
 
 export interface ClientResponse {
