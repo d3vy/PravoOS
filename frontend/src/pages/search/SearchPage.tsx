@@ -13,6 +13,7 @@ export default function SearchPage(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [debouncedSearch, setDebouncedSearch] = useState(search.trim())
+  const [searchContent, setSearchContent] = useState(true)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,8 +27,8 @@ export default function SearchPage(): JSX.Element {
   const enabled = debouncedSearch.length >= MIN_QUERY_LENGTH
 
   const { data, isFetching } = useQuery<GlobalSearchResponse>({
-    queryKey: ['global-search', debouncedSearch],
-    queryFn: () => searchApi.global(debouncedSearch),
+    queryKey: ['global-search', debouncedSearch, searchContent],
+    queryFn: () => searchApi.global(debouncedSearch, searchContent),
     enabled,
   })
 
@@ -50,6 +51,16 @@ export default function SearchPage(): JSX.Element {
           placeholder="Что ищем?"
           className="w-full px-4 py-3 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
         />
+
+        <label className="mt-3 flex items-center gap-2 text-sm text-light-secondary dark:text-dark-secondary cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={searchContent}
+            onChange={(e) => setSearchContent(e.target.checked)}
+            className="h-4 w-4 accent-light-accent dark:accent-dark-accent cursor-pointer"
+          />
+          Искать внутри файлов
+        </label>
 
         <div className="mt-6">
           {!enabled ? (

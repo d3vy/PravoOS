@@ -50,7 +50,7 @@ public class SearchService {
     }
 
     @Transactional(readOnly = true)
-    public GlobalSearchResponse search(UUID lawyerId, String query) {
+    public GlobalSearchResponse search(UUID lawyerId, String query, boolean searchContent) {
         String trimmed = query == null ? "" : query.trim();
         if (trimmed.isEmpty()) {
             return new GlobalSearchResponse(List.of(), List.of(), List.of());
@@ -60,10 +60,10 @@ public class SearchService {
 
         List<CaseHit> cases = searchCases(lawyerId, pattern);
         List<ConversationHit> conversations = searchConversations(lawyerId, trimmed);
-        List<DocumentHit> documents = searchDocuments(lawyerId, trimmed, pattern);
+        List<DocumentHit> documents = searchDocuments(lawyerId, trimmed, pattern, searchContent);
 
-        log.info("Global search by lawyer {} for '{}': {} cases, {} conversations, {} documents",
-                lawyerId, trimmed, cases.size(), conversations.size(), documents.size());
+        log.info("Global search by lawyer {} for '{}' (content={}): {} cases, {} conversations, {} documents",
+                lawyerId, trimmed, searchContent, cases.size(), conversations.size(), documents.size());
         return new GlobalSearchResponse(cases, conversations, documents);
     }
 
@@ -88,11 +88,11 @@ public class SearchService {
                 .toList();
     }
 
-    private List<DocumentHit> searchDocuments(UUID lawyerId, String query, String pattern) {
+    private List<DocumentHit> searchDocuments(UUID lawyerId, String query, String pattern, boolean searchContent) {
         return documentRepository
-                .searchOwnedByLawyer(lawyerId, pattern, PageRequest.of(0, MAX_HITS_PER_SOURCE)).stream()
+                .searchOwnedByLawyer(lawyerId, pattern, searchContent, PageRequest.of(0, MAX_HITS_PER_SOURCE)).stream()
                 .map(d -> new DocumentHit(d.getId(), d.getTitle(), d.getFileName(), d.getCaseId(),
-                        contentSnippet(d, query, pattern)))
+                        searchContent ? contentSnippet(d, query, pattern) : null))
                 .toList();
     }
 

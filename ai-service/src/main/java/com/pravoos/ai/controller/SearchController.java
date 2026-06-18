@@ -22,7 +22,8 @@ public class SearchController {
 
     @GetMapping
     public ResponseEntity<GlobalSearchResponse> search(@RequestParam(required = false) String q,
+                                                       @RequestParam(defaultValue = "true") boolean content,
                                                        Authentication authentication) {
-        return ResponseEntity.ok(searchService.search(SecurityUtils.currentUserId(authentication), q));
+        return ResponseEntity.ok(searchService.search(SecurityUtils.currentUserId(authentication), q, content));
     }
 }

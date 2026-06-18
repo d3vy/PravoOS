@@ -25,11 +25,12 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
             WHERE d.caseId IS NOT NULL
               AND EXISTS (SELECT 1 FROM Case c WHERE c.id = d.caseId AND c.lawyerId = :lawyerId)
               AND (LOWER(d.title) LIKE :pattern ESCAPE '\\'
-                   OR EXISTS (SELECT 1 FROM DocumentChunk ch
-                              WHERE ch.document.id = d.id AND LOWER(ch.content) LIKE :pattern ESCAPE '\\'))
+                   OR (:searchContent = TRUE AND EXISTS (SELECT 1 FROM DocumentChunk ch
+                              WHERE ch.document.id = d.id AND LOWER(ch.content) LIKE :pattern ESCAPE '\\')))
             ORDER BY d.uploadedAt DESC
             """)
     List<Document> searchOwnedByLawyer(@Param("lawyerId") UUID lawyerId,
                                        @Param("pattern") String pattern,
+                                       @Param("searchContent") boolean searchContent,
                                        Pageable pageable);
 }
