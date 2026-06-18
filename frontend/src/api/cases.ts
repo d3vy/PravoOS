@@ -17,9 +17,12 @@ import type {
 } from '../types'
 
 export const casesApi = {
-  getAll: async (status?: CaseStatus): Promise<CaseResponse[]> => {
+  getAll: async (status?: CaseStatus, q?: string): Promise<CaseResponse[]> => {
+    const params: Record<string, string> = {}
+    if (status) params.status = status
+    if (q && q.trim()) params.q = q.trim()
     const response = await apiClient.get<CaseResponse[]>('/api/ai/cases', {
-      params: status ? { status } : undefined,
+      params: Object.keys(params).length > 0 ? params : undefined,
     })
     return response.data
   },

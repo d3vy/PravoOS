@@ -1,5 +1,6 @@
 package com.pravoos.ai.model.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -10,6 +11,7 @@ public record CaseExportModel(
         LocalDateTime createdAt,
         ClientSection client,
         List<DocumentSection> documents,
+        List<TaskSection> tasks,
         List<ResponseSection> responses,
         List<DraftSection> drafts
 ) {
@@ -27,6 +29,12 @@ public record CaseExportModel(
             String fileName,
             String status,
             LocalDateTime uploadedAt
+    ) {}
+
+    public record TaskSection(
+            String text,
+            boolean done,
+            LocalDate dueDate
     ) {}
 
     public record ResponseSection(

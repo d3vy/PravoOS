@@ -6,6 +6,7 @@ import com.pravoos.ai.model.dto.CaseExportModel.ClientSection;
 import com.pravoos.ai.model.dto.CaseExportModel.DocumentSection;
 import com.pravoos.ai.model.dto.CaseExportModel.DraftSection;
 import com.pravoos.ai.model.dto.CaseExportModel.ResponseSection;
+import com.pravoos.ai.model.dto.CaseExportModel.TaskSection;
 import com.pravoos.ai.util.ExportDateFormatter;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -48,6 +49,7 @@ public class CasePdfWriter {
 
             renderClient(renderer, model.client());
             renderDocuments(renderer, model.documents());
+            renderTasks(renderer, model.tasks());
             renderResponses(renderer, model.responses());
             renderDrafts(renderer, model.drafts());
 
@@ -83,6 +85,24 @@ public class CasePdfWriter {
         for (DocumentSection doc : documents) {
             renderer.bullet(doc.title() + " — " + doc.fileName() + " [" + doc.status() + "]");
         }
+    }
+
+    private void renderTasks(Renderer renderer, List<TaskSection> tasks) throws IOException {
+        long openCount = tasks.stream().filter(task -> !task.done()).count();
+        renderer.heading("Задачи по делу (" + openCount + " из " + tasks.size() + " активны)");
+        if (tasks.isEmpty()) {
+            renderer.muted("Задачи не добавлены.");
+            return;
+        }
+        for (TaskSection task : tasks) {
+            renderer.bullet(taskLabel(task));
+        }
+    }
+
+    private String taskLabel(TaskSection task) {
+        String checkbox = task.done() ? "[x] " : "[ ] ";
+        String dueDate = ExportDateFormatter.formatDate(task.dueDate());
+        return checkbox + task.text() + (dueDate == null ? "" : " — до " + dueDate);
     }
 
     private void renderResponses(Renderer renderer, List<ResponseSection> responses) throws IOException {

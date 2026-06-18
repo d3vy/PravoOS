@@ -60,8 +60,8 @@
 - [ ] Фронт: отображение истории событий по делу из КАД, ссылка на карточку дела на kad.arbitr.ru
 
 ### 7. Поиск по делам
-- [ ] Backend: `GET /api/ai/cases?q=` — `ILIKE` по title/description + JOIN по client name
-- [ ] Фронт: поле поиска на `/cases` (аналогично поиску бесед в чате)
+- [x] Backend: `GET /api/ai/cases?q=` — `ILIKE` по title/description + EXISTS по client name (комбинируется с `?status=`)
+- [x] Фронт: поле поиска на `/cases` (debounce 300мс, работает в обоих видах)
 - [ ] Глобальный поиск: дела + беседы + документы — единый `/api/ai/search?q=`
 
 ### 8. Уведомления для юриста (Telegram)
@@ -89,7 +89,7 @@
 - [x] `CaseExportService` + `CaseDocxWriter` (POI) и `CasePdfWriter` (PDFBox + DejaVu для кириллицы): клиент + документы + заключения AI + черновики
 - [x] `GET /api/ai/cases/{id}/export?format=docx|pdf` — скачать выжимку по делу
 - [x] Фронт: кнопки «Экспорт .docx» / «Экспорт .pdf» на странице дела
-- (статус и задачи в выжимку не вошли — сущностей ещё нет, задачи №1/№5)
+- [x] В выжимку входят статус дела (задача №1) и задачи по делу (задача №5)
 
 ### 12. История коммуникаций с клиентом
 - [ ] Flyway-миграция: таблица `client_contacts` (id, client_id, type ENUM звонок/встреча/письмо, date, notes)

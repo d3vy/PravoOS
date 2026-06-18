@@ -6,6 +6,7 @@ import com.pravoos.ai.model.dto.CaseExportModel.ClientSection;
 import com.pravoos.ai.model.dto.CaseExportModel.DocumentSection;
 import com.pravoos.ai.model.dto.CaseExportModel.DraftSection;
 import com.pravoos.ai.model.dto.CaseExportModel.ResponseSection;
+import com.pravoos.ai.model.dto.CaseExportModel.TaskSection;
 import com.pravoos.ai.model.dto.ExportedFile;
 import com.pravoos.ai.model.dto.SourceReference;
 import com.pravoos.ai.model.entity.Case;
@@ -14,6 +15,7 @@ import com.pravoos.ai.model.enums.DraftType;
 import com.pravoos.ai.model.enums.ExportFormat;
 import com.pravoos.ai.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.repository.jpa.CaseDraftRepository;
+import com.pravoos.ai.repository.jpa.CaseTaskRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,7 @@ public class CaseExportService {
     private final DocumentService documentService;
     private final AiResponseRepository aiResponseRepository;
     private final CaseDraftRepository caseDraftRepository;
+    private final CaseTaskRepository caseTaskRepository;
     private final CaseDocxWriter docxWriter;
     private final CasePdfWriter pdfWriter;
 
@@ -41,6 +44,7 @@ public class CaseExportService {
                              DocumentService documentService,
                              AiResponseRepository aiResponseRepository,
                              CaseDraftRepository caseDraftRepository,
+                             CaseTaskRepository caseTaskRepository,
                              CaseDocxWriter docxWriter,
                              CasePdfWriter pdfWriter) {
         this.caseService = caseService;
@@ -48,6 +52,7 @@ public class CaseExportService {
         this.documentService = documentService;
         this.aiResponseRepository = aiResponseRepository;
         this.caseDraftRepository = caseDraftRepository;
+        this.caseTaskRepository = caseTaskRepository;
         this.docxWriter = docxWriter;
         this.pdfWriter = pdfWriter;
     }
@@ -86,6 +91,10 @@ public class CaseExportService {
                 .map(d -> new DocumentSection(d.title(), d.fileName(), statusLabel(d.status()), d.uploadedAt()))
                 .toList();
 
+        List<TaskSection> tasks = caseTaskRepository.findByCaseIdOrderByDoneAscCreatedAtAsc(caseId).stream()
+                .map(t -> new TaskSection(t.getText(), t.isDone(), t.getDueDate()))
+                .toList();
+
         List<ResponseSection> responses = aiResponseRepository.findByCaseIdOrderByCreatedAtDesc(caseId).stream()
                 .map(AiResponseDto::from)
                 .map(dto -> new ResponseSection(
@@ -111,6 +120,7 @@ public class CaseExportService {
                 caseEntity.getCreatedAt(),
                 client,
                 documents,
+                tasks,
                 responses,
                 drafts);
     }

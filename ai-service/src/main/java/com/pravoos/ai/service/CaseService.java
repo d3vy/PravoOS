@@ -70,14 +70,29 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status) {
+    public List<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status, String query) {
         Map<UUID, String> clientNames = clientNamesFor(lawyerId);
-        List<Case> cases = status == null
-                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
-                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status);
+        String trimmedQuery = query == null ? null : query.trim();
+        List<Case> cases = (trimmedQuery == null || trimmedQuery.isEmpty())
+                ? findByStatus(lawyerId, status)
+                : caseRepository.search(lawyerId, status, likePattern(trimmedQuery));
         return cases.stream()
                 .map(caseEntity -> CaseResponse.from(caseEntity, clientName(clientNames, caseEntity.getClientId())))
                 .toList();
+    }
+
+    private List<Case> findByStatus(UUID lawyerId, CaseStatus status) {
+        return status == null
+                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
+                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status);
+    }
+
+    private String likePattern(String query) {
+        String escaped = query.toLowerCase()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+        return "%" + escaped + "%";
     }
 
     @Transactional

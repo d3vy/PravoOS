@@ -53,8 +53,9 @@ public class CaseController {
 
     @GetMapping
     public ResponseEntity<List<CaseResponse>> list(@RequestParam(required = false) CaseStatus status,
+                                                   @RequestParam(required = false) String q,
                                                    Authentication authentication) {
-        return ResponseEntity.ok(caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status));
+        return ResponseEntity.ok(caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status, q));
     }
 
     @GetMapping("/{caseId}")
