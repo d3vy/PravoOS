@@ -10,7 +10,8 @@ import com.pravoos.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 public class DeadlineNotificationEmailService {
@@ -29,20 +30,27 @@ public class DeadlineNotificationEmailService {
         this.resendProperties = resendProperties;
     }
 
-    @Transactional(readOnly = true)
     public void sendDeadlineEmail(DeadlineEmailRequest request) {
-        User user = userRepository.findById(request.lawyerId()).orElse(null);
-        if (user == null || user.getRole() != UserRole.LAWYER || user.getStatus() != UserStatus.ACTIVE) {
+        String recipientEmail = resolveActiveLawyerEmail(request.lawyerId());
+        if (recipientEmail == null) {
             log.warn("Skipping deadline email: lawyer {} not found or not active", request.lawyerId());
             return;
         }
 
         String caseLink = resendProperties.frontendBaseUrl() + "/cases/" + request.caseId();
         try {
-            resendEmailClient.sendDeadlineEmail(user.getEmail(), request.caseTitle(),
+            resendEmailClient.sendDeadlineEmail(recipientEmail, request.caseTitle(),
                     request.deadlineTypeName(), request.deadlineDate(), request.daysLeft(), caseLink);
         } catch (Exception e) {
             log.error("Failed to send deadline email to lawyer {}: {}", request.lawyerId(), e.getMessage(), e);
         }
+    }
+
+    private String resolveActiveLawyerEmail(UUID lawyerId) {
+        User user = userRepository.findById(lawyerId).orElse(null);
+        if (user == null || user.getRole() != UserRole.LAWYER || user.getStatus() != UserStatus.ACTIVE) {
+            return null;
+        }
+        return user.getEmail();
     }
 }

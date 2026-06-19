@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -102,7 +103,7 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
     }
 
     private LocalDate resolveNextHearingDate(ArbitrApiResponse.Case caseDto) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
         LocalDate nextHearingDate = null;
         for (ArbitrApiResponse.CourtHearing hearing : safe(caseDto.courtHearings())) {
             LocalDate hearingDate = parseHearingDate(hearing.start());

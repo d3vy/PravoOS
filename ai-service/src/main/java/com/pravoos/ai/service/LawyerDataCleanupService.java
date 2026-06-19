@@ -11,6 +11,7 @@ import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ public class LawyerDataCleanupService {
     private final DocumentTemplateRepository documentTemplateRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final LawyerDataCleanupService self;
 
     public LawyerDataCleanupService(CaseRepository caseRepository,
                                     CaseTaskRepository caseTaskRepository,
@@ -38,7 +40,8 @@ public class LawyerDataCleanupService {
                                     ClientContactRepository clientContactRepository,
                                     DocumentTemplateRepository documentTemplateRepository,
                                     ConversationRepository conversationRepository,
-                                    MessageRepository messageRepository) {
+                                    MessageRepository messageRepository,
+                                    @Lazy LawyerDataCleanupService self) {
         this.caseRepository = caseRepository;
         this.caseTaskRepository = caseTaskRepository;
         this.caseDraftRepository = caseDraftRepository;
@@ -47,10 +50,11 @@ public class LawyerDataCleanupService {
         this.documentTemplateRepository = documentTemplateRepository;
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
+        this.self = self;
     }
 
     public void purgeLawyerData(UUID lawyerId) {
-        purgeRelationalData(lawyerId);
+        self.purgeRelationalData(lawyerId);
         purgeChatData(lawyerId);
         log.info("Purged AI data for deleted lawyer {}", lawyerId);
     }

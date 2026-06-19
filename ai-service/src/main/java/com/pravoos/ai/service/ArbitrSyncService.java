@@ -9,6 +9,7 @@ import com.pravoos.ai.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,18 +31,20 @@ public class ArbitrSyncService {
     private final CaseRepository caseRepository;
     private final CaseHearingEventRepository hearingEventRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ArbitrSyncService self;
 
     public ArbitrSyncService(ArbitrCaseProvider arbitrCaseProvider,
                              CaseRepository caseRepository,
                              CaseHearingEventRepository hearingEventRepository,
-                             KafkaTemplate<String, Object> kafkaTemplate) {
+                             KafkaTemplate<String, Object> kafkaTemplate,
+                             @Lazy ArbitrSyncService self) {
         this.arbitrCaseProvider = arbitrCaseProvider;
         this.caseRepository = caseRepository;
         this.hearingEventRepository = hearingEventRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.self = self;
     }
 
-    @Transactional
     public void syncCase(UUID caseId) {
         Case caseEntity = caseRepository.findById(caseId).orElse(null);
         if (caseEntity == null || caseEntity.getArbitrCaseNumber() == null
@@ -53,7 +56,16 @@ public class ArbitrSyncService {
         if (fetched.isEmpty()) {
             return;
         }
-        ArbitrCaseData data = fetched.get();
+
+        self.persistSyncedCase(caseId, fetched.get());
+    }
+
+    @Transactional
+    public void persistSyncedCase(UUID caseId, ArbitrCaseData data) {
+        Case caseEntity = caseRepository.findById(caseId).orElse(null);
+        if (caseEntity == null) {
+            return;
+        }
 
         int newEvents = persistNewEvents(caseId, data);
         if (data.caseGuid() != null && !data.caseGuid().equals(caseEntity.getArbitrCaseGuid())) {

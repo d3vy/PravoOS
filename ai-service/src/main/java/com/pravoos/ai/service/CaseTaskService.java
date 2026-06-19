@@ -80,7 +80,6 @@ public class CaseTaskService {
         log.info("Case task deleted: {} on case {} by lawyer {}", taskId, caseId, lawyerId);
     }
 
-    @Transactional
     public List<CaseTaskResponse> generateFromChecklist(UUID caseId, UUID lawyerId) {
         caseService.requireOwnedCase(caseId, lawyerId);
 
