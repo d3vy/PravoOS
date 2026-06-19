@@ -6,6 +6,7 @@ import com.pravoos.ai.model.dto.CaseExportModel.ClientSection;
 import com.pravoos.ai.model.dto.CaseExportModel.DocumentSection;
 import com.pravoos.ai.model.dto.CaseExportModel.DraftSection;
 import com.pravoos.ai.model.dto.CaseExportModel.ResponseSection;
+import com.pravoos.ai.model.dto.CaseExportModel.TaskSection;
 import com.pravoos.ai.util.ExportDateFormatter;
 import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -31,6 +32,7 @@ public class CaseDocxWriter {
 
             writeClient(document, model.client());
             writeDocuments(document, model.documents());
+            writeTasks(document, model.tasks());
             writeResponses(document, model.responses());
             writeDrafts(document, model.drafts());
 
@@ -65,6 +67,24 @@ public class CaseDocxWriter {
         for (DocumentSection doc : documents) {
             bulletLine(document, doc.title() + " — " + doc.fileName() + " [" + doc.status() + "]");
         }
+    }
+
+    private void writeTasks(XWPFDocument document, java.util.List<TaskSection> tasks) {
+        long openCount = tasks.stream().filter(task -> !task.done()).count();
+        sectionHeading(document, "Задачи по делу (" + openCount + " из " + tasks.size() + " активны)");
+        if (tasks.isEmpty()) {
+            mutedLine(document, "Задачи не добавлены.");
+            return;
+        }
+        for (TaskSection task : tasks) {
+            bulletLine(document, taskLabel(task));
+        }
+    }
+
+    private String taskLabel(TaskSection task) {
+        String checkbox = task.done() ? "[x] " : "[ ] ";
+        String dueDate = ExportDateFormatter.formatDate(task.dueDate());
+        return checkbox + task.text() + (dueDate == null ? "" : " — до " + dueDate);
     }
 
     private void writeResponses(XWPFDocument document, java.util.List<ResponseSection> responses) {

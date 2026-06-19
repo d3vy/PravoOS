@@ -46,11 +46,11 @@
 
 ## Tier 2 — Важно (продукт становится удобным)
 
-### 5. Задачи внутри дела
-- [ ] Flyway-миграция: таблица `case_tasks` (id, case_id, text, due_date, done, created_at)
-- [ ] CRUD `/api/ai/cases/{id}/tasks`
-- [ ] AI-генерация чеклиста задач из результата workflow `DOCUMENT_CHECKLIST` → превращать текст в реальные `case_tasks`
-- [ ] Фронт: чеклист задач на странице дела, quick-add задачи, dueDate + done
+### 5. Задачи внутри дела ✅
+- [x] Flyway-миграция V8: таблица `case_tasks` (id, case_id, text, due_date, done, created_at)
+- [x] CRUD `/api/ai/cases/{id}/tasks` (+ PATCH toggle done, DELETE)
+- [x] AI-генерация: `POST /api/ai/cases/{id}/tasks/generate` — прогон `DOCUMENT_CHECKLIST`, парс markdown-таблицы → задачи для missing/partial документов
+- [x] Фронт: чеклист задач на странице дела, quick-add задачи, dueDate + done
 
 ### 6. Интеграция с КАД.Арбитр
 - [ ] Поле `arbitr_case_number VARCHAR(50)` в таблице `cases`
@@ -59,10 +59,10 @@
 - [ ] Kafka topic `case.hearing.updated` — уведомить юриста при изменении даты заседания
 - [ ] Фронт: отображение истории событий по делу из КАД, ссылка на карточку дела на kad.arbitr.ru
 
-### 7. Поиск по делам
-- [ ] Backend: `GET /api/ai/cases?q=` — `ILIKE` по title/description + JOIN по client name
-- [ ] Фронт: поле поиска на `/cases` (аналогично поиску бесед в чате)
-- [ ] Глобальный поиск: дела + беседы + документы — единый `/api/ai/search?q=`
+### 7. Поиск по делам ✅
+- [x] Backend: `GET /api/ai/cases?q=` — `ILIKE` по title/description + EXISTS по client name (комбинируется с `?status=`)
+- [x] Фронт: поле поиска на `/cases` (debounce 300мс, работает в обоих видах)
+- [x] Глобальный поиск: дела + беседы + документы — единый `GET /api/ai/search?q=` (страница `/search`)
 
 ### 8. Уведомления для юриста (Telegram) ✅
 - [x] Flyway V9 (user-service): `telegram_chat_id BIGINT` на `lawyer_profiles` (не на `users`) + таблица `telegram_link_codes`
@@ -89,7 +89,7 @@
 - [x] `CaseExportService` + `CaseDocxWriter` (POI) и `CasePdfWriter` (PDFBox + DejaVu для кириллицы): клиент + документы + заключения AI + черновики
 - [x] `GET /api/ai/cases/{id}/export?format=docx|pdf` — скачать выжимку по делу
 - [x] Фронт: кнопки «Экспорт .docx» / «Экспорт .pdf» на странице дела
-- (статус и задачи в выжимку не вошли — сущностей ещё нет, задачи №1/№5)
+- [x] В выжимку входят статус дела (задача №1) и задачи по делу (задача №5)
 
 ### 12. История коммуникаций с клиентом
 - [ ] Flyway-миграция: таблица `client_contacts` (id, client_id, type ENUM звонок/встреча/письмо, date, notes)

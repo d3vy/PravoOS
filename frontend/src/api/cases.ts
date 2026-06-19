@@ -5,18 +5,24 @@ import type {
   CaseDraftDto,
   CaseDraftSummaryDto,
   CaseStatus,
+  CaseTaskResponse,
   CreateCaseRequest,
+  CreateCaseTaskRequest,
   DocumentResponse,
   DocumentUploadResponse,
   DraftTypeInfo,
   GenerateDraftRequest,
   UpdateCaseRequest,
+  UpdateCaseTaskRequest,
 } from '../types'
 
 export const casesApi = {
-  getAll: async (status?: CaseStatus): Promise<CaseResponse[]> => {
+  getAll: async (status?: CaseStatus, q?: string): Promise<CaseResponse[]> => {
+    const params: Record<string, string> = {}
+    if (status) params.status = status
+    if (q && q.trim()) params.q = q.trim()
     const response = await apiClient.get<CaseResponse[]>('/api/ai/cases', {
-      params: status ? { status } : undefined,
+      params: Object.keys(params).length > 0 ? params : undefined,
     })
     return response.data
   },
@@ -100,6 +106,30 @@ export const casesApi = {
     link.download = `${fileName}.docx`
     link.click()
     window.URL.revokeObjectURL(url)
+  },
+
+  getTasks: async (caseId: string): Promise<CaseTaskResponse[]> => {
+    const response = await apiClient.get<CaseTaskResponse[]>(`/api/ai/cases/${caseId}/tasks`)
+    return response.data
+  },
+
+  createTask: async (caseId: string, data: CreateCaseTaskRequest): Promise<CaseTaskResponse> => {
+    const response = await apiClient.post<CaseTaskResponse>(`/api/ai/cases/${caseId}/tasks`, data)
+    return response.data
+  },
+
+  updateTask: async (caseId: string, taskId: string, data: UpdateCaseTaskRequest): Promise<CaseTaskResponse> => {
+    const response = await apiClient.patch<CaseTaskResponse>(`/api/ai/cases/${caseId}/tasks/${taskId}`, data)
+    return response.data
+  },
+
+  deleteTask: async (caseId: string, taskId: string): Promise<void> => {
+    await apiClient.delete(`/api/ai/cases/${caseId}/tasks/${taskId}`)
+  },
+
+  generateTasks: async (caseId: string): Promise<CaseTaskResponse[]> => {
+    const response = await apiClient.post<CaseTaskResponse[]>(`/api/ai/cases/${caseId}/tasks/generate`)
+    return response.data
   },
 
   exportCase: async (caseId: string, format: 'docx' | 'pdf', fileName: string): Promise<void> => {

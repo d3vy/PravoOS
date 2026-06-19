@@ -12,6 +12,7 @@ import com.pravoos.ai.model.entity.Client;
 import com.pravoos.ai.model.enums.CaseStatus;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
+import com.pravoos.ai.util.LikePattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -76,14 +77,25 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status) {
+    public List<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status, String query) {
         Map<UUID, String> clientNames = clientNamesFor(lawyerId);
-        List<Case> cases = status == null
-                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
-                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status);
+        String trimmedQuery = query == null ? null : query.trim();
+        List<Case> cases = (trimmedQuery == null || trimmedQuery.isEmpty())
+                ? findByStatus(lawyerId, status)
+                : caseRepository.search(lawyerId, status, likePattern(trimmedQuery));
         return cases.stream()
                 .map(caseEntity -> CaseResponse.from(caseEntity, clientName(clientNames, caseEntity.getClientId())))
                 .toList();
+    }
+
+    private List<Case> findByStatus(UUID lawyerId, CaseStatus status) {
+        return status == null
+                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
+                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status);
+    }
+
+    private String likePattern(String query) {
+        return LikePattern.contains(query);
     }
 
     @Transactional
