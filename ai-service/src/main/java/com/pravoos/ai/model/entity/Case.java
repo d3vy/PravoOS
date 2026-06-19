@@ -40,6 +40,12 @@ public class Case {
     @Column(name = "expires_at")
     private LocalDate expiresAt;
 
+    @Column(name = "arbitr_case_number", length = 50)
+    private String arbitrCaseNumber;
+
+    @Column(name = "arbitr_case_guid", length = 40)
+    private String arbitrCaseGuid;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -73,6 +79,12 @@ public class Case {
 
     public LocalDate getExpiresAt() { return expiresAt; }
     public void setExpiresAt(LocalDate expiresAt) { this.expiresAt = expiresAt; }
+
+    public String getArbitrCaseNumber() { return arbitrCaseNumber; }
+    public void setArbitrCaseNumber(String arbitrCaseNumber) { this.arbitrCaseNumber = arbitrCaseNumber; }
+
+    public String getArbitrCaseGuid() { return arbitrCaseGuid; }
+    public void setArbitrCaseGuid(String arbitrCaseGuid) { this.arbitrCaseGuid = arbitrCaseGuid; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

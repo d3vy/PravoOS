@@ -24,6 +24,8 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
     List<Case> findByExpiresAt(LocalDate expiresAt);
 
+    List<Case> findByArbitrCaseNumberIsNotNull();
+
     @Query("""
             SELECT c FROM Case c
             WHERE c.lawyerId = :lawyerId

@@ -12,5 +12,6 @@ public record CreateCaseRequest(
         UUID clientId,
         LocalDate filingDeadline,
         LocalDate nextHearingDate,
-        LocalDate expiresAt
+        LocalDate expiresAt,
+        @Size(max = 50) String arbitrCaseNumber
 ) {}

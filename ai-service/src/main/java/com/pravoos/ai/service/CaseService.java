@@ -2,6 +2,7 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.exception.CaseNotFoundException;
 import com.pravoos.ai.exception.ClientNotFoundException;
+import com.pravoos.ai.model.dto.CaseHearingEventResponse;
 import com.pravoos.ai.model.dto.CaseResponse;
 import com.pravoos.ai.model.dto.CreateCaseRequest;
 import com.pravoos.ai.model.dto.DocumentResponse;
@@ -10,6 +11,7 @@ import com.pravoos.ai.model.dto.UpdateCaseRequest;
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.model.entity.Client;
 import com.pravoos.ai.model.enums.CaseStatus;
+import com.pravoos.ai.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
 import com.pravoos.ai.util.LikePattern;
@@ -21,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,13 +35,19 @@ public class CaseService {
     private final CaseRepository caseRepository;
     private final ClientRepository clientRepository;
     private final DocumentService documentService;
+    private final CaseHearingEventRepository hearingEventRepository;
+    private final ArbitrSyncService arbitrSyncService;
 
     public CaseService(CaseRepository caseRepository,
                        ClientRepository clientRepository,
-                       DocumentService documentService) {
+                       DocumentService documentService,
+                       CaseHearingEventRepository hearingEventRepository,
+                       ArbitrSyncService arbitrSyncService) {
         this.caseRepository = caseRepository;
         this.clientRepository = clientRepository;
         this.documentService = documentService;
+        this.hearingEventRepository = hearingEventRepository;
+        this.arbitrSyncService = arbitrSyncService;
     }
 
     @Transactional
@@ -53,6 +62,7 @@ public class CaseService {
         caseEntity.setFilingDeadline(request.filingDeadline());
         caseEntity.setNextHearingDate(request.nextHearingDate());
         caseEntity.setExpiresAt(request.expiresAt());
+        caseEntity.setArbitrCaseNumber(normalizeArbitrNumber(request.arbitrCaseNumber()));
 
         Case saved = caseRepository.save(caseEntity);
         log.info("Case created: '{}' ({}) by lawyer {}, client {}",
@@ -71,9 +81,41 @@ public class CaseService {
         caseEntity.setFilingDeadline(request.filingDeadline());
         caseEntity.setNextHearingDate(request.nextHearingDate());
         caseEntity.setExpiresAt(request.expiresAt());
+        applyArbitrNumber(caseEntity, request.arbitrCaseNumber());
 
         log.info("Case updated: {} by lawyer {}, client {}", caseId, lawyerId, caseEntity.getClientId());
         return CaseResponse.from(caseEntity, client != null ? client.getName() : null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CaseHearingEventResponse> findHearingEvents(UUID caseId, UUID lawyerId) {
+        requireOwnedCase(caseId, lawyerId);
+        return hearingEventRepository.findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId)
+                .stream()
+                .map(CaseHearingEventResponse::from)
+                .toList();
+    }
+
+    public List<CaseHearingEventResponse> syncArbitr(UUID caseId, UUID lawyerId) {
+        requireOwnedCase(caseId, lawyerId);
+        arbitrSyncService.syncCase(caseId);
+        return findHearingEvents(caseId, lawyerId);
+    }
+
+    private void applyArbitrNumber(Case caseEntity, String requestedNumber) {
+        String normalized = normalizeArbitrNumber(requestedNumber);
+        if (!Objects.equals(normalized, caseEntity.getArbitrCaseNumber())) {
+            caseEntity.setArbitrCaseGuid(null);
+        }
+        caseEntity.setArbitrCaseNumber(normalized);
+    }
+
+    private String normalizeArbitrNumber(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Transactional(readOnly = true)

@@ -1,0 +1,118 @@
+package com.pravoos.ai.service;
+
+import com.pravoos.ai.arbitr.ArbitrCaseData;
+import com.pravoos.ai.arbitr.ArbitrCaseProvider;
+import com.pravoos.ai.event.CaseHearingUpdatedKafkaPayload;
+import com.pravoos.ai.model.entity.Case;
+import com.pravoos.ai.model.entity.CaseHearingEvent;
+import com.pravoos.ai.repository.jpa.CaseHearingEventRepository;
+import com.pravoos.ai.repository.jpa.CaseRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+
+@Service
+public class ArbitrSyncService {
+
+    private static final Logger log = LoggerFactory.getLogger(ArbitrSyncService.class);
+    private static final String TOPIC = "case.hearing.updated";
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+    private final ArbitrCaseProvider arbitrCaseProvider;
+    private final CaseRepository caseRepository;
+    private final CaseHearingEventRepository hearingEventRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    public ArbitrSyncService(ArbitrCaseProvider arbitrCaseProvider,
+                             CaseRepository caseRepository,
+                             CaseHearingEventRepository hearingEventRepository,
+                             KafkaTemplate<String, Object> kafkaTemplate) {
+        this.arbitrCaseProvider = arbitrCaseProvider;
+        this.caseRepository = caseRepository;
+        this.hearingEventRepository = hearingEventRepository;
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    @Transactional
+    public void syncCase(UUID caseId) {
+        Case caseEntity = caseRepository.findById(caseId).orElse(null);
+        if (caseEntity == null || caseEntity.getArbitrCaseNumber() == null
+                || caseEntity.getArbitrCaseNumber().isBlank()) {
+            return;
+        }
+
+        Optional<ArbitrCaseData> fetched = arbitrCaseProvider.fetchCase(caseEntity.getArbitrCaseNumber());
+        if (fetched.isEmpty()) {
+            return;
+        }
+        ArbitrCaseData data = fetched.get();
+
+        int newEvents = persistNewEvents(caseId, data);
+        if (data.caseGuid() != null && !data.caseGuid().equals(caseEntity.getArbitrCaseGuid())) {
+            caseEntity.setArbitrCaseGuid(data.caseGuid());
+        }
+        applyHearingDate(caseEntity, data.nextHearingDate());
+
+        log.info("КАД.Арбитр sync: дело {} ({}) — новых событий {}, ближайшее заседание {}",
+                caseId, caseEntity.getArbitrCaseNumber(), newEvents, data.nextHearingDate());
+    }
+
+    private int persistNewEvents(UUID caseId, ArbitrCaseData data) {
+        int saved = 0;
+        for (ArbitrCaseData.ArbitrEvent event : data.events()) {
+            if (event.sourceEventId() == null
+                    || hearingEventRepository.existsByCaseIdAndSourceEventId(caseId, event.sourceEventId())) {
+                continue;
+            }
+            hearingEventRepository.save(new CaseHearingEvent(
+                    caseId,
+                    event.sourceEventId(),
+                    event.date(),
+                    event.type(),
+                    event.description(),
+                    event.courtName()));
+            saved++;
+        }
+        return saved;
+    }
+
+    private void applyHearingDate(Case caseEntity, LocalDate newHearingDate) {
+        if (newHearingDate == null) {
+            return;
+        }
+        LocalDate previous = caseEntity.getNextHearingDate();
+        if (newHearingDate.equals(previous)) {
+            return;
+        }
+        caseEntity.setNextHearingDate(newHearingDate);
+        publishHearingUpdated(caseEntity, previous, newHearingDate);
+    }
+
+    private void publishHearingUpdated(Case caseEntity, LocalDate previous, LocalDate newHearingDate) {
+        CaseHearingUpdatedKafkaPayload payload = new CaseHearingUpdatedKafkaPayload(
+                caseEntity.getId(),
+                caseEntity.getLawyerId(),
+                caseEntity.getTitle(),
+                caseEntity.getArbitrCaseNumber(),
+                previous == null ? null : DATE_FORMATTER.format(previous),
+                DATE_FORMATTER.format(newHearingDate));
+        try {
+            kafkaTemplate.send(TOPIC, caseEntity.getId().toString(), payload).get();
+            log.info("Опубликовано case.hearing.updated: дело {} {} -> {}",
+                    caseEntity.getId(), previous, newHearingDate);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Прервано при публикации case.hearing.updated", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Не удалось опубликовать case.hearing.updated в Kafka", e.getCause());
+        }
+    }
+}

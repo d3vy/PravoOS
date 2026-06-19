@@ -6,6 +6,7 @@ import com.pravoos.notification.client.UserServiceClient;
 import com.pravoos.notification.config.TelegramBotProperties;
 import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
+import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,35 @@ public class TelegramNotificationService {
         message.setText(formatDeadlineMessage(payload));
         message.setParseMode("HTML");
         sendSafely(message, payload.caseId().toString());
+    }
+
+    public void notifyHearingUpdated(CaseHearingUpdatedKafkaPayload payload) {
+        Optional<Long> chatId = userServiceClient.resolveTelegramChatId(payload.lawyerId());
+        if (chatId.isEmpty()) {
+            log.info("Lawyer {} has no linked Telegram, skipping hearing update for case {}",
+                    payload.lawyerId(), payload.caseId());
+            return;
+        }
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.get().toString());
+        message.setText(formatHearingMessage(payload));
+        message.setParseMode("HTML");
+        sendSafely(message, payload.caseId().toString());
+    }
+
+    private String formatHearingMessage(CaseHearingUpdatedKafkaPayload payload) {
+        String previous = payload.previousHearingDate() == null ? "не было" : payload.previousHearingDate();
+        return String.format("""
+                <b>Изменилась дата заседания (КАД.Арбитр)</b>
+
+                <b>Дело:</b> %s
+                <b>Номер в КАД:</b> %s
+                <b>Было:</b> %s
+                <b>Стало:</b> %s""",
+                escapeHtml(payload.caseTitle()),
+                escapeHtml(payload.arbitrCaseNumber()),
+                escapeHtml(previous),
+                escapeHtml(payload.newHearingDate()));
     }
 
     private void sendDeadlineEmailFallback(CaseDeadlineKafkaPayload payload) {

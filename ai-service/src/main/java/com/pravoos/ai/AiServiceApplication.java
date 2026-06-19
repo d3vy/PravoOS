@@ -1,5 +1,6 @@
 package com.pravoos.ai;
 
+import com.pravoos.ai.config.ArbitrProperties;
 import com.pravoos.ai.config.OpenAiProperties;
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.config.JwtProperties;
@@ -12,7 +13,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-@EnableConfigurationProperties({OpenAiProperties.class, DocumentProperties.class, JwtProperties.class})
+@EnableConfigurationProperties({OpenAiProperties.class, DocumentProperties.class, JwtProperties.class, ArbitrProperties.class})
 @EnableJpaRepositories(basePackages = "com.pravoos.ai.repository.jpa")
 @EnableMongoRepositories(basePackages = "com.pravoos.ai.repository.mongo")
 @EnableScheduling

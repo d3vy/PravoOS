@@ -2,6 +2,7 @@ package com.pravoos.notification.config;
 
 import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
+import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +85,34 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, CaseDeadlineKafkaPayload> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(deadlineConsumerFactory);
+        factory.setCommonErrorHandler(errorHandler());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, CaseHearingUpdatedKafkaPayload> hearingConsumerFactory() {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
+
+        JsonDeserializer<CaseHearingUpdatedKafkaPayload> jsonDeserializer =
+                new JsonDeserializer<>(CaseHearingUpdatedKafkaPayload.class);
+        jsonDeserializer.setUseTypeHeaders(false);
+        jsonDeserializer.addTrustedPackages(CaseHearingUpdatedKafkaPayload.class.getPackageName());
+
+        ErrorHandlingDeserializer<CaseHearingUpdatedKafkaPayload> valueDeserializer =
+                new ErrorHandlingDeserializer<>(jsonDeserializer);
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new ErrorHandlingDeserializer<>(new StringDeserializer()),
+                valueDeserializer);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, CaseHearingUpdatedKafkaPayload> hearingKafkaListenerContainerFactory(
+            ConsumerFactory<String, CaseHearingUpdatedKafkaPayload> hearingConsumerFactory) {
+        ConcurrentKafkaListenerContainerFactory<String, CaseHearingUpdatedKafkaPayload> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(hearingConsumerFactory);
         factory.setCommonErrorHandler(errorHandler());
         return factory;
     }

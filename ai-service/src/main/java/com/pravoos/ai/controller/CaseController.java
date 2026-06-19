@@ -102,6 +102,19 @@ public class CaseController {
         return ResponseEntity.ok(caseService.findDocuments(caseId, SecurityUtils.currentUserId(authentication)));
     }
 
+    @GetMapping("/{caseId}/hearings")
+    public ResponseEntity<List<CaseHearingEventResponse>> hearings(@PathVariable UUID caseId,
+                                                                   Authentication authentication) {
+        return ResponseEntity.ok(caseService.findHearingEvents(caseId, SecurityUtils.currentUserId(authentication)));
+    }
+
+    @PostMapping("/{caseId}/arbitr/sync")
+    public ResponseEntity<List<CaseHearingEventResponse>> syncArbitr(@PathVariable UUID caseId,
+                                                                     Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseService.syncArbitr(caseId, lawyerId));
+    }
+
     @PostMapping("/{caseId}/workflows/{workflowId}/run")
     public ResponseEntity<AiResponseDto> runWorkflow(
             @PathVariable UUID caseId,

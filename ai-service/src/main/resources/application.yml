@@ -68,6 +68,13 @@ document:
   chunk-overlap: 50
   top-k-results: 5
 
+arbitr:
+  api:
+    base-url: ${ARBITR_API_BASE_URL:https://api-cloud.ru/api/kad_arbitr.php}
+    token: ${ARBITR_API_TOKEN:}
+  poll:
+    cron: ${ARBITR_POLL_CRON:0 0 */6 * * *}
+
 management:
   endpoints:
     web:

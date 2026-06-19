@@ -1,0 +1,14 @@
+package com.pravoos.ai.repository.jpa;
+
+import com.pravoos.ai.model.entity.CaseHearingEvent;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface CaseHearingEventRepository extends JpaRepository<CaseHearingEvent, UUID> {
+
+    boolean existsByCaseIdAndSourceEventId(UUID caseId, String sourceEventId);
+
+    List<CaseHearingEvent> findByCaseIdOrderByEventDateDescCreatedAtDesc(UUID caseId);
+}

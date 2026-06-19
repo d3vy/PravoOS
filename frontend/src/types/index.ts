@@ -119,7 +119,17 @@ export interface CaseResponse {
   filingDeadline: string | null
   nextHearingDate: string | null
   expiresAt: string | null
+  arbitrCaseNumber: string | null
+  arbitrCardUrl: string | null
   createdAt: string
+}
+
+export interface CaseHearingEvent {
+  id: string
+  eventDate: string | null
+  eventType: string | null
+  description: string | null
+  courtName: string | null
 }
 
 export interface CreateCaseRequest {
@@ -129,6 +139,7 @@ export interface CreateCaseRequest {
   filingDeadline?: string | null
   nextHearingDate?: string | null
   expiresAt?: string | null
+  arbitrCaseNumber?: string | null
 }
 
 export interface UpdateCaseRequest {
@@ -138,6 +149,7 @@ export interface UpdateCaseRequest {
   filingDeadline?: string | null
   nextHearingDate?: string | null
   expiresAt?: string | null
+  arbitrCaseNumber?: string | null
 }
 
 export interface UpdateCaseStatusRequest {

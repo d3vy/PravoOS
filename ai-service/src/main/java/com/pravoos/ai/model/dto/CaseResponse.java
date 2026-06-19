@@ -18,8 +18,12 @@ public record CaseResponse(
         LocalDate filingDeadline,
         LocalDate nextHearingDate,
         LocalDate expiresAt,
+        String arbitrCaseNumber,
+        String arbitrCardUrl,
         LocalDateTime createdAt
 ) {
+    private static final String KAD_CARD_BASE_URL = "https://kad.arbitr.ru/Card/";
+
     public static CaseResponse from(Case caseEntity, String clientName) {
         return new CaseResponse(
                 caseEntity.getId(),
@@ -32,6 +36,8 @@ public record CaseResponse(
                 caseEntity.getFilingDeadline(),
                 caseEntity.getNextHearingDate(),
                 caseEntity.getExpiresAt(),
+                caseEntity.getArbitrCaseNumber(),
+                caseEntity.getArbitrCaseGuid() == null ? null : KAD_CARD_BASE_URL + caseEntity.getArbitrCaseGuid(),
                 caseEntity.getCreatedAt()
         );
     }

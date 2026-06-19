@@ -6,7 +6,7 @@ import { casesApi } from '../../api/cases'
 import { clientsApi } from '../../api/clients'
 import { templatesApi } from '../../api/templates'
 import { workflowsApi } from '../../api/workflows'
-import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, ClientResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
+import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, ClientResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -106,6 +106,8 @@ export default function CaseDetailPage(): JSX.Element {
 
         <CaseTasksSection caseId={caseId} />
 
+        <ArbitrSection caseItem={caseItem} queryClient={queryClient} />
+
         <WorkflowSection caseId={caseId} workflows={workflows} queryClient={queryClient} />
 
         <DraftSection caseId={caseId} draftTypes={draftTypes} drafts={drafts} queryClient={queryClient} />
@@ -129,6 +131,7 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
   const [filingDeadline, setFilingDeadline] = useState(caseItem.filingDeadline ?? '')
   const [nextHearingDate, setNextHearingDate] = useState(caseItem.nextHearingDate ?? '')
   const [expiresAt, setExpiresAt] = useState(caseItem.expiresAt ?? '')
+  const [arbitrCaseNumber, setArbitrCaseNumber] = useState(caseItem.arbitrCaseNumber ?? '')
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState<'docx' | 'pdf' | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -168,6 +171,7 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
         filingDeadline: filingDeadline || null,
         nextHearingDate: nextHearingDate || null,
         expiresAt: expiresAt || null,
+        arbitrCaseNumber: arbitrCaseNumber.trim() || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
@@ -193,6 +197,7 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
     setFilingDeadline(caseItem.filingDeadline ?? '')
     setNextHearingDate(caseItem.nextHearingDate ?? '')
     setExpiresAt(caseItem.expiresAt ?? '')
+    setArbitrCaseNumber(caseItem.arbitrCaseNumber ?? '')
     setError(null)
     setIsEditing(false)
   }
@@ -232,6 +237,13 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
             <DateField label="Заседание" value={nextHearingDate} onChange={setNextHearingDate} />
             <DateField label="Истечение срока" value={expiresAt} onChange={setExpiresAt} />
           </div>
+          <Input
+            label="Номер дела в КАД.Арбитр"
+            value={arbitrCaseNumber}
+            onChange={(e) => setArbitrCaseNumber(e.target.value)}
+            maxLength={50}
+            placeholder="А40-12345/2024"
+          />
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex gap-2">
             <Button variant="primary" loading={updateMutation.isPending} onClick={handleSave}>
@@ -337,6 +349,106 @@ function DeadlineBadge({ label, value }: { label: string; value: string }): JSX.
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs ${tone}`}>
       <span className="font-medium">{label}:</span> {formatted}{suffix}
     </span>
+  )
+}
+
+function ArbitrSection({ caseItem, queryClient }: { caseItem: CaseResponse; queryClient: ReturnType<typeof useQueryClient> }): JSX.Element {
+  const hasNumber = Boolean(caseItem.arbitrCaseNumber)
+
+  const { data: hearings = [], isLoading } = useQuery<CaseHearingEvent[]>({
+    queryKey: ['case-hearings', caseItem.id],
+    queryFn: () => casesApi.getHearings(caseItem.id),
+    enabled: hasNumber,
+  })
+
+  const syncMutation = useMutation({
+    mutationFn: () => casesApi.syncArbitr(caseItem.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case-hearings', caseItem.id] })
+      queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
+    },
+  })
+
+  return (
+    <section className="mb-10">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
+          События по делу (КАД.Арбитр)
+        </h2>
+        {hasNumber && (
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={syncMutation.isPending}
+            onClick={() => syncMutation.mutate()}
+          >
+            Обновить из КАД
+          </Button>
+        )}
+      </div>
+
+      {!hasNumber ? (
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          Укажите номер дела в КАД.Арбитр в карточке дела, чтобы отслеживать заседания и события.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
+            <span className="text-light-secondary dark:text-dark-secondary">
+              Номер: <span className="text-light-text dark:text-dark-text font-medium">{caseItem.arbitrCaseNumber}</span>
+            </span>
+            {caseItem.arbitrCardUrl && (
+              <a
+                href={caseItem.arbitrCardUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-light-accent dark:text-dark-accent hover:underline"
+              >
+                Открыть на kad.arbitr.ru ↗
+              </a>
+            )}
+          </div>
+
+          {syncMutation.isError && (
+            <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+              Не удалось обновить данные из КАД. Попробуйте позже.
+            </p>
+          )}
+
+          {isLoading ? (
+            <Spinner size="md" />
+          ) : hearings.length === 0 ? (
+            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+              Событий пока нет. Нажмите «Обновить из КАД».
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {hearings.map((event) => (
+                <div
+                  key={event.id}
+                  className="p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+                >
+                  <div className="flex items-center justify-between gap-3 mb-0.5">
+                    <span className="text-sm font-medium text-light-text dark:text-dark-text">
+                      {event.eventType ?? 'Событие'}
+                    </span>
+                    <span className="text-xs text-light-secondary dark:text-dark-secondary shrink-0">
+                      {event.eventDate ? new Date(event.eventDate).toLocaleDateString('ru-RU') : ''}
+                    </span>
+                  </div>
+                  {event.description && (
+                    <p className="text-xs text-light-secondary dark:text-dark-secondary">{event.description}</p>
+                  )}
+                  {event.courtName && (
+                    <p className="text-xs text-light-secondary dark:text-dark-secondary mt-0.5">{event.courtName}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
   )
 }
 

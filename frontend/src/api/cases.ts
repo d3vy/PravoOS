@@ -4,6 +4,7 @@ import type {
   CaseResponse,
   CaseDraftDto,
   CaseDraftSummaryDto,
+  CaseHearingEvent,
   CaseStatus,
   CaseTaskResponse,
   CreateCaseRequest,
@@ -65,6 +66,16 @@ export const casesApi = {
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     )
+    return response.data
+  },
+
+  getHearings: async (caseId: string): Promise<CaseHearingEvent[]> => {
+    const response = await apiClient.get<CaseHearingEvent[]>(`/api/ai/cases/${caseId}/hearings`)
+    return response.data
+  },
+
+  syncArbitr: async (caseId: string): Promise<CaseHearingEvent[]> => {
+    const response = await apiClient.post<CaseHearingEvent[]>(`/api/ai/cases/${caseId}/arbitr/sync`)
     return response.data
   },
 

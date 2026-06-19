@@ -1,3 +1,11 @@
+# УСТАРЕЛО (deprecated). Разовый Playwright-краулер массового парсинга.
+# Заменён фоновой polling-интеграцией через коммерческий API КАД.Арбитр:
+#   ai-service: ArbitrPollingService (@Scheduled) → ArbitrCaseProvider (API)
+#   обновляет next_hearing_date и историю событий по точному номеру дела,
+#   публикует Kafka case.hearing.updated → notification-service → Telegram.
+# Включается заданием ARBITR_API_TOKEN в окружении ai-service.
+# Скрипт ниже сохранён только как справка по структуре сайта.
+#
 # kad.arbitr.ru — все дела о банкротстве
 #
 # Требования:

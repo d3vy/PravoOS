@@ -23,6 +23,7 @@ export default function CasesPage(): JSX.Element {
   const [filingDeadline, setFilingDeadline] = useState('')
   const [nextHearingDate, setNextHearingDate] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
+  const [arbitrCaseNumber, setArbitrCaseNumber] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('list')
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'ALL'>('ALL')
@@ -58,6 +59,7 @@ export default function CasesPage(): JSX.Element {
       setFilingDeadline('')
       setNextHearingDate('')
       setExpiresAt('')
+      setArbitrCaseNumber('')
       setFormError(null)
     },
     onError: () => setFormError('Не удалось создать дело. Попробуйте снова.'),
@@ -82,6 +84,7 @@ export default function CasesPage(): JSX.Element {
       filingDeadline: filingDeadline || undefined,
       nextHearingDate: nextHearingDate || undefined,
       expiresAt: expiresAt || undefined,
+      arbitrCaseNumber: arbitrCaseNumber.trim() || undefined,
     })
   }
 
@@ -171,6 +174,13 @@ export default function CasesPage(): JSX.Element {
                   <DateField label="Заседание" value={nextHearingDate} onChange={setNextHearingDate} />
                   <DateField label="Истечение срока" value={expiresAt} onChange={setExpiresAt} />
                 </div>
+                <Input
+                  label="Номер дела в КАД.Арбитр (опционально)"
+                  value={arbitrCaseNumber}
+                  onChange={(e) => setArbitrCaseNumber(e.target.value)}
+                  maxLength={50}
+                  placeholder="А40-12345/2024"
+                />
                 {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
                 <div>
                   <Button type="submit" variant="primary" loading={createMutation.isPending}>

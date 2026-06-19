@@ -52,12 +52,14 @@
 - [x] AI-генерация: `POST /api/ai/cases/{id}/tasks/generate` — прогон `DOCUMENT_CHECKLIST`, парс markdown-таблицы → задачи для missing/partial документов
 - [x] Фронт: чеклист задач на странице дела, quick-add задачи, dueDate + done
 
-### 6. Интеграция с КАД.Арбитр
-- [ ] Поле `arbitr_case_number VARCHAR(50)` в таблице `cases`
-- [ ] Spring Scheduler: polling kad.arbitr.ru по номеру дела (Playwright/HTTP) — обновление `next_hearing_date`
-- [ ] Переработать `scripts/kad_arbitr.yaml` из разового краулера в фоновый polling-сервис
-- [ ] Kafka topic `case.hearing.updated` — уведомить юриста при изменении даты заседания
-- [ ] Фронт: отображение истории событий по делу из КАД, ссылка на карточку дела на kad.arbitr.ru
+### 6. Интеграция с КАД.Арбитр ✅
+- [x] Flyway V14: `arbitr_case_number VARCHAR(50)` + `arbitr_case_guid` в `cases`, таблица `case_hearing_events` (идемпотентность по `source_event_id`)
+- [x] Источник — коммерческий API-агрегатор (api-cloud.ru `caseInfo`), не парсинг сайта. Абстракция `ArbitrCaseProvider`: `ApiArbitrCaseProvider` (активен при `ARBITR_API_TOKEN`) / `NoopArbitrCaseProvider` (без токена — интеграция спит)
+- [x] `ArbitrPollingService` (`@Scheduled`, `ARBITR_POLL_CRON`) + `ArbitrSyncService` (per-case `@Transactional`) — обновление `next_hearing_date` и истории событий по точному номеру дела
+- [x] `scripts/kad_arbitr.yaml` помечен deprecated — заменён фоновым API-polling
+- [x] Kafka topic `case.hearing.updated` → notification-service consumer → Telegram юристу при изменении даты заседания
+- [x] Фронт: секция «События по делу (КАД)» + кнопка «Обновить из КАД» + поле номера дела в форме + ссылка на карточку kad.arbitr.ru
+- (нужен платный `ARBITR_API_TOKEN`; до его установки интеграция неактивна, остальное работает)
 
 ### 7. Поиск по делам ✅
 - [x] Backend: `GET /api/ai/cases?q=` — `ILIKE` по title/description + EXISTS по client name (комбинируется с `?status=`)
