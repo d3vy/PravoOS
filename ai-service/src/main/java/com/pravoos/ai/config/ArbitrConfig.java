@@ -21,8 +21,8 @@ public class ArbitrConfig {
 
     @Bean
     public ArbitrCaseProvider arbitrCaseProvider(ArbitrProperties properties) {
-        if (!properties.api().hasToken()) {
-            log.warn("ARBITR_API_TOKEN не задан — интеграция с КАД.Арбитр отключена (NoopArbitrCaseProvider)");
+        if (!properties.api().hasKey()) {
+            log.warn("ARBITR_API_KEY не задан — интеграция с КАД.Арбитр отключена (NoopArbitrCaseProvider)");
             return new NoopArbitrCaseProvider();
         }
         log.info("Интеграция с КАД.Арбитр включена, baseUrl={}", properties.api().baseUrl());

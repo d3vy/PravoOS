@@ -70,8 +70,8 @@ document:
 
 arbitr:
   api:
-    base-url: ${ARBITR_API_BASE_URL:https://api-cloud.ru/api/kad_arbitr.php}
-    token: ${ARBITR_API_TOKEN:}
+    base-url: ${ARBITR_API_BASE_URL:https://parser-api.com/parser/arbitr_api/details_by_number}
+    key: ${ARBITR_API_KEY:}
   poll:
     cron: ${ARBITR_POLL_CRON:0 0 */6 * * *}
 

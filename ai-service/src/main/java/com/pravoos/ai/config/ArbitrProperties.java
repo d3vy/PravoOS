@@ -8,10 +8,10 @@ public record ArbitrProperties(
 ) {
     public record Api(
             String baseUrl,
-            String token
+            String key
     ) {
-        public boolean hasToken() {
-            return token != null && !token.isBlank();
+        public boolean hasKey() {
+            return key != null && !key.isBlank();
         }
     }
 }

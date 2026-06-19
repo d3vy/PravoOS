@@ -13,16 +13,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
 
     private static final Logger log = LoggerFactory.getLogger(ApiArbitrCaseProvider.class);
-    private static final DateTimeFormatter EVENT_DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final RestClient restClient;
     private final ArbitrProperties properties;
@@ -42,25 +41,27 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
         if (arbitrCaseNumber == null || arbitrCaseNumber.isBlank()) {
             return Optional.empty();
         }
-        ArbitrApiResponse response = requestCaseInfo(arbitrCaseNumber.trim());
-        if (response == null || response.result() == null) {
-            log.info("КАД.Арбитр: пустой ответ по делу {}", arbitrCaseNumber);
+        ArbitrApiResponse response = requestDetails(arbitrCaseNumber.trim());
+        if (response == null) {
             return Optional.empty();
         }
-        if (Boolean.FALSE.equals(response.found())) {
+        if (response.success() == null || response.success() != 1) {
+            log.info("КАД.Арбитр: Success != 1 по делу {} (error={})", arbitrCaseNumber, response.error());
+            return Optional.empty();
+        }
+        if (response.cases() == null || response.cases().isEmpty()) {
             log.info("КАД.Арбитр: дело {} не найдено", arbitrCaseNumber);
             return Optional.empty();
         }
-        return Optional.of(mapToCaseData(arbitrCaseNumber, response.result()));
+        return Optional.of(mapToCaseData(response.cases().get(0)));
     }
 
-    private ArbitrApiResponse requestCaseInfo(String caseNumber) {
+    private ArbitrApiResponse requestDetails(String caseNumber) {
         try {
             return restClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .queryParam("type", "caseInfo")
+                            .queryParam("key", properties.api().key())
                             .queryParam("CaseNumber", caseNumber)
-                            .queryParam("token", properties.api().token())
                             .build())
                     .retrieve()
                     .body(ArbitrApiResponse.class);
@@ -73,62 +74,52 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
         }
     }
 
-    private ArbitrCaseData mapToCaseData(String requestedNumber, ArbitrApiResponse.Result result) {
-        String caseGuid = result.caseInfo() != null ? result.caseInfo().caseId() : null;
-        String resolvedNumber = result.caseInfo() != null && result.caseInfo().caseNumber() != null
-                ? result.caseInfo().caseNumber()
-                : requestedNumber;
-
+    private ArbitrCaseData mapToCaseData(ArbitrApiResponse.Case caseDto) {
         List<ArbitrCaseData.ArbitrEvent> events = new ArrayList<>();
-        LocalDate nextHearingDate = null;
-        LocalDate today = LocalDate.now();
-
-        for (ArbitrApiResponse.CaseInstance instance : safe(result.caseInstances())) {
+        for (ArbitrApiResponse.CaseInstance instance : safe(caseDto.caseInstances())) {
             String courtName = instance.court() != null ? instance.court().name() : null;
             for (ArbitrApiResponse.InstanceEvent event : safe(instance.instanceEvents())) {
                 events.add(toEvent(event, courtName));
             }
-            for (ArbitrApiResponse.CourtHearing hearing : safe(instance.courtHearings())) {
-                LocalDate hearingDate = parseHearingDate(hearing.start());
-                if (hearingDate != null && !hearingDate.isBefore(today)
-                        && (nextHearingDate == null || hearingDate.isBefore(nextHearingDate))) {
-                    nextHearingDate = hearingDate;
-                }
-            }
         }
-
-        return new ArbitrCaseData(resolvedNumber, caseGuid, nextHearingDate, events);
+        return new ArbitrCaseData(
+                caseDto.caseNumber(),
+                caseDto.caseId(),
+                resolveNextHearingDate(caseDto),
+                events);
     }
 
     private ArbitrCaseData.ArbitrEvent toEvent(ArbitrApiResponse.InstanceEvent event, String courtName) {
-        LocalDate date = parseEventDate(event.date());
-        String description = event.contentTypes() == null || event.contentTypes().isEmpty()
-                ? null
-                : String.join("; ", event.contentTypes());
-        String sourceEventId = buildSourceEventId(courtName, event.date(), event.publishDate(), event.eventTypeName());
+        LocalDate date = parseIsoDate(event.date());
+        String description = Stream.of(event.eventContentTypeName(), event.additionalInfo())
+                .filter(value -> value != null && !value.isBlank())
+                .reduce((first, second) -> first + " — " + second)
+                .orElse(null);
+        String sourceEventId = event.id() != null && !event.id().isBlank()
+                ? event.id()
+                : fallbackSourceEventId(courtName, event.date(), event.eventTypeName());
         return new ArbitrCaseData.ArbitrEvent(sourceEventId, date, event.eventTypeName(), description, courtName);
     }
 
-    private String buildSourceEventId(String courtName, String date, String publishDate, String eventType) {
-        String key = String.join("|",
-                courtName == null ? "" : courtName,
-                date == null ? "" : date,
-                publishDate == null ? "" : publishDate,
-                eventType == null ? "" : eventType);
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(key.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new ArbitrException("SHA-256 недоступен в среде выполнения", e);
+    private LocalDate resolveNextHearingDate(ArbitrApiResponse.Case caseDto) {
+        LocalDate today = LocalDate.now();
+        LocalDate nextHearingDate = null;
+        for (ArbitrApiResponse.CourtHearing hearing : safe(caseDto.courtHearings())) {
+            LocalDate hearingDate = parseHearingDate(hearing.start());
+            if (hearingDate != null && !hearingDate.isBefore(today)
+                    && (nextHearingDate == null || hearingDate.isBefore(nextHearingDate))) {
+                nextHearingDate = hearingDate;
+            }
         }
+        return nextHearingDate;
     }
 
-    private LocalDate parseEventDate(String value) {
+    private LocalDate parseIsoDate(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
         try {
-            return LocalDate.parse(value.trim(), EVENT_DATE_FORMAT);
+            return LocalDate.parse(value.trim());
         } catch (Exception e) {
             return null;
         }
@@ -138,11 +129,19 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
         if (value == null || value.isBlank()) {
             return null;
         }
-        String datePart = value.trim().split("T")[0];
+        return parseIsoDate(value.trim().split("T")[0]);
+    }
+
+    private String fallbackSourceEventId(String courtName, String date, String eventType) {
+        String key = String.join("|",
+                courtName == null ? "" : courtName,
+                date == null ? "" : date,
+                eventType == null ? "" : eventType);
         try {
-            return LocalDate.parse(datePart);
-        } catch (Exception e) {
-            return null;
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(key.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new ArbitrException("SHA-256 недоступен в среде выполнения", e);
         }
     }
 

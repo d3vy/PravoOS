@@ -7,29 +7,26 @@ import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ArbitrApiResponse(
-        Integer status,
-        Boolean found,
-        @JsonProperty("Result") Result result
+        @JsonProperty("Success") Integer success,
+        String error,
+        @JsonProperty("error_code") Integer errorCode,
+        @JsonProperty("Cases") List<Case> cases
 ) {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Result(
-            @JsonProperty("CaseInfo") CaseInfo caseInfo,
-            @JsonProperty("CaseInstances") List<CaseInstance> caseInstances
-    ) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record CaseInfo(
+    public record Case(
             @JsonProperty("CaseId") String caseId,
             @JsonProperty("CaseNumber") String caseNumber,
-            @JsonProperty("State") String state
+            @JsonProperty("State") String state,
+            @JsonProperty("Finished") Boolean finished,
+            @JsonProperty("CaseInstances") List<CaseInstance> caseInstances,
+            @JsonProperty("CourtHearings") List<CourtHearing> courtHearings
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record CaseInstance(
             @JsonProperty("Court") Court court,
-            @JsonProperty("InstanceEvents") List<InstanceEvent> instanceEvents,
-            @JsonProperty("CourtHearings") List<CourtHearing> courtHearings
+            @JsonProperty("InstanceEvents") List<InstanceEvent> instanceEvents
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -39,15 +36,15 @@ public record ArbitrApiResponse(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record InstanceEvent(
+            @JsonProperty("Id") String id,
             @JsonProperty("EventTypeName") String eventTypeName,
-            @JsonProperty("Date") String date,
-            @JsonProperty("PublishDate") String publishDate,
-            @JsonProperty("ContentTypes") List<String> contentTypes
+            @JsonProperty("EventContentTypeName") String eventContentTypeName,
+            @JsonProperty("AdditionalInfo") String additionalInfo,
+            @JsonProperty("Date") String date
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record CourtHearing(
-            @JsonProperty("Location") String location,
             @JsonProperty("Start") String start
     ) {}
 }
