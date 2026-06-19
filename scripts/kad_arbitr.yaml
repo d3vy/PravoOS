@@ -1,0 +1,50 @@
+# kad.arbitr.ru — все дела о банкротстве
+#
+# Требования:
+#   pip install playwright playwright-stealth
+#   python -m playwright install chromium
+#
+# КАК ПОЛУЧИТЬ ПРАВИЛЬНЫЙ seed URL:
+#   1. Открыть https://kad.arbitr.ru/ в браузере
+#   2. В поле "Категория спора" выбрать "Банкротство"
+#   3. Нажать "Найти"
+#   4. Скопировать URL из адресной строки → вставить в seeds ниже
+#   Если URL не изменился (остался https://kad.arbitr.ru/) — сайт хранит
+#   состояние поиска в cookie/сессии. Тогда нужно вручную получить
+#   search_id из DevTools → Network → SearchInstances → Response → id
+#   и использовать URL вида: https://kad.arbitr.ru/Kad/SearchInstances?id=...
+#
+# ПРИМЕЧАНИЕ: kad.arbitr.ru может требовать ввода капчи при первом запуске.
+#   В этом случае запусти с --workers 1 --delay 3.0 и будь готов пройти капчу.
+#
+# Запуск:
+#   python3 crawl_practice.py \
+#     --config kad_arbitr.yaml \
+#     --base-url https://pravoos.ru \
+#     --email admin@example.com --password '***' \
+#     --delay 2.0 --workers 1
+
+sites:
+  - name: kad-arbitr-bankruptcy
+    seeds:
+      # Заменить на реальный URL страницы результатов поиска по банкротству
+      - https://kad.arbitr.ru/
+    allowed_domains: [kad.arbitr.ru]
+    allowed_path_prefixes:
+      - /Card/        # страницы конкретных дел
+      - /Document/    # прямые ссылки на документы
+      - /             # корень для страниц результатов поиска
+    max_depth: 2
+    render_js: true
+    auto_scroll: false
+    # Действия перед пагинацией: выбрать фильтр "Банкротные" и нажать "Найти"
+    pre_actions:
+      - click: "li.bankruptcy"
+      - click: "#b-form-submit button"
+      - wait: "#b-cases tbody tr"
+    # CSS-селектор кнопки "Следующая страница"
+    next_page_selector: "#pages li.rarr a"
+    # Ждать появления строк с делами перед извлечением ссылок
+    wait_for_selector: "#b-cases tbody tr"
+    max_pages: 50000
+    mode: documents

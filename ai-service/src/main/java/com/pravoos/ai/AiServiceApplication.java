@@ -9,11 +9,13 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableConfigurationProperties({OpenAiProperties.class, DocumentProperties.class, JwtProperties.class})
 @EnableJpaRepositories(basePackages = "com.pravoos.ai.repository.jpa")
 @EnableMongoRepositories(basePackages = "com.pravoos.ai.repository.mongo")
+@EnableScheduling
 public class AiServiceApplication {
 
     public static void main(String[] args) {

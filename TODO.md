@@ -15,14 +15,14 @@
 - [x] Фронт: фильтр-чипы на `/cases`, цветные бейджи, смена статуса из карточки и из карточки дела
 - [x] Фронт: Kanban-доска (переключатель Список/Доска, drag-drop смены статуса)
 
-### 2. Дедлайны и напоминания
-- [ ] Flyway-миграция: добавить `filing_deadline DATE`, `next_hearing_date DATE`, `expires_at DATE` в `cases`
-- [ ] `CaseRequest/CaseResponse`: добавить поля дат
-- [ ] Spring Scheduler: `@Scheduled` джоб — проверка дедлайнов за 7/3/1 день
-- [ ] Расширить Telegram-бот на уведомления юристу (сейчас только admin)
-- [ ] Поле `telegram_chat_id` в профиле юриста, команда `/start` у бота для привязки
-- [ ] Email-напоминание как fallback если нет Telegram
-- [ ] Фронт: datepicker для дедлайнов на странице дела, визуальная индикация срочных дел
+### 2. Дедлайны и напоминания ✅
+- [x] Flyway V8 (ai-service): `filing_deadline DATE`, `next_hearing_date DATE`, `expires_at DATE` в `cases`
+- [x] `CreateCaseRequest/UpdateCaseRequest/CaseResponse`: поля дат
+- [x] Spring Scheduler: `DeadlineReminderService` (`@Scheduled`, пороги 7/3/1, Flyway V9 `case_deadline_reminders` для идемпотентности) → Kafka `case.deadline.approaching`
+- [x] Telegram-бот шлёт напоминания юристу (notification-service consumer → resolve chatId → Telegram)
+- [x] `telegram_chat_id` на `lawyer_profiles` (user-service V9) + команда `/start <код>` у бота для привязки
+- [x] Email-напоминание как fallback если нет Telegram (notification → internal `POST /internal/notifications/deadline-email` → Resend в user-service)
+- [x] Фронт: datepicker для дедлайнов (создание+редактирование дела), бейджи срочности (≤3 дн / просрочено)
 
 ### 3. Сущность «Клиент» ✅
 - [x] Flyway-миграция V6: таблица `clients` + `ALTER TABLE cases ADD COLUMN client_id UUID REFERENCES clients ON DELETE SET NULL`
@@ -64,11 +64,11 @@
 - [ ] Фронт: поле поиска на `/cases` (аналогично поиску бесед в чате)
 - [ ] Глобальный поиск: дела + беседы + документы — единый `/api/ai/search?q=`
 
-### 8. Уведомления для юриста (Telegram)
-- [ ] Flyway-миграция: `telegram_chat_id BIGINT` в таблице `users`
-- [ ] `GET/PATCH /api/user/profile` — добавить `telegramChatId` в `ProfileResponse/UpdateProfileRequest`
-- [ ] Telegram-команда `/start` у `PravoOsAdminBot` — привязка chat_id к аккаунту по коду
-- [ ] `notification-service`: слушать Kafka topics с дедлайнами и слать юристу
+### 8. Уведомления для юриста (Telegram) ✅
+- [x] Flyway V9 (user-service): `telegram_chat_id BIGINT` на `lawyer_profiles` (не на `users`) + таблица `telegram_link_codes`
+- [x] `GET /api/user/profile` отдаёт `telegramLinked`; `POST /profile/telegram/link-code` (код+deep-link), `DELETE /profile/telegram` (отвязка)
+- [x] Telegram-команда `/start <код>` у `PravoOsAdminBot` → internal `POST /internal/telegram/bind` → привязка chat_id
+- [x] `notification-service`: consumer `case.deadline.approaching` → `GET /internal/telegram/chat-id/{lawyerId}` → Telegram юристу
 
 ---
 

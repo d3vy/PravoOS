@@ -50,6 +50,20 @@ public class ResendEmailClient {
         log.info("Approval email sent to {}", EmailMasker.mask(to));
     }
 
+    public void sendDeadlineEmail(String to, String caseTitle, String deadlineTypeName,
+                                  String deadlineDate, int daysLeft, String caseLink) {
+        String bodyText = String.format(
+                "Напоминание по делу «%s»: %s — %s. Осталось дней: %d.",
+                caseTitle, deadlineTypeName, deadlineDate, daysLeft);
+        send(to, "Напоминание о дедлайне — PravoOS", buildHtml(
+                bodyText,
+                "Открыть дело",
+                caseLink,
+                "Вы получаете это письмо, так как Telegram-уведомления не подключены. Подключить можно в профиле PravoOS."
+        ));
+        log.info("Deadline email sent to {}", EmailMasker.mask(to));
+    }
+
     public void sendPasswordResetEmail(String to, String resetLink) {
         send(to, "Сброс пароля — PravoOS", buildHtml(
                 "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",

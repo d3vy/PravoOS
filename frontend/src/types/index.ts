@@ -116,6 +116,9 @@ export interface CaseResponse {
   clientName: string | null
   status: CaseStatus
   statusName: string
+  filingDeadline: string | null
+  nextHearingDate: string | null
+  expiresAt: string | null
   createdAt: string
 }
 
@@ -123,12 +126,18 @@ export interface CreateCaseRequest {
   title: string
   description?: string
   clientId?: string | null
+  filingDeadline?: string | null
+  nextHearingDate?: string | null
+  expiresAt?: string | null
 }
 
 export interface UpdateCaseRequest {
   title: string
   description?: string
   clientId?: string | null
+  filingDeadline?: string | null
+  nextHearingDate?: string | null
+  expiresAt?: string | null
 }
 
 export interface UpdateCaseStatusRequest {
@@ -251,6 +260,13 @@ export interface LawyerProfileResponse {
   barNumber: string | null
   specialization: string | null
   phone: string | null
+  telegramLinked: boolean
+}
+
+export interface TelegramLinkResponse {
+  code: string
+  deepLink: string
+  expiresAt: string
 }
 
 export interface UpdateProfileRequest {

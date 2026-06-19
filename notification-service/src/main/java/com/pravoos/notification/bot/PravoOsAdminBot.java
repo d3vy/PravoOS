@@ -1,14 +1,19 @@
 package com.pravoos.notification.bot;
 
+import com.pravoos.notification.client.TelegramBindException;
+import com.pravoos.notification.client.UserServiceClient;
 import com.pravoos.notification.config.TelegramBotProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
@@ -22,14 +27,20 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
 
     private static final Logger log = LoggerFactory.getLogger(PravoOsAdminBot.class);
 
+    private static final String START_COMMAND = "/start";
+
     private final String botUsername;
     private final ApplicationCallbackHandler callbackHandler;
+    private final UserServiceClient userServiceClient;
     private final Set<String> allowedChatIds;
 
-    public PravoOsAdminBot(TelegramBotProperties botProperties, ApplicationCallbackHandler callbackHandler) {
+    public PravoOsAdminBot(TelegramBotProperties botProperties,
+                           ApplicationCallbackHandler callbackHandler,
+                           UserServiceClient userServiceClient) {
         super(botProperties.token());
         this.botUsername = botProperties.username();
         this.callbackHandler = callbackHandler;
+        this.userServiceClient = userServiceClient;
         List<String> configuredChatIds = botProperties.adminChatIds();
         this.allowedChatIds = configuredChatIds == null ? Set.of() : Set.copyOf(configuredChatIds);
     }
@@ -41,9 +52,48 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasCallbackQuery()) {
-            handleCallbackQuery(update.getCallbackQuery());
+        MDC.put("requestId", UUID.randomUUID().toString());
+        try {
+            if (update.hasCallbackQuery()) {
+                handleCallbackQuery(update.getCallbackQuery());
+            } else if (update.hasMessage() && update.getMessage().hasText()) {
+                handleTextMessage(update.getMessage());
+            }
+        } finally {
+            MDC.remove("requestId");
         }
+    }
+
+    private void handleTextMessage(Message message) {
+        Long chatId = message.getChatId();
+        String text = message.getText().trim();
+
+        if (!text.startsWith(START_COMMAND)) {
+            sendText(chatId, "Чтобы получать уведомления, откройте ссылку привязки из своего профиля в PravoOS.");
+            return;
+        }
+
+        String code = text.substring(START_COMMAND.length()).trim();
+        if (code.isEmpty()) {
+            sendText(chatId, "Откройте ссылку привязки из профиля PravoOS — она содержит код привязки.");
+            return;
+        }
+
+        String fullName;
+        try {
+            fullName = userServiceClient.bindTelegram(code, chatId);
+        } catch (TelegramBindException e) {
+            sendText(chatId, e.getMessage());
+            return;
+        } catch (Exception e) {
+            log.error("Failed to bind Telegram for chat {}: {}", chatId, e.getMessage());
+            sendText(chatId, "Не удалось привязать уведомления. Попробуйте позже.");
+            return;
+        }
+
+        String greeting = (fullName == null || fullName.isBlank()) ? "" : ", " + fullName;
+        sendText(chatId, "Уведомления привязаны" + greeting
+                + ". Напоминания о дедлайнах по делам будут приходить сюда.");
     }
 
     private void handleCallbackQuery(CallbackQuery callbackQuery) {
@@ -78,6 +128,17 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
 
         answerCallbackQuery(callbackQuery.getId(), result);
         removeInlineKeyboard(chatId, messageId, originalMessage.getText(), result);
+    }
+
+    private void sendText(Long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Failed to send message to chat {}: {}", chatId, e.getMessage());
+        }
     }
 
     private void answerCallbackQuery(String callbackQueryId, String text) {

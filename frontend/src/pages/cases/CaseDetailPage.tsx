@@ -12,6 +12,7 @@ import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
+import { DateField } from '../../components/cases/DateField'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 import type { CaseStatus } from '../../types'
 
@@ -121,6 +122,9 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
   const [title, setTitle] = useState(caseItem.title)
   const [description, setDescription] = useState(caseItem.description ?? '')
   const [clientId, setClientId] = useState(caseItem.clientId ?? '')
+  const [filingDeadline, setFilingDeadline] = useState(caseItem.filingDeadline ?? '')
+  const [nextHearingDate, setNextHearingDate] = useState(caseItem.nextHearingDate ?? '')
+  const [expiresAt, setExpiresAt] = useState(caseItem.expiresAt ?? '')
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState<'docx' | 'pdf' | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -157,6 +161,9 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
         title: title.trim(),
         description: description.trim() || undefined,
         clientId: clientId || null,
+        filingDeadline: filingDeadline || null,
+        nextHearingDate: nextHearingDate || null,
+        expiresAt: expiresAt || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
@@ -179,6 +186,9 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
     setTitle(caseItem.title)
     setDescription(caseItem.description ?? '')
     setClientId(caseItem.clientId ?? '')
+    setFilingDeadline(caseItem.filingDeadline ?? '')
+    setNextHearingDate(caseItem.nextHearingDate ?? '')
+    setExpiresAt(caseItem.expiresAt ?? '')
     setError(null)
     setIsEditing(false)
   }
@@ -212,6 +222,11 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
                 </option>
               ))}
             </select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <DateField label="Срок подачи" value={filingDeadline} onChange={setFilingDeadline} />
+            <DateField label="Заседание" value={nextHearingDate} onChange={setNextHearingDate} />
+            <DateField label="Истечение срока" value={expiresAt} onChange={setExpiresAt} />
           </div>
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex gap-2">
@@ -270,11 +285,54 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
           </Link>
         )}
       </div>
+      <DeadlineList caseItem={caseItem} />
       {caseItem.description && (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">{caseItem.description}</p>
       )}
       {exportError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{exportError}</p>}
     </div>
+  )
+}
+
+function DeadlineList({ caseItem }: { caseItem: CaseResponse }): JSX.Element | null {
+  const deadlines = [
+    { label: 'Срок подачи', value: caseItem.filingDeadline },
+    { label: 'Заседание', value: caseItem.nextHearingDate },
+    { label: 'Истечение срока', value: caseItem.expiresAt },
+  ].filter((deadline) => deadline.value)
+
+  if (deadlines.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-2">
+      {deadlines.map((deadline) => (
+        <DeadlineBadge key={deadline.label} label={deadline.label} value={deadline.value as string} />
+      ))}
+    </div>
+  )
+}
+
+function DeadlineBadge({ label, value }: { label: string; value: string }): JSX.Element {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(`${value}T00:00:00`)
+  const daysLeft = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  const urgent = daysLeft >= 0 && daysLeft <= 3
+  const overdue = daysLeft < 0
+  const tone = overdue || urgent
+    ? 'border-red-300 text-red-700 dark:border-red-500/40 dark:text-red-400'
+    : 'border-light-border text-light-secondary dark:border-dark-border dark:text-dark-secondary'
+
+  const formatted = target.toLocaleDateString('ru-RU')
+  const suffix = overdue ? ' (просрочено)' : daysLeft === 0 ? ' (сегодня)' : urgent ? ` (через ${daysLeft} дн.)` : ''
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs ${tone}`}>
+      <span className="font-medium">{label}:</span> {formatted}{suffix}
+    </span>
   )
 }
 

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersApi } from '../../api/users'
-import type { LawyerProfileResponse, UpdateProfileRequest } from '../../types'
+import type { LawyerProfileResponse, TelegramLinkResponse, UpdateProfileRequest } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -45,7 +45,103 @@ export default function ProfilePage(): JSX.Element {
           Профиль
         </h1>
         <ProfileForm profile={profile} queryClient={queryClient} />
+        <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
+          <TelegramSection profile={profile} queryClient={queryClient} />
+        </div>
       </div>
+    </div>
+  )
+}
+
+function TelegramSection({
+  profile,
+  queryClient,
+}: {
+  profile: LawyerProfileResponse
+  queryClient: ReturnType<typeof useQueryClient>
+}): JSX.Element {
+  const [link, setLink] = useState<TelegramLinkResponse | null>(null)
+
+  const linkMutation = useMutation({
+    mutationFn: usersApi.createTelegramLinkCode,
+    onSuccess: (data) => setLink(data),
+  })
+
+  const unlinkMutation = useMutation({
+    mutationFn: usersApi.unlinkTelegram,
+    onSuccess: () => {
+      setLink(null)
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+    },
+  })
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Telegram-уведомления</h2>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+          Привяжите Telegram, чтобы получать напоминания о дедлайнах по делам.
+        </p>
+      </div>
+
+      {profile.telegramLinked ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-green-600 dark:text-green-400">Telegram привязан</p>
+          <div>
+            <Button
+              variant="secondary"
+              loading={unlinkMutation.isPending}
+              onClick={() => unlinkMutation.mutate()}
+            >
+              Отвязать Telegram
+            </Button>
+          </div>
+          {unlinkMutation.isError && (
+            <p className="text-sm text-red-600 dark:text-red-400">Не удалось отвязать. Попробуйте снова.</p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {!link && (
+            <div>
+              <Button
+                variant="primary"
+                loading={linkMutation.isPending}
+                onClick={() => linkMutation.mutate()}
+              >
+                Привязать Telegram
+              </Button>
+            </div>
+          )}
+
+          {linkMutation.isError && (
+            <p className="text-sm text-red-600 dark:text-red-400">Не удалось создать ссылку. Попробуйте снова.</p>
+          )}
+
+          {link && (
+            <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4">
+              <p className="text-sm text-light-text dark:text-dark-text">
+                Откройте бота и нажмите «Запустить» — привязка произойдёт автоматически.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <a href={link.deepLink} target="_blank" rel="noopener noreferrer">
+                  <Button variant="primary">Открыть Telegram</Button>
+                </a>
+                <Button
+                  variant="secondary"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ['profile'] })}
+                >
+                  Я привязал — обновить
+                </Button>
+              </div>
+              <p className="text-xs text-light-secondary dark:text-dark-secondary">
+                Если ссылка не сработала, отправьте боту команду:{' '}
+                <code className="font-mono">/start {link.code}</code>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 package com.pravoos.notification.config;
 
 import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
+import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,34 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, ApplicationSubmittedKafkaPayload> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(errorHandler());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, CaseDeadlineKafkaPayload> deadlineConsumerFactory() {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
+
+        JsonDeserializer<CaseDeadlineKafkaPayload> jsonDeserializer =
+                new JsonDeserializer<>(CaseDeadlineKafkaPayload.class);
+        jsonDeserializer.setUseTypeHeaders(false);
+        jsonDeserializer.addTrustedPackages(CaseDeadlineKafkaPayload.class.getPackageName());
+
+        ErrorHandlingDeserializer<CaseDeadlineKafkaPayload> valueDeserializer =
+                new ErrorHandlingDeserializer<>(jsonDeserializer);
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new ErrorHandlingDeserializer<>(new StringDeserializer()),
+                valueDeserializer);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, CaseDeadlineKafkaPayload> deadlineKafkaListenerContainerFactory(
+            ConsumerFactory<String, CaseDeadlineKafkaPayload> deadlineConsumerFactory) {
+        ConcurrentKafkaListenerContainerFactory<String, CaseDeadlineKafkaPayload> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(deadlineConsumerFactory);
         factory.setCommonErrorHandler(errorHandler());
         return factory;
     }

@@ -4,6 +4,7 @@ import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
 import com.pravoos.notification.service.TelegramNotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -34,11 +35,16 @@ public class ApplicationEventConsumer {
 
     @KafkaListener(topics = "application.submitted", groupId = "notification-service-group")
     public void onApplicationSubmitted(ApplicationSubmittedKafkaPayload payload) {
-        if (!processedApplicationIds.add(payload.applicationId())) {
-            log.info("Skipping duplicate application.submitted event: applicationId={}", payload.applicationId());
-            return;
+        MDC.put("requestId", String.valueOf(payload.applicationId()));
+        try {
+            if (!processedApplicationIds.add(payload.applicationId())) {
+                log.info("Skipping duplicate application.submitted event: applicationId={}", payload.applicationId());
+                return;
+            }
+            log.info("Received application.submitted event: applicationId={}", payload.applicationId());
+            telegramNotificationService.notifyNewApplication(payload);
+        } finally {
+            MDC.remove("requestId");
         }
-        log.info("Received application.submitted event: applicationId={}", payload.applicationId());
-        telegramNotificationService.notifyNewApplication(payload);
     }
 }

@@ -28,6 +28,9 @@ public class LawyerProfile {
     @Column(length = 50)
     private String phone;
 
+    @Column(name = "telegram_chat_id")
+    private Long telegramChatId;
+
     public UUID getUserId() { return userId; }
 
     public User getUser() { return user; }
@@ -44,4 +47,7 @@ public class LawyerProfile {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public Long getTelegramChatId() { return telegramChatId; }
+    public void setTelegramChatId(Long telegramChatId) { this.telegramChatId = telegramChatId; }
 }

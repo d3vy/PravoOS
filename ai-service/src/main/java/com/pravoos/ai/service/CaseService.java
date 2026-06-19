@@ -49,6 +49,9 @@ public class CaseService {
         caseEntity.setTitle(request.title().trim());
         caseEntity.setDescription(request.description());
         caseEntity.setClientId(client != null ? client.getId() : null);
+        caseEntity.setFilingDeadline(request.filingDeadline());
+        caseEntity.setNextHearingDate(request.nextHearingDate());
+        caseEntity.setExpiresAt(request.expiresAt());
 
         Case saved = caseRepository.save(caseEntity);
         log.info("Case created: '{}' ({}) by lawyer {}, client {}",
@@ -64,6 +67,9 @@ public class CaseService {
         caseEntity.setTitle(request.title().trim());
         caseEntity.setDescription(request.description());
         caseEntity.setClientId(client != null ? client.getId() : null);
+        caseEntity.setFilingDeadline(request.filingDeadline());
+        caseEntity.setNextHearingDate(request.nextHearingDate());
+        caseEntity.setExpiresAt(request.expiresAt());
 
         log.info("Case updated: {} by lawyer {}, client {}", caseId, lawyerId, caseEntity.getClientId());
         return CaseResponse.from(caseEntity, client != null ? client.getName() : null);

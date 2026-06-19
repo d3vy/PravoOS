@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DateField } from '../../components/cases/DateField'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -19,6 +20,9 @@ export default function CasesPage(): JSX.Element {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [clientId, setClientId] = useState('')
+  const [filingDeadline, setFilingDeadline] = useState('')
+  const [nextHearingDate, setNextHearingDate] = useState('')
+  const [expiresAt, setExpiresAt] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('list')
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'ALL'>('ALL')
@@ -44,6 +48,9 @@ export default function CasesPage(): JSX.Element {
       setTitle('')
       setDescription('')
       setClientId('')
+      setFilingDeadline('')
+      setNextHearingDate('')
+      setExpiresAt('')
       setFormError(null)
     },
     onError: () => setFormError('Не удалось создать дело. Попробуйте снова.'),
@@ -65,6 +72,9 @@ export default function CasesPage(): JSX.Element {
       title: title.trim(),
       description: description.trim() || undefined,
       clientId: clientId || undefined,
+      filingDeadline: filingDeadline || undefined,
+      nextHearingDate: nextHearingDate || undefined,
+      expiresAt: expiresAt || undefined,
     })
   }
 
@@ -148,6 +158,11 @@ export default function CasesPage(): JSX.Element {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <DateField label="Срок подачи" value={filingDeadline} onChange={setFilingDeadline} />
+                  <DateField label="Заседание" value={nextHearingDate} onChange={setNextHearingDate} />
+                  <DateField label="Истечение срока" value={expiresAt} onChange={setExpiresAt} />
                 </div>
                 {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
                 <div>

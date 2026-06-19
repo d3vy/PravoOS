@@ -43,7 +43,8 @@ public class UserService {
                 profile.getFullName(),
                 profile.getBarNumber(),
                 profile.getSpecialization(),
-                profile.getPhone()
+                profile.getPhone(),
+                profile.getTelegramChatId() != null
         );
     }
 }

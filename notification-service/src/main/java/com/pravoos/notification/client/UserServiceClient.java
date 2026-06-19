@@ -3,9 +3,13 @@ package com.pravoos.notification.client;
 import com.pravoos.notification.config.UserServiceProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -48,5 +52,45 @@ public class UserServiceClient {
                 .retrieve()
                 .toBodilessEntity();
         log.info("Application rejected via internal API: {}", applicationId);
+    }
+
+    public String bindTelegram(String code, long chatId) {
+        BindTelegramResponse response = restClient.post()
+                .uri("/internal/telegram/bind")
+                .header("X-Internal-Secret", internalSecret)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new BindTelegramRequest(code, chatId))
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (request, clientResponse) -> {
+                    throw new TelegramBindException(
+                            "Код недействителен или истёк. Сгенерируйте новую ссылку привязки в личном кабинете PravoOS.");
+                })
+                .body(BindTelegramResponse.class);
+        log.info("Telegram bound for chat {}", chatId);
+        return response != null ? response.fullName() : null;
+    }
+
+    public void sendDeadlineEmail(DeadlineEmailRequest request) {
+        restClient.post()
+                .uri("/internal/notifications/deadline-email")
+                .header("X-Internal-Secret", internalSecret)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+        log.info("Deadline email requested for lawyer {} case {}", request.lawyerId(), request.caseId());
+    }
+
+    public Optional<Long> resolveTelegramChatId(UUID lawyerId) {
+        try {
+            TelegramChatIdResponse response = restClient.get()
+                    .uri("/internal/telegram/chat-id/{lawyerId}", lawyerId)
+                    .header("X-Internal-Secret", internalSecret)
+                    .retrieve()
+                    .body(TelegramChatIdResponse.class);
+            return response == null ? Optional.empty() : Optional.ofNullable(response.chatId());
+        } catch (HttpClientErrorException.NotFound e) {
+            return Optional.empty();
+        }
     }
 }

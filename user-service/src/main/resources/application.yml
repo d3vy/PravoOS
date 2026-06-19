@@ -78,6 +78,10 @@ test-lawyer:
 internal:
   secret: ${INTERNAL_SERVICE_SECRET}
 
+telegram:
+  bot-username: ${TELEGRAM_BOT_USERNAME:}
+  link-code-ttl: ${TELEGRAM_LINK_CODE_TTL:PT15M}
+
 resend:
   api-key: ${RESEND_API_KEY}
   from: ${RESEND_FROM:onboarding@resend.dev}

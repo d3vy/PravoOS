@@ -8,5 +8,6 @@ public record LawyerProfileResponse(
         String fullName,
         String barNumber,
         String specialization,
-        String phone
+        String phone,
+        boolean telegramLinked
 ) {}

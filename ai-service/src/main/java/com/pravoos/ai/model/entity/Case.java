@@ -3,6 +3,7 @@ package com.pravoos.ai.model.entity;
 import com.pravoos.ai.model.enums.CaseStatus;
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -30,6 +31,15 @@ public class Case {
     @Column(nullable = false, length = 20)
     private CaseStatus status = CaseStatus.INTAKE;
 
+    @Column(name = "filing_deadline")
+    private LocalDate filingDeadline;
+
+    @Column(name = "next_hearing_date")
+    private LocalDate nextHearingDate;
+
+    @Column(name = "expires_at")
+    private LocalDate expiresAt;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -54,6 +64,15 @@ public class Case {
 
     public CaseStatus getStatus() { return status; }
     public void setStatus(CaseStatus status) { this.status = status; }
+
+    public LocalDate getFilingDeadline() { return filingDeadline; }
+    public void setFilingDeadline(LocalDate filingDeadline) { this.filingDeadline = filingDeadline; }
+
+    public LocalDate getNextHearingDate() { return nextHearingDate; }
+    public void setNextHearingDate(LocalDate nextHearingDate) { this.nextHearingDate = nextHearingDate; }
+
+    public LocalDate getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(LocalDate expiresAt) { this.expiresAt = expiresAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }
