@@ -164,6 +164,39 @@ export interface UpdateCaseTaskRequest {
   done: boolean
 }
 
+export type DeadlineType = 'FILING_DEADLINE' | 'NEXT_HEARING' | 'EXPIRY'
+
+export interface DashboardStatusCount {
+  status: CaseStatus
+  statusName: string
+  count: number
+}
+
+export interface DashboardDeadline {
+  caseId: string
+  caseTitle: string
+  type: DeadlineType
+  typeName: string
+  date: string
+  daysLeft: number
+}
+
+export interface DashboardRecentCase {
+  id: string
+  title: string
+  status: CaseStatus
+  statusName: string
+  createdAt: string
+}
+
+export interface DashboardResponse {
+  pipeline: DashboardStatusCount[]
+  activeCases: number
+  openTasks: number
+  upcomingDeadlines: DashboardDeadline[]
+  recentCases: DashboardRecentCase[]
+}
+
 export interface SearchCaseHit {
   id: string
   title: string
@@ -221,6 +254,40 @@ export interface CreateClientRequest {
 }
 
 export type UpdateClientRequest = CreateClientRequest
+
+export type ContactType = 'CALL' | 'MEETING' | 'LETTER' | 'EMAIL' | 'MESSENGER'
+
+export interface ContactResponse {
+  id: string
+  clientId: string
+  type: ContactType
+  typeName: string
+  contactDate: string
+  notes: string | null
+  createdAt: string
+}
+
+export interface CreateContactRequest {
+  type: ContactType
+  contactDate: string
+  notes?: string
+}
+
+export type UpdateContactRequest = CreateContactRequest
+
+export interface TemplateResponse {
+  id: string
+  name: string
+  content: string
+  createdAt: string
+}
+
+export interface CreateTemplateRequest {
+  name: string
+  content: string
+}
+
+export type UpdateTemplateRequest = CreateTemplateRequest
 
 export interface WorkflowInfo {
   id: string

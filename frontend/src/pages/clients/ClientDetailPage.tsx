@@ -7,6 +7,7 @@ import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { ClientForm } from '../../components/clients/ClientForm'
+import { ClientContactsSection } from '../../components/clients/ClientContactsSection'
 
 export default function ClientDetailPage(): JSX.Element {
   const { clientId = '' } = useParams()
@@ -150,6 +151,8 @@ export default function ClientDetailPage(): JSX.Element {
             )}
           </section>
         )}
+
+        <ClientContactsSection clientId={clientId} />
 
         <section>
           <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">

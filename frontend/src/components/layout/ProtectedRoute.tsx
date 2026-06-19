@@ -21,7 +21,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps):
   }
 
   if (requiredRole && effectiveRole() !== requiredRole) {
-    const fallback = effectiveRole() === 'ADMIN' ? '/admin/applications' : '/chat'
+    const fallback = effectiveRole() === 'ADMIN' ? '/admin/applications' : '/dashboard'
     return <Navigate to={fallback} replace />
   }
 

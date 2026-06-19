@@ -74,16 +74,19 @@
 
 ## Tier 3 — Качество жизни
 
-### 9. Dashboard юриста
-- [ ] Backend: `GET /api/ai/dashboard` — активных дел по статусам, дедлайны на 7 дней, незакрытые задачи, сумма невыставленных часов
-- [ ] Фронт: страница `/dashboard` как главная после логина (сейчас — `/chat`)
-- [ ] Виджеты: pipeline воронка, ближайшие дедлайны, последние дела
+### 9. Dashboard юриста ✅
+- [x] Backend: `GET /api/ai/dashboard` — дела по статусам (воронка), активные дела, дедлайны на 7 дней, незакрытые задачи
+- [x] Фронт: страница `/dashboard` как главная после логина (редирект юриста `/chat` → `/dashboard`)
+- [x] Виджеты: pipeline воронка, ближайшие дедлайны, последние дела, счётчики
+- (сумма невыставленных часов НЕ вошла — нужен `time_entries`, пункт 4 ещё не сделан)
 
-### 10. Шаблоны документов
-- [ ] Flyway-миграция: таблица `document_templates` (id, lawyer_id, name, content_with_placeholders, created_at)
-- [ ] CRUD `/api/ai/templates`
-- [ ] `TemplateService`: заполнение плейсхолдеров `{{client_name}}`, `{{case_number}}` данными из дела
-- [ ] Фронт: библиотека шаблонов, применение шаблона к делу → черновик
+### 10. Шаблоны документов ✅
+- [x] Flyway V12: таблица `document_templates` (id, lawyer_id, name, content, created_at)
+- [x] CRUD `/api/ai/templates` + apply `POST /api/ai/cases/{id}/templates/{templateId}/apply`
+- [x] `TemplateService` + `TemplatePlaceholderResolver`: подстановка `{{client_name}}`, `{{case_title}}`, дедлайны, `{{today}}` и др. из дела/клиента (детерминированно, без LLM)
+- [x] Применение шаблона → создаётся `CaseDraft` (виден в списке черновиков, качается .docx)
+- [x] Фронт: библиотека `/templates`, пикер «Применить шаблон» на странице дела
+- (`{{case_number}}` не вводили — у Case нет поля «номер дела»; поддержаны только реальные данные)
 
 ### 11. Экспорт дела в PDF/DOCX ✅
 - [x] `CaseExportService` + `CaseDocxWriter` (POI) и `CasePdfWriter` (PDFBox + DejaVu для кириллицы): клиент + документы + заключения AI + черновики
@@ -91,10 +94,11 @@
 - [x] Фронт: кнопки «Экспорт .docx» / «Экспорт .pdf» на странице дела
 - [x] В выжимку входят статус дела (задача №1) и задачи по делу (задача №5)
 
-### 12. История коммуникаций с клиентом
-- [ ] Flyway-миграция: таблица `client_contacts` (id, client_id, type ENUM звонок/встреча/письмо, date, notes)
-- [ ] CRUD `/api/ai/clients/{id}/contacts`
-- [ ] Фронт: лог на странице клиента — хронология контактов с заметками
+### 12. История коммуникаций с клиентом ✅
+- [x] Flyway V13: таблица `client_contacts` (id, client_id FK→clients ON DELETE CASCADE, type, contact_date, notes, created_at)
+- [x] CRUD `/api/ai/clients/{id}/contacts` (GET/POST/PUT/DELETE), ownership через `requireOwnedClient`
+- [x] Enum `ContactType`: звонок/встреча/письмо/email/мессенджер
+- [x] Фронт: `ClientContactsSection` на странице клиента — хронология + добавление/удаление
 
 ---
 

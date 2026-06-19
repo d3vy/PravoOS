@@ -13,6 +13,10 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, UUID> {
 
     List<CaseTask> findByCaseIdOrderByDoneAscCreatedAtAsc(UUID caseId);
 
+    @Query("SELECT COUNT(t) FROM CaseTask t WHERE t.done = false "
+            + "AND t.caseId IN (SELECT c.id FROM Case c WHERE c.lawyerId = :lawyerId)")
+    long countOpenByLawyerId(@Param("lawyerId") UUID lawyerId);
+
     @Modifying
     @Query("DELETE FROM CaseTask t WHERE t.caseId IN (SELECT c.id FROM Case c WHERE c.lawyerId = :lawyerId)")
     int deleteByLawyerId(@Param("lawyerId") UUID lawyerId);

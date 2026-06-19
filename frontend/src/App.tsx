@@ -12,12 +12,14 @@ import EditApplicationPage from './pages/EditApplicationPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
+import DashboardPage from './pages/dashboard/DashboardPage'
 import ChatPage from './pages/chat/ChatPage'
 import CasesPage from './pages/cases/CasesPage'
 import CaseDetailPage from './pages/cases/CaseDetailPage'
 import ClientsPage from './pages/clients/ClientsPage'
 import ClientDetailPage from './pages/clients/ClientDetailPage'
 import SearchPage from './pages/search/SearchPage'
+import TemplatesPage from './pages/templates/TemplatesPage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
@@ -44,6 +46,15 @@ export default function App(): JSX.Element {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/chat"
         element={
           <ProtectedRoute>
@@ -66,6 +77,15 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute>
             <CaseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/templates"
+        element={
+          <ProtectedRoute>
+            <TemplatesPage />
           </ProtectedRoute>
         }
       />

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
 import { clientsApi } from '../../api/clients'
+import { templatesApi } from '../../api/templates'
 import { workflowsApi } from '../../api/workflows'
 import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, ClientResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
@@ -514,12 +515,26 @@ function WorkflowSection({ caseId, workflows, queryClient }: SectionProps & { wo
 
 function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps & { draftTypes: DraftTypeInfo[]; drafts: CaseDraftSummaryDto[] }): JSX.Element {
   const [selectedDraftType, setSelectedDraftType] = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState('')
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const generateMutation = useMutation({
     mutationFn: () => casesApi.generateDraft(caseId, { draftType: selectedDraftType }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['case-drafts', caseId] })
+    },
+  })
+
+  const { data: templates = [] } = useQuery({
+    queryKey: ['templates'],
+    queryFn: templatesApi.getAll,
+  })
+
+  const applyTemplateMutation = useMutation({
+    mutationFn: () => templatesApi.applyToCase(caseId, selectedTemplate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case-drafts', caseId] })
+      setSelectedTemplate('')
     },
   })
 
@@ -563,6 +578,48 @@ function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps 
           >
             Сгенерировать
           </Button>
+        </div>
+
+        <div className="pt-3 mt-1 border-t border-light-border dark:border-dark-border flex flex-col gap-2">
+          <span className="text-xs font-semibold text-light-secondary dark:text-dark-secondary">
+            Применить шаблон
+          </span>
+          {templates.length === 0 ? (
+            <p className="text-xs text-light-secondary dark:text-dark-secondary">
+              Шаблонов нет.{' '}
+              <Link to="/templates" className="text-light-accent dark:text-dark-accent">
+                Создать шаблон
+              </Link>
+            </p>
+          ) : (
+            <>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              >
+                <option value="">Выберите шаблон</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+              {applyTemplateMutation.isError && (
+                <p className="text-sm text-red-600 dark:text-red-400">Не удалось применить шаблон.</p>
+              )}
+              <div>
+                <Button
+                  variant="secondary"
+                  disabled={!selectedTemplate}
+                  loading={applyTemplateMutation.isPending}
+                  onClick={() => applyTemplateMutation.mutate()}
+                >
+                  Применить шаблон
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         {drafts.length > 0 && (

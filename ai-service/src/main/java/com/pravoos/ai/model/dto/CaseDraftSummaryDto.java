@@ -27,6 +27,9 @@ public record CaseDraftSummaryDto(
     }
 
     private static String resolveDraftTypeName(String draftTypeId) {
+        if ("TEMPLATE".equals(draftTypeId)) {
+            return "Шаблон";
+        }
         try {
             return DraftType.valueOf(draftTypeId).displayName();
         } catch (IllegalArgumentException ex) {

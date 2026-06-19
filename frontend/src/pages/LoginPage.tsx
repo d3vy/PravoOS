@@ -26,7 +26,7 @@ export default function LoginPage(): JSX.Element {
   }, [lockSeconds])
 
   if (isAuthenticated()) {
-    const path = user?.role === 'ADMIN' ? '/admin/applications' : '/chat'
+    const path = user?.role === 'ADMIN' ? '/admin/applications' : '/dashboard'
     return <Navigate to={path} replace />
   }
 
@@ -44,7 +44,7 @@ export default function LoginPage(): JSX.Element {
         email: response.email,
         role: response.role,
       })
-      const path = response.role === 'ADMIN' ? '/admin/applications' : '/chat'
+      const path = response.role === 'ADMIN' ? '/admin/applications' : '/dashboard'
       navigate(path, { replace: true })
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 429) {

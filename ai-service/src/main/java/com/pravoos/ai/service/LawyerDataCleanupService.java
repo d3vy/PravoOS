@@ -4,7 +4,9 @@ import com.pravoos.ai.model.mongo.Conversation;
 import com.pravoos.ai.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.CaseTaskRepository;
+import com.pravoos.ai.repository.jpa.ClientContactRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
+import com.pravoos.ai.repository.jpa.DocumentTemplateRepository;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
 import org.slf4j.Logger;
@@ -24,6 +26,8 @@ public class LawyerDataCleanupService {
     private final CaseTaskRepository caseTaskRepository;
     private final CaseDraftRepository caseDraftRepository;
     private final ClientRepository clientRepository;
+    private final ClientContactRepository clientContactRepository;
+    private final DocumentTemplateRepository documentTemplateRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
 
@@ -31,12 +35,16 @@ public class LawyerDataCleanupService {
                                     CaseTaskRepository caseTaskRepository,
                                     CaseDraftRepository caseDraftRepository,
                                     ClientRepository clientRepository,
+                                    ClientContactRepository clientContactRepository,
+                                    DocumentTemplateRepository documentTemplateRepository,
                                     ConversationRepository conversationRepository,
                                     MessageRepository messageRepository) {
         this.caseRepository = caseRepository;
         this.caseTaskRepository = caseTaskRepository;
         this.caseDraftRepository = caseDraftRepository;
         this.clientRepository = clientRepository;
+        this.clientContactRepository = clientContactRepository;
+        this.documentTemplateRepository = documentTemplateRepository;
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
     }
@@ -52,9 +60,11 @@ public class LawyerDataCleanupService {
         int tasks = caseTaskRepository.deleteByLawyerId(lawyerId);
         int drafts = caseDraftRepository.deleteByLawyerId(lawyerId);
         int cases = caseRepository.deleteByLawyerId(lawyerId);
+        int contacts = clientContactRepository.deleteByLawyerId(lawyerId);
         int clients = clientRepository.deleteByLawyerId(lawyerId);
-        log.info("Deleted {} tasks, {} drafts, {} cases and {} clients for lawyer {}",
-                tasks, drafts, cases, clients, lawyerId);
+        int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
+        log.info("Deleted {} tasks, {} drafts, {} cases, {} contacts, {} clients and {} templates for lawyer {}",
+                tasks, drafts, cases, contacts, clients, templates, lawyerId);
     }
 
     private void purgeChatData(UUID lawyerId) {

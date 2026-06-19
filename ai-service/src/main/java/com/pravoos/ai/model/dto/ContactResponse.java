@@ -1,0 +1,30 @@
+package com.pravoos.ai.model.dto;
+
+import com.pravoos.ai.model.entity.ClientContact;
+import com.pravoos.ai.model.enums.ContactType;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public record ContactResponse(
+        UUID id,
+        UUID clientId,
+        ContactType type,
+        String typeName,
+        LocalDate contactDate,
+        String notes,
+        LocalDateTime createdAt
+) {
+    public static ContactResponse from(ClientContact contact) {
+        return new ContactResponse(
+                contact.getId(),
+                contact.getClientId(),
+                contact.getType(),
+                contact.getType().getDisplayName(),
+                contact.getContactDate(),
+                contact.getNotes(),
+                contact.getCreatedAt()
+        );
+    }
+}

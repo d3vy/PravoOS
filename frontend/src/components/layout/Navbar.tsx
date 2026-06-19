@@ -37,6 +37,11 @@ export function Navbar(): JSX.Element {
               <>
                 {role === 'LAWYER' && (
                   <>
+                    <Link to="/dashboard" className="hidden sm:block">
+                      <Button variant="ghost" size="sm">
+                        Дашборд
+                      </Button>
+                    </Link>
                     <Link to="/search" className="hidden sm:block">
                       <Button variant="ghost" size="sm">
                         Поиск
@@ -50,6 +55,11 @@ export function Navbar(): JSX.Element {
                     <Link to="/clients" className="hidden sm:block">
                       <Button variant="ghost" size="sm">
                         Клиенты
+                      </Button>
+                    </Link>
+                    <Link to="/templates" className="hidden sm:block">
+                      <Button variant="ghost" size="sm">
+                        Шаблоны
                       </Button>
                     </Link>
                     <Link to="/chat" className="hidden sm:block">
