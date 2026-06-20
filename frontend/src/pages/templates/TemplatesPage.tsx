@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { templatesApi } from '../../api/templates'
 import { Navbar } from '../../components/layout/Navbar'
@@ -126,6 +126,24 @@ function TemplateEditor({
   const [name, setName] = useState(initial?.name ?? '')
   const [content, setContent] = useState(initial?.content ?? '')
   const [error, setError] = useState<string | null>(null)
+  const contentRef = useRef<HTMLTextAreaElement>(null)
+
+  const insertPlaceholder = (placeholder: string): void => {
+    const textarea = contentRef.current
+    if (!textarea) {
+      setContent((current) => current + placeholder)
+      return
+    }
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const nextContent = content.slice(0, start) + placeholder + content.slice(end)
+    setContent(nextContent)
+    requestAnimationFrame(() => {
+      const caret = start + placeholder.length
+      textarea.focus()
+      textarea.setSelectionRange(caret, caret)
+    })
+  }
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -176,6 +194,7 @@ function TemplateEditor({
       <div>
         <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">Текст шаблона</label>
         <textarea
+          ref={contentRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={10}
@@ -184,15 +203,21 @@ function TemplateEditor({
       </div>
 
       <div className="text-xs text-light-secondary dark:text-dark-secondary">
-        <p className="mb-1.5">Плейсхолдеры (заполнятся данными дела и клиента при применении):</p>
-        <div className="flex flex-wrap gap-1.5">
+        <p className="mb-1.5">
+          Пишите текст как обычно. Там, где должно подставиться имя клиента, дата или другие данные дела,
+          вставьте плейсхолдер — например <code className="px-1 rounded bg-light-bg dark:bg-dark-bg">{'{{client_name}}'}</code>.
+          При применении шаблона к делу он заменится на реальное значение. Нажмите на плейсхолдер, чтобы вставить его в текст.
+        </p>
+        <div className="flex flex-wrap gap-1.5 mt-2">
           {PLACEHOLDERS.map((placeholder) => (
-            <code
+            <button
               key={placeholder}
-              className="px-1.5 py-0.5 rounded bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border"
+              type="button"
+              onClick={() => insertPlaceholder(placeholder)}
+              className="px-1.5 py-0.5 rounded bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border font-mono hover:border-light-accent dark:hover:border-dark-accent hover:text-light-text dark:hover:text-dark-text transition-colors"
             >
               {placeholder}
-            </code>
+            </button>
           ))}
         </div>
       </div>

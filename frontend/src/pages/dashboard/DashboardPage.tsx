@@ -64,7 +64,7 @@ function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Активные дела" value={data.activeCases} to="/cases" />
         <StatCard label="Незакрытые задачи" value={data.openTasks} />
-        <StatCard label="Дедлайны на 7 дней" value={data.upcomingDeadlines.length} />
+        <StatCard label="Дедлайнов на неделе" value={data.upcomingDeadlines.length} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
