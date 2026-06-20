@@ -30,7 +30,6 @@ public class UserService {
         LawyerProfile profile = lawyerProfileRepository.findByUserIdWithUser(userId)
                 .orElseThrow(ProfileNotFoundException::new);
         profile.setFullName(request.fullName());
-        profile.setBarNumber(request.barNumber());
         profile.setSpecialization(request.specialization());
         profile.setPhone(request.phone());
         return toResponse(profile);

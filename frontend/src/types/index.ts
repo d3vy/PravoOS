@@ -397,7 +397,6 @@ export interface TelegramLinkResponse {
 
 export interface UpdateProfileRequest {
   fullName: string
-  barNumber?: string
   specialization?: string
   phone?: string
 }

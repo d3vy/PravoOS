@@ -8,9 +8,6 @@ public record UpdateProfileRequest(
         @Size(max = 255, message = "ФИО не должно превышать 255 символов")
         String fullName,
 
-        @Size(max = 100, message = "Номер удостоверения не должен превышать 100 символов")
-        String barNumber,
-
         @Size(max = 255, message = "Специализация не должна превышать 255 символов")
         String specialization,
 
