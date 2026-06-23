@@ -9,6 +9,8 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+      connection-timeout: 30000
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: none
@@ -79,7 +81,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus
   endpoint:
     health:
       probes:

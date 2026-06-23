@@ -14,6 +14,8 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+      connection-timeout: 30000
+      leak-detection-threshold: 30000
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -94,7 +96,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus
   endpoint:
     health:
       probes:
