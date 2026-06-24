@@ -17,12 +17,17 @@ services:
   kafka:
     restart: unless-stopped
     ports: !reset []
+    environment:
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     healthcheck:
       start_period: 120s
 
   user-service:
     restart: unless-stopped
     ports: !reset []
+    environment:
+      SPRINGDOC_API_DOCS_ENABLED: "false"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "false"
 
   ai-service:
     restart: unless-stopped
@@ -30,6 +35,8 @@ services:
     environment:
       DB_AI_USERNAME: ${DB_USERNAME}
       DB_AI_PASSWORD: ${DB_PASSWORD}
+      SPRINGDOC_API_DOCS_ENABLED: "false"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "false"
     healthcheck:
       start_period: 120s
 
@@ -50,6 +57,14 @@ services:
       retries: 8
       start_period: 120s
 
+  prometheus:
+    restart: unless-stopped
+    ports: !reset []
+
+  grafana:
+    restart: unless-stopped
+    ports: !reset []
+
   frontend:
     restart: unless-stopped
     ports:
@@ -62,6 +77,8 @@ services:
     depends_on:
       api-gateway:
         condition: service_healthy
+      grafana:
+        condition: service_started
 
   certbot:
     image: certbot/certbot:latest

@@ -36,13 +36,15 @@ services:
   redis:
     image: redis:7-alpine
     container_name: pravoos-redis
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -96,6 +98,7 @@ services:
       DB_USER_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx200m"
     depends_on:
@@ -129,12 +132,17 @@ services:
       DB_AI_PASSWORD: ${DB_PASSWORD}
       MONGODB_HOST: mongodb
       MONGODB_PORT: 27017
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx300m"
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health/liveness || exit 1"]
@@ -182,6 +190,7 @@ services:
       AI_SERVICE_URL: http://ai-service:8082
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       SERVER_IP: ${SERVER_IP:-}
       SERVER_DOMAIN: ${SERVER_DOMAIN:-}
       CORS_INCLUDE_LOCALHOST: ${CORS_INCLUDE_LOCALHOST:-true}
@@ -203,6 +212,35 @@ services:
     volumes:
       - ./logs/api-gateway:/app/logs/api-gateway
 
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: pravoos-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: pravoos-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
   frontend:
     build:
       context: ./frontend
@@ -219,3 +257,5 @@ volumes:
   zookeeper_data:
   documents_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
