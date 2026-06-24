@@ -5,29 +5,23 @@ import com.pravoos.user.model.enums.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
 
-    private static final int MIN_SECRET_BYTES = 32;
-
-    private final SecretKey secretKey;
+    private final RSAPrivateKey privateKey;
+    private final RSAPublicKey publicKey;
     private final long accessExpirationMs;
 
     public JwtTokenProvider(JwtProperties jwtProperties) {
-        byte[] secretBytes = jwtProperties.secret().getBytes(StandardCharsets.UTF_8);
-        if (secretBytes.length < MIN_SECRET_BYTES) {
-            throw new IllegalStateException(
-                    "JWT secret must be at least " + MIN_SECRET_BYTES + " bytes for HS256");
-        }
-        this.secretKey = Keys.hmacShaKeyFor(secretBytes);
+        this.privateKey = RsaKeyLoader.loadPrivateKey(jwtProperties.privateKey());
+        this.publicKey = RsaKeyLoader.loadPublicKey(jwtProperties.publicKey());
         this.accessExpirationMs = jwtProperties.accessExpirationMs();
     }
 
@@ -38,13 +32,13 @@ public class JwtTokenProvider {
                 .claim("role", role.name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpirationMs))
-                .signWith(secretKey)
+                .signWith(privateKey)
                 .compact();
     }
 
     public Claims extractClaims(String token) {
         return Jwts.parser()
-                .verifyWith(secretKey)
+                .verifyWith(publicKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

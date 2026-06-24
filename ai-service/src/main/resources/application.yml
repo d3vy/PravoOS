@@ -57,7 +57,7 @@ server:
   port: 8082
 
 jwt:
-  secret: ${JWT_SECRET}
+  public-key: ${JWT_PUBLIC_KEY}
 
 llm:
   openai:

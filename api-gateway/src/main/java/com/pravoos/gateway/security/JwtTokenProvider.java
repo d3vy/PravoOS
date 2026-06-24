@@ -4,31 +4,22 @@ import com.pravoos.gateway.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.security.interfaces.RSAPublicKey;
 
 @Component
 public class JwtTokenProvider {
 
-    private static final int MIN_SECRET_BYTES = 32;
-
-    private final SecretKey secretKey;
+    private final RSAPublicKey publicKey;
 
     public JwtTokenProvider(JwtProperties jwtProperties) {
-        byte[] secretBytes = jwtProperties.secret().getBytes(StandardCharsets.UTF_8);
-        if (secretBytes.length < MIN_SECRET_BYTES) {
-            throw new IllegalStateException(
-                    "JWT secret must be at least " + MIN_SECRET_BYTES + " bytes for HS256");
-        }
-        this.secretKey = Keys.hmacShaKeyFor(secretBytes);
+        this.publicKey = RsaKeyLoader.loadPublicKey(jwtProperties.publicKey());
     }
 
     public Claims extractClaims(String token) {
         return Jwts.parser()
-                .verifyWith(secretKey)
+                .verifyWith(publicKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

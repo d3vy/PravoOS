@@ -135,6 +135,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx300m"
     depends_on:
@@ -166,6 +167,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       USER_SERVICE_BASE_URL: http://user-service:8081
+      JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx100m"
     depends_on:
@@ -191,6 +193,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_PRIVATE_KEY: ""
       SERVER_IP: ${SERVER_IP:-}
       SERVER_DOMAIN: ${SERVER_DOMAIN:-}
       CORS_INCLUDE_LOCALHOST: ${CORS_INCLUDE_LOCALHOST:-true}

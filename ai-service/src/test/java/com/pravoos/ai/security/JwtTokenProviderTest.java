@@ -2,11 +2,13 @@ package com.pravoos.ai.security;
 
 import com.pravoos.ai.config.JwtProperties;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Base64;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,13 +16,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtTokenProviderTest {
 
-    private static final String SECRET = "this-is-a-very-long-test-secret-key-32b";
+    private static final KeyPair KEY_PAIR = generateKeyPair();
+    private static final KeyPair FOREIGN_KEY_PAIR = generateKeyPair();
 
-    private final JwtTokenProvider provider = new JwtTokenProvider(new JwtProperties(SECRET));
+    private final JwtTokenProvider provider = new JwtTokenProvider(new JwtProperties(publicKeyBase64(KEY_PAIR)));
 
     @Test
     void validTokenIsAcceptedAndClaimsExtracted() {
-        String token = signedToken(SECRET, "user-123", "LAWYER", new Date(System.currentTimeMillis() + 60_000));
+        String token = signedToken(KEY_PAIR, "user-123", "LAWYER", new Date(System.currentTimeMillis() + 60_000));
 
         assertThat(provider.isTokenValid(token)).isTrue();
         assertThat(provider.extractClaims(token).getSubject()).isEqualTo("user-123");
@@ -29,15 +32,14 @@ class JwtTokenProviderTest {
 
     @Test
     void tamperedTokenIsRejected() {
-        String token = signedToken(SECRET, "user-123", "LAWYER", new Date(System.currentTimeMillis() + 60_000));
+        String token = signedToken(KEY_PAIR, "user-123", "LAWYER", new Date(System.currentTimeMillis() + 60_000));
 
         assertThat(provider.isTokenValid(token + "x")).isFalse();
     }
 
     @Test
     void tokenSignedWithDifferentKeyIsRejected() {
-        String foreignToken = signedToken(
-                "another-completely-different-secret-key-32", "user-123", "ADMIN",
+        String foreignToken = signedToken(FOREIGN_KEY_PAIR, "user-123", "ADMIN",
                 new Date(System.currentTimeMillis() + 60_000));
 
         assertThat(provider.isTokenValid(foreignToken)).isFalse();
@@ -45,7 +47,7 @@ class JwtTokenProviderTest {
 
     @Test
     void expiredTokenIsRejected() {
-        String token = signedToken(SECRET, "user-123", "LAWYER", new Date(System.currentTimeMillis() - 1_000));
+        String token = signedToken(KEY_PAIR, "user-123", "LAWYER", new Date(System.currentTimeMillis() - 1_000));
 
         assertThat(provider.isTokenValid(token)).isFalse();
     }
@@ -56,18 +58,31 @@ class JwtTokenProviderTest {
     }
 
     @Test
-    void secretShorterThanThirtyTwoBytesIsRejectedAtConstruction() {
-        assertThatThrownBy(() -> new JwtTokenProvider(new JwtProperties("too-short")))
+    void blankPublicKeyIsRejectedAtConstruction() {
+        assertThatThrownBy(() -> new JwtTokenProvider(new JwtProperties("")))
                 .isInstanceOf(IllegalStateException.class);
     }
 
-    private static String signedToken(String secret, String subject, String role, Date expiration) {
-        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    private static String signedToken(KeyPair keyPair, String subject, String role, Date expiration) {
         return Jwts.builder()
                 .subject(subject)
                 .claim("role", role)
                 .expiration(expiration)
-                .signWith(key)
+                .signWith((RSAPrivateKey) keyPair.getPrivate())
                 .compact();
+    }
+
+    private static String publicKeyBase64(KeyPair keyPair) {
+        return Base64.getEncoder().encodeToString(((RSAPublicKey) keyPair.getPublic()).getEncoded());
+    }
+
+    private static KeyPair generateKeyPair() {
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            return generator.generateKeyPair();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
