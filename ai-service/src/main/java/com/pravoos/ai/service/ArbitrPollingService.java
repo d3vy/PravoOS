@@ -3,6 +3,7 @@ package com.pravoos.ai.service;
 import com.pravoos.ai.arbitr.ArbitrCaseProvider;
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.repository.jpa.CaseRepository;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,6 +30,7 @@ public class ArbitrPollingService {
     }
 
     @Scheduled(cron = "${arbitr.poll.cron:0 0 */6 * * *}", zone = "UTC")
+    @SchedulerLock(name = "ArbitrPollingService_pollTrackedCases", lockAtLeastFor = "PT1M", lockAtMostFor = "PT2H")
     public void pollTrackedCases() {
         if (!arbitrCaseProvider.isEnabled()) {
             return;

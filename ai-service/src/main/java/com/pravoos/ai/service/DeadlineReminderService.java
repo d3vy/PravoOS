@@ -6,6 +6,7 @@ import com.pravoos.ai.model.entity.CaseDeadlineReminder;
 import com.pravoos.ai.model.enums.DeadlineType;
 import com.pravoos.ai.repository.jpa.CaseDeadlineReminderRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -41,6 +42,7 @@ public class DeadlineReminderService {
     }
 
     @Scheduled(cron = "${deadline.reminder.cron:0 0 9 * * *}", zone = "UTC")
+    @SchedulerLock(name = "DeadlineReminderService_sendDueReminders", lockAtLeastFor = "PT1M", lockAtMostFor = "PT30M")
     public void sendDueReminders() {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         log.info("Running deadline reminder scan for {}", today);

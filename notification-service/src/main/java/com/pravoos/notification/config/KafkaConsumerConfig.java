@@ -33,6 +33,7 @@ public class KafkaConsumerConfig {
     private static final Logger log = LoggerFactory.getLogger(KafkaConsumerConfig.class);
     private static final long RETRY_INTERVAL_MS = 2000L;
     private static final long MAX_RETRIES = 3L;
+    private static final int LISTENER_CONCURRENCY = 2;
 
     private final KafkaProperties kafkaProperties;
 
@@ -80,6 +81,7 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(errorHandler(deadLetterKafkaTemplate));
+        factory.setConcurrency(LISTENER_CONCURRENCY);
         return factory;
     }
 
@@ -109,6 +111,7 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(deadlineConsumerFactory);
         factory.setCommonErrorHandler(errorHandler(deadLetterKafkaTemplate));
+        factory.setConcurrency(LISTENER_CONCURRENCY);
         return factory;
     }
 
@@ -138,6 +141,22 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(hearingConsumerFactory);
         factory.setCommonErrorHandler(errorHandler(deadLetterKafkaTemplate));
+        factory.setConcurrency(LISTENER_CONCURRENCY);
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, String> dltConsumerFactory() {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), new StringDeserializer());
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> dltKafkaListenerContainerFactory(
+            ConsumerFactory<String, String> dltConsumerFactory) {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(dltConsumerFactory);
         return factory;
     }
 

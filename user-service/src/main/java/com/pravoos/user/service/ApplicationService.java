@@ -1,6 +1,7 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.event.ApplicationApprovedSpringEvent;
+import com.pravoos.user.event.ApplicationSubmittedKafkaPayload;
 import com.pravoos.user.event.ApplicationSubmittedSpringEvent;
 import com.pravoos.user.event.VerificationEmailRequestedEvent;
 import com.pravoos.user.exception.ApplicationAlreadyExistsException;
@@ -25,7 +26,10 @@ import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.service.EmailVerificationService;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
+import com.pravoos.user.util.PaginationSupport;
 import com.pravoos.user.util.PhoneNormalizer;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -49,17 +53,27 @@ public class ApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final EmailVerificationService emailVerificationService;
+    private final OutboxEventService outboxEventService;
+    private final Counter applicationSubmittedCounter;
+    private final Counter applicationApprovedCounter;
+    private final Counter applicationRejectedCounter;
 
     public ApplicationService(LawyerApplicationRepository applicationRepository,
                                UserRepository userRepository,
                                PasswordEncoder passwordEncoder,
                                ApplicationEventPublisher eventPublisher,
-                               EmailVerificationService emailVerificationService) {
+                               EmailVerificationService emailVerificationService,
+                               OutboxEventService outboxEventService,
+                               MeterRegistry meterRegistry) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
         this.emailVerificationService = emailVerificationService;
+        this.outboxEventService = outboxEventService;
+        this.applicationSubmittedCounter = Counter.builder("pravoos.application").tag("action", "submitted").register(meterRegistry);
+        this.applicationApprovedCounter = Counter.builder("pravoos.application").tag("action", "approved").register(meterRegistry);
+        this.applicationRejectedCounter = Counter.builder("pravoos.application").tag("action", "rejected").register(meterRegistry);
     }
 
     @Transactional
@@ -92,6 +106,10 @@ public class ApplicationService {
 
         LawyerApplication saved = applicationRepository.save(application);
         eventPublisher.publishEvent(new ApplicationSubmittedSpringEvent(saved));
+        outboxEventService.enqueue("application.submitted", saved.getId().toString(),
+                new ApplicationSubmittedKafkaPayload(saved.getId(), saved.getFullName(),
+                        saved.getEmail(), saved.getSpecialization()));
+        applicationSubmittedCounter.increment();
 
         log.info("Lawyer application submitted: {}", EmailMasker.mask(email));
         return new ApplicationSubmissionResponse(toApplicationResponse(saved), saved.getStatusToken());
@@ -196,6 +214,7 @@ public class ApplicationService {
 
         markReviewed(application, ApplicationStatus.APPROVED, adminId);
         eventPublisher.publishEvent(new ApplicationApprovedSpringEvent(application.getEmail(), application.getFullName()));
+        applicationApprovedCounter.increment();
 
         log.info("Application approved: {} by admin: {}", applicationId, adminId);
         return toApplicationResponse(application);
@@ -206,6 +225,7 @@ public class ApplicationService {
         LawyerApplication application = findPendingApplicationOrThrow(applicationId);
 
         markReviewed(application, ApplicationStatus.REJECTED, adminId);
+        applicationRejectedCounter.increment();
 
         log.info("Application rejected: {} by admin: {}", applicationId, adminId);
         return toApplicationResponse(application);
@@ -219,19 +239,29 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public List<ApplicationResponse> getPendingApplications() {
-        return applicationRepository.findByStatusOrderBySubmittedAtDesc(ApplicationStatus.PENDING)
+    public List<ApplicationResponse> getPendingApplications(int page, int size) {
+        return applicationRepository.findByStatusOrderBySubmittedAtDesc(ApplicationStatus.PENDING, PaginationSupport.of(page, size))
                 .stream()
                 .map(this::toApplicationResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ApplicationResponse> getAllApplications() {
-        return applicationRepository.findAllByOrderBySubmittedAtDesc()
+    public List<ApplicationResponse> getAllApplications(int page, int size) {
+        return applicationRepository.findAllByOrderBySubmittedAtDesc(PaginationSupport.of(page, size))
                 .stream()
                 .map(this::toApplicationResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public long countAllApplications() {
+        return applicationRepository.count();
+    }
+
+    @Transactional(readOnly = true)
+    public long countPendingApplications() {
+        return applicationRepository.countByStatus(ApplicationStatus.PENDING);
     }
 
     private LawyerApplication findPendingApplicationOrThrow(UUID applicationId) {

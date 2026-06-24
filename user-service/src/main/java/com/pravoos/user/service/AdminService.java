@@ -1,6 +1,6 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.event.LawyerDeletedSpringEvent;
+import com.pravoos.user.event.LawyerDeletedKafkaPayload;
 import com.pravoos.user.exception.LawyerNotFoundException;
 import com.pravoos.user.model.dto.ClientStatsResponse;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
@@ -11,9 +11,9 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.util.EmailMasker;
+import com.pravoos.user.util.PaginationSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,22 +28,27 @@ public class AdminService {
 
     private final UserRepository userRepository;
     private final LawyerApplicationRepository lawyerApplicationRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventService outboxEventService;
 
     public AdminService(UserRepository userRepository,
                         LawyerApplicationRepository lawyerApplicationRepository,
-                        ApplicationEventPublisher eventPublisher) {
+                        OutboxEventService outboxEventService) {
         this.userRepository = userRepository;
         this.lawyerApplicationRepository = lawyerApplicationRepository;
-        this.eventPublisher = eventPublisher;
+        this.outboxEventService = outboxEventService;
     }
 
     @Transactional(readOnly = true)
-    public List<LawyerProfileResponse> getActiveLawyers() {
-        return userRepository.findByRoleAndStatusWithProfile(UserRole.LAWYER, UserStatus.ACTIVE)
+    public List<LawyerProfileResponse> getActiveLawyers(int page, int size) {
+        return userRepository.findByRoleAndStatusWithProfile(UserRole.LAWYER, UserStatus.ACTIVE, PaginationSupport.of(page, size))
                 .stream()
                 .map(this::toLawyerProfileResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public long countActiveLawyers() {
+        return userRepository.countByRoleAndStatus(UserRole.LAWYER, UserStatus.ACTIVE);
     }
 
     @Transactional
@@ -58,7 +63,7 @@ public class AdminService {
         userRepository.flush();
         lawyerApplicationRepository.deleteByEmail(email);
 
-        eventPublisher.publishEvent(new LawyerDeletedSpringEvent(userId));
+        outboxEventService.enqueue("lawyer.deleted", userId.toString(), new LawyerDeletedKafkaPayload(userId));
 
         log.warn("Lawyer {} ({}) deleted by admin {}", userId, EmailMasker.mask(email), adminId);
     }
