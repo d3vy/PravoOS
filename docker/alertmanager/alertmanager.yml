@@ -1,0 +1,18 @@
+route:
+  receiver: telegram
+  group_by: ["alertname", "service"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      # Заполнить реальными значениями перед прод-запуском:
+      #   bot_token — токен бота (можно тот же TELEGRAM_BOT_TOKEN)
+      #   chat_id   — целочисленный id чата/канала алертов (например -1001234567890)
+      - bot_token: "REPLACE_WITH_TELEGRAM_BOT_TOKEN"
+        chat_id: 0
+        parse_mode: "HTML"
+        send_resolved: true
+        message: "{{ range .Alerts }}<b>{{ .Labels.severity }}</b>: {{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}"

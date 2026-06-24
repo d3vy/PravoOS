@@ -1,0 +1,49 @@
+groups:
+  - name: pravoos-availability
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Сервис {{ $labels.service }} недоступен"
+          description: "{{ $labels.job }} не отвечает на scrape более 2 минут."
+
+      - alert: HighHttp5xxRate
+        expr: sum by (service) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокий уровень 5xx в {{ $labels.service }}"
+          description: "> 1 ошибки 5xx в секунду последние 5 минут."
+
+  - name: pravoos-app
+    rules:
+      - alert: KafkaDeadLetterMessages
+        expr: increase(pravoos_kafka_dlt_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Сообщения попали в DLT: {{ $labels.topic }}"
+          description: "За 10 минут в DLT-топик {{ $labels.topic }} попали сообщения — требуется разбор."
+
+      - alert: LoginFailureSpike
+        expr: sum(rate(pravoos_login_total{result="failure"}[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Всплеск неудачных логинов (возможный брутфорс)"
+          description: "> 1 неудачного входа в секунду последние 10 минут."
+
+      - alert: HighHeapUsage
+        expr: sum by (service) (jvm_memory_used_bytes{area="heap"}) / sum by (service) (jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Heap > 90% в {{ $labels.service }}"
+          description: "Использование heap выше 90% последние 10 минут — риск OOM."

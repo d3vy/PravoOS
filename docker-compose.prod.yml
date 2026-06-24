@@ -58,6 +58,10 @@ services:
     restart: unless-stopped
     ports: !reset []
 
+  alertmanager:
+    restart: unless-stopped
+    ports: !reset []
+
   grafana:
     restart: unless-stopped
     ports: !reset []
