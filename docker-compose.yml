@@ -164,6 +164,9 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       USER_SERVICE_BASE_URL: http://user-service:8081
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx100m"
@@ -171,6 +174,8 @@ services:
       kafka:
         condition: service_healthy
       user-service:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./logs/notification-service:/app/logs/notification-service
