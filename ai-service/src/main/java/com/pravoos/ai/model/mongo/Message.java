@@ -2,7 +2,6 @@ package com.pravoos.ai.model.mongo;
 
 import com.pravoos.ai.model.enums.MessageRole;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -14,7 +13,6 @@ public class Message {
     @Id
     private String id;
 
-    @Indexed
     private String conversationId;
 
     private MessageRole role;

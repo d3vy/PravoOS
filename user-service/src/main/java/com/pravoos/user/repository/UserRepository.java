@@ -3,6 +3,7 @@ package com.pravoos.user.repository;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,4 +31,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.lawyerProfile WHERE u.role = :role AND u.status = :status")
     List<User> findByRoleAndStatusWithProfile(@Param("role") UserRole role, @Param("status") UserStatus status);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.lawyerProfile WHERE u.role = :role AND u.status = :status ORDER BY u.createdAt DESC")
+    List<User> findByRoleAndStatusWithProfile(@Param("role") UserRole role,
+                                              @Param("status") UserStatus status,
+                                              Pageable pageable);
 }

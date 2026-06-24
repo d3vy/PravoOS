@@ -3,6 +3,7 @@ package com.pravoos.user.repository;
 import com.pravoos.user.model.entity.LawyerApplication;
 import com.pravoos.user.model.enums.ApplicationStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -22,7 +23,13 @@ public interface LawyerApplicationRepository extends JpaRepository<LawyerApplica
 
     List<LawyerApplication> findByStatusOrderBySubmittedAtDesc(ApplicationStatus status);
 
+    List<LawyerApplication> findByStatusOrderBySubmittedAtDesc(ApplicationStatus status, Pageable pageable);
+
     List<LawyerApplication> findAllByOrderBySubmittedAtDesc();
+
+    List<LawyerApplication> findAllByOrderBySubmittedAtDesc(Pageable pageable);
+
+    long countByStatus(ApplicationStatus status);
 
     boolean existsByEmailAndStatus(String email, ApplicationStatus status);
 

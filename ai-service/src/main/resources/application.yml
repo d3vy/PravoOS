@@ -35,6 +35,11 @@ spring:
       properties:
         spring.json.add.type.headers: false
   data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
     mongodb:
       host: ${MONGODB_HOST:mongodb}
       port: ${MONGODB_PORT:27017}
@@ -42,7 +47,7 @@ spring:
       username: ${MONGO_USERNAME}
       password: ${MONGO_PASSWORD}
       authentication-database: admin
-      auto-index-creation: true
+      auto-index-creation: false
   servlet:
     multipart:
       max-file-size: 50MB

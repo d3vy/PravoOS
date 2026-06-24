@@ -17,6 +17,8 @@ import java.util.UUID;
 @RequestMapping("/api/admin")
 public class AdminController {
 
+    private static final String TOTAL_COUNT_HEADER = "X-Total-Count";
+
     private final ApplicationService applicationService;
     private final AdminService adminService;
 
@@ -26,13 +28,21 @@ public class AdminController {
     }
 
     @GetMapping("/applications")
-    public ResponseEntity<List<ApplicationResponse>> getAllApplications() {
-        return ResponseEntity.ok(applicationService.getAllApplications());
+    public ResponseEntity<List<ApplicationResponse>> getAllApplications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "200") int size) {
+        return ResponseEntity.ok()
+                .header(TOTAL_COUNT_HEADER, String.valueOf(applicationService.countAllApplications()))
+                .body(applicationService.getAllApplications(page, size));
     }
 
     @GetMapping("/applications/pending")
-    public ResponseEntity<List<ApplicationResponse>> getPendingApplications() {
-        return ResponseEntity.ok(applicationService.getPendingApplications());
+    public ResponseEntity<List<ApplicationResponse>> getPendingApplications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "200") int size) {
+        return ResponseEntity.ok()
+                .header(TOTAL_COUNT_HEADER, String.valueOf(applicationService.countPendingApplications()))
+                .body(applicationService.getPendingApplications(page, size));
     }
 
     @PostMapping("/applications/{id}/approve")
@@ -54,8 +64,12 @@ public class AdminController {
     }
 
     @GetMapping("/users/lawyers")
-    public ResponseEntity<List<LawyerProfileResponse>> getActiveLawyers() {
-        return ResponseEntity.ok(adminService.getActiveLawyers());
+    public ResponseEntity<List<LawyerProfileResponse>> getActiveLawyers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "200") int size) {
+        return ResponseEntity.ok()
+                .header(TOTAL_COUNT_HEADER, String.valueOf(adminService.countActiveLawyers()))
+                .body(adminService.getActiveLawyers(page, size));
     }
 
     @DeleteMapping("/users/lawyers/{id}")
