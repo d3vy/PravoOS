@@ -17,7 +17,8 @@ public class RateLimiterConfig {
         return exchange -> {
             String forwardedFor = exchange.getRequest().getHeaders().getFirst(X_FORWARDED_FOR);
             if (forwardedFor != null && !forwardedFor.isBlank()) {
-                return Mono.just(forwardedFor.split(",")[0].trim());
+                String[] hops = forwardedFor.split(",");
+                return Mono.just(hops[hops.length - 1].trim());
             }
             InetSocketAddress remoteAddress = exchange.getRequest().getRemoteAddress();
             String clientIp = remoteAddress != null ? remoteAddress.getAddress().getHostAddress() : "unknown";

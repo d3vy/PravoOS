@@ -5,6 +5,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       timeout: 2s
   cloud:
     gateway:
@@ -27,12 +28,22 @@ spring:
             - name: JwtAuthFilter
               args:
                 requiredRole: ADMIN
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${ADMIN_RATE_REPLENISH:20}
+                redis-rate-limiter.burstCapacity: ${ADMIN_RATE_BURST:40}
+                key-resolver: "#{@ipKeyResolver}"
         - id: user-service-user
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/user/**
           filters:
             - name: JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${USER_RATE_REPLENISH:20}
+                redis-rate-limiter.burstCapacity: ${USER_RATE_BURST:40}
+                key-resolver: "#{@ipKeyResolver}"
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://localhost:8082}
           predicates:

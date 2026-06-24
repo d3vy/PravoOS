@@ -1,5 +1,6 @@
 package com.pravoos.ai.config;
 
+import com.pravoos.ai.security.AccessTokenDenylist;
 import com.pravoos.ai.security.JwtAuthenticationFilter;
 import com.pravoos.ai.security.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
@@ -19,9 +20,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final AccessTokenDenylist accessTokenDenylist;
 
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider) {
+    public SecurityConfig(JwtTokenProvider jwtTokenProvider, AccessTokenDenylist accessTokenDenylist) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.accessTokenDenylist = accessTokenDenylist;
     }
 
     @Bean
@@ -30,7 +33,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/prometheus").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/ai/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
@@ -48,7 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/chat/**").hasRole("LAWYER")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, accessTokenDenylist),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

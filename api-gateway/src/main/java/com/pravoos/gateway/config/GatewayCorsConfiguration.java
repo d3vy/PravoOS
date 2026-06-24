@@ -30,6 +30,7 @@ public class GatewayCorsConfiguration {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("*"));
+        corsConfig.setExposedHeaders(List.of("X-Total-Count"));
         corsConfig.setAllowCredentials(true);
         corsConfig.setMaxAge(3600L);
 

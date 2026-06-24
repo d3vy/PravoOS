@@ -19,9 +19,14 @@ public class InternalSecretVerifier {
     }
 
     public void verify(String secret) {
-        if (secret == null || !MessageDigest.isEqual(sha256(secretProperties.secret()), sha256(secret))) {
+        if (!matches(secret)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
+    }
+
+    public boolean matches(String secret) {
+        return secret != null
+                && MessageDigest.isEqual(sha256(secretProperties.secret()), sha256(secret));
     }
 
     private byte[] sha256(String value) {
