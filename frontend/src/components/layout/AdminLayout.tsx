@@ -14,6 +14,8 @@ const navItems: NavItem[] = [
   { path: '/admin/ai-stats', label: 'AI-метрики' },
 ]
 
+const GRAFANA_URL = '/grafana/'
+
 const desktopLinkClass = ({ isActive }: { isActive: boolean }): string =>
   `px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
     isActive
@@ -48,6 +50,14 @@ export function AdminLayout(): JSX.Element {
             {item.label}
           </NavLink>
         ))}
+        <a
+          href={GRAFANA_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text"
+        >
+          📊 Метрики
+        </a>
         <button
           onClick={handleSwitchToLawyer}
           className="shrink-0 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text"
@@ -65,6 +75,15 @@ export function AdminLayout(): JSX.Element {
                 {item.label}
               </NavLink>
             ))}
+            <a
+              href={GRAFANA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg flex items-center gap-2"
+            >
+              <span>📊</span>
+              <span>Метрики (Grafana)</span>
+            </a>
           </nav>
           <div className="p-4 border-t border-light-border dark:border-dark-border">
             <button

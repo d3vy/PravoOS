@@ -11,6 +11,8 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.security.JwtTokenProvider;
 import com.pravoos.user.util.EmailMasker;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,17 +33,24 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final LoginAttemptService loginAttemptService;
+    private final Counter loginSuccessCounter;
+    private final Counter loginFailureCounter;
+    private final Counter loginLockedCounter;
 
     public AuthService(UserRepository userRepository,
                        JwtTokenProvider jwtTokenProvider,
                        PasswordEncoder passwordEncoder,
                        RefreshTokenService refreshTokenService,
-                       LoginAttemptService loginAttemptService) {
+                       LoginAttemptService loginAttemptService,
+                       MeterRegistry meterRegistry) {
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
         this.loginAttemptService = loginAttemptService;
+        this.loginSuccessCounter = Counter.builder("pravoos.login").tag("result", "success").register(meterRegistry);
+        this.loginFailureCounter = Counter.builder("pravoos.login").tag("result", "failure").register(meterRegistry);
+        this.loginLockedCounter = Counter.builder("pravoos.login").tag("result", "locked").register(meterRegistry);
     }
 
     @Transactional
@@ -49,6 +58,7 @@ public class AuthService {
         String email = EmailNormalizer.normalize(request.email());
         loginAttemptService.remainingLockSeconds(email)
                 .ifPresent(seconds -> {
+                    loginLockedCounter.increment();
                     log.warn("Blocked login attempt for locked account: {}", EmailMasker.mask(email));
                     throw new AccountLockedException(seconds);
                 });
@@ -59,17 +69,20 @@ public class AuthService {
         if (user == null) {
             passwordEncoder.matches(request.password(), DUMMY_PASSWORD_HASH);
             loginAttemptService.recordFailure(email);
+            loginFailureCounter.increment();
             log.warn("Failed login attempt for unknown/inactive email: {}", EmailMasker.mask(email));
             throw new InvalidCredentialsException();
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             loginAttemptService.recordFailure(email);
+            loginFailureCounter.increment();
             log.warn("Failed login attempt for email: {}", EmailMasker.mask(email));
             throw new InvalidCredentialsException();
         }
 
         loginAttemptService.reset(email);
+        loginSuccessCounter.increment();
         log.info("User authenticated: {}", EmailMasker.mask(email));
         return issueTokens(user);
     }
