@@ -1,22 +1,27 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { adminApi } from '../../api/admin'
+import { adminApi, DEFAULT_PAGE_SIZE, type Page } from '../../api/admin'
 import type { LawyerProfileResponse } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { Pagination } from '../../components/ui/Pagination'
 
 export default function UsersPage(): JSX.Element {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
   const queryClient = useQueryClient()
 
-  const { data: lawyers = [], isLoading } = useQuery<LawyerProfileResponse[]>({
-    queryKey: ['admin-lawyers'],
-    queryFn: adminApi.getLawyers,
+  const { data, isLoading } = useQuery<Page<LawyerProfileResponse>>({
+    queryKey: ['admin-lawyers', page],
+    queryFn: () => adminApi.getLawyers(page),
+    placeholderData: keepPreviousData,
   })
+  const lawyers = data?.items ?? []
+  const total = data?.total ?? 0
 
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -139,6 +144,8 @@ export default function UsersPage(): JSX.Element {
           ))}
         </div>
       )}
+
+      <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
 
       <AnimatePresence>
         {confirmOpen && (

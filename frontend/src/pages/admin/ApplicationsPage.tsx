@@ -1,30 +1,44 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
-import { adminApi } from '../../api/admin'
+import { adminApi, DEFAULT_PAGE_SIZE, type Page } from '../../api/admin'
 import type { ApplicationResponse } from '../../types'
 import { ApplicationStatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { Pagination } from '../../components/ui/Pagination'
 
 type Tab = 'all' | 'pending'
 
 export default function ApplicationsPage(): JSX.Element {
   const [activeTab, setActiveTab] = useState<Tab>('all')
+  const [page, setPage] = useState(0)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [approveError, setApproveError] = useState<{ id: string; message: string } | null>(null)
   const queryClient = useQueryClient()
 
-  const { data: allApplications = [], isLoading: allLoading } = useQuery<ApplicationResponse[]>({
-    queryKey: ['applications', 'all'],
-    queryFn: adminApi.getAllApplications,
+  const { data: allData, isLoading: allLoading } = useQuery<Page<ApplicationResponse>>({
+    queryKey: ['applications', 'all', page],
+    queryFn: () => adminApi.getAllApplications(page),
+    placeholderData: keepPreviousData,
   })
 
-  const { data: pendingApplications = [], isLoading: pendingLoading } = useQuery<ApplicationResponse[]>({
-    queryKey: ['applications', 'pending'],
-    queryFn: adminApi.getPendingApplications,
+  const { data: pendingData, isLoading: pendingLoading } = useQuery<Page<ApplicationResponse>>({
+    queryKey: ['applications', 'pending', page],
+    queryFn: () => adminApi.getPendingApplications(page),
+    placeholderData: keepPreviousData,
   })
+
+  const allApplications = allData?.items ?? []
+  const pendingApplications = pendingData?.items ?? []
+  const allTotal = allData?.total ?? 0
+  const pendingTotal = pendingData?.total ?? 0
+
+  const changeTab = (tab: Tab): void => {
+    setActiveTab(tab)
+    setPage(0)
+  }
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => adminApi.approveApplication(id),
@@ -33,11 +47,11 @@ export default function ApplicationsPage(): JSX.Element {
       await queryClient.cancelQueries({ queryKey: ['applications'] })
       const updateStatus = (apps: ApplicationResponse[]): ApplicationResponse[] =>
         apps.map((a) => (a.id === id ? { ...a, status: 'APPROVED' as const } : a))
-      queryClient.setQueryData(['applications', 'all'], (old: ApplicationResponse[] | undefined) =>
-        old ? updateStatus(old) : old
+      queryClient.setQueriesData<Page<ApplicationResponse>>({ queryKey: ['applications', 'all'] }, (old) =>
+        old ? { ...old, items: updateStatus(old.items) } : old
       )
-      queryClient.setQueryData(['applications', 'pending'], (old: ApplicationResponse[] | undefined) =>
-        old ? old.filter((a) => a.id !== id) : old
+      queryClient.setQueriesData<Page<ApplicationResponse>>({ queryKey: ['applications', 'pending'] }, (old) =>
+        old ? { ...old, items: old.items.filter((a) => a.id !== id), total: Math.max(0, old.total - 1) } : old
       )
     },
     onError: (error, id) => {
@@ -61,11 +75,11 @@ export default function ApplicationsPage(): JSX.Element {
       await queryClient.cancelQueries({ queryKey: ['applications'] })
       const updateStatus = (apps: ApplicationResponse[]): ApplicationResponse[] =>
         apps.map((a) => (a.id === id ? { ...a, status: 'APPROVED' as const, emailVerified: true } : a))
-      queryClient.setQueryData(['applications', 'all'], (old: ApplicationResponse[] | undefined) =>
-        old ? updateStatus(old) : old
+      queryClient.setQueriesData<Page<ApplicationResponse>>({ queryKey: ['applications', 'all'] }, (old) =>
+        old ? { ...old, items: updateStatus(old.items) } : old
       )
-      queryClient.setQueryData(['applications', 'pending'], (old: ApplicationResponse[] | undefined) =>
-        old ? old.filter((a) => a.id !== id) : old
+      queryClient.setQueriesData<Page<ApplicationResponse>>({ queryKey: ['applications', 'pending'] }, (old) =>
+        old ? { ...old, items: old.items.filter((a) => a.id !== id), total: Math.max(0, old.total - 1) } : old
       )
     },
     onError: (error, id) => {
@@ -89,11 +103,11 @@ export default function ApplicationsPage(): JSX.Element {
       await queryClient.cancelQueries({ queryKey: ['applications'] })
       const updateStatus = (apps: ApplicationResponse[]): ApplicationResponse[] =>
         apps.map((a) => (a.id === id ? { ...a, status: 'REJECTED' as const } : a))
-      queryClient.setQueryData(['applications', 'all'], (old: ApplicationResponse[] | undefined) =>
-        old ? updateStatus(old) : old
+      queryClient.setQueriesData<Page<ApplicationResponse>>({ queryKey: ['applications', 'all'] }, (old) =>
+        old ? { ...old, items: updateStatus(old.items) } : old
       )
-      queryClient.setQueryData(['applications', 'pending'], (old: ApplicationResponse[] | undefined) =>
-        old ? old.filter((a) => a.id !== id) : old
+      queryClient.setQueriesData<Page<ApplicationResponse>>({ queryKey: ['applications', 'pending'] }, (old) =>
+        old ? { ...old, items: old.items.filter((a) => a.id !== id), total: Math.max(0, old.total - 1) } : old
       )
     },
     onSettled: () => {
@@ -104,7 +118,8 @@ export default function ApplicationsPage(): JSX.Element {
 
   const displayedApplications = activeTab === 'pending' ? pendingApplications : allApplications
   const isLoading = activeTab === 'pending' ? pendingLoading : allLoading
-  const pendingCount = pendingApplications.length
+  const displayedTotal = activeTab === 'pending' ? pendingTotal : allTotal
+  const pendingCount = pendingTotal
 
   return (
     <div className="p-6 lg:p-8">
@@ -118,7 +133,7 @@ export default function ApplicationsPage(): JSX.Element {
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-light-bg dark:bg-dark-bg rounded-lg w-fit mb-6 border border-light-border dark:border-dark-border">
         <button
-          onClick={() => setActiveTab('all')}
+          onClick={() => changeTab('all')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'all'
               ? 'bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text shadow-sm'
@@ -128,7 +143,7 @@ export default function ApplicationsPage(): JSX.Element {
           Все
         </button>
         <button
-          onClick={() => setActiveTab('pending')}
+          onClick={() => changeTab('pending')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'pending'
               ? 'bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text shadow-sm'
@@ -173,6 +188,8 @@ export default function ApplicationsPage(): JSX.Element {
           </AnimatePresence>
         </div>
       )}
+
+      <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={displayedTotal} onPageChange={setPage} />
     </div>
   )
 }
