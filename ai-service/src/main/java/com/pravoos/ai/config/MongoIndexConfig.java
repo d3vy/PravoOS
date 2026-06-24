@@ -31,7 +31,23 @@ public class MongoIndexConfig {
                             .on("createdAt", Sort.Direction.DESC)
                             .named("conversations_lawyer_created"));
 
+            dropIfExists(mongoTemplate, Message.class, "conversationId_1");
+            dropIfExists(mongoTemplate, Conversation.class, "lawyerId_1");
+
             log.info("MongoDB indexes ensured (messages, conversations)");
         };
+    }
+
+    private void dropIfExists(MongoTemplate mongoTemplate, Class<?> entity, String indexName) {
+        try {
+            boolean present = mongoTemplate.indexOps(entity).getIndexInfo().stream()
+                    .anyMatch(info -> indexName.equals(info.getName()));
+            if (present) {
+                mongoTemplate.indexOps(entity).dropIndex(indexName);
+                log.info("Dropped redundant Mongo index {} on {}", indexName, entity.getSimpleName());
+            }
+        } catch (RuntimeException e) {
+            log.warn("Could not drop Mongo index {} on {}: {}", indexName, entity.getSimpleName(), e.getMessage());
+        }
     }
 }

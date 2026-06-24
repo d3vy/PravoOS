@@ -11,9 +11,6 @@ services:
     restart: unless-stopped
     ports: !reset []
 
-  zookeeper:
-    restart: unless-stopped
-
   kafka:
     restart: unless-stopped
     ports: !reset []
