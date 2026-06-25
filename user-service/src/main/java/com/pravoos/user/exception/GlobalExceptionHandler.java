@@ -1,5 +1,6 @@
 package com.pravoos.user.exception;
 
+import com.pravoos.common.exception.InvalidPhoneNumberException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -35,6 +36,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handlePravoosException(PravoosException ex) {
         log.warn("Business error [{}]: {}", ex.getStatus(), ex.getMessage());
         return ResponseEntity.status(ex.getStatus()).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidPhoneNumberException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPhone(InvalidPhoneNumberException ex) {
+        log.warn("Invalid phone number: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

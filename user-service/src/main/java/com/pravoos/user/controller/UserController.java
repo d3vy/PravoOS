@@ -3,7 +3,7 @@ package com.pravoos.user.controller;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
 import com.pravoos.user.model.dto.TelegramLinkResponse;
 import com.pravoos.user.model.dto.UpdateProfileRequest;
-import com.pravoos.user.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.user.service.TelegramLinkService;
 import com.pravoos.user.service.UserService;
 import jakarta.validation.Valid;

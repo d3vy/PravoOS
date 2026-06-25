@@ -3,7 +3,7 @@ package com.pravoos.user.controller;
 import com.pravoos.user.model.dto.ApplicationResponse;
 import com.pravoos.user.model.dto.ClientStatsResponse;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
-import com.pravoos.user.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.user.service.AdminService;
 import com.pravoos.user.service.ApplicationService;
 import org.springframework.http.ResponseEntity;

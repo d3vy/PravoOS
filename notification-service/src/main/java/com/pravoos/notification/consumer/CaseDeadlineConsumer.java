@@ -30,13 +30,14 @@ public class CaseDeadlineConsumer {
         MDC.put("requestId", String.valueOf(payload.caseId()));
         try {
             String dedupKey = payload.caseId() + ":" + payload.deadlineTypeName() + ":" + payload.daysLeft();
-            if (!processedEventGuard.isFirstProcessing(EVENT_TYPE, dedupKey)) {
+            if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
                 log.info("Skipping duplicate case.deadline.approaching: {}", dedupKey);
                 return;
             }
             log.info("Received case.deadline.approaching: case={} type={} daysLeft={}",
                     payload.caseId(), payload.deadlineTypeName(), payload.daysLeft());
             telegramNotificationService.notifyDeadline(payload);
+            processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
         } finally {
             MDC.remove("requestId");
         }

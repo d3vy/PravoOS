@@ -18,6 +18,8 @@
     <name>PravoOS Parent</name>
 
     <modules>
+        <module>pravoos-common</module>
+        <module>pravoos-common-web</module>
         <module>api-gateway</module>
         <module>user-service</module>
         <module>ai-service</module>

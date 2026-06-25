@@ -1,20 +1,17 @@
-package com.pravoos.gateway.security;
+package com.pravoos.common.security;
 
-import com.pravoos.gateway.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import org.springframework.stereotype.Component;
 
 import java.security.interfaces.RSAPublicKey;
 
-@Component
-public class JwtTokenProvider {
+public class JwtVerifier {
 
     private final RSAPublicKey publicKey;
 
-    public JwtTokenProvider(JwtProperties jwtProperties) {
-        this.publicKey = RsaKeyLoader.loadPublicKey(jwtProperties.publicKey());
+    public JwtVerifier(String publicKeyPem) {
+        this.publicKey = RsaKeyLoader.loadPublicKey(publicKeyPem);
     }
 
     public Claims extractClaims(String token) {

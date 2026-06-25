@@ -4,7 +4,7 @@ import com.pravoos.ai.model.dto.ClientDetailResponse;
 import com.pravoos.ai.model.dto.ClientResponse;
 import com.pravoos.ai.model.dto.CreateClientRequest;
 import com.pravoos.ai.model.dto.UpdateClientRequest;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.ClientService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

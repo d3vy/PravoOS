@@ -56,93 +56,21 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, ApplicationSubmittedKafkaPayload> consumerFactory() {
-        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
-
-        JsonDeserializer<ApplicationSubmittedKafkaPayload> jsonDeserializer =
-                new JsonDeserializer<>(ApplicationSubmittedKafkaPayload.class);
-        jsonDeserializer.setUseTypeHeaders(false);
-        jsonDeserializer.addTrustedPackages(ApplicationSubmittedKafkaPayload.class.getPackageName());
-
-        ErrorHandlingDeserializer<ApplicationSubmittedKafkaPayload> valueDeserializer =
-                new ErrorHandlingDeserializer<>(jsonDeserializer);
-
-        return new DefaultKafkaConsumerFactory<>(
-                props,
-                new ErrorHandlingDeserializer<>(new StringDeserializer()),
-                valueDeserializer);
-    }
-
-    @Bean
     public ConcurrentKafkaListenerContainerFactory<String, ApplicationSubmittedKafkaPayload> kafkaListenerContainerFactory(
-            ConsumerFactory<String, ApplicationSubmittedKafkaPayload> consumerFactory,
             KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
-        ConcurrentKafkaListenerContainerFactory<String, ApplicationSubmittedKafkaPayload> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory);
-        factory.setCommonErrorHandler(errorHandler(deadLetterKafkaTemplate));
-        factory.setConcurrency(LISTENER_CONCURRENCY);
-        return factory;
-    }
-
-    @Bean
-    public ConsumerFactory<String, CaseDeadlineKafkaPayload> deadlineConsumerFactory() {
-        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
-
-        JsonDeserializer<CaseDeadlineKafkaPayload> jsonDeserializer =
-                new JsonDeserializer<>(CaseDeadlineKafkaPayload.class);
-        jsonDeserializer.setUseTypeHeaders(false);
-        jsonDeserializer.addTrustedPackages(CaseDeadlineKafkaPayload.class.getPackageName());
-
-        ErrorHandlingDeserializer<CaseDeadlineKafkaPayload> valueDeserializer =
-                new ErrorHandlingDeserializer<>(jsonDeserializer);
-
-        return new DefaultKafkaConsumerFactory<>(
-                props,
-                new ErrorHandlingDeserializer<>(new StringDeserializer()),
-                valueDeserializer);
+        return listenerFactory(ApplicationSubmittedKafkaPayload.class, deadLetterKafkaTemplate);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, CaseDeadlineKafkaPayload> deadlineKafkaListenerContainerFactory(
-            ConsumerFactory<String, CaseDeadlineKafkaPayload> deadlineConsumerFactory,
             KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
-        ConcurrentKafkaListenerContainerFactory<String, CaseDeadlineKafkaPayload> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(deadlineConsumerFactory);
-        factory.setCommonErrorHandler(errorHandler(deadLetterKafkaTemplate));
-        factory.setConcurrency(LISTENER_CONCURRENCY);
-        return factory;
-    }
-
-    @Bean
-    public ConsumerFactory<String, CaseHearingUpdatedKafkaPayload> hearingConsumerFactory() {
-        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
-
-        JsonDeserializer<CaseHearingUpdatedKafkaPayload> jsonDeserializer =
-                new JsonDeserializer<>(CaseHearingUpdatedKafkaPayload.class);
-        jsonDeserializer.setUseTypeHeaders(false);
-        jsonDeserializer.addTrustedPackages(CaseHearingUpdatedKafkaPayload.class.getPackageName());
-
-        ErrorHandlingDeserializer<CaseHearingUpdatedKafkaPayload> valueDeserializer =
-                new ErrorHandlingDeserializer<>(jsonDeserializer);
-
-        return new DefaultKafkaConsumerFactory<>(
-                props,
-                new ErrorHandlingDeserializer<>(new StringDeserializer()),
-                valueDeserializer);
+        return listenerFactory(CaseDeadlineKafkaPayload.class, deadLetterKafkaTemplate);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, CaseHearingUpdatedKafkaPayload> hearingKafkaListenerContainerFactory(
-            ConsumerFactory<String, CaseHearingUpdatedKafkaPayload> hearingConsumerFactory,
             KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
-        ConcurrentKafkaListenerContainerFactory<String, CaseHearingUpdatedKafkaPayload> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(hearingConsumerFactory);
-        factory.setCommonErrorHandler(errorHandler(deadLetterKafkaTemplate));
-        factory.setConcurrency(LISTENER_CONCURRENCY);
-        return factory;
+        return listenerFactory(CaseHearingUpdatedKafkaPayload.class, deadLetterKafkaTemplate);
     }
 
     @Bean
@@ -158,6 +86,29 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(dltConsumerFactory);
         return factory;
+    }
+
+    private <T> ConcurrentKafkaListenerContainerFactory<String, T> listenerFactory(
+            Class<T> payloadType, KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
+        ConcurrentKafkaListenerContainerFactory<String, T> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(jsonConsumerFactory(payloadType));
+        factory.setCommonErrorHandler(errorHandler(deadLetterKafkaTemplate));
+        factory.setConcurrency(LISTENER_CONCURRENCY);
+        return factory;
+    }
+
+    private <T> ConsumerFactory<String, T> jsonConsumerFactory(Class<T> payloadType) {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
+
+        JsonDeserializer<T> jsonDeserializer = new JsonDeserializer<>(payloadType);
+        jsonDeserializer.setUseTypeHeaders(false);
+        jsonDeserializer.addTrustedPackages(payloadType.getPackageName());
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new ErrorHandlingDeserializer<>(new StringDeserializer()),
+                new ErrorHandlingDeserializer<>(jsonDeserializer));
     }
 
     private DefaultErrorHandler errorHandler(KafkaTemplate<String, Object> deadLetterKafkaTemplate) {

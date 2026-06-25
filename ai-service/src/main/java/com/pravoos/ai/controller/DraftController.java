@@ -5,7 +5,7 @@ import com.pravoos.ai.model.dto.CaseDraftSummaryDto;
 import com.pravoos.ai.model.dto.DraftTypeInfo;
 import com.pravoos.ai.model.dto.GenerateDraftRequest;
 import com.pravoos.ai.model.entity.CaseDraft;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.DocxExportService;
 import com.pravoos.ai.service.DraftService;
 import jakarta.validation.Valid;

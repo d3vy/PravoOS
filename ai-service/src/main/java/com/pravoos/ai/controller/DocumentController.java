@@ -3,7 +3,7 @@ package com.pravoos.ai.controller;
 import com.pravoos.ai.model.dto.DocumentContent;
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.DocumentService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;

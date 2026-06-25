@@ -1,6 +1,6 @@
-package com.pravoos.user.util;
+package com.pravoos.common.util;
 
-import com.pravoos.user.exception.InvalidPhoneException;
+import com.pravoos.common.exception.InvalidPhoneNumberException;
 
 public final class PhoneNormalizer {
 
@@ -9,14 +9,14 @@ public final class PhoneNormalizer {
 
     public static String normalize(String phone) {
         if (phone == null) {
-            throw new InvalidPhoneException();
+            throw new InvalidPhoneNumberException();
         }
         String digits = phone.replaceAll("\\D", "");
         if (digits.length() == 11 && digits.charAt(0) == '8') {
             digits = "7" + digits.substring(1);
         }
         if (digits.length() != 11 || digits.charAt(0) != '7') {
-            throw new InvalidPhoneException();
+            throw new InvalidPhoneNumberException();
         }
         return "+" + digits;
     }

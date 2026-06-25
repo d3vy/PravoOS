@@ -2,7 +2,7 @@ package com.pravoos.ai.controller;
 
 import com.pravoos.ai.model.dto.AiResponseDto;
 import com.pravoos.ai.model.dto.RateRequest;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.AiResponseService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

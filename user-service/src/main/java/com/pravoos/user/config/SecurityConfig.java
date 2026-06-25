@@ -1,9 +1,9 @@
 package com.pravoos.user.config;
 
+import com.pravoos.common.security.JwtVerifier;
 import com.pravoos.user.security.InternalSecretFilter;
 import com.pravoos.user.security.InternalSecretVerifier;
 import com.pravoos.user.security.JwtAuthenticationFilter;
-import com.pravoos.user.security.JwtTokenProvider;
 import com.pravoos.user.service.TokenDenylistService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,20 +22,22 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final JwtTokenProvider jwtTokenProvider;
     private final TokenDenylistService tokenDenylistService;
     private final InternalSecretVerifier internalSecretVerifier;
 
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider,
-                          TokenDenylistService tokenDenylistService,
+    public SecurityConfig(TokenDenylistService tokenDenylistService,
                           InternalSecretVerifier internalSecretVerifier) {
-        this.jwtTokenProvider = jwtTokenProvider;
         this.tokenDenylistService = tokenDenylistService;
         this.internalSecretVerifier = internalSecretVerifier;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public JwtVerifier jwtVerifier(JwtProperties jwtProperties) {
+        return new JwtVerifier(jwtProperties.publicKey());
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtVerifier jwtVerifier) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -48,7 +50,7 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(new InternalSecretFilter(internalSecretVerifier),
                         UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, tokenDenylistService),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtVerifier, tokenDenylistService),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

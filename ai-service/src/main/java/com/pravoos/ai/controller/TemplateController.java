@@ -4,7 +4,7 @@ import com.pravoos.ai.model.dto.CaseDraftDto;
 import com.pravoos.ai.model.dto.CreateTemplateRequest;
 import com.pravoos.ai.model.dto.TemplateResponse;
 import com.pravoos.ai.model.dto.UpdateTemplateRequest;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.TemplateService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

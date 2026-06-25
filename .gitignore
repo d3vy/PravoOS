@@ -65,3 +65,6 @@ scripts/manual_docs/
 backups/
 scripts/plenums.yaml
 scripts/law218.yaml
+
+# Local RSA key material — never commit
+jwt.pem

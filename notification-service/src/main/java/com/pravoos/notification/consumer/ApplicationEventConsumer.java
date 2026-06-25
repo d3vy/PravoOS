@@ -28,12 +28,14 @@ public class ApplicationEventConsumer {
     public void onApplicationSubmitted(ApplicationSubmittedKafkaPayload payload) {
         MDC.put("requestId", String.valueOf(payload.applicationId()));
         try {
-            if (!processedEventGuard.isFirstProcessing(EVENT_TYPE, String.valueOf(payload.applicationId()))) {
+            String dedupKey = String.valueOf(payload.applicationId());
+            if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
                 log.info("Skipping duplicate application.submitted event: applicationId={}", payload.applicationId());
                 return;
             }
             log.info("Received application.submitted event: applicationId={}", payload.applicationId());
             telegramNotificationService.notifyNewApplication(payload);
+            processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
         } finally {
             MDC.remove("requestId");
         }

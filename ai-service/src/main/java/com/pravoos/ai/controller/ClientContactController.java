@@ -3,7 +3,7 @@ package com.pravoos.ai.controller;
 import com.pravoos.ai.model.dto.ContactResponse;
 import com.pravoos.ai.model.dto.CreateContactRequest;
 import com.pravoos.ai.model.dto.UpdateContactRequest;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.ClientContactService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

@@ -8,10 +8,12 @@ import com.pravoos.user.config.RefreshCookieProperties;
 import com.pravoos.user.config.ResendProperties;
 import com.pravoos.user.config.TelegramProperties;
 import com.pravoos.user.config.TestLawyerProperties;
+import com.pravoos.common.web.RequestIdFilter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -23,5 +25,10 @@ public class UserServiceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(UserServiceApplication.class, args);
+    }
+
+    @Bean
+    public RequestIdFilter requestIdFilter() {
+        return new RequestIdFilter();
     }
 }

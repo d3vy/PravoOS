@@ -7,6 +7,7 @@ import com.pravoos.notification.config.TelegramBotProperties;
 import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
+import com.pravoos.notification.exception.NotificationDeliveryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,13 +27,16 @@ public class TelegramNotificationService {
     private final PravoOsAdminBot bot;
     private final TelegramBotProperties botProperties;
     private final UserServiceClient userServiceClient;
+    private final TelegramChatIdResolver telegramChatIdResolver;
 
     public TelegramNotificationService(PravoOsAdminBot bot,
                                        TelegramBotProperties botProperties,
-                                       UserServiceClient userServiceClient) {
+                                       UserServiceClient userServiceClient,
+                                       TelegramChatIdResolver telegramChatIdResolver) {
         this.bot = bot;
         this.botProperties = botProperties;
         this.userServiceClient = userServiceClient;
+        this.telegramChatIdResolver = telegramChatIdResolver;
     }
 
     public void notifyNewApplication(ApplicationSubmittedKafkaPayload payload) {
@@ -49,7 +53,7 @@ public class TelegramNotificationService {
     }
 
     public void notifyDeadline(CaseDeadlineKafkaPayload payload) {
-        Optional<Long> chatId = userServiceClient.resolveTelegramChatId(payload.lawyerId());
+        Optional<Long> chatId = telegramChatIdResolver.resolve(payload.lawyerId());
         if (chatId.isEmpty()) {
             log.info("Lawyer {} has no linked Telegram, falling back to email for case {}",
                     payload.lawyerId(), payload.caseId());
@@ -60,11 +64,11 @@ public class TelegramNotificationService {
         message.setChatId(chatId.get().toString());
         message.setText(formatDeadlineMessage(payload));
         message.setParseMode("HTML");
-        sendSafely(message, payload.caseId().toString());
+        send(message, payload.caseId().toString());
     }
 
     public void notifyHearingUpdated(CaseHearingUpdatedKafkaPayload payload) {
-        Optional<Long> chatId = userServiceClient.resolveTelegramChatId(payload.lawyerId());
+        Optional<Long> chatId = telegramChatIdResolver.resolve(payload.lawyerId());
         if (chatId.isEmpty()) {
             log.info("Lawyer {} has no linked Telegram, skipping hearing update for case {}",
                     payload.lawyerId(), payload.caseId());
@@ -74,7 +78,7 @@ public class TelegramNotificationService {
         message.setChatId(chatId.get().toString());
         message.setText(formatHearingMessage(payload));
         message.setParseMode("HTML");
-        sendSafely(message, payload.caseId().toString());
+        send(message, payload.caseId().toString());
     }
 
     private String formatHearingMessage(CaseHearingUpdatedKafkaPayload payload) {
@@ -102,8 +106,8 @@ public class TelegramNotificationService {
                     payload.deadlineDate(),
                     payload.daysLeft()));
         } catch (Exception e) {
-            log.error("Failed to request deadline email for lawyer {} case {}: {}",
-                    payload.lawyerId(), payload.caseId(), e.getMessage());
+            throw new NotificationDeliveryException(
+                    "Failed to request deadline email for case " + payload.caseId(), e);
         }
     }
 
@@ -118,6 +122,15 @@ public class TelegramNotificationService {
                 escapeHtml(payload.deadlineTypeName()),
                 escapeHtml(payload.deadlineDate()),
                 payload.daysLeft());
+    }
+
+    private void send(SendMessage message, String context) {
+        try {
+            bot.execute(message);
+        } catch (TelegramApiException e) {
+            throw new NotificationDeliveryException(
+                    "Failed to send Telegram notification for context [" + context + "]", e);
+        }
     }
 
     private void sendSafely(SendMessage message, String context) {

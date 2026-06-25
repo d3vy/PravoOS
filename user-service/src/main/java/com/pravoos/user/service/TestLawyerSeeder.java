@@ -8,7 +8,7 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
-import com.pravoos.user.util.PhoneNormalizer;
+import com.pravoos.common.util.PhoneNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;

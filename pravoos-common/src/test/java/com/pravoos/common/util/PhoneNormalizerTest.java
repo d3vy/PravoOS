@@ -1,6 +1,6 @@
-package com.pravoos.ai.util;
+package com.pravoos.common.util;
 
-import com.pravoos.ai.exception.InvalidPhoneException;
+import com.pravoos.common.exception.InvalidPhoneNumberException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,16 +20,16 @@ class PhoneNormalizerTest {
 
     @Test
     void nullPhoneIsRejected() {
-        assertThatThrownBy(() -> PhoneNormalizer.normalize(null)).isInstanceOf(InvalidPhoneException.class);
+        assertThatThrownBy(() -> PhoneNormalizer.normalize(null)).isInstanceOf(InvalidPhoneNumberException.class);
     }
 
     @Test
     void wrongLengthIsRejected() {
-        assertThatThrownBy(() -> PhoneNormalizer.normalize("12345")).isInstanceOf(InvalidPhoneException.class);
+        assertThatThrownBy(() -> PhoneNormalizer.normalize("12345")).isInstanceOf(InvalidPhoneNumberException.class);
     }
 
     @Test
     void wrongCountryCodeIsRejected() {
-        assertThatThrownBy(() -> PhoneNormalizer.normalize("+1 202 555 0100")).isInstanceOf(InvalidPhoneException.class);
+        assertThatThrownBy(() -> PhoneNormalizer.normalize("+1 202 555 0100")).isInstanceOf(InvalidPhoneNumberException.class);
     }
 }

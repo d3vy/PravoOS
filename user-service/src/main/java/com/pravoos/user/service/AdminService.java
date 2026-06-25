@@ -29,13 +29,16 @@ public class AdminService {
     private final UserRepository userRepository;
     private final LawyerApplicationRepository lawyerApplicationRepository;
     private final OutboxEventService outboxEventService;
+    private final TokenDenylistService tokenDenylistService;
 
     public AdminService(UserRepository userRepository,
                         LawyerApplicationRepository lawyerApplicationRepository,
-                        OutboxEventService outboxEventService) {
+                        OutboxEventService outboxEventService,
+                        TokenDenylistService tokenDenylistService) {
         this.userRepository = userRepository;
         this.lawyerApplicationRepository = lawyerApplicationRepository;
         this.outboxEventService = outboxEventService;
+        this.tokenDenylistService = tokenDenylistService;
     }
 
     @Transactional(readOnly = true)
@@ -63,6 +66,7 @@ public class AdminService {
         userRepository.flush();
         lawyerApplicationRepository.deleteByEmail(email);
 
+        tokenDenylistService.revokeAccessTokensFor(userId);
         outboxEventService.enqueue("lawyer.deleted", userId.toString(), new LawyerDeletedKafkaPayload(userId));
 
         log.warn("Lawyer {} ({}) deleted by admin {}", userId, EmailMasker.mask(email), adminId);
