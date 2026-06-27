@@ -178,10 +178,15 @@ main() {
     log "SSL certificate already present."
   fi
 
+  if ! ssl_certificate_exists; then
+    echo "SSL certificate is still missing for ${SERVER_DOMAIN} — keeping HTTP-only mode."
+    echo "Fix DNS / Let's Encrypt access and re-run deploy. Site will stay on port 80 (Cloudflare 521 over HTTPS)."
+    exit 1
+  fi
+
   log "Enabling HTTPS..."
   ./scripts/render-nginx.sh prod
-  compose up -d frontend
-  compose exec -T frontend nginx -s reload
+  compose up -d --force-recreate frontend
 
   log "Deployment complete."
   echo ""
