@@ -123,7 +123,7 @@ wait_for_services() {
 
 start_infrastructure() {
   log "Starting infrastructure..."
-  compose up -d postgres mongodb zookeeper kafka
+  compose up -d postgres mongodb kafka
   wait_for_kafka || sleep 60
 }
 
