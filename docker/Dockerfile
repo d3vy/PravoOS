@@ -1,11 +1,15 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 COPY pom.xml .
+COPY pravoos-common/pom.xml pravoos-common/pom.xml
+COPY pravoos-common-web/pom.xml pravoos-common-web/pom.xml
 COPY api-gateway/pom.xml api-gateway/pom.xml
 COPY user-service/pom.xml user-service/pom.xml
 COPY ai-service/pom.xml ai-service/pom.xml
 COPY notification-service/pom.xml notification-service/pom.xml
 RUN mvn -B -ntp -q dependency:go-offline || true
+COPY pravoos-common/src pravoos-common/src
+COPY pravoos-common-web/src pravoos-common-web/src
 COPY api-gateway/src api-gateway/src
 COPY user-service/src user-service/src
 COPY ai-service/src ai-service/src
