@@ -41,7 +41,7 @@ RUN addgroup -S spring && adduser -S spring -G spring
 USER spring
 COPY --from=build /build/api-gateway/target/api-gateway-*.jar app.jar
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD wget -qO- http://localhost:8080/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
+    CMD wget -qO- http://localhost:8090/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
 FROM eclipse-temurin:21-jre-alpine AS notification-service
