@@ -8,11 +8,13 @@ route:
 receivers:
   - name: telegram
     telegram_configs:
-      # Заполнить реальными значениями перед прод-запуском:
-      #   bot_token — токен бота (можно тот же TELEGRAM_BOT_TOKEN)
-      #   chat_id   — целочисленный id чата/канала алертов (например -1001234567890)
       - bot_token: "${TELEGRAM_BOT_TOKEN}"
-        chat_id: ${TELEGRAM_ALERTS_CHAT_ID}
+        chat_id: ${TELEGRAM_ALERTS_CHAT_ID_1}
+        parse_mode: "HTML"
+        send_resolved: true
+        message: "{{ range .Alerts }}<b>{{ .Labels.severity }}</b>: {{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}"
+      - bot_token: "${TELEGRAM_BOT_TOKEN}"
+        chat_id: ${TELEGRAM_ALERTS_CHAT_ID_2}
         parse_mode: "HTML"
         send_resolved: true
         message: "{{ range .Alerts }}<b>{{ .Labels.severity }}</b>: {{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}"
