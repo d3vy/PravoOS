@@ -11,7 +11,7 @@ import com.pravoos.ai.model.entity.Client;
 import com.pravoos.ai.model.enums.ClientType;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
-import com.pravoos.ai.util.PhoneNormalizer;
+import com.pravoos.common.util.PhoneNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

@@ -21,14 +21,26 @@ public class ProcessedEventGuard {
         this.redisTemplate = redisTemplate;
     }
 
-    public boolean isFirstProcessing(String eventType, String dedupKey) {
-        String key = KEY_PREFIX + eventType + ":" + dedupKey;
+    public boolean isProcessed(String eventType, String dedupKey) {
+        String key = key(eventType, dedupKey);
         try {
-            Boolean set = redisTemplate.opsForValue().setIfAbsent(key, "1", TTL);
-            return Boolean.TRUE.equals(set);
+            return Boolean.TRUE.equals(redisTemplate.hasKey(key));
         } catch (DataAccessException ex) {
             log.warn("Redis unavailable for dedup check ({}), processing event to avoid loss", key, ex);
-            return true;
+            return false;
         }
+    }
+
+    public void markProcessed(String eventType, String dedupKey) {
+        String key = key(eventType, dedupKey);
+        try {
+            redisTemplate.opsForValue().set(key, "1", TTL);
+        } catch (DataAccessException ex) {
+            log.warn("Redis unavailable to mark event processed ({}), may be redelivered", key, ex);
+        }
+    }
+
+    private String key(String eventType, String dedupKey) {
+        return KEY_PREFIX + eventType + ":" + dedupKey;
     }
 }

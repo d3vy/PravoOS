@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 public class DashboardService {
 
     private static final int DEADLINE_HORIZON_DAYS = 7;
-    private static final int RECENT_CASES_LIMIT = 5;
     private static final Set<CaseStatus> CLOSED_STATUSES =
             EnumSet.of(CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST);
 
@@ -43,20 +42,19 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard(UUID lawyerId) {
-        List<Case> cases = caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId);
-
         return new DashboardResponse(
-                buildPipeline(cases),
-                countActive(cases),
+                buildPipeline(lawyerId),
+                caseRepository.countByLawyerIdAndStatusNotIn(lawyerId, CLOSED_STATUSES),
                 caseTaskRepository.countOpenByLawyerId(lawyerId),
-                buildUpcomingDeadlines(cases),
-                buildRecentCases(cases)
+                buildUpcomingDeadlines(lawyerId),
+                buildRecentCases(lawyerId)
         );
     }
 
-    private List<StatusCount> buildPipeline(List<Case> cases) {
-        Map<CaseStatus, Long> counts = cases.stream()
-                .collect(Collectors.groupingBy(Case::getStatus, Collectors.counting()));
+    private List<StatusCount> buildPipeline(UUID lawyerId) {
+        Map<CaseStatus, Long> counts = caseRepository.countGroupedByStatus(lawyerId).stream()
+                .collect(Collectors.toMap(CaseRepository.StatusCountView::getStatus,
+                        CaseRepository.StatusCountView::getCount));
         List<StatusCount> pipeline = new ArrayList<>();
         for (CaseStatus status : CaseStatus.values()) {
             pipeline.add(new StatusCount(status, status.getDisplayName(), counts.getOrDefault(status, 0L)));
@@ -64,18 +62,11 @@ public class DashboardService {
         return pipeline;
     }
 
-    private long countActive(List<Case> cases) {
-        return cases.stream().filter(caseEntity -> !isClosed(caseEntity)).count();
-    }
-
-    private List<UpcomingDeadline> buildUpcomingDeadlines(List<Case> cases) {
+    private List<UpcomingDeadline> buildUpcomingDeadlines(UUID lawyerId) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
         List<UpcomingDeadline> deadlines = new ArrayList<>();
-        for (Case caseEntity : cases) {
-            if (isClosed(caseEntity)) {
-                continue;
-            }
+        for (Case caseEntity : caseRepository.findCasesWithUpcomingDeadlines(lawyerId, CLOSED_STATUSES, today, horizon)) {
             collectDeadline(deadlines, caseEntity, DeadlineType.FILING_DEADLINE, Case::getFilingDeadline, today, horizon);
             collectDeadline(deadlines, caseEntity, DeadlineType.NEXT_HEARING, Case::getNextHearingDate, today, horizon);
             collectDeadline(deadlines, caseEntity, DeadlineType.EXPIRY, Case::getExpiresAt, today, horizon);
@@ -104,9 +95,8 @@ public class DashboardService {
         ));
     }
 
-    private List<RecentCase> buildRecentCases(List<Case> cases) {
-        return cases.stream()
-                .limit(RECENT_CASES_LIMIT)
+    private List<RecentCase> buildRecentCases(UUID lawyerId) {
+        return caseRepository.findTop5ByLawyerIdOrderByCreatedAtDesc(lawyerId).stream()
                 .map(caseEntity -> new RecentCase(
                         caseEntity.getId(),
                         caseEntity.getTitle(),
@@ -114,9 +104,5 @@ public class DashboardService {
                         caseEntity.getStatus().getDisplayName(),
                         caseEntity.getCreatedAt()))
                 .toList();
-    }
-
-    private boolean isClosed(Case caseEntity) {
-        return CLOSED_STATUSES.contains(caseEntity.getStatus());
     }
 }

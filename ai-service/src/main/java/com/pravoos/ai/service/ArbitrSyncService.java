@@ -10,7 +10,6 @@ import com.pravoos.ai.repository.jpa.CaseRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +17,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 @Service
 public class ArbitrSyncService {
@@ -30,18 +28,18 @@ public class ArbitrSyncService {
     private final ArbitrCaseProvider arbitrCaseProvider;
     private final CaseRepository caseRepository;
     private final CaseHearingEventRepository hearingEventRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxEventService outboxEventService;
     private final ArbitrSyncService self;
 
     public ArbitrSyncService(ArbitrCaseProvider arbitrCaseProvider,
                              CaseRepository caseRepository,
                              CaseHearingEventRepository hearingEventRepository,
-                             KafkaTemplate<String, Object> kafkaTemplate,
+                             OutboxEventService outboxEventService,
                              @Lazy ArbitrSyncService self) {
         this.arbitrCaseProvider = arbitrCaseProvider;
         this.caseRepository = caseRepository;
         this.hearingEventRepository = hearingEventRepository;
-        this.kafkaTemplate = kafkaTemplate;
+        this.outboxEventService = outboxEventService;
         this.self = self;
     }
 
@@ -116,15 +114,8 @@ public class ArbitrSyncService {
                 caseEntity.getArbitrCaseNumber(),
                 previous == null ? null : DATE_FORMATTER.format(previous),
                 DATE_FORMATTER.format(newHearingDate));
-        try {
-            kafkaTemplate.send(TOPIC, caseEntity.getId().toString(), payload).get();
-            log.info("Опубликовано case.hearing.updated: дело {} {} -> {}",
-                    caseEntity.getId(), previous, newHearingDate);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Прервано при публикации case.hearing.updated", e);
-        } catch (ExecutionException e) {
-            throw new IllegalStateException("Не удалось опубликовать case.hearing.updated в Kafka", e.getCause());
-        }
+        outboxEventService.enqueue(TOPIC, caseEntity.getId().toString(), payload);
+        log.info("Enqueued case.hearing.updated: дело {} {} -> {}",
+                caseEntity.getId(), previous, newHearingDate);
     }
 }

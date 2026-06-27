@@ -7,10 +7,37 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 public interface CaseRepository extends JpaRepository<Case, UUID> {
+
+    interface StatusCountView {
+        CaseStatus getStatus();
+        long getCount();
+    }
+
+    @Query("SELECT c.status AS status, COUNT(c) AS count FROM Case c "
+            + "WHERE c.lawyerId = :lawyerId GROUP BY c.status")
+    List<StatusCountView> countGroupedByStatus(@Param("lawyerId") UUID lawyerId);
+
+    long countByLawyerIdAndStatusNotIn(UUID lawyerId, Collection<CaseStatus> statuses);
+
+    @Query("""
+            SELECT c FROM Case c
+            WHERE c.lawyerId = :lawyerId
+              AND c.status NOT IN :closedStatuses
+              AND ((c.filingDeadline BETWEEN :today AND :horizon)
+                   OR (c.nextHearingDate BETWEEN :today AND :horizon)
+                   OR (c.expiresAt BETWEEN :today AND :horizon))
+            """)
+    List<Case> findCasesWithUpcomingDeadlines(@Param("lawyerId") UUID lawyerId,
+                                              @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
+                                              @Param("today") LocalDate today,
+                                              @Param("horizon") LocalDate horizon);
+
+    List<Case> findTop5ByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
     List<Case> findByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 

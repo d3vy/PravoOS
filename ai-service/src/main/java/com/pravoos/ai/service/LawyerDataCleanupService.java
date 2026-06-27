@@ -1,5 +1,6 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.model.entity.PendingLawyerPurge;
 import com.pravoos.ai.model.mongo.Conversation;
 import com.pravoos.ai.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
@@ -7,11 +8,15 @@ import com.pravoos.ai.repository.jpa.CaseTaskRepository;
 import com.pravoos.ai.repository.jpa.ClientContactRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
 import com.pravoos.ai.repository.jpa.DocumentTemplateRepository;
+import com.pravoos.ai.repository.jpa.PendingLawyerPurgeRepository;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +27,7 @@ import java.util.UUID;
 public class LawyerDataCleanupService {
 
     private static final Logger log = LoggerFactory.getLogger(LawyerDataCleanupService.class);
+    private static final int RETRY_BATCH_SIZE = 50;
 
     private final CaseRepository caseRepository;
     private final CaseTaskRepository caseTaskRepository;
@@ -31,6 +37,7 @@ public class LawyerDataCleanupService {
     private final DocumentTemplateRepository documentTemplateRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
     private final LawyerDataCleanupService self;
 
     public LawyerDataCleanupService(CaseRepository caseRepository,
@@ -41,6 +48,7 @@ public class LawyerDataCleanupService {
                                     DocumentTemplateRepository documentTemplateRepository,
                                     ConversationRepository conversationRepository,
                                     MessageRepository messageRepository,
+                                    PendingLawyerPurgeRepository pendingLawyerPurgeRepository,
                                     @Lazy LawyerDataCleanupService self) {
         this.caseRepository = caseRepository;
         this.caseTaskRepository = caseTaskRepository;
@@ -50,13 +58,49 @@ public class LawyerDataCleanupService {
         this.documentTemplateRepository = documentTemplateRepository;
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
+        this.pendingLawyerPurgeRepository = pendingLawyerPurgeRepository;
         this.self = self;
     }
 
     public void purgeLawyerData(UUID lawyerId) {
-        self.purgeRelationalData(lawyerId);
-        purgeChatData(lawyerId);
-        log.info("Purged AI data for deleted lawyer {}", lawyerId);
+        self.recordPurgeIntent(lawyerId);
+        attemptPurge(lawyerId);
+    }
+
+    @Transactional
+    public void recordPurgeIntent(UUID lawyerId) {
+        if (!pendingLawyerPurgeRepository.existsById(lawyerId)) {
+            pendingLawyerPurgeRepository.save(new PendingLawyerPurge(lawyerId));
+        }
+    }
+
+    @Scheduled(fixedDelayString = "${app.lawyer-purge.retry-interval-ms:300000}")
+    @SchedulerLock(name = "LawyerDataCleanupService_retryPending",
+            lockAtLeastFor = "PT10S", lockAtMostFor = "PT10M")
+    public void retryPendingPurges() {
+        List<PendingLawyerPurge> pending =
+                pendingLawyerPurgeRepository.findOldestBatch(PageRequest.of(0, RETRY_BATCH_SIZE));
+        for (PendingLawyerPurge entry : pending) {
+            attemptPurge(entry.getLawyerId());
+        }
+    }
+
+    private void attemptPurge(UUID lawyerId) {
+        try {
+            self.purgeRelationalData(lawyerId);
+            purgeChatData(lawyerId);
+            pendingLawyerPurgeRepository.deleteById(lawyerId);
+            log.info("Purged AI data for deleted lawyer {}", lawyerId);
+        } catch (Exception e) {
+            self.markPurgeFailed(lawyerId, e.getMessage());
+            log.error("Failed to purge AI data for lawyer {}, will retry later", lawyerId, e);
+        }
+    }
+
+    @Transactional
+    public void markPurgeFailed(UUID lawyerId, String error) {
+        pendingLawyerPurgeRepository.findById(lawyerId)
+                .ifPresent(entry -> entry.recordFailedAttempt(error));
     }
 
     @Transactional

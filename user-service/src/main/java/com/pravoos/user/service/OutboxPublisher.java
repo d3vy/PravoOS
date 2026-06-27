@@ -10,7 +10,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -37,15 +40,17 @@ public class OutboxPublisher {
         if (pending.isEmpty()) {
             return;
         }
+        Map<OutboxEvent, CompletableFuture<?>> inFlight = new LinkedHashMap<>();
         for (OutboxEvent event : pending) {
-            publish(event);
+            inFlight.put(event,
+                    stringKafkaTemplate.send(event.getTopic(), event.getKafkaKey(), event.getPayload()));
         }
+        inFlight.forEach(this::awaitResult);
     }
 
-    private void publish(OutboxEvent event) {
+    private void awaitResult(OutboxEvent event, CompletableFuture<?> sendResult) {
         try {
-            stringKafkaTemplate.send(event.getTopic(), event.getKafkaKey(), event.getPayload())
-                    .get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            sendResult.get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             event.markPublished();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();

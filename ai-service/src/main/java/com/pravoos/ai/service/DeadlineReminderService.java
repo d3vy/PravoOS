@@ -9,16 +9,16 @@ import com.pravoos.ai.repository.jpa.CaseRepository;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 @Service
@@ -31,14 +31,17 @@ public class DeadlineReminderService {
 
     private final CaseRepository caseRepository;
     private final CaseDeadlineReminderRepository reminderRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxEventService outboxEventService;
+    private final DeadlineReminderService self;
 
     public DeadlineReminderService(CaseRepository caseRepository,
                                    CaseDeadlineReminderRepository reminderRepository,
-                                   KafkaTemplate<String, Object> kafkaTemplate) {
+                                   OutboxEventService outboxEventService,
+                                   @Lazy DeadlineReminderService self) {
         this.caseRepository = caseRepository;
         this.reminderRepository = reminderRepository;
-        this.kafkaTemplate = kafkaTemplate;
+        this.outboxEventService = outboxEventService;
+        this.self = self;
     }
 
     @Scheduled(cron = "${deadline.reminder.cron:0 0 9 * * *}", zone = "UTC")
@@ -62,11 +65,11 @@ public class DeadlineReminderService {
         int published = 0;
         for (Case caseEntity : cases) {
             try {
-                if (sendReminder(caseEntity, type, dateAccessor.apply(caseEntity), threshold)) {
+                if (self.enqueueReminder(caseEntity, type, dateAccessor.apply(caseEntity), threshold)) {
                     published++;
                 }
             } catch (Exception e) {
-                log.error("Failed to publish deadline reminder for case {} type {}: {}",
+                log.error("Failed to enqueue deadline reminder for case {} type {}: {}",
                         caseEntity.getId(), type, e.getMessage(), e);
             }
         }
@@ -81,7 +84,8 @@ public class DeadlineReminderService {
         };
     }
 
-    private boolean sendReminder(Case caseEntity, DeadlineType type, LocalDate deadlineDate, int threshold) {
+    @Transactional
+    public boolean enqueueReminder(Case caseEntity, DeadlineType type, LocalDate deadlineDate, int threshold) {
         if (reminderRepository.existsByCaseIdAndDeadlineTypeAndDeadlineDateAndThresholdDays(
                 caseEntity.getId(), type, deadlineDate, threshold)) {
             return false;
@@ -95,22 +99,11 @@ public class DeadlineReminderService {
                 DATE_FORMATTER.format(deadlineDate),
                 threshold);
 
-        publish(caseEntity.getId().toString(), payload);
         reminderRepository.save(new CaseDeadlineReminder(
                 caseEntity.getId(), type, deadlineDate, threshold, LocalDateTime.now(ZoneOffset.UTC)));
-        log.info("Published deadline reminder: case={} type={} date={} daysLeft={}",
+        outboxEventService.enqueue(TOPIC, caseEntity.getId().toString(), payload);
+        log.info("Enqueued deadline reminder: case={} type={} date={} daysLeft={}",
                 caseEntity.getId(), type, deadlineDate, threshold);
         return true;
-    }
-
-    private void publish(String key, CaseDeadlineKafkaPayload payload) {
-        try {
-            kafkaTemplate.send(TOPIC, key, payload).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while publishing deadline reminder", e);
-        } catch (ExecutionException e) {
-            throw new IllegalStateException("Failed to publish deadline reminder to Kafka", e.getCause());
-        }
     }
 }

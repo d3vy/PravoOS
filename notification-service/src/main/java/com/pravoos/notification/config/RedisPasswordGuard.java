@@ -1,5 +1,6 @@
 package com.pravoos.notification.config;
 
+import com.pravoos.common.config.RedisPasswordCheck;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -17,10 +18,7 @@ public class RedisPasswordGuard {
 
     @PostConstruct
     void verifyRedisPasswordPresent() {
-        if (redisPassword == null || redisPassword.isBlank()) {
-            throw new IllegalStateException(
-                    "REDIS_PASSWORD must be set in production (profile 'docker'). "
-                            + "Redis backs consumer idempotency and must not run without a password.");
-        }
+        RedisPasswordCheck.requirePassword(redisPassword,
+                "Redis backs consumer idempotency and must not run without a password.");
     }
 }

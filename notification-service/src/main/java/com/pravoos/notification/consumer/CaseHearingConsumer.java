@@ -30,13 +30,14 @@ public class CaseHearingConsumer {
         MDC.put("requestId", String.valueOf(payload.caseId()));
         try {
             String dedupKey = payload.caseId() + ":" + payload.newHearingDate();
-            if (!processedEventGuard.isFirstProcessing(EVENT_TYPE, dedupKey)) {
+            if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
                 log.info("Skipping duplicate case.hearing.updated: {}", dedupKey);
                 return;
             }
             log.info("Received case.hearing.updated: case={} {} -> {}",
                     payload.caseId(), payload.previousHearingDate(), payload.newHearingDate());
             telegramNotificationService.notifyHearingUpdated(payload);
+            processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
         } finally {
             MDC.remove("requestId");
         }

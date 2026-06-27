@@ -2,7 +2,7 @@ package com.pravoos.ai.controller;
 
 import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.model.enums.CaseStatus;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.AiResponseService;
 import com.pravoos.ai.service.CaseExportService;
 import com.pravoos.ai.service.CaseService;

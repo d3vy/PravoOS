@@ -1,8 +1,11 @@
 package com.pravoos.gateway.filter;
 
-import com.pravoos.gateway.security.JwtTokenProvider;
+import com.pravoos.common.security.JwtVerifier;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
@@ -17,16 +20,21 @@ import java.util.Date;
 @Component
 public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String DENYLIST_KEY_PREFIX = "auth:revoked_after:";
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtVerifier jwtVerifier;
     private final ReactiveStringRedisTemplate redisTemplate;
+    private final boolean denylistFailOpen;
 
-    public JwtAuthFilter(JwtTokenProvider jwtTokenProvider, ReactiveStringRedisTemplate redisTemplate) {
+    public JwtAuthFilter(JwtVerifier jwtVerifier,
+                         ReactiveStringRedisTemplate redisTemplate,
+                         @Value("${app.gateway.denylist.fail-open:true}") boolean denylistFailOpen) {
         super(Config.class);
-        this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtVerifier = jwtVerifier;
         this.redisTemplate = redisTemplate;
+        this.denylistFailOpen = denylistFailOpen;
     }
 
     @Override
@@ -41,7 +49,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
             Claims claims;
             try {
-                claims = jwtTokenProvider.extractClaims(token);
+                claims = jwtVerifier.extractClaims(token);
             } catch (JwtException | IllegalArgumentException e) {
                 return unauthorized(exchange);
             }
@@ -86,7 +94,10 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                     }
                 })
                 .defaultIfEmpty(false)
-                .onErrorReturn(false);
+                .onErrorResume(ex -> {
+                    log.warn("Redis denylist check failed for user {}, fail-open={}", userId, denylistFailOpen, ex);
+                    return Mono.just(!denylistFailOpen);
+                });
     }
 
     private long issuedAtSeconds(Claims claims) {

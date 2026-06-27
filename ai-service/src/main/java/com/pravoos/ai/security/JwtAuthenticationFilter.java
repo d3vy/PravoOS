@@ -1,5 +1,6 @@
 package com.pravoos.ai.security;
 
+import com.pravoos.common.security.JwtVerifier;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,12 +19,12 @@ import java.util.List;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtVerifier jwtVerifier;
     private final AccessTokenDenylist accessTokenDenylist;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
+    public JwtAuthenticationFilter(JwtVerifier jwtVerifier,
                                    AccessTokenDenylist accessTokenDenylist) {
-        this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtVerifier = jwtVerifier;
         this.accessTokenDenylist = accessTokenDenylist;
     }
 
@@ -33,8 +34,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
         String token = extractBearerToken(request);
 
-        if (token != null && jwtTokenProvider.isTokenValid(token)) {
-            Claims claims = jwtTokenProvider.extractClaims(token);
+        if (token != null && jwtVerifier.isValid(token)) {
+            Claims claims = jwtVerifier.extractClaims(token);
             String role = claims.get("role", String.class);
 
             if (role != null && !role.isBlank() && !isRevoked(claims)) {

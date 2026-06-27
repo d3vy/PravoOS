@@ -27,7 +27,7 @@ import com.pravoos.user.service.EmailVerificationService;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import com.pravoos.user.util.PaginationSupport;
-import com.pravoos.user.util.PhoneNormalizer;
+import com.pravoos.common.util.PhoneNormalizer;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;

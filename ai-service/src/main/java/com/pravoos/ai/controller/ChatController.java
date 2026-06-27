@@ -5,7 +5,7 @@ import com.pravoos.ai.model.dto.ChatResponse;
 import com.pravoos.ai.model.dto.ConversationResponse;
 import com.pravoos.ai.model.dto.MessageResponse;
 import com.pravoos.ai.model.dto.RateRequest;
-import com.pravoos.ai.security.SecurityUtils;
+import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.ChatService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

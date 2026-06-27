@@ -2,7 +2,7 @@ package com.pravoos.ai.config;
 
 import com.pravoos.ai.security.AccessTokenDenylist;
 import com.pravoos.ai.security.JwtAuthenticationFilter;
-import com.pravoos.ai.security.JwtTokenProvider;
+import com.pravoos.common.security.JwtVerifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,16 +19,19 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final JwtTokenProvider jwtTokenProvider;
     private final AccessTokenDenylist accessTokenDenylist;
 
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider, AccessTokenDenylist accessTokenDenylist) {
-        this.jwtTokenProvider = jwtTokenProvider;
+    public SecurityConfig(AccessTokenDenylist accessTokenDenylist) {
         this.accessTokenDenylist = accessTokenDenylist;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public JwtVerifier jwtVerifier(JwtProperties jwtProperties) {
+        return new JwtVerifier(jwtProperties.publicKey());
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtVerifier jwtVerifier) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -51,7 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/chat/**").hasRole("LAWYER")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, accessTokenDenylist),
+                .addFilterBefore(new JwtAuthenticationFilter(jwtVerifier, accessTokenDenylist),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

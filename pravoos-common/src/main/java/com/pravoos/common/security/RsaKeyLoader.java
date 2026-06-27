@@ -1,4 +1,4 @@
-package com.pravoos.user.security;
+package com.pravoos.common.security;
 
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
