@@ -79,52 +79,19 @@ build_images() {
   compose build user-service ai-service api-gateway notification-service frontend
 }
 
-wait_for_kafka() {
-  log "Waiting for Kafka to become healthy (up to 6 min)..."
-  for _ in {1..36}; do
-    local status
-    status=$(compose ps kafka --format '{{.Health}}' 2>/dev/null || true)
-    if [[ "$status" == "healthy" ]]; then
-      log "Kafka is healthy."
-      return 0
-    fi
-    sleep 10
-  done
-  log "Kafka not healthy yet — check: docker compose logs kafka --tail 50"
-  return 1
-}
-
-wait_for_services() {
-  local services=(user-service ai-service api-gateway notification-service)
-  local timeout=180
-  local elapsed=0
-  log "Waiting for Java services (up to ${timeout}s)..."
-  while [ $elapsed -lt $timeout ]; do
-    local all_up=true
-    for svc in "${services[@]}"; do
-      local status
-      status=$(docker inspect --format='{{.State.Health.Status}}' "pravoos-$svc" 2>/dev/null || echo "missing")
-      if [[ "$status" != "healthy" ]]; then
-        all_up=false
-        break
-      fi
+start_stack() {
+  log "Starting full stack — Compose orders by depends_on and waits for health..."
+  if ! compose up -d --wait --wait-timeout "${STACK_WAIT_TIMEOUT:-600}"; then
+    log "Stack did not become healthy in time."
+    log "Status:"
+    compose ps || true
+    log "Recent logs of unhealthy services:"
+    compose ps --status running --format '{{.Service}}' 2>/dev/null | while read -r svc; do
+      [[ -n "$svc" ]] && log "  see: docker compose logs $svc --tail 80"
     done
-    if $all_up; then
-      log "All services healthy."
-      return 0
-    fi
-    sleep 10
-    elapsed=$((elapsed + 10))
-    log "  Still waiting... (${elapsed}s)"
-  done
-  log "Timeout reached. Check status: docker compose ps"
-  log "Continuing anyway — services may still be starting."
-}
-
-start_infrastructure() {
-  log "Starting infrastructure..."
-  compose up -d postgres mongodb kafka
-  wait_for_kafka || sleep 60
+    return 1
+  fi
+  log "All services healthy."
 }
 
 ssl_certificate_exists() {
@@ -166,11 +133,7 @@ main() {
 
   log "Starting stack (HTTP, certificate bootstrap)..."
   ./scripts/render-nginx.sh init
-  start_infrastructure
-  compose up -d
-
-  log "Waiting for services to become healthy..."
-  wait_for_services
+  start_stack
 
   if ! ssl_certificate_exists; then
     obtain_ssl_certificate
@@ -186,7 +149,7 @@ main() {
 
   log "Enabling HTTPS..."
   ./scripts/render-nginx.sh prod
-  compose up -d --force-recreate frontend
+  compose up -d --force-recreate --wait --wait-timeout 120 frontend
 
   log "Deployment complete."
   echo ""
