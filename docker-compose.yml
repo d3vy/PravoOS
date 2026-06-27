@@ -238,6 +238,10 @@ services:
     container_name: pravoos-alertmanager
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--config.expand-env=true"
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ALERTS_CHAT_ID: ${TELEGRAM_ALERTS_CHAT_ID}
     volumes:
       - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager

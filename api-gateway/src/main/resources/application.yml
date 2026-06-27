@@ -69,6 +69,8 @@ jwt:
   public-key: ${JWT_PUBLIC_KEY}
 
 management:
+  server:
+    port: 8090
   endpoints:
     web:
       exposure:
