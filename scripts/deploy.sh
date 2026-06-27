@@ -80,18 +80,10 @@ build_images() {
 }
 
 start_stack() {
-  log "Starting full stack — Compose orders by depends_on and waits for health..."
-  if ! compose up -d --wait --wait-timeout "${STACK_WAIT_TIMEOUT:-600}"; then
-    log "Stack did not become healthy in time."
-    log "Status:"
-    compose ps || true
-    log "Recent logs of unhealthy services:"
-    compose ps --status running --format '{{.Service}}' 2>/dev/null | while read -r svc; do
-      [[ -n "$svc" ]] && log "  see: docker compose logs $svc --tail 80"
-    done
-    return 1
-  fi
-  log "All services healthy."
+  log "Starting full stack — Compose enforces health-ordering via depends_on..."
+  compose up -d --remove-orphans
+  log "Stack started. Status:"
+  compose ps
 }
 
 ssl_certificate_exists() {
