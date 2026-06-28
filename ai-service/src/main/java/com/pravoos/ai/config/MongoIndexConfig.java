@@ -4,6 +4,7 @@ import com.pravoos.ai.model.mongo.Conversation;
 import com.pravoos.ai.model.mongo.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,10 +12,20 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
 
+import java.time.Duration;
+
 @Configuration
 public class MongoIndexConfig {
 
     private static final Logger log = LoggerFactory.getLogger(MongoIndexConfig.class);
+    private static final String MESSAGES_TTL_INDEX = "messages_created_ttl";
+    private static final String CONVERSATIONS_TTL_INDEX = "conversations_created_ttl";
+
+    private final int retentionDays;
+
+    public MongoIndexConfig(@Value("${chat.retention-days:0}") int retentionDays) {
+        this.retentionDays = retentionDays;
+    }
 
     @Bean
     public ApplicationRunner mongoIndexInitializer(MongoTemplate mongoTemplate) {
@@ -34,8 +45,32 @@ public class MongoIndexConfig {
             dropIfExists(mongoTemplate, Message.class, "conversationId_1");
             dropIfExists(mongoTemplate, Conversation.class, "lawyerId_1");
 
+            applyRetentionPolicy(mongoTemplate);
+
             log.info("MongoDB indexes ensured (messages, conversations)");
         };
+    }
+
+    private void applyRetentionPolicy(MongoTemplate mongoTemplate) {
+        if (retentionDays <= 0) {
+            dropIfExists(mongoTemplate, Message.class, MESSAGES_TTL_INDEX);
+            dropIfExists(mongoTemplate, Conversation.class, CONVERSATIONS_TTL_INDEX);
+            log.info("Chat retention TTL disabled (chat.retention-days={})", retentionDays);
+            return;
+        }
+        Duration ttl = Duration.ofDays(retentionDays);
+        ensureTtlIndex(mongoTemplate, Message.class, MESSAGES_TTL_INDEX, ttl);
+        ensureTtlIndex(mongoTemplate, Conversation.class, CONVERSATIONS_TTL_INDEX, ttl);
+        log.info("Chat retention TTL set to {} day(s) on conversations and messages", retentionDays);
+    }
+
+    private void ensureTtlIndex(MongoTemplate mongoTemplate, Class<?> entity, String indexName, Duration ttl) {
+        dropIfExists(mongoTemplate, entity, indexName);
+        mongoTemplate.indexOps(entity).ensureIndex(
+                new Index()
+                        .on("createdAt", Sort.Direction.ASC)
+                        .expire(ttl)
+                        .named(indexName));
     }
 
     private void dropIfExists(MongoTemplate mongoTemplate, Class<?> entity, String indexName) {

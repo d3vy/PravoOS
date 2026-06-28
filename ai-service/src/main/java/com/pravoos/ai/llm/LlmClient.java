@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface LlmClient {
 
-    String complete(String systemPrompt, List<LlmMessage> history, String userMessage);
+    LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage);
 
     float[] embed(String text);
 

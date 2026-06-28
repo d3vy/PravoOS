@@ -73,6 +73,12 @@ llm:
     embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
     embedding-dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:1536}
     max-tokens: ${OPENAI_MAX_TOKENS:4096}
+  quota:
+    daily-requests: ${LLM_DAILY_QUOTA:200}
+  history-max-chars: ${LLM_HISTORY_MAX_CHARS:12000}
+
+chat:
+  retention-days: ${CHAT_RETENTION_DAYS:0}
 
 document:
   storage-path: ${DOCUMENT_STORAGE_PATH:/app/documents}

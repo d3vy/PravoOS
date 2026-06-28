@@ -2,6 +2,7 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.llm.LlmClient;
+import com.pravoos.ai.llm.LlmResult;
 import com.pravoos.ai.model.dto.AiResponseDto;
 import com.pravoos.ai.model.dto.RunWorkflowRequest;
 import com.pravoos.ai.model.dto.SourceReference;
@@ -32,6 +33,7 @@ public class WorkflowService {
     private final LlmClient llmClient;
     private final AiResponseRepository aiResponseRepository;
     private final DocumentProperties documentProperties;
+    private final LlmQuotaService llmQuotaService;
 
     public WorkflowService(CaseService caseService,
                            EmbeddingService embeddingService,
@@ -39,7 +41,8 @@ public class WorkflowService {
                            RagService ragService,
                            LlmClient llmClient,
                            AiResponseRepository aiResponseRepository,
-                           DocumentProperties documentProperties) {
+                           DocumentProperties documentProperties,
+                           LlmQuotaService llmQuotaService) {
         this.caseService = caseService;
         this.embeddingService = embeddingService;
         this.vectorSearchRepository = vectorSearchRepository;
@@ -47,6 +50,7 @@ public class WorkflowService {
         this.llmClient = llmClient;
         this.aiResponseRepository = aiResponseRepository;
         this.documentProperties = documentProperties;
+        this.llmQuotaService = llmQuotaService;
     }
 
     public List<WorkflowInfo> listWorkflows() {
@@ -56,6 +60,7 @@ public class WorkflowService {
     }
 
     public AiResponseDto run(UUID caseId, String workflowId, RunWorkflowRequest request, UUID lawyerId) {
+        llmQuotaService.assertWithinQuota(lawyerId);
         caseService.requireOwnedCase(caseId, lawyerId);
         BankruptcyWorkflow workflow = BankruptcyWorkflow.fromId(workflowId);
 
@@ -71,8 +76,9 @@ public class WorkflowService {
         List<SourceReference> sources = toSourceReferences(matches);
 
         String systemPrompt = ragService.buildWorkflowPrompt(instruction, chunks);
-        String rawAnswer = llmClient.complete(systemPrompt, List.of(), instruction);
-        FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(rawAnswer);
+        LlmResult completion = llmClient.complete(systemPrompt, List.of(), instruction);
+        FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(completion.content());
+        log.info("LLM workflow tokens for lawyer {}: total={}", lawyerId, completion.usage().totalTokens());
 
         String query = question != null && !question.isBlank() ? question : workflow.displayName();
         AiResponse saved = saveResponse(caseId, lawyerId, workflow.name(), query, parsed.answer(), sources);

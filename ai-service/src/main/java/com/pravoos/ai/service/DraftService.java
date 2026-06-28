@@ -3,6 +3,7 @@ package com.pravoos.ai.service;
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.exception.DraftNotFoundException;
 import com.pravoos.ai.llm.LlmClient;
+import com.pravoos.ai.llm.LlmResult;
 import com.pravoos.ai.model.dto.CaseDraftDto;
 import com.pravoos.ai.model.dto.CaseDraftSummaryDto;
 import com.pravoos.ai.model.dto.DraftTypeInfo;
@@ -32,6 +33,7 @@ public class DraftService {
     private final LlmClient llmClient;
     private final CaseDraftRepository caseDraftRepository;
     private final DocumentProperties documentProperties;
+    private final LlmQuotaService llmQuotaService;
 
     public DraftService(CaseService caseService,
                         EmbeddingService embeddingService,
@@ -39,7 +41,8 @@ public class DraftService {
                         RagService ragService,
                         LlmClient llmClient,
                         CaseDraftRepository caseDraftRepository,
-                        DocumentProperties documentProperties) {
+                        DocumentProperties documentProperties,
+                        LlmQuotaService llmQuotaService) {
         this.caseService = caseService;
         this.embeddingService = embeddingService;
         this.vectorSearchRepository = vectorSearchRepository;
@@ -47,6 +50,7 @@ public class DraftService {
         this.llmClient = llmClient;
         this.caseDraftRepository = caseDraftRepository;
         this.documentProperties = documentProperties;
+        this.llmQuotaService = llmQuotaService;
     }
 
     public List<DraftTypeInfo> listDraftTypes() {
@@ -56,6 +60,7 @@ public class DraftService {
     }
 
     public CaseDraftDto generate(UUID caseId, GenerateDraftRequest request, UUID lawyerId) {
+        llmQuotaService.assertWithinQuota(lawyerId);
         caseService.requireOwnedCase(caseId, lawyerId);
         DraftType draftType = DraftType.fromId(request.draftType());
         log.info("Generating draft {} for case {} by lawyer {}", draftType.name(), caseId, lawyerId);
@@ -66,14 +71,15 @@ public class DraftService {
 
         List<String> chunks = matches.stream().map(ChunkMatch::content).toList();
         String systemPrompt = ragService.buildWorkflowPrompt(draftType.instruction(), chunks);
-        String content = llmClient.complete(systemPrompt, List.of(), "Выполни задачу.");
+        LlmResult completion = llmClient.complete(systemPrompt, List.of(), "Выполни задачу.");
+        log.info("LLM draft tokens for lawyer {}: total={}", lawyerId, completion.usage().totalTokens());
 
         CaseDraft draft = new CaseDraft();
         draft.setCaseId(caseId);
         draft.setLawyerId(lawyerId);
         draft.setDraftType(draftType.name());
         draft.setTitle(draftType.displayName());
-        draft.setContent(content);
+        draft.setContent(completion.content());
 
         CaseDraft saved = caseDraftRepository.save(draft);
         log.info("Draft {} generated with id {}", draftType.name(), saved.getId());

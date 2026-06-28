@@ -4,6 +4,7 @@ import com.pravoos.ai.event.LawyerDeletedKafkaPayload;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,9 +29,12 @@ public class KafkaConsumerConfig {
     private static final long MAX_RETRIES = 3L;
 
     private final KafkaProperties kafkaProperties;
+    private final int listenerConcurrency;
 
-    public KafkaConsumerConfig(KafkaProperties kafkaProperties) {
+    public KafkaConsumerConfig(KafkaProperties kafkaProperties,
+                               @Value("${app.kafka.topic-partitions:3}") int listenerConcurrency) {
         this.kafkaProperties = kafkaProperties;
+        this.listenerConcurrency = listenerConcurrency;
     }
 
     @Bean
@@ -59,6 +63,7 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(errorHandler(kafkaTemplate));
+        factory.setConcurrency(listenerConcurrency);
         return factory;
     }
 

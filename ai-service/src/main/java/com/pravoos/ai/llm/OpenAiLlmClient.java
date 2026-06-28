@@ -27,14 +27,16 @@ public class OpenAiLlmClient implements LlmClient {
 
     private final RestClient restClient;
     private final OpenAiProperties properties;
+    private final LlmMetrics llmMetrics;
 
-    public OpenAiLlmClient(RestClient openAiRestClient, OpenAiProperties properties) {
+    public OpenAiLlmClient(RestClient openAiRestClient, OpenAiProperties properties, LlmMetrics llmMetrics) {
         this.restClient = openAiRestClient;
         this.properties = properties;
+        this.llmMetrics = llmMetrics;
     }
 
     @Override
-    public String complete(String systemPrompt, List<LlmMessage> history, String userMessage) {
+    public LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage) {
         List<LlmMessage> messages = buildMessages(systemPrompt, history, userMessage);
         OpenAiChatRequest request = new OpenAiChatRequest(
                 properties.model(),
@@ -52,8 +54,10 @@ public class OpenAiLlmClient implements LlmClient {
         if (response == null) {
             throw new LlmException("Empty response from LLM API");
         }
-        log.debug("LLM completion successful, model: {}", properties.model());
-        return response.firstContent();
+        LlmUsage usage = response.toLlmUsage();
+        llmMetrics.recordCompletion(usage);
+        log.debug("LLM completion successful, model: {}, tokens: {}", properties.model(), usage.totalTokens());
+        return new LlmResult(response.firstContent(), usage);
     }
 
     @Override

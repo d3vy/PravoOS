@@ -6,6 +6,7 @@ import com.pravoos.ai.exception.DocumentNotFoundException;
 import com.pravoos.ai.exception.MessageNotFoundException;
 import com.pravoos.ai.model.dto.RateRequest;
 import com.pravoos.ai.llm.LlmClient;
+import com.pravoos.ai.llm.LlmResult;
 import com.pravoos.ai.llm.dto.LlmMessage;
 import com.pravoos.ai.model.dto.ChatRequest;
 import com.pravoos.ai.model.dto.ChatResponse;
@@ -57,6 +58,8 @@ public class ChatService {
     private final LlmClient llmClient;
     private final DocumentProperties documentProperties;
     private final LegalDomainGuard legalDomainGuard;
+    private final LlmQuotaService llmQuotaService;
+    private final int historyMaxChars;
 
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
@@ -68,7 +71,10 @@ public class ChatService {
                        RagService ragService,
                        LlmClient llmClient,
                        DocumentProperties documentProperties,
-                       LegalDomainGuard legalDomainGuard) {
+                       LegalDomainGuard legalDomainGuard,
+                       LlmQuotaService llmQuotaService,
+                       @org.springframework.beans.factory.annotation.Value("${llm.history-max-chars:12000}")
+                       int historyMaxChars) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.vectorSearchRepository = vectorSearchRepository;
@@ -80,9 +86,12 @@ public class ChatService {
         this.llmClient = llmClient;
         this.documentProperties = documentProperties;
         this.legalDomainGuard = legalDomainGuard;
+        this.llmQuotaService = llmQuotaService;
+        this.historyMaxChars = historyMaxChars;
     }
 
     public ChatResponse chat(ChatRequest request, UUID lawyerId) {
+        llmQuotaService.assertWithinQuota(lawyerId);
         Conversation conversation = resolveConversation(request.conversationId(), lawyerId, request.message());
         boolean isNewConversation = conversation.getId() == null;
 
@@ -122,8 +131,11 @@ public class ChatService {
                 .forEach(sources::add);
 
         String systemPrompt = ragService.buildSystemPrompt(relevantChunks);
-        String rawAnswer = llmClient.complete(systemPrompt, historyForLlm, request.message());
-        FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(rawAnswer);
+        LlmResult completion = llmClient.complete(systemPrompt, historyForLlm, request.message());
+        FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(completion.content());
+        log.info("LLM chat tokens for lawyer {}: total={}, prompt={}, completion={}",
+                lawyerId, completion.usage().totalTokens(),
+                completion.usage().promptTokens(), completion.usage().completionTokens());
 
         if (isNewConversation) {
             conversation = conversationRepository.save(conversation);
@@ -236,7 +248,8 @@ public class ChatService {
     }
 
     private List<LlmMessage> buildLlmHistory(List<Message> recentDescending) {
-        List<Message> chronological = new ArrayList<>(recentDescending);
+        List<Message> withinBudget = applyCharBudget(recentDescending);
+        List<Message> chronological = new ArrayList<>(withinBudget);
         Collections.reverse(chronological);
 
         int firstUser = 0;
@@ -248,5 +261,19 @@ public class ChatService {
                 .stream()
                 .map(m -> new LlmMessage(m.getRole().name().toLowerCase(), m.getContent()))
                 .toList();
+    }
+
+    private List<Message> applyCharBudget(List<Message> recentDescending) {
+        List<Message> kept = new ArrayList<>();
+        int used = 0;
+        for (Message message : recentDescending) {
+            int cost = message.getContent() == null ? 0 : message.getContent().length();
+            if (!kept.isEmpty() && used + cost > historyMaxChars) {
+                break;
+            }
+            kept.add(message);
+            used += cost;
+        }
+        return kept;
     }
 }

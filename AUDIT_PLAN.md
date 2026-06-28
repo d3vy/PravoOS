@@ -213,8 +213,25 @@ single-flight refresh и boundary покрывают lazy-загруженные
 - ✅ №5 — верификация gateway denylist: fail-open/closed конфигурируем и корректен, `iat<=revoked_after` верно, X-User-* стираются глобально (`UserHeaderSanitizingFilter`) и переустанавливаются из проверенных claims. Зафиксировано тестом `JwtAuthFilterTest` (7 тестов, зелёные).
 - ✅ №15 (пагинация) — отдельным коммитом. Backend: `Pageable`+`Page<>` на 6 эндпоинтах (cases, clients, documents, conversations, messages, contacts), отдаём **массив в теле + `X-Total-Count`** (как в админ-эндпоинтах user-service — единая конвенция), `PageRequests` клампит size (default 20, max 100), `PagedResponse` хелпер. Frontend: общий `api/pagination.ts` (`Page<T>`, `readTotal`), реальная page-навигация на Cases/Clients/Documents (`Pagination`-компонент), чат/контакты/дропдауны — bounded одной страницей (size=100). `tsc`+`vite build` зелёные, 26 backend-тестов зелёные. Прогон на запущенном фронте — за тобой (Docker daemon в этой сессии не поднят).
 
-**Фаза 3 — желательно (полировка/экономия):**
-№2, №4, №11, №12, №13, №17, №18, №19, №21, №24, №25, №26, №27, №28, №29, №30.
+**Фаза 3 — желательно (полировка/экономия):** ✅ ВЫПОЛНЕНО (2026-06-28), кроме №21 (осознанно отложен)
+- ✅ №2 — BCrypt strength 12 (`SecurityConfig.BCRYPT_STRENGTH`); старые cost-10 хэши верифицируются прозрачно.
+- ✅ №4 — `/actuator/prometheus` зафиксирован как осознанный `permitAll` (internal-only docker-сеть); противоречие в `memory/MEMORY.md` устранено (код первичен).
+- ✅ №11 — counter `pravoos.guard{result=pass|block|allow_failopen|cache_hit}` в `LegalDomainGuard`.
+- ✅ №12 — история диалога ограничена по символам (`llm.history-max-chars=12000`, `ChatService.applyCharBudget`), а не жёстким top-10.
+- ✅ №13 — парсинг `usage.{prompt,completion,total}_tokens` (`OpenAiChatResponse.Usage` → `LlmUsage`); `complete` возвращает `LlmResult{content,usage}`.
+- ✅ №17 — `ai-service` Kafka concurrency = числу партиций (`KafkaConsumerConfig`, `${app.kafka.topic-partitions:3}`).
+- ✅ №18 — конфигурируемый TTL чат-истории (`chat.retention-days`, **default 0 = выкл** — включение ops-решением; при >0 TTL-индексы на `createdAt` обеих коллекций в `MongoIndexConfig`).
+- ✅ №19 — **уже было** (Hikari `maximum-pool-size`/`minimum-idle`/timeout/leak в обоих сервисах); находка аудита неточна.
+- ⏸️ №21 — distributed tracing: **осознанно отложен** (как и помечено в плане — «отдельная задача, не срочно»). Требует micrometer-tracing + экспортёр во всех 4 сервисах + gateway + новый коллектор (Tempo/Jaeger/Zipkin) в compose. Полу-вшитый трейсер = шум без бэкенда. Делать отдельным пассом с поднятием коллектора. Корреляция между сервисами сейчас обеспечена `X-Request-Id`.
+- ✅ №24 — лимит размера шаблона `@Size(max=50000)` на `content` в Create/UpdateTemplateRequest.
+- ✅ №25 — `scripts/verify-indexes.sql` (EXPLAIN ANALYZE по горячим запросам + аудит `pg_stat_user_indexes`/`_tables`); прогон — на запущенной БД с данными.
+- ✅ №26 — `LawyerDataCleanupServiceTest`: удаление юриста чистит все 6 реляционных сущностей (`verifyNoMoreInteractions`) + conversations/messages Mongo + pending-маркер.
+- ✅ №27 — Caffeine-кэш guard-вердикта (`maxSize=10k`, TTL=1ч, ключ — нормализованный текст; fail-open НЕ кэшируется).
+- ✅ №28 — агрегатные counters `pravoos.llm.requests` и `pravoos.llm.tokens{type=prompt|completion}` (`LlmMetrics`); per-lawyer — через INFO-лог токенов (избегаем cardinality-взрыва в Prometheus).
+- ✅ №29 — дневная квота LLM на юриста (`LlmQuotaService`, Redis-счётчик `llm_quota:<id>:<date>`, `llm.quota.daily-requests=200`, **0=выкл**); проверяется в chat/workflow/draft, при превышении — 429 `LLM_QUOTA_EXCEEDED`.
+- ✅ №30 — frontend error-reporter (`lib/errorReporter.ts`): отправка на `VITE_ERROR_REPORT_URL` через `sendBeacon`/`fetch keepalive` (no-op если не задан), дедуп + лимит на сессию; подключён в `ErrorBoundary` + глобальные `error`/`unhandledrejection` (покрывают lazy-роуты).
+
+Проверки: `mvn -pl ai-service test` — 28 тестов зелёные; `tsc --noEmit` фронт — чисто. №25 (EXPLAIN) и прогон фронта — на запущенном окружении. Не закоммичено (по правилу — только по команде).
 
 > После подтверждения плана — реализуем по одному пункту/модулю, с `/clear` между крупными блоками
 > (правило экономии контекста из CLAUDE.md). Каждая правка — с тестом, где это применимо.
