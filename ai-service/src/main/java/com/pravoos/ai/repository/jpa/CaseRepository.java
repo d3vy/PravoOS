@@ -2,6 +2,8 @@ package com.pravoos.ai.repository.jpa;
 
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.model.enums.CaseStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -41,7 +43,11 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
     List<Case> findByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
+    Page<Case> findByLawyerIdOrderByCreatedAtDesc(UUID lawyerId, Pageable pageable);
+
     List<Case> findByLawyerIdAndStatusOrderByCreatedAtDesc(UUID lawyerId, CaseStatus status);
+
+    Page<Case> findByLawyerIdAndStatusOrderByCreatedAtDesc(UUID lawyerId, CaseStatus status, Pageable pageable);
 
     List<Case> findByClientIdAndLawyerIdOrderByCreatedAtDesc(UUID clientId, UUID lawyerId);
 
@@ -66,6 +72,30 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
     List<Case> search(@Param("lawyerId") UUID lawyerId,
                       @Param("status") CaseStatus status,
                       @Param("pattern") String pattern);
+
+    @Query(value = """
+            SELECT c FROM Case c
+            WHERE c.lawyerId = :lawyerId
+              AND (:status IS NULL OR c.status = :status)
+              AND (LOWER(c.title) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+                   OR EXISTS (SELECT 1 FROM Client cl
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+            ORDER BY c.createdAt DESC
+            """,
+            countQuery = """
+            SELECT COUNT(c) FROM Case c
+            WHERE c.lawyerId = :lawyerId
+              AND (:status IS NULL OR c.status = :status)
+              AND (LOWER(c.title) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+                   OR EXISTS (SELECT 1 FROM Client cl
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+            """)
+    Page<Case> search(@Param("lawyerId") UUID lawyerId,
+                      @Param("status") CaseStatus status,
+                      @Param("pattern") String pattern,
+                      Pageable pageable);
 
     int deleteByLawyerId(UUID lawyerId);
 }

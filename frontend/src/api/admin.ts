@@ -1,18 +1,8 @@
 import apiClient from './client'
 import type { ApplicationResponse, ClientStatsResponse, LawyerProfileResponse } from '../types'
+import { DEFAULT_PAGE_SIZE, readTotal, type Page } from './pagination'
 
-export interface Page<T> {
-  items: T[]
-  total: number
-}
-
-export const DEFAULT_PAGE_SIZE = 20
-
-function readTotal(headers: unknown, fallback: number): number {
-  const raw = (headers as Record<string, string> | undefined)?.['x-total-count']
-  const parsed = raw ? Number.parseInt(raw, 10) : NaN
-  return Number.isFinite(parsed) ? parsed : fallback
-}
+export { DEFAULT_PAGE_SIZE, type Page } from './pagination'
 
 export const adminApi = {
   getAllApplications: async (page = 0, size = DEFAULT_PAGE_SIZE): Promise<Page<ApplicationResponse>> => {

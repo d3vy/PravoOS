@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { DateField } from '../../components/cases/DateField'
 import { Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
 import { clientsApi } from '../../api/clients'
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { CaseResponse, CaseStatus, ClientResponse } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
+import { Pagination } from '../../components/ui/Pagination'
 import { CaseStatusBadge, CASE_STATUS_CONFIG, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 
@@ -29,6 +31,7 @@ export default function CasesPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'ALL'>('ALL')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(0)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -38,10 +41,19 @@ export default function CasesPage(): JSX.Element {
 
   const serverStatus = view === 'list' && statusFilter !== 'ALL' ? statusFilter : undefined
 
-  const { data: cases = [], isLoading } = useQuery<CaseResponse[]>({
-    queryKey: ['cases', view, serverStatus ?? 'all', debouncedSearch],
-    queryFn: () => casesApi.getAll(serverStatus, debouncedSearch || undefined),
+  useEffect(() => {
+    setPage(0)
+  }, [view, serverStatus, debouncedSearch])
+
+  const isBoard = view === 'board'
+  const { data: casesPage, isLoading } = useQuery<Page<CaseResponse>>({
+    queryKey: ['cases', view, serverStatus ?? 'all', debouncedSearch, page],
+    queryFn: () =>
+      casesApi.list(serverStatus, debouncedSearch || undefined, isBoard ? 0 : page, isBoard ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   })
+  const cases = casesPage?.items ?? []
+  const total = casesPage?.total ?? 0
 
   const { data: clients = [] } = useQuery<ClientResponse[]>({
     queryKey: ['clients'],
@@ -272,6 +284,10 @@ export default function CasesPage(): JSX.Element {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {!isBoard && !isLoading && (
+          <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
         )}
       </div>
     </div>

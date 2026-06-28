@@ -1,4 +1,5 @@
 import apiClient from './client'
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, readTotal, type Page } from './pagination'
 import type {
   ClientDetailResponse,
   ClientResponse,
@@ -10,8 +11,15 @@ import type {
 } from '../types'
 
 export const clientsApi = {
+  list: async (page = 0, size = DEFAULT_PAGE_SIZE): Promise<Page<ClientResponse>> => {
+    const response = await apiClient.get<ClientResponse[]>('/api/ai/clients', { params: { page, size } })
+    return { items: response.data, total: readTotal(response.headers, response.data.length) }
+  },
+
   getAll: async (): Promise<ClientResponse[]> => {
-    const response = await apiClient.get<ClientResponse[]>('/api/ai/clients')
+    const response = await apiClient.get<ClientResponse[]>('/api/ai/clients', {
+      params: { page: 0, size: MAX_PAGE_SIZE },
+    })
     return response.data
   },
 
@@ -35,7 +43,9 @@ export const clientsApi = {
   },
 
   getContacts: async (clientId: string): Promise<ContactResponse[]> => {
-    const response = await apiClient.get<ContactResponse[]>(`/api/ai/clients/${clientId}/contacts`)
+    const response = await apiClient.get<ContactResponse[]>(`/api/ai/clients/${clientId}/contacts`, {
+      params: { page: 0, size: MAX_PAGE_SIZE },
+    })
     return response.data
   },
 

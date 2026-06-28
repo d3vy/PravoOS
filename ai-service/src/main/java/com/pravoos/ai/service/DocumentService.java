@@ -13,7 +13,9 @@ import com.pravoos.ai.model.enums.DocumentStatus;
 import com.pravoos.ai.pipeline.ChunkData;
 import com.pravoos.ai.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.repository.jpa.DocumentRepository;
+import com.pravoos.ai.util.PageRequests;
 import org.slf4j.Logger;
+import org.springframework.data.domain.Page;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.FileSystemResource;
@@ -142,11 +144,9 @@ public class DocumentService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentResponse> findAll() {
-        return documentRepository.findByCaseIdIsNullOrderByUploadedAtDesc()
-                .stream()
-                .map(this::toDocumentResponse)
-                .toList();
+    public Page<DocumentResponse> findAll(int page, int size) {
+        return documentRepository.findByCaseIdIsNullOrderByUploadedAtDesc(PageRequests.of(page, size))
+                .map(this::toDocumentResponse);
     }
 
     @Transactional(readOnly = true)

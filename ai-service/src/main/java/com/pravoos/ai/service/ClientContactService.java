@@ -6,12 +6,13 @@ import com.pravoos.ai.model.dto.CreateContactRequest;
 import com.pravoos.ai.model.dto.UpdateContactRequest;
 import com.pravoos.ai.model.entity.ClientContact;
 import com.pravoos.ai.repository.jpa.ClientContactRepository;
+import com.pravoos.ai.util.PageRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,12 +29,11 @@ public class ClientContactService {
     }
 
     @Transactional(readOnly = true)
-    public List<ContactResponse> findByClient(UUID clientId, UUID lawyerId) {
+    public Page<ContactResponse> findByClient(UUID clientId, UUID lawyerId, int page, int size) {
         clientService.requireOwnedClient(clientId, lawyerId);
-        return contactRepository.findByClientIdOrderByContactDateDescCreatedAtDesc(clientId)
-                .stream()
-                .map(ContactResponse::from)
-                .toList();
+        return contactRepository
+                .findByClientIdOrderByContactDateDescCreatedAtDesc(clientId, PageRequests.of(page, size))
+                .map(ContactResponse::from);
     }
 
     @Transactional

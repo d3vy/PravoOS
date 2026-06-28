@@ -3,6 +3,7 @@ package com.pravoos.ai.controller;
 import com.pravoos.ai.model.dto.DocumentContent;
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;
+import com.pravoos.ai.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.DocumentService;
 import org.springframework.core.io.Resource;
@@ -39,8 +40,9 @@ public class DocumentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<DocumentResponse>> findAll() {
-        return ResponseEntity.ok(documentService.findAll());
+    public ResponseEntity<List<DocumentResponse>> findAll(@RequestParam(defaultValue = "0") int page,
+                                                          @RequestParam(defaultValue = "20") int size) {
+        return PagedResponse.of(documentService.findAll(page, size));
     }
 
     @GetMapping("/{id}/content")

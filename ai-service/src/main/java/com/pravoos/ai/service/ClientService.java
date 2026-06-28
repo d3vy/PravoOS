@@ -11,9 +11,11 @@ import com.pravoos.ai.model.entity.Client;
 import com.pravoos.ai.model.enums.ClientType;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
+import com.pravoos.ai.util.PageRequests;
 import com.pravoos.common.util.PhoneNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,12 +54,11 @@ public class ClientService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClientResponse> findByLawyer(UUID lawyerId) {
+    public Page<ClientResponse> findByLawyer(UUID lawyerId, int page, int size) {
         Map<UUID, Long> caseCounts = caseCountsFor(lawyerId);
-        return clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
-                .stream()
-                .map(client -> ClientResponse.from(client, caseCounts.getOrDefault(client.getId(), 0L)))
-                .toList();
+        Page<Client> clients = clientRepository
+                .findByLawyerIdOrderByCreatedAtDesc(lawyerId, PageRequests.of(page, size));
+        return clients.map(client -> ClientResponse.from(client, caseCounts.getOrDefault(client.getId(), 0L)));
     }
 
     @Transactional(readOnly = true)

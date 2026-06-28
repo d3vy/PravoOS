@@ -2,6 +2,7 @@ package com.pravoos.ai.controller;
 
 import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.model.enums.CaseStatus;
+import com.pravoos.ai.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.AiResponseService;
 import com.pravoos.ai.service.CaseExportService;
@@ -54,8 +55,11 @@ public class CaseController {
     @GetMapping
     public ResponseEntity<List<CaseResponse>> list(@RequestParam(required = false) CaseStatus status,
                                                    @RequestParam(required = false) String q,
+                                                   @RequestParam(defaultValue = "0") int page,
+                                                   @RequestParam(defaultValue = "20") int size,
                                                    Authentication authentication) {
-        return ResponseEntity.ok(caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status, q));
+        return PagedResponse.of(
+                caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status, q, page, size));
     }
 
     @GetMapping("/{caseId}")

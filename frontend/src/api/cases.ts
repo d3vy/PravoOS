@@ -1,4 +1,5 @@
 import apiClient from './client'
+import { DEFAULT_PAGE_SIZE, readTotal, type Page } from './pagination'
 import type {
   AiResponseDto,
   CaseResponse,
@@ -18,14 +19,17 @@ import type {
 } from '../types'
 
 export const casesApi = {
-  getAll: async (status?: CaseStatus, q?: string): Promise<CaseResponse[]> => {
-    const params: Record<string, string> = {}
+  list: async (
+    status?: CaseStatus,
+    q?: string,
+    page = 0,
+    size = DEFAULT_PAGE_SIZE
+  ): Promise<Page<CaseResponse>> => {
+    const params: Record<string, string | number> = { page, size }
     if (status) params.status = status
     if (q && q.trim()) params.q = q.trim()
-    const response = await apiClient.get<CaseResponse[]>('/api/ai/cases', {
-      params: Object.keys(params).length > 0 ? params : undefined,
-    })
-    return response.data
+    const response = await apiClient.get<CaseResponse[]>('/api/ai/cases', { params })
+    return { items: response.data, total: readTotal(response.headers, response.data.length) }
   },
 
   updateStatus: async (caseId: string, status: CaseStatus): Promise<CaseResponse> => {

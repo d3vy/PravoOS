@@ -4,6 +4,7 @@ import com.pravoos.ai.model.dto.ClientDetailResponse;
 import com.pravoos.ai.model.dto.ClientResponse;
 import com.pravoos.ai.model.dto.CreateClientRequest;
 import com.pravoos.ai.model.dto.UpdateClientRequest;
+import com.pravoos.ai.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.ClientService;
 import jakarta.validation.Valid;
@@ -33,8 +34,10 @@ public class ClientController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ClientResponse>> list(Authentication authentication) {
-        return ResponseEntity.ok(clientService.findByLawyer(SecurityUtils.currentUserId(authentication)));
+    public ResponseEntity<List<ClientResponse>> list(@RequestParam(defaultValue = "0") int page,
+                                                     @RequestParam(defaultValue = "20") int size,
+                                                     Authentication authentication) {
+        return PagedResponse.of(clientService.findByLawyer(SecurityUtils.currentUserId(authentication), page, size));
     }
 
     @GetMapping("/{clientId}")

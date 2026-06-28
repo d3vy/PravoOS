@@ -1,6 +1,8 @@
 package com.pravoos.ai.repository.mongo;
 
 import com.pravoos.ai.model.mongo.Conversation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
@@ -11,6 +13,10 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
     List<Conversation> findTop100ByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
     List<Conversation> findTop50ByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(UUID lawyerId, String title);
+
+    Page<Conversation> findByLawyerIdOrderByCreatedAtDesc(UUID lawyerId, Pageable pageable);
+
+    Page<Conversation> findByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(UUID lawyerId, String title, Pageable pageable);
 
     List<Conversation> findByLawyerId(UUID lawyerId);
 

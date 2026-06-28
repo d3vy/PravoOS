@@ -11,6 +11,7 @@ import com.pravoos.ai.model.dto.ChatRequest;
 import com.pravoos.ai.model.dto.ChatResponse;
 import com.pravoos.ai.model.dto.ConversationResponse;
 import com.pravoos.ai.model.dto.MessageResponse;
+import com.pravoos.ai.util.PageRequests;
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.model.entity.Document;
 import com.pravoos.ai.model.enums.MessageRole;
@@ -25,6 +26,8 @@ import com.pravoos.ai.repository.mongo.MessageRepository;
 import com.pravoos.ai.repository.VectorSearchRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -176,13 +179,13 @@ public class ChatService {
                 .orElseThrow();
     }
 
-    public List<ConversationResponse> getConversations(UUID lawyerId, String query) {
-        List<Conversation> conversations = (query != null && !query.isBlank())
-                ? conversationRepository.findTop50ByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(lawyerId, query.trim())
-                : conversationRepository.findTop100ByLawyerIdOrderByCreatedAtDesc(lawyerId);
-        return conversations.stream()
-                .map(c -> new ConversationResponse(c.getId(), c.getTitle(), c.getCreatedAt()))
-                .toList();
+    public Page<ConversationResponse> getConversations(UUID lawyerId, String query, int page, int size) {
+        var pageRequest = PageRequests.of(page, size);
+        Page<Conversation> conversations = (query != null && !query.isBlank())
+                ? conversationRepository.findByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
+                        lawyerId, query.trim(), pageRequest)
+                : conversationRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId, pageRequest);
+        return conversations.map(c -> new ConversationResponse(c.getId(), c.getTitle(), c.getCreatedAt()));
     }
 
     public MessageResponse rateMessage(String messageId, RateRequest request, UUID lawyerId) {
@@ -202,7 +205,7 @@ public class ChatService {
         return MessageResponse.from(saved);
     }
 
-    public List<MessageResponse> getMessages(String conversationId, UUID lawyerId) {
+    public Page<MessageResponse> getMessages(String conversationId, UUID lawyerId, int page, int size) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
@@ -212,10 +215,12 @@ public class ChatService {
             throw new ConversationNotFoundException(conversationId);
         }
 
-        return messageRepository.findByConversationIdOrderByCreatedAt(conversationId)
-                .stream()
-                .map(MessageResponse::from)
-                .toList();
+        Page<Message> messages = messageRepository
+                .findByConversationIdOrderByCreatedAtDesc(conversationId, PageRequests.of(page, size));
+        List<MessageResponse> chronological = new ArrayList<>(
+                messages.getContent().stream().map(MessageResponse::from).toList());
+        Collections.reverse(chronological);
+        return new PageImpl<>(chronological, messages.getPageable(), messages.getTotalElements());
     }
 
     private Conversation resolveConversation(String conversationId, UUID lawyerId, String firstMessage) {

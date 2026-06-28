@@ -5,6 +5,7 @@ import com.pravoos.ai.model.dto.ChatResponse;
 import com.pravoos.ai.model.dto.ConversationResponse;
 import com.pravoos.ai.model.dto.MessageResponse;
 import com.pravoos.ai.model.dto.RateRequest;
+import com.pravoos.ai.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.ChatService;
 import jakarta.validation.Valid;
@@ -34,15 +35,21 @@ public class ChatController {
     @GetMapping("/conversations")
     public ResponseEntity<List<ConversationResponse>> getConversations(
             @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
             Authentication authentication) {
-        return ResponseEntity.ok(chatService.getConversations(SecurityUtils.currentUserId(authentication), q));
+        return PagedResponse.of(
+                chatService.getConversations(SecurityUtils.currentUserId(authentication), q, page, size));
     }
 
     @GetMapping("/conversations/{id}/messages")
     public ResponseEntity<List<MessageResponse>> getMessages(
             @PathVariable String id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
             Authentication authentication) {
-        return ResponseEntity.ok(chatService.getMessages(id, SecurityUtils.currentUserId(authentication)));
+        return PagedResponse.of(
+                chatService.getMessages(id, SecurityUtils.currentUserId(authentication), page, size));
     }
 
     @PostMapping("/messages/{id}/rate")

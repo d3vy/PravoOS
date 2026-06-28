@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback, type DragEvent } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { documentsApi } from '../../api/documents'
+import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { DocumentResponse } from '../../types'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { Pagination } from '../../components/ui/Pagination'
 
 const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
@@ -23,24 +25,27 @@ export default function DocumentsPage(): JSX.Element {
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragCounterRef = useRef(0)
+  const [page, setPage] = useState(0)
   const queryClient = useQueryClient()
 
-  const { data: documents = [], isLoading } = useQuery<DocumentResponse[]>({
-    queryKey: ['documents'],
-    queryFn: documentsApi.getAll,
+  const { data: documentsPage, isLoading } = useQuery<Page<DocumentResponse>>({
+    queryKey: ['documents', page],
+    queryFn: () => documentsApi.list(page),
+    placeholderData: keepPreviousData,
     refetchInterval: (query) => {
-      const data = query.state.data
-      const hasProcessing = data?.some((d) => d.status === 'PROCESSING')
+      const hasProcessing = query.state.data?.items?.some((d) => d.status === 'PROCESSING')
       return hasProcessing ? POLLING_INTERVAL_MS : false
     },
   })
+  const documents = documentsPage?.items ?? []
+  const total = documentsPage?.total ?? 0
 
   const deleteMutation = useMutation({
     mutationFn: documentsApi.delete,
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ['documents'] })
-      queryClient.setQueryData(['documents'], (old: DocumentResponse[] | undefined) =>
-        old ? old.filter((d) => d.id !== id) : old
+      queryClient.setQueryData(['documents', page], (old: Page<DocumentResponse> | undefined) =>
+        old ? { ...old, items: old.items.filter((d) => d.id !== id) } : old
       )
     },
     onSettled: () => {
@@ -187,9 +192,9 @@ export default function DocumentsPage(): JSX.Element {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
             Загруженные документы
-            {documents.length > 0 && (
+            {total > 0 && (
               <span className="ml-2 text-light-secondary dark:text-dark-secondary font-normal">
-                ({documents.length})
+                ({total})
               </span>
             )}
           </h2>
@@ -225,6 +230,10 @@ export default function DocumentsPage(): JSX.Element {
               ))}
             </AnimatePresence>
           </div>
+        )}
+
+        {!isLoading && (
+          <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
         )}
       </div>
     </div>

@@ -1,23 +1,29 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clientsApi } from '../../api/clients'
+import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { ClientResponse } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { Pagination } from '../../components/ui/Pagination'
 import { ClientForm } from '../../components/clients/ClientForm'
 
 export default function ClientsPage(): JSX.Element {
   const [showForm, setShowForm] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
   const queryClient = useQueryClient()
 
-  const { data: clients = [], isLoading } = useQuery<ClientResponse[]>({
-    queryKey: ['clients'],
-    queryFn: clientsApi.getAll,
+  const { data: clientsPage, isLoading } = useQuery<Page<ClientResponse>>({
+    queryKey: ['clients', page],
+    queryFn: () => clientsApi.list(page),
+    placeholderData: keepPreviousData,
   })
+  const clients = clientsPage?.items ?? []
+  const total = clientsPage?.total ?? 0
 
   const createMutation = useMutation({
     mutationFn: clientsApi.create,
@@ -105,6 +111,10 @@ export default function ClientsPage(): JSX.Element {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {!isLoading && (
+          <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@ package com.pravoos.ai.repository.jpa;
 
 import com.pravoos.ai.model.entity.Document;
 import com.pravoos.ai.model.enums.DocumentStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +18,8 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     List<Document> findByStatus(DocumentStatus status);
 
     List<Document> findByCaseIdIsNullOrderByUploadedAtDesc();
+
+    Page<Document> findByCaseIdIsNullOrderByUploadedAtDesc(Pageable pageable);
 
     List<Document> findByCaseIdOrderByUploadedAtDesc(UUID caseId);
 

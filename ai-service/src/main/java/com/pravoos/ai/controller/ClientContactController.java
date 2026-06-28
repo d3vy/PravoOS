@@ -3,6 +3,7 @@ package com.pravoos.ai.controller;
 import com.pravoos.ai.model.dto.ContactResponse;
 import com.pravoos.ai.model.dto.CreateContactRequest;
 import com.pravoos.ai.model.dto.UpdateContactRequest;
+import com.pravoos.ai.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.ClientContactService;
 import jakarta.validation.Valid;
@@ -26,9 +27,11 @@ public class ClientContactController {
 
     @GetMapping
     public ResponseEntity<List<ContactResponse>> list(@PathVariable UUID clientId,
+                                                      @RequestParam(defaultValue = "0") int page,
+                                                      @RequestParam(defaultValue = "50") int size,
                                                       Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(contactService.findByClient(clientId, lawyerId));
+        return PagedResponse.of(contactService.findByClient(clientId, lawyerId, page, size));
     }
 
     @PostMapping

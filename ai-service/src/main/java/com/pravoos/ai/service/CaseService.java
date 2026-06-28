@@ -15,8 +15,12 @@ import com.pravoos.ai.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;
 import com.pravoos.ai.util.LikePattern;
+import com.pravoos.ai.util.PageRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -119,21 +123,21 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status, String query) {
+    public Page<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status, String query, int page, int size) {
         Map<UUID, String> clientNames = clientNamesFor(lawyerId);
         String trimmedQuery = query == null ? null : query.trim();
-        List<Case> cases = (trimmedQuery == null || trimmedQuery.isEmpty())
-                ? findByStatus(lawyerId, status)
-                : caseRepository.search(lawyerId, status, likePattern(trimmedQuery));
-        return cases.stream()
-                .map(caseEntity -> CaseResponse.from(caseEntity, clientName(clientNames, caseEntity.getClientId())))
-                .toList();
+        PageRequest pageRequest = PageRequests.of(page, size);
+        Page<Case> cases = (trimmedQuery == null || trimmedQuery.isEmpty())
+                ? findByStatus(lawyerId, status, pageRequest)
+                : caseRepository.search(lawyerId, status, likePattern(trimmedQuery), pageRequest);
+        return cases.map(caseEntity ->
+                CaseResponse.from(caseEntity, clientName(clientNames, caseEntity.getClientId())));
     }
 
-    private List<Case> findByStatus(UUID lawyerId, CaseStatus status) {
+    private Page<Case> findByStatus(UUID lawyerId, CaseStatus status, Pageable pageable) {
         return status == null
-                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
-                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status);
+                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId, pageable)
+                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status, pageable);
     }
 
     private String likePattern(String query) {
