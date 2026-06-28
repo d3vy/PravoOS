@@ -182,8 +182,6 @@ export default function LandingPage(): JSX.Element {
           </AnimatedSection>
 
           <div className="grid md:grid-cols-3 gap-12 relative">
-            <div className="hidden md:block absolute top-7 left-[16.666%] right-[16.666%] h-px bg-light-border dark:bg-dark-border" />
-
             {steps.map((step, index) => (
               <AnimatedSection key={step.number} delay={index * 0.12}>
                 <div className="flex flex-col gap-4">
