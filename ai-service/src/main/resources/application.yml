@@ -79,6 +79,7 @@ document:
   chunk-size: 512
   chunk-overlap: 50
   top-k-results: 5
+  context-max-chars: ${RAG_CONTEXT_MAX_CHARS:24000}
 
 arbitr:
   api:

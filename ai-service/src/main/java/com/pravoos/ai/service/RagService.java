@@ -1,7 +1,11 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.config.DocumentProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -10,6 +14,8 @@ import java.util.regex.Pattern;
 @Service
 public class RagService {
 
+    private static final Logger log = LoggerFactory.getLogger(RagService.class);
+    private static final String CHUNK_SEPARATOR = "\n\n---\n\n";
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{(instruction|context)\\}");
 
     private static final String FOLLOW_UP_INSTRUCTION = """
@@ -47,6 +53,12 @@ public class RagService {
             {context}
             """ + FOLLOW_UP_INSTRUCTION;
 
+    private final int contextMaxChars;
+
+    public RagService(DocumentProperties documentProperties) {
+        this.contextMaxChars = documentProperties.contextMaxChars();
+    }
+
     public String buildSystemPrompt(List<String> relevantChunks) {
         return fill(SYSTEM_PROMPT_TEMPLATE, Map.of("context", joinContext(relevantChunks)));
     }
@@ -69,8 +81,34 @@ public class RagService {
     }
 
     private String joinContext(List<String> relevantChunks) {
-        return relevantChunks.isEmpty()
-                ? "Контекст пуст."
-                : String.join("\n\n---\n\n", relevantChunks);
+        if (relevantChunks.isEmpty()) {
+            return "Контекст пуст.";
+        }
+
+        List<String> budgeted = new ArrayList<>();
+        int used = 0;
+        int dropped = 0;
+        for (String chunk : relevantChunks) {
+            int separatorCost = budgeted.isEmpty() ? 0 : CHUNK_SEPARATOR.length();
+            int remaining = contextMaxChars - used - separatorCost;
+            if (remaining <= 0) {
+                dropped++;
+                continue;
+            }
+            if (chunk.length() <= remaining) {
+                budgeted.add(chunk);
+                used += separatorCost + chunk.length();
+            } else {
+                budgeted.add(chunk.substring(0, remaining));
+                used = contextMaxChars;
+                dropped++;
+            }
+        }
+
+        if (dropped > 0) {
+            log.info("RAG context trimmed to {} chars budget: kept {} chunk(s), dropped/truncated {}",
+                    contextMaxChars, budgeted.size(), dropped);
+        }
+        return String.join(CHUNK_SEPARATOR, budgeted);
     }
 }

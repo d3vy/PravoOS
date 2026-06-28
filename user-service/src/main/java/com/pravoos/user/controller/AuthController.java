@@ -45,6 +45,8 @@ public class AuthController {
 
     private static final int APPLY_MAX_PER_IP = 5;
     private static final Duration APPLY_WINDOW = Duration.ofHours(1);
+    private static final int LOGIN_MAX_PER_IP = 30;
+    private static final Duration LOGIN_WINDOW = Duration.ofMinutes(5);
 
     private final AuthService authService;
     private final ApplicationService applicationService;
@@ -71,7 +73,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request,
+                                              HttpServletRequest httpRequest) {
+        String clientIp = ClientIpResolver.resolve(httpRequest);
+        if (!ipRateLimiter.allow("login", clientIp, LOGIN_MAX_PER_IP, LOGIN_WINDOW)) {
+            throw new TooManyRequestsException();
+        }
         return authResponse(authService.login(request));
     }
 

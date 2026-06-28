@@ -12,11 +12,18 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 @Component
 public class OpenAiLlmClient implements LlmClient {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiLlmClient.class);
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long BASE_BACKOFF_MS = 500L;
+    private static final long MAX_BACKOFF_MS = 8000L;
+    private static final Set<Integer> RETRYABLE_STATUSES = Set.of(429, 500, 502, 503, 504);
 
     private final RestClient restClient;
     private final OpenAiProperties properties;
@@ -36,25 +43,17 @@ public class OpenAiLlmClient implements LlmClient {
                 0.1
         );
 
-        try {
-            OpenAiChatResponse response = restClient.post()
-                    .uri("/chat/completions")
-                    .body(request)
-                    .retrieve()
-                    .body(OpenAiChatResponse.class);
+        OpenAiChatResponse response = executeWithRetry("chat completion", () -> restClient.post()
+                .uri("/chat/completions")
+                .body(request)
+                .retrieve()
+                .body(OpenAiChatResponse.class));
 
-            if (response == null) {
-                throw new LlmException("Empty response from LLM API");
-            }
-            log.debug("LLM completion successful, model: {}", properties.model());
-            return response.firstContent();
-        } catch (RestClientResponseException e) {
-            log.error("LLM API returned {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new LlmException("LLM API call failed with status " + e.getStatusCode().value());
-        } catch (RestClientException e) {
-            log.error("LLM API call failed: {}", e.getMessage());
-            throw new LlmException("LLM API call failed: " + e.getMessage());
+        if (response == null) {
+            throw new LlmException("Empty response from LLM API");
         }
+        log.debug("LLM completion successful, model: {}", properties.model());
+        return response.firstContent();
     }
 
     @Override
@@ -72,23 +71,53 @@ public class OpenAiLlmClient implements LlmClient {
                 texts
         );
 
-        try {
-            OpenAiEmbeddingResponse response = restClient.post()
-                    .uri("/embeddings")
-                    .body(request)
-                    .retrieve()
-                    .body(OpenAiEmbeddingResponse.class);
+        OpenAiEmbeddingResponse response = executeWithRetry("embedding", () -> restClient.post()
+                .uri("/embeddings")
+                .body(request)
+                .retrieve()
+                .body(OpenAiEmbeddingResponse.class));
 
-            if (response == null || response.allEmbeddings().size() != texts.size()) {
-                throw new LlmException("Incomplete embedding response from API");
+        if (response == null || response.allEmbeddings().size() != texts.size()) {
+            throw new LlmException("Incomplete embedding response from API");
+        }
+        return response.allEmbeddings();
+    }
+
+    private <T> T executeWithRetry(String operation, Supplier<T> call) {
+        RestClientException lastException = null;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                return call.get();
+            } catch (RestClientResponseException e) {
+                lastException = e;
+                int status = e.getStatusCode().value();
+                if (!RETRYABLE_STATUSES.contains(status) || attempt == MAX_ATTEMPTS) {
+                    log.error("OpenAI {} returned {}: {}", operation, status, e.getResponseBodyAsString());
+                    throw new LlmException("OpenAI " + operation + " failed with status " + status);
+                }
+                log.warn("OpenAI {} returned {} (attempt {}/{}), retrying", operation, status, attempt, MAX_ATTEMPTS);
+            } catch (RestClientException e) {
+                lastException = e;
+                if (attempt == MAX_ATTEMPTS) {
+                    log.error("OpenAI {} failed: {}", operation, e.getMessage());
+                    throw new LlmException("OpenAI " + operation + " failed: " + e.getMessage());
+                }
+                log.warn("OpenAI {} failed (attempt {}/{}): {}, retrying", operation, attempt, MAX_ATTEMPTS, e.getMessage());
             }
-            return response.allEmbeddings();
-        } catch (RestClientResponseException e) {
-            log.error("Embedding API returned {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new LlmException("Embedding API call failed with status " + e.getStatusCode().value());
-        } catch (RestClientException e) {
-            log.error("Embedding API call failed: {}", e.getMessage());
-            throw new LlmException("Embedding API call failed: " + e.getMessage());
+            backoff(attempt);
+        }
+        throw new LlmException("OpenAI " + operation + " failed after " + MAX_ATTEMPTS + " attempts: "
+                + (lastException == null ? "unknown" : lastException.getMessage()));
+    }
+
+    private void backoff(int attempt) {
+        long delay = Math.min(BASE_BACKOFF_MS * (1L << (attempt - 1)), MAX_BACKOFF_MS);
+        long jitter = ThreadLocalRandom.current().nextLong(delay / 2 + 1);
+        try {
+            Thread.sleep(delay + jitter);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new LlmException("OpenAI call interrupted during backoff");
         }
     }
 

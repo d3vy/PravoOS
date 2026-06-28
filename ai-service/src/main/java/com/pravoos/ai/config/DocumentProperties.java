@@ -7,5 +7,6 @@ public record DocumentProperties(
         String storagePath,
         int chunkSize,
         int chunkOverlap,
-        int topKResults
+        int topKResults,
+        int contextMaxChars
 ) {}
