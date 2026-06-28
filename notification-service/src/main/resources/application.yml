@@ -44,6 +44,13 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
+  tracing:
+    enabled: ${TRACING_ENABLED:true}
+    sampling:
+      probability: ${TRACING_SAMPLE_PROBABILITY:0.1}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_TRACING_ENDPOINT:http://tempo:4318/v1/traces}
 
 logging:
   config: classpath:logback-spring.xml

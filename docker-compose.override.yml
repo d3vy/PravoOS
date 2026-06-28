@@ -6,7 +6,17 @@ services:
   user-service:
     environment:
       SWAGGER_ENABLED: "true"
+      TRACING_SAMPLE_PROBABILITY: "1.0"
 
   ai-service:
     environment:
       SWAGGER_ENABLED: "true"
+      TRACING_SAMPLE_PROBABILITY: "1.0"
+
+  notification-service:
+    environment:
+      TRACING_SAMPLE_PROBABILITY: "1.0"
+
+  api-gateway:
+    environment:
+      TRACING_SAMPLE_PROBABILITY: "1.0"

@@ -27,6 +27,7 @@ import com.pravoos.ai.repository.mongo.MessageRepository;
 import com.pravoos.ai.repository.VectorSearchRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
@@ -73,8 +74,7 @@ public class ChatService {
                        DocumentProperties documentProperties,
                        LegalDomainGuard legalDomainGuard,
                        LlmQuotaService llmQuotaService,
-                       @org.springframework.beans.factory.annotation.Value("${llm.history-max-chars:12000}")
-                       int historyMaxChars) {
+                       @Value("${llm.history-max-chars:12000}") int historyMaxChars) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.vectorSearchRepository = vectorSearchRepository;

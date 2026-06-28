@@ -66,6 +66,10 @@ services:
     restart: unless-stopped
     ports: !reset []
 
+  tempo:
+    restart: unless-stopped
+    ports: !reset []
+
   frontend:
     restart: unless-stopped
     ports:
