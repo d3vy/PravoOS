@@ -26,29 +26,52 @@ public class ApplicationCallbackHandler {
                         || callbackData.startsWith(REJECT_PREFIX));
     }
 
-    public String handle(String callbackData) {
-        try {
-            if (callbackData.startsWith(APPROVE_FORCE_PREFIX)) {
-                UUID id = UUID.fromString(callbackData.substring(APPROVE_FORCE_PREFIX.length()));
-                userServiceClient.approveApplicationForce(id);
-                return "Заявка принята без подтверждения почты";
-            } else if (callbackData.startsWith(APPROVE_PREFIX)) {
-                UUID id = UUID.fromString(callbackData.substring(APPROVE_PREFIX.length()));
-                userServiceClient.approveApplication(id);
-                return "Заявка принята";
-            } else {
-                UUID id = UUID.fromString(callbackData.substring(REJECT_PREFIX.length()));
-                userServiceClient.rejectApplication(id);
-                return "Заявка отклонена";
-            }
-        } catch (HttpClientErrorException.NotFound e) {
-            return "Заявка не найдена";
-        } catch (HttpClientErrorException.Conflict e) {
-            return "Заявка уже обработана или email занят";
-        } catch (HttpClientErrorException.UnprocessableEntity e) {
-            return "Email не подтверждён — используйте кнопку «Принять без почты»";
-        } catch (HttpClientErrorException e) {
-            throw e;
+    public ApplicationCallbackResult handle(String callbackData) {
+        if (callbackData.startsWith(APPROVE_FORCE_PREFIX)) {
+            return handleApproveForce(parseId(callbackData, APPROVE_FORCE_PREFIX));
         }
+        if (callbackData.startsWith(APPROVE_PREFIX)) {
+            return handleApprove(parseId(callbackData, APPROVE_PREFIX));
+        }
+        return handleReject(parseId(callbackData, REJECT_PREFIX));
+    }
+
+    private ApplicationCallbackResult handleApprove(UUID applicationId) {
+        try {
+            userServiceClient.approveApplication(applicationId);
+            return ApplicationCallbackResult.terminal("Заявка принята");
+        } catch (HttpClientErrorException.UnprocessableEntity e) {
+            return ApplicationCallbackResult.emailNotVerified(applicationId);
+        } catch (HttpClientErrorException.NotFound e) {
+            return ApplicationCallbackResult.terminal("Заявка не найдена");
+        } catch (HttpClientErrorException.Conflict e) {
+            return ApplicationCallbackResult.terminal("Заявка уже обработана или email занят");
+        }
+    }
+
+    private ApplicationCallbackResult handleApproveForce(UUID applicationId) {
+        try {
+            userServiceClient.approveApplicationForce(applicationId);
+            return ApplicationCallbackResult.terminal("Заявка принята без подтверждения почты");
+        } catch (HttpClientErrorException.NotFound e) {
+            return ApplicationCallbackResult.terminal("Заявка не найдена");
+        } catch (HttpClientErrorException.Conflict e) {
+            return ApplicationCallbackResult.terminal("Заявка уже обработана или email занят");
+        }
+    }
+
+    private ApplicationCallbackResult handleReject(UUID applicationId) {
+        try {
+            userServiceClient.rejectApplication(applicationId);
+            return ApplicationCallbackResult.terminal("Заявка отклонена");
+        } catch (HttpClientErrorException.NotFound e) {
+            return ApplicationCallbackResult.terminal("Заявка не найдена");
+        } catch (HttpClientErrorException.Conflict e) {
+            return ApplicationCallbackResult.terminal("Заявка уже обработана");
+        }
+    }
+
+    private UUID parseId(String callbackData, String prefix) {
+        return UUID.fromString(callbackData.substring(prefix.length()));
     }
 }

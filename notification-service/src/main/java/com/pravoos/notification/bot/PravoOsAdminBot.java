@@ -15,11 +15,12 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.MaybeInaccessibleMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
@@ -117,7 +118,7 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
             return;
         }
 
-        String result;
+        ApplicationCallbackResult result;
         try {
             result = callbackHandler.handle(data);
         } catch (Exception e) {
@@ -126,8 +127,12 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
             return;
         }
 
-        answerCallbackQuery(callbackQuery.getId(), result);
-        removeInlineKeyboard(chatId, messageId, originalMessage.getText(), result);
+        answerCallbackQuery(callbackQuery.getId(), result.message());
+        if (result.outcome() == ApplicationCallbackResult.Outcome.EMAIL_NOT_VERIFIED) {
+            updateKeyboard(chatId, messageId, buildForceApprovalKeyboard(result.applicationId()));
+        } else {
+            updateKeyboard(chatId, messageId, null);
+        }
     }
 
     private void sendText(Long chatId, String text) {
@@ -145,6 +150,7 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
         AnswerCallbackQuery answer = new AnswerCallbackQuery();
         answer.setCallbackQueryId(callbackQueryId);
         answer.setText(text);
+        answer.setShowAlert(true);
         try {
             execute(answer);
         } catch (TelegramApiException e) {
@@ -152,17 +158,29 @@ public class PravoOsAdminBot extends TelegramLongPollingBot {
         }
     }
 
-    private void removeInlineKeyboard(String chatId, Integer messageId, String originalText, String statusText) {
-        EditMessageText editMessage = new EditMessageText();
-        editMessage.setChatId(chatId);
-        editMessage.setMessageId(messageId);
-        editMessage.setParseMode("HTML");
-        String safeOriginalText = originalText != null ? originalText : "";
-        editMessage.setText(safeOriginalText + "\n\n<b>Статус:</b> " + statusText);
+    private void updateKeyboard(String chatId, Integer messageId, InlineKeyboardMarkup markup) {
+        EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
+        editMarkup.setChatId(chatId);
+        editMarkup.setMessageId(messageId);
+        editMarkup.setReplyMarkup(markup);
         try {
-            execute(editMessage);
+            execute(editMarkup);
         } catch (TelegramApiException e) {
-            log.error("Failed to edit message after callback: {}", e.getMessage());
+            log.error("Failed to update inline keyboard after callback: {}", e.getMessage());
         }
+    }
+
+    private InlineKeyboardMarkup buildForceApprovalKeyboard(UUID applicationId) {
+        InlineKeyboardButton approveForceButton = new InlineKeyboardButton();
+        approveForceButton.setText("Принять без почты");
+        approveForceButton.setCallbackData("approve_force:" + applicationId);
+
+        InlineKeyboardButton rejectButton = new InlineKeyboardButton();
+        rejectButton.setText("Отклонить");
+        rejectButton.setCallbackData("reject:" + applicationId);
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        markup.setKeyboard(List.of(List.of(approveForceButton, rejectButton)));
+        return markup;
     }
 }
