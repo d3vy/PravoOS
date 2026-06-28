@@ -2,3 +2,11 @@ services:
   frontend:
     ports:
       - "${FRONTEND_PORT:-80}:80"
+
+  user-service:
+    environment:
+      SWAGGER_ENABLED: "true"
+
+  ai-service:
+    environment:
+      SWAGGER_ENABLED: "true"

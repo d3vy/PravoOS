@@ -1,7 +1,9 @@
 package com.pravoos.user.controller;
 
+import com.pravoos.user.model.dto.ApplicationResponse;
 import com.pravoos.user.service.ApplicationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +19,11 @@ public class InternalApplicationController {
 
     public InternalApplicationController(ApplicationService applicationService) {
         this.applicationService = applicationService;
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApplicationResponse> get(@PathVariable UUID id) {
+        return ResponseEntity.ok(applicationService.getApplicationById(id));
     }
 
     @PostMapping("/{id}/approve")

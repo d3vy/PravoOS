@@ -6,11 +6,13 @@ import com.pravoos.user.exception.InvalidVerificationTokenException;
 import com.pravoos.user.model.entity.LawyerApplication;
 import com.pravoos.user.model.enums.ApplicationStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
+import com.pravoos.user.security.TokenHasher;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,15 +32,18 @@ public class EmailVerificationService {
     private final ResendProperties resendProperties;
     private final EmailRateLimiter emailRateLimiter;
     private final ApplicationEventPublisher eventPublisher;
+    private final TokenHasher tokenHasher;
 
     public EmailVerificationService(LawyerApplicationRepository applicationRepository,
                                     ResendProperties resendProperties,
                                     EmailRateLimiter emailRateLimiter,
-                                    ApplicationEventPublisher eventPublisher) {
+                                    ApplicationEventPublisher eventPublisher,
+                                    TokenHasher tokenHasher) {
         this.applicationRepository = applicationRepository;
         this.resendProperties = resendProperties;
         this.emailRateLimiter = emailRateLimiter;
         this.eventPublisher = eventPublisher;
+        this.tokenHasher = tokenHasher;
     }
 
     public String generateToken() {
@@ -53,7 +58,7 @@ public class EmailVerificationService {
 
     @Transactional
     public void verifyToken(String token) {
-        LawyerApplication application = applicationRepository.findByEmailVerificationToken(token)
+        LawyerApplication application = applicationRepository.findByEmailVerificationToken(tokenHasher.sha256Hex(token))
                 .orElseThrow(InvalidVerificationTokenException::new);
 
         LocalDateTime expiresAt = application.getEmailVerificationExpiresAt();
@@ -65,6 +70,7 @@ public class EmailVerificationService {
         application.setEmailVerificationToken(null);
         application.setEmailVerificationExpiresAt(null);
         applicationRepository.save(application);
+        log.info("Email verified for application {} ({})", application.getId(), EmailMasker.mask(application.getEmail()));
     }
 
     @Transactional
@@ -75,16 +81,17 @@ public class EmailVerificationService {
         }
         applicationRepository.findByEmailAndStatusAndEmailVerifiedFalse(email, ApplicationStatus.PENDING)
                 .ifPresent(application -> {
-                    String newToken = generateToken();
-                    application.setEmailVerificationToken(newToken);
+                    String rawToken = generateToken();
+                    application.setEmailVerificationToken(tokenHasher.sha256Hex(rawToken));
                     application.setEmailVerificationExpiresAt(tokenExpiry());
                     applicationRepository.save(application);
-                    eventPublisher.publishEvent(new VerificationEmailRequestedEvent(email, newToken));
+                    eventPublisher.publishEvent(new VerificationEmailRequestedEvent(email, rawToken));
                     log.info("Verification email resent to {}", EmailMasker.mask(email));
                 });
     }
 
     @Scheduled(cron = "0 0 4 * * *")
+    @SchedulerLock(name = "EmailVerificationService_purgeExpiredVerificationTokens", lockAtMostFor = "PT10M")
     @Transactional
     public void purgeExpiredVerificationTokens() {
         int cleared = applicationRepository.clearExpiredVerificationTokens(LocalDateTime.now(ZoneOffset.UTC));

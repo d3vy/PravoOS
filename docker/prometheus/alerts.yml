@@ -39,6 +39,24 @@ groups:
           summary: "Всплеск неудачных логинов (возможный брутфорс)"
           description: "> 1 неудачного входа в секунду последние 10 минут."
 
+      - alert: VerificationEmailDeliveryFailing
+        expr: increase(pravoos_email_verification_total{result="failed"}[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Письма подтверждения почты не отправляются"
+          description: "За 10 минут были провалы отправки verification-писем через Resend — пользователи не могут завершить регистрацию. Проверь RESEND_API_KEY и статус Resend."
+
+      - alert: PasswordResetEmailDeliveryFailing
+        expr: increase(pravoos_email_password_reset_total{result="failed"}[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Письма сброса пароля не отправляются"
+          description: "За 10 минут были провалы отправки password-reset писем через Resend — пользователи не могут восстановить доступ. Проверь RESEND_API_KEY и статус Resend."
+
       - alert: HighHeapUsage
         expr: sum by (service) (jvm_memory_used_bytes{area="heap"}) / sum by (service) (jvm_memory_max_bytes{area="heap"}) > 0.9
         for: 10m

@@ -2,6 +2,7 @@ package com.pravoos.user.service;
 
 import com.pravoos.user.model.entity.OutboxEvent;
 import com.pravoos.user.repository.OutboxEventRepository;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +34,7 @@ public class OutboxPublisher {
     }
 
     @Scheduled(fixedDelayString = "${app.outbox.poll-interval-ms:5000}")
+    @SchedulerLock(name = "OutboxPublisher_publishPending", lockAtMostFor = "PT1M", lockAtLeastFor = "PT1S")
     @Transactional
     public void publishPending() {
         List<OutboxEvent> pending = outboxEventRepository

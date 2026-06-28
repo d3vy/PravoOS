@@ -41,9 +41,12 @@ load_env() {
 validate_env() {
   local missing=()
   local key
-  for key in SERVER_DOMAIN SERVER_IP ACME_EMAIL JWT_SECRET DB_PASSWORD \
-    MONGO_PASSWORD ADMIN_EMAIL ADMIN_PASSWORD \
-    OPENAI_API_KEY TELEGRAM_BOT_TOKEN TELEGRAM_ADMIN_CHAT_IDS; do
+  for key in SERVER_DOMAIN SERVER_IP ACME_EMAIL JWT_SECRET DB_USERNAME DB_PASSWORD \
+    MONGO_USERNAME MONGO_PASSWORD REDIS_PASSWORD ADMIN_EMAIL ADMIN_PASSWORD \
+    OPENAI_API_KEY RESEND_API_KEY \
+    TELEGRAM_BOT_TOKEN TELEGRAM_ADMIN_CHAT_IDS \
+    TELEGRAM_ALERTS_CHAT_ID_1 TELEGRAM_ALERTS_CHAT_ID_2 \
+    GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD; do
     if [[ -z "${!key:-}" ]]; then
       missing+=("$key")
     fi
@@ -55,6 +58,10 @@ validate_env() {
   fi
   if [[ "$JWT_SECRET" == *changeme* ]]; then
     echo "JWT_SECRET must be a strong random value (not the example placeholder)."
+    exit 1
+  fi
+  if [[ "$GRAFANA_ADMIN_PASSWORD" == *changeme* ]]; then
+    echo "GRAFANA_ADMIN_PASSWORD must be changed from the example placeholder."
     exit 1
   fi
 }

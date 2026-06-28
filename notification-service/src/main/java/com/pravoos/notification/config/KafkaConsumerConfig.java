@@ -1,6 +1,6 @@
 package com.pravoos.notification.config;
 
-import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
+import com.pravoos.notification.event.ApplicationSubmittedEvent;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -56,9 +56,9 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, ApplicationSubmittedKafkaPayload> kafkaListenerContainerFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, ApplicationSubmittedEvent> kafkaListenerContainerFactory(
             KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
-        return listenerFactory(ApplicationSubmittedKafkaPayload.class, deadLetterKafkaTemplate);
+        return listenerFactory(ApplicationSubmittedEvent.class, deadLetterKafkaTemplate);
     }
 
     @Bean

@@ -87,6 +87,12 @@ arbitr:
   poll:
     cron: ${ARBITR_POLL_CRON:0 0 */6 * * *}
 
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
 management:
   endpoints:
     web:
@@ -96,6 +102,9 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,db,redis
   health:
     livenessstate:
       enabled: true

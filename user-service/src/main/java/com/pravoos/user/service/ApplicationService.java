@@ -23,6 +23,7 @@ import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
 import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.security.TokenHasher;
 import com.pravoos.user.service.EmailVerificationService;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
@@ -54,6 +55,7 @@ public class ApplicationService {
     private final ApplicationEventPublisher eventPublisher;
     private final EmailVerificationService emailVerificationService;
     private final OutboxEventService outboxEventService;
+    private final TokenHasher tokenHasher;
     private final Counter applicationSubmittedCounter;
     private final Counter applicationApprovedCounter;
     private final Counter applicationRejectedCounter;
@@ -64,6 +66,7 @@ public class ApplicationService {
                                ApplicationEventPublisher eventPublisher,
                                EmailVerificationService emailVerificationService,
                                OutboxEventService outboxEventService,
+                               TokenHasher tokenHasher,
                                MeterRegistry meterRegistry) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
@@ -71,6 +74,7 @@ public class ApplicationService {
         this.eventPublisher = eventPublisher;
         this.emailVerificationService = emailVerificationService;
         this.outboxEventService = outboxEventService;
+        this.tokenHasher = tokenHasher;
         this.applicationSubmittedCounter = Counter.builder("pravoos.application").tag("action", "submitted").register(meterRegistry);
         this.applicationApprovedCounter = Counter.builder("pravoos.application").tag("action", "approved").register(meterRegistry);
         this.applicationRejectedCounter = Counter.builder("pravoos.application").tag("action", "rejected").register(meterRegistry);
@@ -99,20 +103,26 @@ public class ApplicationService {
         application.setBarNumber(request.barNumber());
         application.setSpecialization(request.specialization());
         application.setPhone(PhoneNormalizer.normalize(request.phone()));
+        String rawVerificationToken = emailVerificationService.generateToken();
         application.setStatusToken(emailVerificationService.generateToken());
         application.setStatusTokenExpiresAt(LocalDateTime.now().plus(STATUS_TOKEN_TTL));
-        application.setEmailVerificationToken(emailVerificationService.generateToken());
+        application.setEmailVerificationToken(tokenHasher.sha256Hex(rawVerificationToken));
         application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
 
         LawyerApplication saved = applicationRepository.save(application);
-        eventPublisher.publishEvent(new ApplicationSubmittedSpringEvent(saved));
+        eventPublisher.publishEvent(new ApplicationSubmittedSpringEvent(saved.getEmail(), rawVerificationToken));
         outboxEventService.enqueue("application.submitted", saved.getId().toString(),
-                new ApplicationSubmittedKafkaPayload(saved.getId(), saved.getFullName(),
-                        saved.getEmail(), saved.getSpecialization()));
+                new ApplicationSubmittedKafkaPayload(saved.getId()));
         applicationSubmittedCounter.increment();
 
         log.info("Lawyer application submitted: {}", EmailMasker.mask(email));
         return new ApplicationSubmissionResponse(toApplicationResponse(saved), saved.getStatusToken());
+    }
+
+    @Transactional(readOnly = true)
+    public ApplicationResponse getApplicationById(UUID applicationId) {
+        return toApplicationResponse(applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId)));
     }
 
     @Transactional(readOnly = true)
@@ -172,12 +182,12 @@ public class ApplicationService {
         }
 
         if (emailChanged) {
-            String verificationToken = emailVerificationService.generateToken();
+            String rawVerificationToken = emailVerificationService.generateToken();
             application.setEmailVerified(false);
-            application.setEmailVerificationToken(verificationToken);
+            application.setEmailVerificationToken(tokenHasher.sha256Hex(rawVerificationToken));
             application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
             applicationRepository.save(application);
-            eventPublisher.publishEvent(new VerificationEmailRequestedEvent(newEmail, verificationToken));
+            eventPublisher.publishEvent(new VerificationEmailRequestedEvent(newEmail, rawVerificationToken));
             log.info("Application email changed, re-verification sent: {}", EmailMasker.mask(newEmail));
         } else {
             applicationRepository.save(application);

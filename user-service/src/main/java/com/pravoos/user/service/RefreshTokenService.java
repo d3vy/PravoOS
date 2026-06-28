@@ -7,6 +7,7 @@ import com.pravoos.user.repository.RefreshTokenRepository;
 import com.pravoos.user.security.TokenHasher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -86,6 +87,7 @@ public class RefreshTokenService {
     }
 
     @Scheduled(cron = "0 0 3 * * *")
+    @SchedulerLock(name = "RefreshTokenService_purgeExpiredTokens", lockAtMostFor = "PT10M")
     @Transactional
     public void purgeExpiredTokens() {
         int deleted = refreshTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());

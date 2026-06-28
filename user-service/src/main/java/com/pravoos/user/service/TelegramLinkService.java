@@ -10,6 +10,7 @@ import com.pravoos.user.repository.LawyerProfileRepository;
 import com.pravoos.user.repository.TelegramLinkCodeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -93,6 +94,7 @@ public class TelegramLinkService {
     }
 
     @Scheduled(cron = "0 15 4 * * *")
+    @SchedulerLock(name = "TelegramLinkService_purgeExpiredCodes", lockAtMostFor = "PT10M")
     @Transactional
     public void purgeExpiredCodes() {
         int removed = linkCodeRepository.deleteByExpiresAtBefore(LocalDateTime.now(ZoneOffset.UTC));

@@ -5,6 +5,6 @@ import org.springframework.http.HttpStatus;
 public class ApplicationAlreadyExistsException extends PravoosException {
 
     public ApplicationAlreadyExistsException(String email) {
-        super("Заявка с такой почтой уже находится на рассмотрении", HttpStatus.CONFLICT);
+        super("Заявка с такой почтой уже находится на рассмотрении", HttpStatus.CONFLICT, "APPLICATION_PENDING");
     }
 }

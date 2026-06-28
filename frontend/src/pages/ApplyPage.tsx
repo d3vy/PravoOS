@@ -22,14 +22,21 @@ function submissionErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status
     const message = error.response?.data?.message as string | undefined
-    if (status === 409 && message?.includes('Pending application')) {
-      return 'Заявка с этим email уже находится на рассмотрении.'
+    const code = error.response?.data?.code as string | undefined
+    if (status === 409 && code === 'APPLICATION_PENDING') {
+      return (
+        'Заявка с этим email уже находится на рассмотрении. ' +
+        'Если письмо для подтверждения почты не пришло — запросите его повторно или проверьте статус заявки.'
+      )
     }
-    if (status === 409) {
+    if (status === 409 && code === 'EMAIL_EXISTS') {
       return (
         'Пользователь с таким email уже зарегистрирован. ' +
         'Попробуйте войти в аккаунт или восстановить пароль.'
       )
+    }
+    if (status === 409) {
+      return message ?? 'Заявка с таким email уже существует.'
     }
     if (status === 400 && message) {
       return message

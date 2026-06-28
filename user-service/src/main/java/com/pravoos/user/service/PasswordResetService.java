@@ -13,6 +13,7 @@ import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -109,6 +110,7 @@ public class PasswordResetService {
     }
 
     @Scheduled(cron = "0 30 3 * * *")
+    @SchedulerLock(name = "PasswordResetService_purgeExpiredTokens", lockAtMostFor = "PT10M")
     @Transactional
     public void purgeExpiredTokens() {
         int deleted = passwordResetTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now(ZoneOffset.UTC));

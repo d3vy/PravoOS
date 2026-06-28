@@ -99,6 +99,12 @@ resend:
   password-reset-expiry-hours: ${RESEND_PASSWORD_RESET_EXPIRY_HOURS:1}
   max-emails-per-hour: ${RESEND_MAX_EMAILS_PER_HOUR:3}
 
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
 management:
   endpoints:
     web:
@@ -108,6 +114,9 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,db,redis
   health:
     livenessstate:
       enabled: true

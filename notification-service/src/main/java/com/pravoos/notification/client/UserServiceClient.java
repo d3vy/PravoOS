@@ -62,6 +62,20 @@ public class UserServiceClient {
         log.info("Application rejected via internal API: {}", applicationId);
     }
 
+    public Optional<ApplicationDetailsResponse> getApplication(UUID applicationId) {
+        try {
+            ApplicationDetailsResponse details = restClient.get()
+                    .uri("/internal/applications/{id}", applicationId)
+                    .header("X-Internal-Secret", internalSecret)
+                    .retrieve()
+                    .body(ApplicationDetailsResponse.class);
+            return Optional.ofNullable(details);
+        } catch (HttpClientErrorException.NotFound e) {
+            log.warn("Application {} not found in user-service", applicationId);
+            return Optional.empty();
+        }
+    }
+
     public String bindTelegram(String code, long chatId) {
         BindTelegramResponse response = restClient.post()
                 .uri("/internal/telegram/bind")
