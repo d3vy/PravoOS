@@ -40,6 +40,10 @@ management:
       enabled: true
     readinessstate:
       enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 logging:
   config: classpath:logback-spring.xml

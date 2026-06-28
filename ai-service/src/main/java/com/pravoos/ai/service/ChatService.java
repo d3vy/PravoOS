@@ -80,10 +80,13 @@ public class ChatService {
     }
 
     public ChatResponse chat(ChatRequest request, UUID lawyerId) {
-        legalDomainGuard.assertLegalQuery(request.message());
-
         Conversation conversation = resolveConversation(request.conversationId(), lawyerId, request.message());
         boolean isNewConversation = conversation.getId() == null;
+
+        if (isNewConversation) {
+            legalDomainGuard.assertLegalQuery(request.message());
+        }
+
         log.info("Chat request received: conversation={}, lawyer={}",
                 isNewConversation ? "new" : conversation.getId(), lawyerId);
 
@@ -96,11 +99,6 @@ public class ChatService {
         List<LlmMessage> historyForLlm = isNewConversation
                 ? List.of()
                 : buildLlmHistory(messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId()));
-
-        if (isNewConversation) {
-            conversation = conversationRepository.save(conversation);
-        }
-        messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
 
         float[] queryEmbedding = embeddingService.embed(request.message());
         List<ChunkMatch> matches = vectorSearchRepository
@@ -124,6 +122,10 @@ public class ChatService {
         String rawAnswer = llmClient.complete(systemPrompt, historyForLlm, request.message());
         FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(rawAnswer);
 
+        if (isNewConversation) {
+            conversation = conversationRepository.save(conversation);
+        }
+        messageRepository.save(new Message(conversation.getId(), MessageRole.USER, request.message(), List.of()));
         messageRepository.save(new Message(conversation.getId(), MessageRole.ASSISTANT, parsed.answer(), sources));
 
         log.info("Chat response generated for conversation: {} ({} source(s))", conversation.getId(), sources.size());

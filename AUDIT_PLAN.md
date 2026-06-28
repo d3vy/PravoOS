@@ -203,8 +203,15 @@ single-flight refresh и boundary покрывают lazy-загруженные
 Не закоммичено (по правилу — только по команде).
 
 **Фаза 2 — важно (надёжность/наблюдаемость):**
-№3 (security-заголовки), №7+№8 (guard: один вызов + свой таймаут), №10 (orphan-сообщение), №14 (пул OpenAI),
-№15 (пагинация — backend+frontend вместе), №22 (алерты), №23 (лимит длины message), №5 (denylist verify).
+- ✅ №7 — guard только на первом сообщении новой беседы (`ChatService.chat`).
+- ✅ №8 — отдельный `openAiGuardRestClient` с read-timeout 10с (`RestClientConfig`, `LegalDomainGuard`).
+- ✅ №10 — user+assistant сохраняются атомарно ПОСЛЕ успешного ответа LLM; при падении — ни orphan-сообщения, ни пустой беседы (`ChatService.chat`).
+- ✅ №23 — **уже было** (`@Size(max=4000)` на `ChatRequest.message`).
+- ✅ №3 — security-заголовки nginx (HSTS на 443, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, CSP) в обоих шаблонах + regenerated `generated/default.conf`; `/grafana/` без своей CSP.
+- ✅ №14 — пул соединений OpenAI на Apache HttpClient5 (`PoolingHttpClientConnectionManager`, keep-alive, shared между основным и guard-клиентом) в `RestClientConfig`.
+- ✅ №22 — алерты `HighRequestLatencyP99`, `KafkaConsumerLag`; включены percentiles-histogram (`http.server.requests`) во всех 4 сервисах (чинит существующую p95-панель дашборда). Дашборд-панели guard-block/LLM-токены — после появления метрик (фаза 3, №11/№13). Выделенный алерт на OpenAI-ошибки — туда же; сейчас покрыто через `HighHttp5xxRate` на ai-service.
+- ✅ №5 — верификация gateway denylist: fail-open/closed конфигурируем и корректен, `iat<=revoked_after` верно, X-User-* стираются глобально (`UserHeaderSanitizingFilter`) и переустанавливаются из проверенных claims. Зафиксировано тестом `JwtAuthFilterTest` (7 тестов, зелёные).
+- ⬜ №15 (пагинация) — отдельным коммитом: полный `Pageable`+`Page<>` на backend + переписать фронт-контракт + UI-пагинация, с прогоном на запущенном фронте.
 
 **Фаза 3 — желательно (полировка/экономия):**
 №2, №4, №11, №12, №13, №17, №18, №19, №21, №24, №25, №26, №27, №28, №29, №30.

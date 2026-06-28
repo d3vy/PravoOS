@@ -19,6 +19,15 @@ groups:
           summary: "Высокий уровень 5xx в {{ $labels.service }}"
           description: "> 1 ошибки 5xx в секунду последние 5 минут."
 
+      - alert: HighRequestLatencyP99
+        expr: histogram_quantile(0.99, sum by (service, le) (rate(http_server_requests_seconds_bucket[5m]))) > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая задержка p99 в {{ $labels.service }}"
+          description: "p99 латентность HTTP-запросов выше 3с последние 10 минут."
+
   - name: pravoos-app
     rules:
       - alert: KafkaDeadLetterMessages
@@ -65,3 +74,12 @@ groups:
         annotations:
           summary: "Heap > 90% в {{ $labels.service }}"
           description: "Использование heap выше 90% последние 10 минут — риск OOM."
+
+      - alert: KafkaConsumerLag
+        expr: max by (service, client_id) (kafka_consumer_fetch_manager_records_lag_max) > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Отставание Kafka-консьюмера в {{ $labels.service }}"
+          description: "Лаг консьюмера {{ $labels.client_id }} > 1000 сообщений последние 10 минут — консьюмер не успевает обрабатывать."

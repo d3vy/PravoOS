@@ -7,6 +7,7 @@ import com.pravoos.ai.llm.dto.OpenAiChatRequest;
 import com.pravoos.ai.llm.dto.OpenAiChatResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -30,8 +31,9 @@ public class LegalDomainGuard {
     private final RestClient restClient;
     private final OpenAiProperties properties;
 
-    public LegalDomainGuard(RestClient openAiRestClient, OpenAiProperties properties) {
-        this.restClient = openAiRestClient;
+    public LegalDomainGuard(@Qualifier("openAiGuardRestClient") RestClient openAiGuardRestClient,
+                            OpenAiProperties properties) {
+        this.restClient = openAiGuardRestClient;
         this.properties = properties;
     }
 
