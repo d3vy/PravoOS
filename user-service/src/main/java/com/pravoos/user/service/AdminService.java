@@ -86,7 +86,6 @@ public class AdminService {
                 user.getId(),
                 user.getEmail(),
                 profile != null ? profile.getFullName() : null,
-                profile != null ? profile.getBarNumber() : null,
                 profile != null ? profile.getSpecialization() : null,
                 profile != null ? profile.getPhone() : null,
                 profile != null && profile.getTelegramChatId() != null

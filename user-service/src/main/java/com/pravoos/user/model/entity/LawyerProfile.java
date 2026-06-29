@@ -19,9 +19,6 @@ public class LawyerProfile {
     @Column(nullable = false)
     private String fullName;
 
-    @Column(length = 100)
-    private String barNumber;
-
     @Column(length = 255)
     private String specialization;
 
@@ -38,9 +35,6 @@ public class LawyerProfile {
 
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
-
-    public String getBarNumber() { return barNumber; }
-    public void setBarNumber(String barNumber) { this.barNumber = barNumber; }
 
     public String getSpecialization() { return specialization; }
     public void setSpecialization(String specialization) { this.specialization = specialization; }

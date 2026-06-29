@@ -243,7 +243,6 @@ function ApplicationCard({
               </div>
             </div>
             <InfoField label="Телефон" value={application.phone} />
-            <InfoField label="Номер адвоката" value={application.barNumber} />
             <InfoField label="Специализация" value={application.specialization} />
           </div>
 

@@ -224,8 +224,7 @@ function LawyerCard({
           <p className="text-sm text-light-secondary dark:text-dark-secondary">{lawyer.email}</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-1 text-sm">
-          <InfoField label="Номер адвоката" value={lawyer.barNumber} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm">
           <InfoField label="Специализация" value={lawyer.specialization} />
           <InfoField label="Телефон" value={lawyer.phone} />
         </div>

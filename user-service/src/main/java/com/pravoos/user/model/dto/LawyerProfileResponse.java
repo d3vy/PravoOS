@@ -6,7 +6,6 @@ public record LawyerProfileResponse(
         UUID userId,
         String email,
         String fullName,
-        String barNumber,
         String specialization,
         String phone,
         boolean telegramLinked

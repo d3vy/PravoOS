@@ -46,7 +46,6 @@ export default function EditApplicationPage(): JSX.Element {
           fullName: data.fullName,
           email: data.email,
           password: '',
-          barNumber: data.barNumber,
           specialization: data.specialization,
           phone: data.phone,
         })
@@ -66,7 +65,6 @@ export default function EditApplicationPage(): JSX.Element {
       await authApi.updateApplication(token, {
         email: data.email.trim(),
         fullName: data.fullName,
-        barNumber: data.barNumber,
         specialization: data.specialization,
         phone: data.phone,
         ...(data.password ? { password: data.password } : {}),

@@ -138,7 +138,6 @@ export default function ApplicationStatusPage(): JSX.Element {
               value={application.emailVerified ? 'Да' : 'Нет'}
             />
             <StatusField label="Телефон" value={application.phone} />
-            <StatusField label="Номер адвоката" value={application.barNumber} />
             <StatusField label="Специализация" value={application.specialization} />
             <StatusField label="Подана" value={formatDateTime(application.submittedAt)} />
             {application.reviewedAt && (

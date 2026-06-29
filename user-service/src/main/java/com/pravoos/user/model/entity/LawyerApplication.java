@@ -23,9 +23,6 @@ public class LawyerApplication {
     @Column(nullable = false)
     private String passwordHash;
 
-    @Column(length = 100)
-    private String barNumber;
-
     @Column(length = 255)
     private String specialization;
 
@@ -74,9 +71,6 @@ public class LawyerApplication {
 
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
-
-    public String getBarNumber() { return barNumber; }
-    public void setBarNumber(String barNumber) { this.barNumber = barNumber; }
 
     public String getSpecialization() { return specialization; }
     public void setSpecialization(String specialization) { this.specialization = specialization; }

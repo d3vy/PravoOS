@@ -9,7 +9,6 @@ public record ApplicationResponse(
         UUID id,
         String email,
         String fullName,
-        String barNumber,
         String specialization,
         String phone,
         ApplicationStatus status,

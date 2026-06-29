@@ -82,18 +82,11 @@ public class ApplicationService {
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException(email);
         }
-        if (applicationRepository.existsByBarNumberAndStatus(request.barNumber(), ApplicationStatus.PENDING)) {
-            throw new BarNumberAlreadyExistsException(request.barNumber());
-        }
-        if (userRepository.existsByLawyerProfileBarNumber(request.barNumber())) {
-            throw new BarNumberAlreadyExistsException(request.barNumber());
-        }
 
         LawyerApplication application = new LawyerApplication();
         application.setEmail(email);
         application.setFullName(request.fullName());
         application.setPasswordHash(passwordEncoder.encode(request.password()));
-        application.setBarNumber(request.barNumber());
         application.setSpecialization(request.specialization());
         application.setPhone(PhoneNormalizer.normalize(request.phone()));
         String rawVerificationToken = emailVerificationService.generateToken();
@@ -156,18 +149,6 @@ public class ApplicationService {
         }
 
         application.setFullName(request.fullName());
-
-        String newBarNumber = request.barNumber();
-        if (!newBarNumber.equals(application.getBarNumber())) {
-            if (applicationRepository.existsByBarNumberAndStatus(newBarNumber, ApplicationStatus.PENDING)) {
-                throw new BarNumberAlreadyExistsException(newBarNumber);
-            }
-            if (userRepository.existsByLawyerProfileBarNumber(newBarNumber)) {
-                throw new BarNumberAlreadyExistsException(newBarNumber);
-            }
-            application.setBarNumber(newBarNumber);
-        }
-
         application.setSpecialization(request.specialization());
         application.setPhone(PhoneNormalizer.normalize(request.phone()));
         if (request.password() != null && !request.password().isBlank()) {
@@ -287,7 +268,6 @@ public class ApplicationService {
 
         LawyerProfile profile = new LawyerProfile();
         profile.setFullName(application.getFullName());
-        profile.setBarNumber(application.getBarNumber());
         profile.setSpecialization(application.getSpecialization());
         profile.setPhone(application.getPhone());
         profile.setUser(user);
@@ -301,7 +281,6 @@ public class ApplicationService {
                 application.getId(),
                 application.getEmail(),
                 application.getFullName(),
-                application.getBarNumber(),
                 application.getSpecialization(),
                 application.getPhone(),
                 application.getStatus(),

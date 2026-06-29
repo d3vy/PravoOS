@@ -22,7 +22,6 @@ export interface ApplyRequest {
   email: string
   password: string
   fullName: string
-  barNumber: string
   specialization: string
   phone: string
 }
@@ -31,7 +30,6 @@ export interface ApplicationResponse {
   id: string
   email: string
   fullName: string
-  barNumber: string
   specialization: string
   phone: string
   status: ApplicationStatus
@@ -49,7 +47,6 @@ export interface UpdateApplicationRequest {
   email: string
   fullName: string
   password?: string
-  barNumber: string
   specialization: string
   phone: string
 }
@@ -101,7 +98,6 @@ export interface LawyerResponse {
   id: string
   email: string
   fullName: string
-  barNumber: string
   specialization: string
   phone: string
 }
@@ -383,7 +379,6 @@ export interface LawyerProfileResponse {
   userId: string
   email: string
   fullName: string
-  barNumber: string | null
   specialization: string | null
   phone: string | null
   telegramLinked: boolean

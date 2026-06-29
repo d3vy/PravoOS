@@ -40,7 +40,6 @@ public class UserService {
                 profile.getUserId(),
                 profile.getUser().getEmail(),
                 profile.getFullName(),
-                profile.getBarNumber(),
                 profile.getSpecialization(),
                 profile.getPhone(),
                 profile.getTelegramChatId() != null

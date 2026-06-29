@@ -196,21 +196,6 @@ function ProfileForm({
         maxLength={255}
       />
 
-      <div>
-        <label className="text-sm font-medium text-light-text dark:text-dark-text block mb-1.5">
-          Номер удостоверения адвоката
-        </label>
-        <input
-          type="text"
-          value={profile.barNumber ?? '—'}
-          disabled
-          className="input-base opacity-60 cursor-not-allowed w-full"
-        />
-        <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">
-          Подтверждён при регистрации и не может быть изменён.
-        </p>
-      </div>
-
       <Input
         label="Специализация"
         value={specialization}

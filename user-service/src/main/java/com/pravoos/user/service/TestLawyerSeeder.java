@@ -58,7 +58,6 @@ public class TestLawyerSeeder implements ApplicationRunner {
 
         LawyerProfile profile = new LawyerProfile();
         profile.setFullName(properties.fullName());
-        profile.setBarNumber(properties.barNumber());
         profile.setSpecialization(properties.specialization());
         profile.setPhone(PhoneNormalizer.normalize(properties.phone()));
         profile.setUser(lawyer);

@@ -8,7 +8,6 @@ public record TestLawyerProperties(
         String email,
         String password,
         String fullName,
-        String barNumber,
         String specialization,
         String phone
 ) {}

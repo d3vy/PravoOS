@@ -8,7 +8,6 @@ export interface ApplicationFormData {
   fullName: string
   email: string
   password: string
-  barNumber: string
   specialization: string
   phone: string
 }
@@ -17,7 +16,6 @@ interface FormErrors {
   fullName?: string
   email?: string
   password?: string
-  barNumber?: string
   specialization?: string
   phone?: string
 }
@@ -31,7 +29,6 @@ interface ApplicationFormProps {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const BAR_NUMBER_REGEX = /^\d{1,3}\/\d{1,6}$/
 const PHONE_MAX_DIGITS = 11
 
 function sanitizePhone(value: string): string {
@@ -56,31 +53,10 @@ function sanitizePhone(value: string): string {
   return formatted
 }
 
-function sanitizeBarNumber(value: string): string {
-  const cleaned = value.replace(/[^\d/]/g, '')
-  if (cleaned.includes('/')) {
-    const slashIdx = cleaned.indexOf('/')
-    const prefix = cleaned.slice(0, slashIdx).slice(0, 3)
-    const suffix = cleaned.slice(slashIdx + 1).replace(/\D/g, '').slice(0, 6)
-    return `${prefix}/${suffix}`
-  }
-  if (cleaned.length > 2) {
-    return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 8)}`
-  }
-  return cleaned
-}
-
 function validatePhone(phone: string): string | undefined {
   const digits = phone.replace(/\D/g, '')
   if (!digits) return 'Укажите контактный телефон'
   if (digits.length < 11) return 'Введите корректный телефон'
-  return undefined
-}
-
-function validateBarNumber(barNumber: string): string | undefined {
-  const trimmed = barNumber.trim()
-  if (!trimmed) return 'Укажите номер адвоката'
-  if (!BAR_NUMBER_REGEX.test(trimmed)) return 'Некорректный номер адвоката (пример: 77/1234)'
   return undefined
 }
 
@@ -92,8 +68,6 @@ function validate(data: ApplicationFormData, passwordRequired: boolean): FormErr
     const passwordError = validatePassword(data.password)
     if (passwordError) errors.password = passwordError
   }
-  const barNumberError = validateBarNumber(data.barNumber)
-  if (barNumberError) errors.barNumber = barNumberError
   if (!data.specialization.trim()) errors.specialization = 'Укажите специализацию'
   const phoneError = validatePhone(data.phone)
   if (phoneError) errors.phone = phoneError
@@ -116,7 +90,6 @@ export function ApplicationForm({
     (field: keyof ApplicationFormData) => (e: React.ChangeEvent<HTMLInputElement>): void => {
       const value =
         field === 'phone' ? sanitizePhone(e.target.value) :
-        field === 'barNumber' ? sanitizeBarNumber(e.target.value) :
         e.target.value
       setFormData((prev) => ({ ...prev, [field]: value }))
       if (errors[field]) {
@@ -126,10 +99,6 @@ export function ApplicationForm({
 
   const handlePhoneBlur = (): void => {
     setErrors((prev) => ({ ...prev, phone: validatePhone(formData.phone) }))
-  }
-
-  const handleBarNumberBlur = (): void => {
-    setErrors((prev) => ({ ...prev, barNumber: validateBarNumber(formData.barNumber) }))
   }
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
@@ -197,27 +166,15 @@ export function ApplicationForm({
         error={errors.password}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <Input
-          id="barNumber"
-          label="Номер адвоката"
-          type="text"
-          placeholder="77/1234"
-          value={formData.barNumber}
-          onChange={updateField('barNumber')}
-          onBlur={handleBarNumberBlur}
-          error={errors.barNumber}
-        />
-        <Input
-          id="specialization"
-          label="Специализация"
-          type="text"
-          placeholder="Корпоративное право"
-          value={formData.specialization}
-          onChange={updateField('specialization')}
-          error={errors.specialization}
-        />
-      </div>
+      <Input
+        id="specialization"
+        label="Специализация"
+        type="text"
+        placeholder="Корпоративное право"
+        value={formData.specialization}
+        onChange={updateField('specialization')}
+        error={errors.specialization}
+      />
 
       {submitError && (
         <motion.div

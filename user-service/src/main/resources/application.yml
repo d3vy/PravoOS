@@ -80,7 +80,6 @@ test-lawyer:
   email: ${TEST_LAWYER_EMAIL:}
   password: ${TEST_LAWYER_PASSWORD:}
   full-name: ${TEST_LAWYER_NAME:Тестовый Юрист}
-  bar-number: ${TEST_LAWYER_BAR:77/0001}
   specialization: ${TEST_LAWYER_SPEC:Тестирование}
   phone: ${TEST_LAWYER_PHONE:+70000000000}
 

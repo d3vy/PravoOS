@@ -13,7 +13,6 @@ const EMPTY_FORM: ApplicationFormData = {
   fullName: '',
   email: '',
   password: '',
-  barNumber: '',
   specialization: '',
   phone: '',
 }
@@ -132,7 +131,6 @@ export default function ApplyPage(): JSX.Element {
                   <ApplicationField label="Полное имя" value={submission.application.fullName} />
                   <ApplicationField label="Email" value={submission.application.email} highlight />
                   <ApplicationField label="Телефон" value={submission.application.phone} />
-                  <ApplicationField label="Номер адвоката" value={submission.application.barNumber} />
                   <ApplicationField label="Специализация" value={submission.application.specialization} />
                 </dl>
               </div>
