@@ -75,7 +75,7 @@ export default function LandingPage(): JSX.Element {
           >
             <p className="eyebrow mb-7 tracking-[0.2em]">AI-платформа для юристов</p>
 
-            <h1 className="font-sans text-5xl md:text-7xl lg:text-8xl font-black text-light-text dark:text-dark-text leading-[1.0] tracking-tight mb-8">
+            <h1 className="font-sans text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-light-text dark:text-dark-text leading-[1.05] sm:leading-[1.0] tracking-tight mb-8 break-words hyphens-auto">
               Юрист должен<br />
               заниматься правом.
             </h1>
@@ -133,7 +133,7 @@ export default function LandingPage(): JSX.Element {
         <div className="page-container">
           <AnimatedSection className="mb-16">
             <p className="eyebrow mb-5">Проблема</p>
-            <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight break-words hyphens-auto">
               Где теряется время квалифицированного юриста
             </h2>
           </AnimatedSection>
@@ -176,7 +176,7 @@ export default function LandingPage(): JSX.Element {
         <div className="page-container">
           <AnimatedSection className="mb-16">
             <p className="eyebrow mb-5">Как это работает</p>
-            <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight break-words hyphens-auto">
               Три шага до ответа по правовой базе
             </h2>
           </AnimatedSection>
@@ -206,7 +206,7 @@ export default function LandingPage(): JSX.Element {
         <div className="page-container">
           <AnimatedSection className="mb-16">
             <p className="eyebrow mb-5">Возможности</p>
-            <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text max-w-2xl leading-tight tracking-tight break-words hyphens-auto">
               Инструмент для правовой практики
             </h2>
           </AnimatedSection>
@@ -234,7 +234,7 @@ export default function LandingPage(): JSX.Element {
           <AnimatedSection>
             <div className="max-w-xl">
               <p className="eyebrow mb-6">Начать работу</p>
-              <h2 className="font-sans text-4xl md:text-5xl font-black text-light-text dark:text-dark-text mb-6 leading-tight tracking-tight">
+              <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text mb-6 leading-tight tracking-tight break-words hyphens-auto">
                 Готовы освободиться от рутины?
               </h2>
               <p className="text-light-secondary dark:text-dark-secondary mb-10 text-lg leading-relaxed font-light">

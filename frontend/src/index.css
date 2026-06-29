@@ -5,6 +5,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    overflow-x: clip;
   }
 
   body {
@@ -16,6 +17,8 @@
     background-attachment: fixed;
     background-position: center;
     background-color: #09090b;
+    overflow-x: clip;
+    max-width: 100vw;
   }
 
   .dark body {
