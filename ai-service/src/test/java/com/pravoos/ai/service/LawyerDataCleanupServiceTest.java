@@ -1,13 +1,7 @@
 package com.pravoos.ai.service;
 
 import com.pravoos.ai.model.mongo.Conversation;
-import com.pravoos.ai.repository.jpa.CaseDraftRepository;
-import com.pravoos.ai.repository.jpa.CaseRepository;
-import com.pravoos.ai.repository.jpa.CaseTaskRepository;
-import com.pravoos.ai.repository.jpa.ClientContactRepository;
-import com.pravoos.ai.repository.jpa.ClientRepository;
-import com.pravoos.ai.repository.jpa.DocumentTemplateRepository;
-import com.pravoos.ai.repository.jpa.PendingLawyerPurgeRepository;
+import com.pravoos.ai.repository.jpa.*;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
 import org.junit.jupiter.api.Test;
@@ -19,10 +13,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class LawyerDataCleanupServiceTest {

@@ -1,9 +1,9 @@
 package com.pravoos.ai;
 
 import com.pravoos.ai.config.ArbitrProperties;
-import com.pravoos.ai.config.OpenAiProperties;
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.config.JwtProperties;
+import com.pravoos.ai.config.OpenAiProperties;
 import com.pravoos.common.web.RequestIdFilter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

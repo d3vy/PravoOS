@@ -2,11 +2,7 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.exception.CaseExportException;
 import com.pravoos.ai.model.dto.CaseExportModel;
-import com.pravoos.ai.model.dto.CaseExportModel.ClientSection;
-import com.pravoos.ai.model.dto.CaseExportModel.DocumentSection;
-import com.pravoos.ai.model.dto.CaseExportModel.DraftSection;
-import com.pravoos.ai.model.dto.CaseExportModel.ResponseSection;
-import com.pravoos.ai.model.dto.CaseExportModel.TaskSection;
+import com.pravoos.ai.model.dto.CaseExportModel.*;
 import com.pravoos.ai.util.ExportDateFormatter;
 import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;

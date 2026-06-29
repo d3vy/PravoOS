@@ -1,11 +1,7 @@
 package com.pravoos.ai.model.dto;
 
 import com.pravoos.ai.model.enums.ClientType;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public record CreateClientRequest(
         @NotBlank @Size(max = 300) String name,

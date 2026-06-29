@@ -2,11 +2,7 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.model.dto.AiResponseDto;
 import com.pravoos.ai.model.dto.CaseExportModel;
-import com.pravoos.ai.model.dto.CaseExportModel.ClientSection;
-import com.pravoos.ai.model.dto.CaseExportModel.DocumentSection;
-import com.pravoos.ai.model.dto.CaseExportModel.DraftSection;
-import com.pravoos.ai.model.dto.CaseExportModel.ResponseSection;
-import com.pravoos.ai.model.dto.CaseExportModel.TaskSection;
+import com.pravoos.ai.model.dto.CaseExportModel.*;
 import com.pravoos.ai.model.dto.ExportedFile;
 import com.pravoos.ai.model.dto.SourceReference;
 import com.pravoos.ai.model.entity.Case;

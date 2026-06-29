@@ -1,8 +1,8 @@
 package com.pravoos.ai.controller;
 
 import com.pravoos.ai.model.dto.DashboardResponse;
-import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.DashboardService;
+import com.pravoos.common.web.SecurityUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;

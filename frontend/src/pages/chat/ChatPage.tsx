@@ -5,6 +5,7 @@ import {
   useCallback,
   type KeyboardEvent,
 } from 'react'
+import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -133,13 +134,17 @@ export default function ChatPage(): JSX.Element {
       }
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      const backendMessage =
+        axios.isAxiosError(error) && typeof error.response?.data?.message === 'string'
+          ? (error.response.data.message as string)
+          : null
       setMessages((prev) => [
         ...prev.filter((m) => !m.isStreaming),
         {
           id: `error-${Date.now()}`,
           role: 'ASSISTANT' as const,
-          content: 'Произошла ошибка при обработке запроса. Попробуйте ещё раз.',
+          content: backendMessage ?? 'Произошла ошибка при обработке запроса. Попробуйте ещё раз.',
         },
       ])
     },
@@ -255,7 +260,7 @@ export default function ChatPage(): JSX.Element {
           <div className="p-4 border-b border-light-border dark:border-dark-border flex flex-col gap-2">
             <button
               onClick={startNewChat}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white text-sm font-medium hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-sm font-medium hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -464,20 +469,20 @@ export default function ChatPage(): JSX.Element {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onInput={handleTextareaInput}
-                  placeholder="Задайте вопрос... (Enter — отправить)"
+                  placeholder="Задайте вопрос"
                   rows={1}
                   disabled={isSending}
                   aria-label="Текст сообщения"
-                  className="flex-1 bg-transparent text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary resize-none outline-none text-sm leading-relaxed min-h-[24px] max-h-40 disabled:opacity-50"
+                  className="flex-1 bg-transparent text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary resize-none outline-none text-[15px] leading-6 py-1.5 min-h-[36px] max-h-40 disabled:opacity-50"
                 />
                 <button
                   onClick={() => handleSend()}
                   disabled={!inputValue.trim() || isSending}
-                  className="shrink-0 w-9 h-9 rounded-lg bg-light-accent dark:bg-dark-accent text-white flex items-center justify-center hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="shrink-0 w-9 h-9 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg flex items-center justify-center hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   aria-label="Отправить"
                 >
                   {isSending ? (
-                    <Spinner size="sm" className="border-white/30 border-t-white" />
+                    <Spinner size="sm" className="border-white/30 border-t-white dark:border-dark-bg/30 dark:border-t-dark-bg" />
                   ) : (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="22" y1="2" x2="11" y2="13" />
@@ -539,7 +544,7 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 ${
           isUser
-            ? 'bg-light-accent dark:bg-dark-accent text-white'
+            ? 'bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg'
             : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
         }`}
       >
@@ -550,7 +555,7 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
         <div
           className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
             isUser
-              ? 'bg-light-accent dark:bg-dark-accent text-white rounded-tr-sm'
+              ? 'bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg rounded-tr-sm'
               : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text dark:text-dark-text rounded-tl-sm'
           }`}
         >

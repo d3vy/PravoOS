@@ -1,5 +1,6 @@
 package com.pravoos.user.service;
 
+import com.pravoos.common.util.PhoneNormalizer;
 import com.pravoos.user.config.TestLawyerProperties;
 import com.pravoos.user.model.entity.LawyerProfile;
 import com.pravoos.user.model.entity.User;
@@ -8,7 +9,6 @@ import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.EmailNormalizer;
-import com.pravoos.common.util.PhoneNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;

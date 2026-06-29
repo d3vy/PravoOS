@@ -12,11 +12,7 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class EmailDeliverabilityValidator {

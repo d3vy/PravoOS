@@ -21,11 +21,7 @@ public interface LawyerApplicationRepository extends JpaRepository<LawyerApplica
     @Query("SELECT a FROM LawyerApplication a WHERE a.id = :id")
     Optional<LawyerApplication> findByIdForUpdate(@Param("id") UUID id);
 
-    List<LawyerApplication> findByStatusOrderBySubmittedAtDesc(ApplicationStatus status);
-
     List<LawyerApplication> findByStatusOrderBySubmittedAtDesc(ApplicationStatus status, Pageable pageable);
-
-    List<LawyerApplication> findAllByOrderBySubmittedAtDesc();
 
     List<LawyerApplication> findAllByOrderBySubmittedAtDesc(Pageable pageable);
 

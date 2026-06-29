@@ -1,11 +1,7 @@
 package com.pravoos.ai.service;
 
 import com.pravoos.ai.exception.ClientNotFoundException;
-import com.pravoos.ai.model.dto.CaseResponse;
-import com.pravoos.ai.model.dto.ClientDetailResponse;
-import com.pravoos.ai.model.dto.ClientResponse;
-import com.pravoos.ai.model.dto.CreateClientRequest;
-import com.pravoos.ai.model.dto.UpdateClientRequest;
+import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.model.entity.Client;
 import com.pravoos.ai.model.enums.ClientType;

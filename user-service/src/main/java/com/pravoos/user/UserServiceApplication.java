@@ -1,14 +1,7 @@
 package com.pravoos.user;
 
-import com.pravoos.user.config.AdminProperties;
-import com.pravoos.user.config.BruteForceProperties;
-import com.pravoos.user.config.InternalSecretProperties;
-import com.pravoos.user.config.JwtProperties;
-import com.pravoos.user.config.RefreshCookieProperties;
-import com.pravoos.user.config.ResendProperties;
-import com.pravoos.user.config.TelegramProperties;
-import com.pravoos.user.config.TestLawyerProperties;
 import com.pravoos.common.web.RequestIdFilter;
+import com.pravoos.user.config.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;

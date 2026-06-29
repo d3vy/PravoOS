@@ -5,19 +5,18 @@ import com.pravoos.ai.model.dto.CaseDraftSummaryDto;
 import com.pravoos.ai.model.dto.DraftTypeInfo;
 import com.pravoos.ai.model.dto.GenerateDraftRequest;
 import com.pravoos.ai.model.entity.CaseDraft;
-import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.ai.service.DocxExportService;
 import com.pravoos.ai.service.DraftService;
+import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
-import java.nio.charset.StandardCharsets;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 

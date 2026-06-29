@@ -2,13 +2,7 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.model.entity.PendingLawyerPurge;
 import com.pravoos.ai.model.mongo.Conversation;
-import com.pravoos.ai.repository.jpa.CaseDraftRepository;
-import com.pravoos.ai.repository.jpa.CaseRepository;
-import com.pravoos.ai.repository.jpa.CaseTaskRepository;
-import com.pravoos.ai.repository.jpa.ClientContactRepository;
-import com.pravoos.ai.repository.jpa.ClientRepository;
-import com.pravoos.ai.repository.jpa.DocumentTemplateRepository;
-import com.pravoos.ai.repository.jpa.PendingLawyerPurgeRepository;
+import com.pravoos.ai.repository.jpa.*;
 import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
