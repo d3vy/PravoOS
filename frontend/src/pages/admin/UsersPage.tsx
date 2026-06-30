@@ -235,7 +235,7 @@ function LawyerCard({
 
 function InfoField({ label, value }: { label: string; value: string | null }): JSX.Element {
   return (
-    <div>
+    <div className="min-w-0">
       <span className="text-xs text-light-secondary dark:text-dark-secondary">{label}</span>
       <p className="text-light-text dark:text-dark-text truncate">{value ?? '—'}</p>
     </div>

@@ -451,7 +451,7 @@ export default function ChatPage(): JSX.Element {
                           <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-7 shrink-0">
                             {doc.fileName.split('.').pop()}
                           </span>
-                          <span className="truncate">{doc.title}</span>
+                          <span className="min-w-0 truncate">{doc.title}</span>
                           {attachedDocIds.includes(doc.id) && (
                             <svg className="ml-auto shrink-0 w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                               <polyline points="20 6 9 17 4 12" />
@@ -551,7 +551,7 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
         {isUser ? 'Вы' : <PravoIcon className="w-4 h-4" />}
       </div>
 
-      <div className={`flex flex-col gap-2 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col gap-2 min-w-0 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
           className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
             isUser
@@ -559,7 +559,7 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
               : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text dark:text-dark-text rounded-tl-sm'
           }`}
         >
-          {message.isStreaming ? <TypingDots /> : <p className="whitespace-pre-wrap break-words">{message.content}</p>}
+          {message.isStreaming ? <TypingDots /> : <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{message.content}</p>}
         </div>
 
         {!message.isStreaming && message.sources && message.sources.length > 0 && (

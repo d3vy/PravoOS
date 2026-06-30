@@ -259,7 +259,7 @@ export default function CasesPage(): JSX.Element {
               >
                 <Link to={`/cases/${caseItem.id}`} className="flex-1">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-medium text-light-text dark:text-dark-text line-clamp-2">{caseItem.title}</h3>
+                    <h3 className="font-medium text-light-text dark:text-dark-text line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{caseItem.title}</h3>
                     <CaseStatusBadge status={caseItem.status} />
                   </div>
                   {caseItem.clientName && (

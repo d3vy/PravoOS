@@ -234,7 +234,7 @@ function ApplicationCard({
             <div>
               <span className="text-xs text-light-secondary dark:text-dark-secondary">Email</span>
               <div className="flex items-center gap-1.5">
-                <p className="text-sm text-light-text dark:text-dark-text truncate">{application.email}</p>
+                <p className="min-w-0 text-sm text-light-text dark:text-dark-text truncate">{application.email}</p>
                 {application.emailVerified ? (
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>
                 ) : (
@@ -311,7 +311,7 @@ function ApplicationCard({
 
 function InfoField({ label, value }: { label: string; value: string }): JSX.Element {
   return (
-    <div>
+    <div className="min-w-0">
       <span className="text-xs text-light-secondary dark:text-dark-secondary">{label}</span>
       <p className="text-sm text-light-text dark:text-dark-text truncate">{value}</p>
     </div>

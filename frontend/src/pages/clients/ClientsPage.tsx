@@ -93,7 +93,7 @@ export default function ClientsPage(): JSX.Element {
                   className="block h-full p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-medium text-light-text dark:text-dark-text line-clamp-2">{client.name}</h3>
+                    <h3 className="font-medium text-light-text dark:text-dark-text line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{client.name}</h3>
                     <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
                       {client.typeName}
                     </span>

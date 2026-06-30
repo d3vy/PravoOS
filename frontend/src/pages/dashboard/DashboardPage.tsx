@@ -178,7 +178,7 @@ function RecentCasesWidget({ cases }: { cases: DashboardResponse['recentCases'] 
                 to={`/cases/${caseItem.id}`}
                 className="flex items-center justify-between gap-3 py-3 hover:opacity-80 transition-opacity"
               >
-                <span className="text-sm font-medium text-light-text dark:text-dark-text truncate">
+                <span className="min-w-0 text-sm font-medium text-light-text dark:text-dark-text truncate">
                   {caseItem.title}
                 </span>
                 <CaseStatusBadge status={caseItem.status} />
