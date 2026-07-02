@@ -28,4 +28,13 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UU
     List<String> findMatchingContent(@Param("documentId") UUID documentId,
                                      @Param("pattern") String pattern,
                                      Pageable pageable);
+
+    @Query(value = """
+            SELECT EXISTS (
+                SELECT 1 FROM document_chunks dc
+                JOIN documents d ON d.id = dc.document_id
+                WHERE d.case_id IS NULL AND dc.content LIKE :pattern ESCAPE '\\'
+            )
+            """, nativeQuery = true)
+    boolean existsInKnowledgeBaseByContent(@Param("pattern") String pattern);
 }

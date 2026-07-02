@@ -87,6 +87,10 @@ contract-review:
   max-input-chars: ${CONTRACT_REVIEW_MAX_INPUT_CHARS:40000}
   max-findings: ${CONTRACT_REVIEW_MAX_FINDINGS:30}
 
+citation-check:
+  max-citations: ${CITATION_CHECK_MAX_CITATIONS:100}
+  max-court-case-lookups: ${CITATION_CHECK_MAX_COURT_LOOKUPS:25}
+
 document:
   storage-path: ${DOCUMENT_STORAGE_PATH:/app/documents}
   chunk-size: 512

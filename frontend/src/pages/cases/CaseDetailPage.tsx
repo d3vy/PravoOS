@@ -7,7 +7,8 @@ import { clientsApi } from '../../api/clients'
 import { templatesApi } from '../../api/templates'
 import { workflowsApi } from '../../api/workflows'
 import { contractReviewsApi } from '../../api/contractReviews'
-import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, ClientResponse, ContractReviewDto, ContractRiskLevel, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
+import { citationsApi } from '../../api/citations'
+import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, CitationCheck, CitationStatus, ClientResponse, ContractReviewDto, ContractRiskLevel, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -936,6 +937,67 @@ function CopyButton({ text }: { text: string }): JSX.Element {
   )
 }
 
+const CITATION_STATUS_META: Record<CitationStatus, { label: string; tone: string }> = {
+  VERIFIED: { label: 'Подтверждено', tone: 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:bg-emerald-500/10' },
+  NOT_FOUND: { label: 'Не найдено', tone: 'border-red-300 text-red-700 bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:bg-red-500/10' },
+  UNVERIFIED: { label: 'Не проверено', tone: 'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:bg-amber-500/10' },
+}
+
+function CitationCheckPanel({ responseId }: { responseId: string }): JSX.Element {
+  const checkMutation = useMutation({
+    mutationFn: () => citationsApi.checkResponse(responseId),
+  })
+  const result = checkMutation.data
+
+  return (
+    <div className="mb-4 pt-3 border-t border-light-border dark:border-dark-border">
+      <div className="flex items-center gap-3 mb-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          loading={checkMutation.isPending}
+          onClick={() => checkMutation.mutate()}
+        >
+          Проверить ссылки
+        </Button>
+        {result && (
+          <span className="text-xs text-light-secondary dark:text-dark-secondary">
+            {result.total === 0
+              ? 'Ссылки не найдены'
+              : `Всего: ${result.total} · подтверждено: ${result.verified} · не найдено: ${result.notFound} · не проверено: ${result.unverified}`}
+          </span>
+        )}
+      </div>
+
+      {checkMutation.isError && (
+        <p className="text-sm text-red-600 dark:text-red-400">Не удалось проверить ссылки. Попробуйте снова.</p>
+      )}
+
+      {result && result.citations.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {result.citations.map((citation, i) => (
+            <CitationRow key={i} citation={citation} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CitationRow({ citation }: { citation: CitationCheck }): JSX.Element {
+  const meta = CITATION_STATUS_META[citation.status]
+  const typeLabel = citation.type === 'COURT_CASE' ? 'Дело' : 'Норма'
+  return (
+    <div className="flex items-start gap-2 text-xs">
+      <span className={`shrink-0 px-1.5 py-0.5 rounded border font-medium ${meta.tone}`}>{meta.label}</span>
+      <div className="min-w-0">
+        <span className="font-medium text-light-text dark:text-dark-text">{typeLabel}: {citation.raw}</span>
+        <span className="block text-light-secondary dark:text-dark-secondary">{citation.detail}</span>
+      </div>
+    </div>
+  )
+}
+
 function ResponsesSection({ caseId, responses, queryClient }: SectionProps & { responses: AiResponseDto[] }): JSX.Element {
   const rateMutation = useMutation({
     mutationFn: ({ responseId, rating }: { responseId: string; rating: number }) =>
@@ -1011,6 +1073,8 @@ function ResponsesSection({ caseId, responses, queryClient }: SectionProps & { r
                   </div>
                 </div>
               )}
+
+              <CitationCheckPanel responseId={response.id} />
 
               <div className="flex items-center gap-4 pt-3 border-t border-light-border dark:border-dark-border">
                 <CopyButton text={response.result} />

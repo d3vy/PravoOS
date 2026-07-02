@@ -381,6 +381,25 @@ export interface ContractReviewDto {
   createdAt: string
 }
 
+export type CitationType = 'COURT_CASE' | 'STATUTE'
+export type CitationStatus = 'VERIFIED' | 'NOT_FOUND' | 'UNVERIFIED'
+
+export interface CitationCheck {
+  raw: string
+  type: CitationType
+  normalized: string
+  status: CitationStatus
+  detail: string
+}
+
+export interface CitationCheckResult {
+  citations: CitationCheck[]
+  total: number
+  verified: number
+  notFound: number
+  unverified: number
+}
+
 export interface WorkflowStat {
   workflowId: string
   workflowName: string
