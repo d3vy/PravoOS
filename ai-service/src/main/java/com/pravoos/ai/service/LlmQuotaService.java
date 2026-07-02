@@ -72,6 +72,17 @@ public class LlmQuotaService {
         }
     }
 
+    public void recordTokenUsage(UUID lawyerId, long totalTokens) {
+        if (dailyTokenLimit <= 0 || totalTokens <= 0) {
+            return;
+        }
+        try {
+            incrementWithTtl(tokenKey(lawyerId), totalTokens);
+        } catch (DataAccessException ex) {
+            log.warn("Redis unavailable during embedding token accounting for lawyer {}", lawyerId, ex);
+        }
+    }
+
     private void incrementWithTtl(String key, long delta) {
         Long value = redisTemplate.opsForValue().increment(key, delta);
         if (value != null && value == delta) {

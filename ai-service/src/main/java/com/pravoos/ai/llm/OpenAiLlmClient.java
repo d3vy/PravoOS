@@ -74,13 +74,13 @@ public class OpenAiLlmClient implements LlmClient {
 
     @Override
     public float[] embed(String text) {
-        return embedBatch(List.of(text)).get(0);
+        return embedBatch(List.of(text)).embeddings().get(0);
     }
 
     @Override
-    public List<float[]> embedBatch(List<String> texts) {
+    public EmbeddingResult embedBatch(List<String> texts) {
         if (texts == null || texts.isEmpty()) {
-            return List.of();
+            return new EmbeddingResult(List.of(), 0L);
         }
         OpenAiEmbeddingRequest request = new OpenAiEmbeddingRequest(
                 properties.embeddingModel(),
@@ -96,7 +96,7 @@ public class OpenAiLlmClient implements LlmClient {
         if (response == null || response.allEmbeddings().size() != texts.size()) {
             throw new LlmException("Incomplete embedding response from API");
         }
-        return response.allEmbeddings();
+        return new EmbeddingResult(response.allEmbeddings(), response.totalTokens());
     }
 
     private <T> T executeWithRetry(String operation, Supplier<T> call) {

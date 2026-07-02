@@ -3,10 +3,12 @@ package com.pravoos.ai.pipeline;
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.exception.DocumentNotFoundException;
+import com.pravoos.ai.llm.EmbeddingResult;
 import com.pravoos.ai.model.entity.Document;
 import com.pravoos.ai.repository.jpa.DocumentRepository;
 import com.pravoos.ai.service.DocumentService;
 import com.pravoos.ai.service.EmbeddingService;
+import com.pravoos.ai.service.LlmQuotaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -31,19 +33,22 @@ public class EmbeddingPipeline {
     private final TextChunker textChunker;
     private final EmbeddingService embeddingService;
     private final DocumentProperties documentProperties;
+    private final LlmQuotaService llmQuotaService;
 
     public EmbeddingPipeline(DocumentRepository documentRepository,
                              DocumentService documentService,
                              DocumentParser documentParser,
                              TextChunker textChunker,
                              EmbeddingService embeddingService,
-                             DocumentProperties documentProperties) {
+                             DocumentProperties documentProperties,
+                             LlmQuotaService llmQuotaService) {
         this.documentRepository = documentRepository;
         this.documentService = documentService;
         this.documentParser = documentParser;
         this.textChunker = textChunker;
         this.embeddingService = embeddingService;
         this.documentProperties = documentProperties;
+        this.llmQuotaService = llmQuotaService;
     }
 
     @Async
@@ -68,17 +73,21 @@ public class EmbeddingPipeline {
             );
 
             List<ChunkData> chunkData = new ArrayList<>(chunkTexts.size());
+            long embeddingTokens = 0L;
             for (int start = 0; start < chunkTexts.size(); start += EMBEDDING_BATCH_SIZE) {
                 int end = Math.min(start + EMBEDDING_BATCH_SIZE, chunkTexts.size());
                 List<String> batch = chunkTexts.subList(start, end);
-                List<float[]> embeddings = embeddingService.embedBatch(batch);
+                EmbeddingResult result = embeddingService.embedBatch(batch);
+                embeddingTokens += result.totalTokens();
                 for (int i = 0; i < batch.size(); i++) {
-                    chunkData.add(new ChunkData(batch.get(i), start + i, embeddings.get(i)));
+                    chunkData.add(new ChunkData(batch.get(i), start + i, result.embeddings().get(i)));
                 }
             }
 
             documentService.completeProcessing(documentId, chunkData);
-            log.info("Document {} processed: {} chunks created", documentId, chunkData.size());
+            llmQuotaService.recordTokenUsage(document.getUploadedBy(), embeddingTokens);
+            log.info("Document {} processed: {} chunks created, {} embedding tokens billed to {}",
+                    documentId, chunkData.size(), embeddingTokens, document.getUploadedBy());
         } catch (Exception e) {
             log.error("Embedding pipeline failed for document: {}", documentId, e);
             documentService.markFailed(documentId);

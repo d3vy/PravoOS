@@ -9,5 +9,5 @@ import java.util.UUID;
 public record ChatRequest(
         String conversationId,
         @NotBlank @Size(max = 4000) String message,
-        List<UUID> attachedDocumentIds
+        @Size(max = 10, message = "Не более 10 вложенных документов на сообщение") List<UUID> attachedDocumentIds
 ) {}

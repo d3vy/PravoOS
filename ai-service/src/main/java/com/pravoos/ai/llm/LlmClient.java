@@ -10,5 +10,5 @@ public interface LlmClient {
 
     float[] embed(String text);
 
-    List<float[]> embedBatch(List<String> texts);
+    EmbeddingResult embedBatch(List<String> texts);
 }

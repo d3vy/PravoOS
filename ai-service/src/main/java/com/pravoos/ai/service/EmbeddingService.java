@@ -2,6 +2,7 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.config.OpenAiProperties;
 import com.pravoos.ai.exception.LlmException;
+import com.pravoos.ai.llm.EmbeddingResult;
 import com.pravoos.ai.llm.LlmClient;
 import com.pravoos.ai.model.entity.DocumentChunk;
 import org.slf4j.Logger;
@@ -34,10 +35,10 @@ public class EmbeddingService {
         return validateDimensions(llmClient.embed(text));
     }
 
-    public List<float[]> embedBatch(List<String> texts) {
-        List<float[]> embeddings = llmClient.embedBatch(texts);
-        embeddings.forEach(this::validateDimensions);
-        return embeddings;
+    public EmbeddingResult embedBatch(List<String> texts) {
+        EmbeddingResult result = llmClient.embedBatch(texts);
+        result.embeddings().forEach(this::validateDimensions);
+        return result;
     }
 
     private float[] validateDimensions(float[] embedding) {
