@@ -1,6 +1,7 @@
 package com.pravoos.ai;
 
 import com.pravoos.ai.config.ArbitrProperties;
+import com.pravoos.ai.config.ContractReviewProperties;
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.config.FileCryptoProperties;
 import com.pravoos.ai.config.JwtProperties;
@@ -18,7 +19,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableConfigurationProperties({OpenAiProperties.class, DocumentProperties.class, JwtProperties.class,
-        ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class})
+        ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class,
+        ContractReviewProperties.class})
 @EnableJpaRepositories(basePackages = "com.pravoos.ai.repository.jpa")
 @EnableMongoRepositories(basePackages = "com.pravoos.ai.repository.mongo")
 @EnableScheduling

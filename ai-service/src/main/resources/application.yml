@@ -83,6 +83,10 @@ llm:
 chat:
   retention-days: ${CHAT_RETENTION_DAYS:0}
 
+contract-review:
+  max-input-chars: ${CONTRACT_REVIEW_MAX_INPUT_CHARS:40000}
+  max-findings: ${CONTRACT_REVIEW_MAX_FINDINGS:30}
+
 document:
   storage-path: ${DOCUMENT_STORAGE_PATH:/app/documents}
   chunk-size: 512

@@ -359,6 +359,28 @@ export interface RateRequest {
   comment?: string
 }
 
+export type ContractRiskLevel = 'HIGH' | 'MEDIUM' | 'LOW'
+
+export interface ContractRisk {
+  clause: string
+  category: string
+  level: ContractRiskLevel
+  explanation: string
+  recommendation: string
+}
+
+export interface ContractReviewDto {
+  id: string
+  caseId: string
+  documentId: string
+  documentTitle: string
+  summary: string
+  riskScore: number
+  highRiskCount: number
+  findings: ContractRisk[]
+  createdAt: string
+}
+
 export interface WorkflowStat {
   workflowId: string
   workflowName: string

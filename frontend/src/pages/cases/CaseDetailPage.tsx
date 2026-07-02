@@ -6,7 +6,8 @@ import { casesApi } from '../../api/cases'
 import { clientsApi } from '../../api/clients'
 import { templatesApi } from '../../api/templates'
 import { workflowsApi } from '../../api/workflows'
-import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, ClientResponse, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
+import { contractReviewsApi } from '../../api/contractReviews'
+import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, ClientResponse, ContractReviewDto, ContractRiskLevel, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -67,6 +68,12 @@ export default function CaseDetailPage(): JSX.Element {
     enabled: caseId !== '',
   })
 
+  const { data: contractReviews = [] } = useQuery<ContractReviewDto[]>({
+    queryKey: ['case-contract-reviews', caseId],
+    queryFn: () => contractReviewsApi.listByCase(caseId),
+    enabled: caseId !== '',
+  })
+
   if (caseLoading) {
     return (
       <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
@@ -109,6 +116,8 @@ export default function CaseDetailPage(): JSX.Element {
         <ArbitrSection caseItem={caseItem} queryClient={queryClient} />
 
         <WorkflowSection caseId={caseId} workflows={workflows} queryClient={queryClient} />
+
+        <ContractReviewSection caseId={caseId} documents={documents} reviews={contractReviews} queryClient={queryClient} />
 
         <DraftSection caseId={caseId} draftTypes={draftTypes} drafts={drafts} queryClient={queryClient} />
 
@@ -622,6 +631,134 @@ function WorkflowSection({ caseId, workflows, queryClient }: SectionProps & { wo
         </div>
       </div>
     </section>
+  )
+}
+
+const RISK_LEVEL_META: Record<ContractRiskLevel, { label: string; tone: string }> = {
+  HIGH: { label: 'Высокий', tone: 'border-red-300 text-red-700 bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:bg-red-500/10' },
+  MEDIUM: { label: 'Средний', tone: 'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:bg-amber-500/10' },
+  LOW: { label: 'Низкий', tone: 'border-light-border text-light-secondary bg-light-bg dark:border-dark-border dark:text-dark-secondary dark:bg-dark-bg' },
+}
+
+function riskScoreTone(score: number): string {
+  if (score >= 66) return 'text-red-600 dark:text-red-400'
+  if (score >= 33) return 'text-amber-600 dark:text-amber-400'
+  return 'text-emerald-600 dark:text-emerald-400'
+}
+
+function ContractReviewSection({ caseId, documents, reviews, queryClient }: SectionProps & { documents: DocumentResponse[]; reviews: ContractReviewDto[] }): JSX.Element {
+  const [selectedDocId, setSelectedDocId] = useState('')
+  const readyDocuments = documents.filter((doc) => doc.status === 'READY')
+
+  const reviewMutation = useMutation({
+    mutationFn: () => contractReviewsApi.create(selectedDocId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case-contract-reviews', caseId] })
+      setSelectedDocId('')
+    },
+  })
+
+  return (
+    <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">AI-ревью договора</h2>
+      <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
+        Выберите загруженный договор — AI выделит рискованные условия и предложит правки.
+      </p>
+
+      {readyDocuments.length === 0 ? (
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          Загрузите документ дела (PDF, DOCX) и дождитесь обработки, чтобы запустить ревью.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <select
+            value={selectedDocId}
+            onChange={(e) => setSelectedDocId(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+          >
+            <option value="">Выберите договор</option>
+            {readyDocuments.map((doc) => (
+              <option key={doc.id} value={doc.id}>
+                {doc.title}
+              </option>
+            ))}
+          </select>
+
+          {reviewMutation.isError && (
+            <p className="text-sm text-red-600 dark:text-red-400">Не удалось выполнить ревью. Попробуйте снова.</p>
+          )}
+
+          <div>
+            <Button
+              variant="primary"
+              disabled={!selectedDocId}
+              loading={reviewMutation.isPending}
+              onClick={() => reviewMutation.mutate()}
+            >
+              Проанализировать риски
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {reviews.length > 0 && (
+        <div className="flex flex-col gap-4 mt-5">
+          {reviews.map((review) => (
+            <ContractReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Element {
+  return (
+    <div className="p-4 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">{review.documentTitle}</p>
+          <p className="text-xs text-light-secondary dark:text-dark-secondary">
+            {new Date(review.createdAt).toLocaleString('ru-RU')}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <span className={`text-lg font-semibold ${riskScoreTone(review.riskScore)}`}>{review.riskScore}</span>
+          <span className="text-xs text-light-secondary dark:text-dark-secondary">/100</span>
+          {review.highRiskCount > 0 && (
+            <p className="text-xs text-red-600 dark:text-red-400">{review.highRiskCount} высоких</p>
+          )}
+        </div>
+      </div>
+
+      <p className="text-sm text-light-text dark:text-dark-text whitespace-pre-wrap mb-3">{review.summary}</p>
+
+      {review.findings.length === 0 ? (
+        <p className="text-xs text-light-secondary dark:text-dark-secondary">Существенных рисков не выявлено.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {review.findings.map((risk, i) => {
+            const meta = RISK_LEVEL_META[risk.level]
+            return (
+              <div key={i} className={`p-3 rounded-lg border ${meta.tone}`}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide">{meta.label} · {risk.category}</span>
+                </div>
+                <p className="text-sm font-medium text-light-text dark:text-dark-text mb-1">{risk.clause}</p>
+                {risk.explanation && (
+                  <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">{risk.explanation}</p>
+                )}
+                {risk.recommendation && (
+                  <p className="text-xs text-light-text dark:text-dark-text">
+                    <span className="font-semibold">Рекомендация:</span> {risk.recommendation}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/drafts/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/draft-types").hasRole("LAWYER")
                         .requestMatchers("/api/ai/workflows/**").hasRole("LAWYER")
+                        .requestMatchers("/api/ai/contract-reviews/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/responses/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/messages/**").hasRole("LAWYER")
                         .requestMatchers(HttpMethod.GET, "/api/ai/conversations/**").hasRole("LAWYER")
