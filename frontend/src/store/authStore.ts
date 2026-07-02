@@ -12,7 +12,6 @@ interface AuthState {
   accessToken: string | null
   user: AuthUser | null
   bootstrapped: boolean
-  viewAsLawyer: boolean
   setSession: (accessToken: string, user: AuthUser) => void
   setAccessToken: (accessToken: string) => void
   setBootstrapped: (value: boolean) => void
@@ -20,7 +19,6 @@ interface AuthState {
   isAuthenticated: () => boolean
   hasRole: (role: UserRole) => boolean
   effectiveRole: () => UserRole | undefined
-  toggleViewAsLawyer: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -29,19 +27,13 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       user: null,
       bootstrapped: false,
-      viewAsLawyer: false,
       setSession: (accessToken, user) => set({ accessToken, user }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setBootstrapped: (value) => set({ bootstrapped: value }),
-      clearAuth: () => set({ accessToken: null, user: null, viewAsLawyer: false }),
+      clearAuth: () => set({ accessToken: null, user: null }),
       isAuthenticated: () => get().accessToken !== null,
       hasRole: (role) => get().user?.role === role,
-      effectiveRole: () => {
-        const { user, viewAsLawyer } = get()
-        if (!user) return undefined
-        return user.role === 'ADMIN' && viewAsLawyer ? 'LAWYER' : user.role
-      },
-      toggleViewAsLawyer: () => set((state) => ({ viewAsLawyer: !state.viewAsLawyer })),
+      effectiveRole: () => get().user?.role,
     }),
     {
       name: 'pravoos-auth',

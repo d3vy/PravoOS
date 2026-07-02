@@ -22,7 +22,7 @@ const lawyerLinks: NavLinkItem[] = [
 ]
 
 export function Navbar(): JSX.Element {
-  const { user, clearAuth, isAuthenticated, effectiveRole, viewAsLawyer, toggleViewAsLawyer } = useAuthStore()
+  const { clearAuth, isAuthenticated, effectiveRole } = useAuthStore()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
@@ -47,12 +47,6 @@ export function Navbar(): JSX.Element {
     clearAuth()
     setMobileMenuOpen(false)
     navigate('/')
-  }
-
-  const handleBackToAdmin = (): void => {
-    toggleViewAsLawyer()
-    setMobileMenuOpen(false)
-    navigate('/admin/applications')
   }
 
   const role = effectiveRole()
@@ -89,14 +83,6 @@ export function Navbar(): JSX.Element {
                       Рабочий стол
                     </Button>
                   </Link>
-                )}
-                {user?.role === 'ADMIN' && viewAsLawyer && (
-                  <button
-                    onClick={handleBackToAdmin}
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
-                  >
-                    <span>← Вернуться в админку</span>
-                  </button>
                 )}
                 <div className="hidden sm:block">
                   <Button variant="secondary" size="sm" onClick={() => void handleLogout()}>
@@ -153,14 +139,6 @@ export function Navbar(): JSX.Element {
               >
                 Рабочий стол
               </Link>
-            )}
-            {user?.role === 'ADMIN' && viewAsLawyer && (
-              <button
-                onClick={handleBackToAdmin}
-                className="text-left px-4 py-3 rounded-lg text-sm font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
-              >
-                ← Вернуться в админку
-              </button>
             )}
             <button
               onClick={() => void handleLogout()}

@@ -48,7 +48,7 @@ export default function App(): JSX.Element {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <DashboardPage />
           </ProtectedRoute>
         }
@@ -57,7 +57,7 @@ export default function App(): JSX.Element {
       <Route
         path="/chat"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <ChatPage />
           </ProtectedRoute>
         }
@@ -66,7 +66,7 @@ export default function App(): JSX.Element {
       <Route
         path="/cases"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <CasesPage />
           </ProtectedRoute>
         }
@@ -75,7 +75,7 @@ export default function App(): JSX.Element {
       <Route
         path="/cases/:caseId"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <CaseDetailPage />
           </ProtectedRoute>
         }
@@ -84,7 +84,7 @@ export default function App(): JSX.Element {
       <Route
         path="/templates"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <TemplatesPage />
           </ProtectedRoute>
         }
@@ -93,7 +93,7 @@ export default function App(): JSX.Element {
       <Route
         path="/clients"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <ClientsPage />
           </ProtectedRoute>
         }
@@ -102,7 +102,7 @@ export default function App(): JSX.Element {
       <Route
         path="/clients/:clientId"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <ClientDetailPage />
           </ProtectedRoute>
         }
@@ -111,7 +111,7 @@ export default function App(): JSX.Element {
       <Route
         path="/search"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <SearchPage />
           </ProtectedRoute>
         }
@@ -120,7 +120,7 @@ export default function App(): JSX.Element {
       <Route
         path="/profile"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="LAWYER">
             <ProfilePage />
           </ProtectedRoute>
         }
