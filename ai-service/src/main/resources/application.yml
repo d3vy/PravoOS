@@ -91,6 +91,9 @@ document:
   context-max-chars: ${RAG_CONTEXT_MAX_CHARS:24000}
   max-distance: ${RAG_MAX_DISTANCE:0.85}
   max-per-case: ${DOCUMENT_MAX_PER_CASE:200}
+  max-per-lawyer: ${DOCUMENT_MAX_PER_LAWYER:2000}
+  max-total-bytes-per-lawyer: ${DOCUMENT_MAX_TOTAL_BYTES_PER_LAWYER:5368709120}
+  upload-rate-per-minute: ${DOCUMENT_UPLOAD_RATE_PER_MINUTE:20}
   crypto:
     key: ${FILE_ENCRYPTION_KEY:}
   malware-scan:

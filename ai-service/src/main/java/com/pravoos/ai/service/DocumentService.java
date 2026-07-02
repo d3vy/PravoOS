@@ -4,6 +4,7 @@ import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.exception.DocumentNotFoundException;
 import com.pravoos.ai.exception.DocumentProcessingException;
+import com.pravoos.ai.exception.StorageQuotaExceededException;
 import com.pravoos.ai.model.dto.DocumentContent;
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;
@@ -44,6 +45,7 @@ public class DocumentService {
     private final DocumentProperties documentProperties;
     private final FileCryptoService fileCryptoService;
     private final MalwareScanClient malwareScanClient;
+    private final UploadRateLimiter uploadRateLimiter;
     private final Counter processingFailedCounter;
 
     public DocumentService(DocumentRepository documentRepository,
@@ -52,6 +54,7 @@ public class DocumentService {
                            DocumentProperties documentProperties,
                            FileCryptoService fileCryptoService,
                            MalwareScanClient malwareScanClient,
+                           UploadRateLimiter uploadRateLimiter,
                            MeterRegistry meterRegistry) {
         this.documentRepository = documentRepository;
         this.documentChunkRepository = documentChunkRepository;
@@ -59,6 +62,7 @@ public class DocumentService {
         this.documentProperties = documentProperties;
         this.fileCryptoService = fileCryptoService;
         this.malwareScanClient = malwareScanClient;
+        this.uploadRateLimiter = uploadRateLimiter;
         this.processingFailedCounter = Counter.builder("pravoos.document.processing")
                 .description("Document embedding-pipeline outcomes")
                 .tag("result", "failed")
@@ -76,6 +80,7 @@ public class DocumentService {
             log.warn("Document upload rejected: empty file from {}", uploadedBy);
             throw new DocumentProcessingException("Uploaded file is empty");
         }
+        uploadRateLimiter.assertWithinLimit(uploadedBy);
         if (caseId != null) {
             long existing = documentRepository.countByCaseId(caseId);
             if (existing >= documentProperties.maxPerCase()) {
@@ -90,6 +95,7 @@ public class DocumentService {
         String fileType = extractFileType(originalName);
 
         byte[] content = readBytes(file);
+        enforceStorageQuota(uploadedBy, content.length);
         validateContentMatchesType(content, fileType);
         malwareScanClient.scan(content, originalName);
 
@@ -102,6 +108,7 @@ public class DocumentService {
         document.setFilePath(filePath.toString());
         document.setUploadedBy(uploadedBy);
         document.setCaseId(caseId);
+        document.setSizeBytes(content.length);
 
         Document saved = documentRepository.save(document);
 
@@ -204,6 +211,26 @@ public class DocumentService {
                 .stream()
                 .map(this::toDocumentResponse)
                 .toList();
+    }
+
+    private void enforceStorageQuota(UUID uploadedBy, long incomingBytes) {
+        int maxDocuments = documentProperties.maxPerLawyer();
+        if (maxDocuments > 0 && documentRepository.countByUploadedBy(uploadedBy) >= maxDocuments) {
+            log.warn("Document upload rejected: user {} reached the limit of {} documents",
+                    uploadedBy, maxDocuments);
+            throw new StorageQuotaExceededException(
+                    "Достигнут лимит числа документов (" + maxDocuments + ")");
+        }
+        long maxBytes = documentProperties.maxTotalBytesPerLawyer();
+        if (maxBytes > 0) {
+            long used = documentRepository.sumSizeBytesByUploadedBy(uploadedBy);
+            if (used + incomingBytes > maxBytes) {
+                log.warn("Document upload rejected: user {} would exceed storage quota ({}+{} > {} bytes)",
+                        uploadedBy, used, incomingBytes, maxBytes);
+                throw new StorageQuotaExceededException(
+                        "Достигнут лимит объёма хранилища (" + (maxBytes / (1024 * 1024)) + " МБ)");
+            }
+        }
     }
 
     private void requireKnowledgeBaseDocument(Document document) {

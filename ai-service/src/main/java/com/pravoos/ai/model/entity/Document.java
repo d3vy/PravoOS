@@ -32,6 +32,9 @@ public class Document {
     @Column(name = "case_id")
     private UUID caseId;
 
+    @Column(name = "size_bytes", nullable = false)
+    private long sizeBytes;
+
     @Column(nullable = false)
     private LocalDateTime uploadedAt;
 
@@ -66,6 +69,9 @@ public class Document {
 
     public UUID getCaseId() { return caseId; }
     public void setCaseId(UUID caseId) { this.caseId = caseId; }
+
+    public long getSizeBytes() { return sizeBytes; }
+    public void setSizeBytes(long sizeBytes) { this.sizeBytes = sizeBytes; }
 
     public LocalDateTime getUploadedAt() { return uploadedAt; }
 

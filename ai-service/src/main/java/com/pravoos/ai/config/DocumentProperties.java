@@ -9,5 +9,8 @@ public record DocumentProperties(
         int chunkOverlap,
         int topKResults,
         int contextMaxChars,
-        int maxPerCase
+        int maxPerCase,
+        int maxPerLawyer,
+        long maxTotalBytesPerLawyer,
+        int uploadRatePerMinute
 ) {}

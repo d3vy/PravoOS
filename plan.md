@@ -83,22 +83,27 @@
 
 ---
 
-## Блок D — Защита от DoS / исчерпания ресурсов  `[ ]`
+## Блок D — Защита от DoS / исчерпания ресурсов  `[x]`
 
-- [ ] **D11. Нет глобальной storage-квоты на юриста.**
+- [x] **D11. Нет глобальной storage-квоты на юриста.**
   `DOCUMENT_MAX_PER_CASE=200` есть, но число дел не ограничено → диск можно забить.
-  → Суммарный лимит объёма/числа документов на юриста.
-  Файлы: `DocumentService.java`, `CaseService.java`, `DocumentProperties.java`.
+  → V18 `documents.size_bytes`. `enforceStorageQuota` в `DocumentService.upload`
+  (единая точка для КБ- и case-загрузок, ключ `uploadedBy`): лимит числа
+  (`DOCUMENT_MAX_PER_LAWYER=2000`) и суммарного объёма
+  (`DOCUMENT_MAX_TOTAL_BYTES_PER_LAWYER=5 ГиБ`, `sumSizeBytesByUploadedBy`).
+  Превышение → `StorageQuotaExceededException` (507). `0` в любом лимите = выкл.
 
-- [ ] **D12. Guard fail-open по умолчанию.**
+- [x] **D12. Guard fail-open по умолчанию.**
   `LLM_GUARD_FAIL_OPEN=true`: при недоступности классификатора не-юр запросы проходят → расход.
-  → Fail-closed по умолчанию в docker/prod-профиле.
-  Файлы: `docker-compose.prod.yml` / `application.yml`.
+  → `LLM_GUARD_FAIL_OPEN=false` в `docker-compose.prod.yml` (ai-service). Дефолт кода
+  оставлен `true` для dev.
 
-- [ ] **D13. Нет rate-limit на дорогие операции загрузки/эмбеддинга.**
+- [x] **D13. Нет rate-limit на дорогие операции загрузки/эмбеддинга.**
   Отдельно от общего IP-лимита gateway. Всплеск загрузок → шторм на OpenAI embeddings.
-  → Per-user лимит на upload/embedding в единицу времени (Redis, паттерн `IpRateLimiter`).
-  Файлы: новый лимитер в ai-service, `DocumentController`/`CaseController`.
+  → `UploadRateLimiter` (Redis, паттерн `IpRateLimiter`, ключ `upload_rate:{userId}`,
+  окно 1 мин, `DOCUMENT_UPLOAD_RATE_PER_MINUTE=20`, fail-open к Redis).
+  Вызов в `DocumentService.upload` до чтения байтов → покрывает и upload, и вызванный
+  им `@Async` embedding. Превышение → `UploadRateLimitExceededException` (429).
 
 ---
 

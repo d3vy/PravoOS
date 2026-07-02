@@ -25,6 +25,11 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     long countByCaseId(UUID caseId);
 
+    long countByUploadedBy(UUID uploadedBy);
+
+    @Query("SELECT COALESCE(SUM(d.sizeBytes), 0) FROM Document d WHERE d.uploadedBy = :uploadedBy")
+    long sumSizeBytesByUploadedBy(@Param("uploadedBy") UUID uploadedBy);
+
     @Query("""
             SELECT d FROM Document d
             WHERE d.caseId IS NOT NULL

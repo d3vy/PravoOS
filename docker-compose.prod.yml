@@ -34,6 +34,7 @@ services:
       DB_AI_PASSWORD: ${DB_PASSWORD}
       SPRINGDOC_API_DOCS_ENABLED: "false"
       SPRINGDOC_SWAGGER_UI_ENABLED: "false"
+      LLM_GUARD_FAIL_OPEN: "false"
     healthcheck:
       start_period: 120s
 
