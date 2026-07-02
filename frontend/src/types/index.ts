@@ -18,6 +18,38 @@ export interface AuthResponse {
   role: UserRole
 }
 
+export interface LoginResponse {
+  mfaRequired: boolean
+  mfaToken?: string
+  accessToken?: string
+  userId?: string
+  email?: string
+  role?: UserRole
+}
+
+export interface MfaLoginRequest {
+  mfaToken: string
+  code: string
+}
+
+export interface MfaStatusResponse {
+  enabled: boolean
+  mandatory: boolean
+}
+
+export interface MfaSetupResponse {
+  secret: string
+  otpauthUri: string
+}
+
+export interface SessionResponse {
+  id: string
+  ipAddress?: string
+  userAgent?: string
+  createdAt: string
+  lastUsedAt?: string
+}
+
 export interface ApplyRequest {
   email: string
   password: string

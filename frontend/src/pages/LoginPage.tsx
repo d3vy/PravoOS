@@ -16,6 +16,8 @@ export default function LoginPage(): JSX.Element {
   const [lockSeconds, setLockSeconds] = useState(0)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [mfaToken, setMfaToken] = useState<string | null>(null)
+  const [mfaCode, setMfaCode] = useState('')
 
   const { setSession, isAuthenticated, user } = useAuthStore()
   const navigate = useNavigate()
@@ -33,6 +35,21 @@ export default function LoginPage(): JSX.Element {
 
   const isLocked = lockSeconds > 0
 
+  const completeSession = (auth: {
+    accessToken: string
+    userId: string
+    email: string
+    role: 'LAWYER' | 'ADMIN'
+  }): void => {
+    setSession(auth.accessToken, {
+      userId: auth.userId,
+      email: auth.email,
+      role: auth.role,
+    })
+    const path = auth.role === 'ADMIN' ? '/admin/applications' : '/dashboard'
+    navigate(path, { replace: true })
+  }
+
   const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
     setError(null)
@@ -40,13 +57,17 @@ export default function LoginPage(): JSX.Element {
 
     try {
       const response = await authApi.login({ email, password })
-      setSession(response.accessToken, {
-        userId: response.userId,
-        email: response.email,
-        role: response.role,
-      })
-      const path = response.role === 'ADMIN' ? '/admin/applications' : '/dashboard'
-      navigate(path, { replace: true })
+      if (response.mfaRequired && response.mfaToken) {
+        setMfaToken(response.mfaToken)
+        setMfaCode('')
+      } else if (response.accessToken && response.userId && response.email && response.role) {
+        completeSession({
+          accessToken: response.accessToken,
+          userId: response.userId,
+          email: response.email,
+          role: response.role,
+        })
+      }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 429) {
         const retryAfter = Number(err.response.headers['retry-after'])
@@ -57,6 +78,38 @@ export default function LoginPage(): JSX.Element {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleMfaSubmit = async (e: FormEvent): Promise<void> => {
+    e.preventDefault()
+    if (!mfaToken) return
+    setError(null)
+    setLoading(true)
+
+    try {
+      const auth = await authApi.loginMfa({ mfaToken, code: mfaCode })
+      completeSession(auth)
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        const code = err.response.data?.code
+        if (code === 'MFA_INVALID_CHALLENGE') {
+          setMfaToken(null)
+          setError('Сессия подтверждения истекла. Войдите заново.')
+        } else {
+          setError('Неверный код. Проверьте приложение-аутентификатор и попробуйте снова.')
+        }
+      } else {
+        setError('Не удалось подтвердить код. Попробуйте снова.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const cancelMfa = (): void => {
+    setMfaToken(null)
+    setMfaCode('')
+    setError(null)
   }
 
   const formatLockTime = (totalSeconds: number): string => {
@@ -82,6 +135,63 @@ export default function LoginPage(): JSX.Element {
           className="w-full max-w-md"
         >
           <div className="card-elevated rounded-2xl p-8">
+            {mfaToken ? (
+              <>
+                <div className="mb-8">
+                  <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
+                    Двухфакторное подтверждение
+                  </h1>
+                  <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
+                    Введите 6-значный код из приложения-аутентификатора
+                  </p>
+                </div>
+
+                <form onSubmit={handleMfaSubmit} className="flex flex-col gap-5">
+                  <Input
+                    id="mfaCode"
+                    label="Код подтверждения"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                    autoFocus
+                  />
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                    >
+                      <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                    </motion.div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    loading={loading}
+                    disabled={mfaCode.length !== 6}
+                    className="w-full mt-1"
+                  >
+                    Подтвердить
+                  </Button>
+
+                  <button
+                    type="button"
+                    onClick={cancelMfa}
+                    className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:underline"
+                  >
+                    Вернуться ко входу
+                  </button>
+                </form>
+              </>
+            ) : (
+            <>
             <div className="mb-8">
               <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
                 Вход в систему
@@ -182,6 +292,8 @@ export default function LoginPage(): JSX.Element {
                 </Link>
               </p>
             </div>
+            </>
+            )}
           </div>
         </motion.div>
       </main>

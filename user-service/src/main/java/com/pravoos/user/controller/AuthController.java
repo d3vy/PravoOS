@@ -33,6 +33,7 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
     private final EmailDeliverabilityValidator emailDeliverabilityValidator;
+    private final PasswordPolicyService passwordPolicyService;
     private final IpRateLimiter ipRateLimiter;
 
     public AuthController(AuthService authService,
@@ -41,6 +42,7 @@ public class AuthController {
                           EmailVerificationService emailVerificationService,
                           PasswordResetService passwordResetService,
                           EmailDeliverabilityValidator emailDeliverabilityValidator,
+                          PasswordPolicyService passwordPolicyService,
                           IpRateLimiter ipRateLimiter) {
         this.authService = authService;
         this.applicationService = applicationService;
@@ -48,26 +50,43 @@ public class AuthController {
         this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
         this.emailDeliverabilityValidator = emailDeliverabilityValidator;
+        this.passwordPolicyService = passwordPolicyService;
         this.ipRateLimiter = ipRateLimiter;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request,
-                                              HttpServletRequest httpRequest) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                               HttpServletRequest httpRequest) {
         String clientIp = ClientIpResolver.resolve(httpRequest);
         if (!ipRateLimiter.allow("login", clientIp, LOGIN_MAX_PER_IP, LOGIN_WINDOW)) {
             throw new TooManyRequestsException();
         }
-        return authResponse(authService.login(request));
+        LoginResult result = authService.login(request, clientIp, userAgent(httpRequest));
+        if (result.mfaRequired()) {
+            return ResponseEntity.ok(LoginResponse.mfaChallenge(result.mfaToken()));
+        }
+        return loginSuccess(result.tokens());
+    }
+
+    @PostMapping("/login/mfa")
+    public ResponseEntity<LoginResponse> loginMfa(@Valid @RequestBody MfaLoginRequest request,
+                                                  HttpServletRequest httpRequest) {
+        String clientIp = ClientIpResolver.resolve(httpRequest);
+        if (!ipRateLimiter.allow("login", clientIp, LOGIN_MAX_PER_IP, LOGIN_WINDOW)) {
+            throw new TooManyRequestsException();
+        }
+        TokenResponse tokens = authService.completeMfaLogin(request.mfaToken(), request.code(), clientIp, userAgent(httpRequest));
+        return loginSuccess(tokens);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
-            @CookieValue(name = RefreshCookieFactory.COOKIE_NAME, required = false) String refreshToken) {
+            @CookieValue(name = RefreshCookieFactory.COOKIE_NAME, required = false) String refreshToken,
+            HttpServletRequest httpRequest) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new InvalidRefreshTokenException();
         }
-        return authResponse(authService.refresh(refreshToken));
+        return authResponse(authService.refresh(refreshToken, ClientIpResolver.resolve(httpRequest), userAgent(httpRequest)));
     }
 
     @PostMapping("/logout")
@@ -88,6 +107,7 @@ public class AuthController {
         if (!ipRateLimiter.allow("apply", clientIp, APPLY_MAX_PER_IP, APPLY_WINDOW)) {
             throw new TooManyRequestsException();
         }
+        passwordPolicyService.validate(request.password());
         emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
         return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.submitApplication(request));
     }
@@ -102,6 +122,9 @@ public class AuthController {
     public ResponseEntity<ApplicationResponse> updateApplication(
             @RequestHeader("X-Application-Token") String token,
             @Valid @RequestBody UpdateApplicationRequest request) {
+        if (request.password() != null && !request.password().isBlank()) {
+            passwordPolicyService.validate(request.password());
+        }
         emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
         return ResponseEntity.ok(applicationService.updateApplication(token, request));
     }
@@ -126,13 +149,29 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordPolicyService.validate(request.password());
         passwordResetService.resetPassword(request.token(), request.password());
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseEntity<LoginResponse> loginSuccess(TokenResponse tokens) {
+        AuthResponse auth = new AuthResponse(tokens.accessToken(), tokens.userId(), tokens.email(), tokens.role());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.create(tokens.refreshToken()).toString())
+                .body(LoginResponse.authenticated(auth));
     }
 
     private ResponseEntity<AuthResponse> authResponse(TokenResponse tokens) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.create(tokens.refreshToken()).toString())
                 .body(new AuthResponse(tokens.accessToken(), tokens.userId(), tokens.email(), tokens.role()));
+    }
+
+    private static String userAgent(HttpServletRequest request) {
+        String userAgent = request.getHeader(HttpHeaders.USER_AGENT);
+        if (userAgent == null || userAgent.isBlank()) {
+            return null;
+        }
+        return userAgent.length() > 255 ? userAgent.substring(0, 255) : userAgent;
     }
 }

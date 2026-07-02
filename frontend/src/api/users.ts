@@ -1,5 +1,12 @@
 import apiClient from './client'
-import type { LawyerProfileResponse, TelegramLinkResponse, UpdateProfileRequest } from '../types'
+import type {
+  LawyerProfileResponse,
+  TelegramLinkResponse,
+  UpdateProfileRequest,
+  MfaStatusResponse,
+  MfaSetupResponse,
+  SessionResponse,
+} from '../types'
 
 export const usersApi = {
   getProfile: async (): Promise<LawyerProfileResponse> => {
@@ -19,5 +26,32 @@ export const usersApi = {
 
   unlinkTelegram: async (): Promise<void> => {
     await apiClient.delete('/api/user/profile/telegram')
+  },
+
+  getMfaStatus: async (): Promise<MfaStatusResponse> => {
+    const response = await apiClient.get<MfaStatusResponse>('/api/user/mfa')
+    return response.data
+  },
+
+  setupMfa: async (): Promise<MfaSetupResponse> => {
+    const response = await apiClient.post<MfaSetupResponse>('/api/user/mfa/setup')
+    return response.data
+  },
+
+  enableMfa: async (code: string): Promise<void> => {
+    await apiClient.post('/api/user/mfa/enable', { code })
+  },
+
+  disableMfa: async (code: string): Promise<void> => {
+    await apiClient.post('/api/user/mfa/disable', { code })
+  },
+
+  listSessions: async (): Promise<SessionResponse[]> => {
+    const response = await apiClient.get<SessionResponse[]>('/api/user/sessions')
+    return response.data
+  },
+
+  revokeSession: async (sessionId: string): Promise<void> => {
+    await apiClient.delete(`/api/user/sessions/${sessionId}`)
   },
 }

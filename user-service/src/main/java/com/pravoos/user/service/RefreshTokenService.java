@@ -13,10 +13,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pravoos.user.model.dto.SessionResponse;
+
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -42,14 +45,44 @@ public class RefreshTokenService {
     }
 
     @Transactional
-    public String issue(UUID userId) {
+    public String issue(UUID userId, String ipAddress, String userAgent) {
         String rawToken = generateRawToken();
+        LocalDateTime now = LocalDateTime.now();
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUserId(userId);
         refreshToken.setTokenHash(tokenHasher.sha256Hex(rawToken));
-        refreshToken.setExpiresAt(LocalDateTime.now().plus(refreshExpirationMs, ChronoUnit.MILLIS));
+        refreshToken.setExpiresAt(now.plus(refreshExpirationMs, ChronoUnit.MILLIS));
+        refreshToken.setIpAddress(ipAddress);
+        refreshToken.setUserAgent(userAgent);
+        refreshToken.setLastUsedAt(now);
         refreshTokenRepository.save(refreshToken);
         return rawToken;
+    }
+
+    @Transactional
+    public boolean isKnownDevice(UUID userId, String ipAddress) {
+        return ipAddress != null && refreshTokenRepository.existsByUserIdAndIpAddress(userId, ipAddress);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionResponse> listActiveSessions(UUID userId) {
+        return refreshTokenRepository
+                .findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(userId, LocalDateTime.now())
+                .stream()
+                .map(token -> new SessionResponse(
+                        token.getId(),
+                        token.getIpAddress(),
+                        token.getUserAgent(),
+                        token.getCreatedAt(),
+                        token.getLastUsedAt()))
+                .toList();
+    }
+
+    @Transactional
+    public void revokeSession(UUID userId, UUID sessionId) {
+        refreshTokenRepository.findByIdAndUserId(sessionId, userId)
+                .filter(token -> token.getRevokedAt() == null)
+                .ifPresent(token -> token.setRevokedAt(LocalDateTime.now()));
     }
 
     @Transactional

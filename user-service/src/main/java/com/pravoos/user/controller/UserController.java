@@ -2,8 +2,10 @@ package com.pravoos.user.controller;
 
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
+import com.pravoos.user.model.dto.SessionResponse;
 import com.pravoos.user.model.dto.TelegramLinkResponse;
 import com.pravoos.user.model.dto.UpdateProfileRequest;
+import com.pravoos.user.service.RefreshTokenService;
 import com.pravoos.user.service.TelegramLinkService;
 import com.pravoos.user.service.UserService;
 import jakarta.validation.Valid;
@@ -11,16 +13,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
 
     private final UserService userService;
     private final TelegramLinkService telegramLinkService;
+    private final RefreshTokenService refreshTokenService;
 
-    public UserController(UserService userService, TelegramLinkService telegramLinkService) {
+    public UserController(UserService userService,
+                          TelegramLinkService telegramLinkService,
+                          RefreshTokenService refreshTokenService) {
         this.userService = userService;
         this.telegramLinkService = telegramLinkService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @GetMapping("/profile")
@@ -43,6 +52,17 @@ public class UserController {
     @DeleteMapping("/profile/telegram")
     public ResponseEntity<Void> unlinkTelegram(Authentication authentication) {
         telegramLinkService.unlink(SecurityUtils.currentUserId(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<List<SessionResponse>> listSessions(Authentication authentication) {
+        return ResponseEntity.ok(refreshTokenService.listActiveSessions(SecurityUtils.currentUserId(authentication)));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public ResponseEntity<Void> revokeSession(@PathVariable UUID sessionId, Authentication authentication) {
+        refreshTokenService.revokeSession(SecurityUtils.currentUserId(authentication), sessionId);
         return ResponseEntity.noContent().build();
     }
 }

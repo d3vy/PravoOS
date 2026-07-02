@@ -45,7 +45,7 @@ class RefreshTokenServiceTest {
         UUID userId = UUID.randomUUID();
         ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
 
-        String rawToken = service.issue(userId);
+        String rawToken = service.issue(userId, "203.0.113.7", "JUnit-UA");
 
         verify(refreshTokenRepository).save(captor.capture());
         RefreshToken saved = captor.getValue();
@@ -54,6 +54,9 @@ class RefreshTokenServiceTest {
         assertThat(saved.getTokenHash()).isEqualTo(tokenHasher.sha256Hex(rawToken));
         assertThat(saved.getTokenHash()).isNotEqualTo(rawToken);
         assertThat(saved.getExpiresAt()).isAfter(LocalDateTime.now());
+        assertThat(saved.getIpAddress()).isEqualTo("203.0.113.7");
+        assertThat(saved.getUserAgent()).isEqualTo("JUnit-UA");
+        assertThat(saved.getLastUsedAt()).isNotNull();
     }
 
     @Test

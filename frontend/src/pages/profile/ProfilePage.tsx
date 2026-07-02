@@ -1,7 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersApi } from '../../api/users'
-import type { LawyerProfileResponse, TelegramLinkResponse, UpdateProfileRequest } from '../../types'
+import type {
+  LawyerProfileResponse,
+  MfaSetupResponse,
+  SessionResponse,
+  TelegramLinkResponse,
+  UpdateProfileRequest,
+} from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -48,8 +54,220 @@ export default function ProfilePage(): JSX.Element {
         <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
           <TelegramSection profile={profile} queryClient={queryClient} />
         </div>
+        <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
+          <MfaSection queryClient={queryClient} />
+        </div>
+        <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
+          <SessionsSection />
+        </div>
       </div>
     </div>
+  )
+}
+
+function MfaSection({
+  queryClient,
+}: {
+  queryClient: ReturnType<typeof useQueryClient>
+}): JSX.Element {
+  const [setup, setSetup] = useState<MfaSetupResponse | null>(null)
+  const [code, setCode] = useState('')
+  const [disableCode, setDisableCode] = useState('')
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const { data: status, isLoading } = useQuery({
+    queryKey: ['mfa-status'],
+    queryFn: usersApi.getMfaStatus,
+  })
+
+  const setupMutation = useMutation({
+    mutationFn: usersApi.setupMfa,
+    onSuccess: (data) => {
+      setSetup(data)
+      setCode('')
+      setActionError(null)
+    },
+    onError: () => setActionError('Не удалось начать настройку. Попробуйте снова.'),
+  })
+
+  const enableMutation = useMutation({
+    mutationFn: () => usersApi.enableMfa(code),
+    onSuccess: () => {
+      setSetup(null)
+      setCode('')
+      setActionError(null)
+      queryClient.invalidateQueries({ queryKey: ['mfa-status'] })
+    },
+    onError: () => setActionError('Неверный код. Проверьте приложение и попробуйте снова.'),
+  })
+
+  const disableMutation = useMutation({
+    mutationFn: () => usersApi.disableMfa(disableCode),
+    onSuccess: () => {
+      setDisableCode('')
+      setActionError(null)
+      queryClient.invalidateQueries({ queryKey: ['mfa-status'] })
+    },
+    onError: () => setActionError('Не удалось отключить. Проверьте код и попробуйте снова.'),
+  })
+
+  if (isLoading || !status) {
+    return <Spinner size="sm" />
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">
+          Двухфакторная аутентификация
+        </h2>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+          Дополнительный код из приложения-аутентификатора при входе (Google Authenticator, 1Password и др.).
+          {status.mandatory && ' Обязательна для администраторов.'}
+        </p>
+      </div>
+
+      {status.enabled ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-green-600 dark:text-green-400">Двухфакторная аутентификация включена</p>
+          {status.mandatory ? (
+            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+              Отключение недоступно для администраторов.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2 max-w-xs">
+              <Input
+                label="Код для отключения"
+                inputMode="numeric"
+                placeholder="000000"
+                value={disableCode}
+                onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              />
+              <div>
+                <Button
+                  variant="secondary"
+                  loading={disableMutation.isPending}
+                  disabled={disableCode.length !== 6}
+                  onClick={() => disableMutation.mutate()}
+                >
+                  Отключить 2FA
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : setup ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4 max-w-md">
+          <p className="text-sm text-light-text dark:text-dark-text">
+            Добавьте ключ в приложение-аутентификатор, затем введите код для подтверждения.
+          </p>
+          <div>
+            <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">Секретный ключ:</p>
+            <code className="font-mono text-sm break-all text-light-text dark:text-dark-text">{setup.secret}</code>
+          </div>
+          <Input
+            label="Код подтверждения"
+            inputMode="numeric"
+            placeholder="000000"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="primary"
+              loading={enableMutation.isPending}
+              disabled={code.length !== 6}
+              onClick={() => enableMutation.mutate()}
+            >
+              Включить 2FA
+            </Button>
+            <Button variant="secondary" onClick={() => setSetup(null)}>
+              Отмена
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <Button
+            variant="primary"
+            loading={setupMutation.isPending}
+            onClick={() => setupMutation.mutate()}
+          >
+            Настроить 2FA
+          </Button>
+        </div>
+      )}
+
+      {actionError && <p className="text-sm text-red-600 dark:text-red-400">{actionError}</p>}
+    </div>
+  )
+}
+
+function SessionsSection(): JSX.Element {
+  const queryClient = useQueryClient()
+
+  const { data: sessions, isLoading } = useQuery({
+    queryKey: ['sessions'],
+    queryFn: usersApi.listSessions,
+  })
+
+  const revokeMutation = useMutation({
+    mutationFn: (sessionId: string) => usersApi.revokeSession(sessionId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+  })
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Активные сессии</h2>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+          Устройства с активным доступом к аккаунту. Завершите незнакомые сессии.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <Spinner size="sm" />
+      ) : !sessions || sessions.length === 0 ? (
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">Активных сессий нет.</p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {sessions.map((session) => (
+            <SessionRow
+              key={session.id}
+              session={session}
+              onRevoke={() => revokeMutation.mutate(session.id)}
+              revoking={revokeMutation.isPending && revokeMutation.variables === session.id}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function SessionRow({
+  session,
+  onRevoke,
+  revoking,
+}: {
+  session: SessionResponse
+  onRevoke: () => void
+  revoking: boolean
+}): JSX.Element {
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-lg border border-light-border dark:border-dark-border p-3">
+      <div className="min-w-0">
+        <p className="text-sm text-light-text dark:text-dark-text truncate">
+          {session.userAgent ?? 'Неизвестное устройство'}
+        </p>
+        <p className="text-xs text-light-secondary dark:text-dark-secondary truncate">
+          IP: {session.ipAddress ?? '—'} · вход {new Date(session.createdAt).toLocaleString('ru-RU')}
+        </p>
+      </div>
+      <Button variant="secondary" loading={revoking} onClick={onRevoke}>
+        Завершить
+      </Button>
+    </li>
   )
 }
 

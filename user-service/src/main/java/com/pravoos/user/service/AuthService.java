@@ -1,9 +1,12 @@
 package com.pravoos.user.service;
 
+import com.pravoos.user.event.NewLoginEvent;
 import com.pravoos.user.exception.AccountLockedException;
 import com.pravoos.user.exception.InvalidCredentialsException;
 import com.pravoos.user.exception.InvalidRefreshTokenException;
+import com.pravoos.user.exception.MfaException;
 import com.pravoos.user.model.dto.LoginRequest;
+import com.pravoos.user.model.dto.LoginResult;
 import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserStatus;
@@ -15,10 +18,13 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Service
@@ -33,28 +39,39 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final LoginAttemptService loginAttemptService;
+    private final MfaService mfaService;
+    private final MfaChallengeService mfaChallengeService;
+    private final ApplicationEventPublisher eventPublisher;
     private final Counter loginSuccessCounter;
     private final Counter loginFailureCounter;
     private final Counter loginLockedCounter;
+    private final Counter loginMfaChallengedCounter;
 
     public AuthService(UserRepository userRepository,
                        JwtTokenProvider jwtTokenProvider,
                        PasswordEncoder passwordEncoder,
                        RefreshTokenService refreshTokenService,
                        LoginAttemptService loginAttemptService,
+                       MfaService mfaService,
+                       MfaChallengeService mfaChallengeService,
+                       ApplicationEventPublisher eventPublisher,
                        MeterRegistry meterRegistry) {
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
         this.loginAttemptService = loginAttemptService;
+        this.mfaService = mfaService;
+        this.mfaChallengeService = mfaChallengeService;
+        this.eventPublisher = eventPublisher;
         this.loginSuccessCounter = Counter.builder("pravoos.login").tag("result", "success").register(meterRegistry);
         this.loginFailureCounter = Counter.builder("pravoos.login").tag("result", "failure").register(meterRegistry);
         this.loginLockedCounter = Counter.builder("pravoos.login").tag("result", "locked").register(meterRegistry);
+        this.loginMfaChallengedCounter = Counter.builder("pravoos.login").tag("result", "mfa_challenged").register(meterRegistry);
     }
 
     @Transactional
-    public TokenResponse login(LoginRequest request) {
+    public LoginResult login(LoginRequest request, String ipAddress, String userAgent) {
         String email = EmailNormalizer.normalize(request.email());
         loginAttemptService.remainingLockSeconds(email)
                 .ifPresent(seconds -> {
@@ -82,18 +99,44 @@ public class AuthService {
         }
 
         loginAttemptService.reset(email);
+
+        if (mfaService.isMfaEnabled(user.getId())) {
+            loginMfaChallengedCounter.increment();
+            log.info("Password verified, MFA challenge required: {}", EmailMasker.mask(email));
+            return LoginResult.mfaRequired(mfaChallengeService.createChallenge(user.getId()));
+        }
+
         loginSuccessCounter.increment();
         log.info("User authenticated: {}", EmailMasker.mask(email));
-        return issueTokens(user);
+        return LoginResult.success(completeLogin(user, ipAddress, userAgent));
     }
 
     @Transactional
-    public TokenResponse refresh(String rawRefreshToken) {
+    public TokenResponse completeMfaLogin(String mfaToken, String code, String ipAddress, String userAgent) {
+        UUID userId = mfaChallengeService.resolve(mfaToken);
+        if (!mfaService.verifyLoginCode(userId, code)) {
+            mfaChallengeService.registerFailedAttempt(mfaToken);
+            log.warn("Invalid MFA code during login for user {}", userId);
+            throw MfaException.invalidCode();
+        }
+        mfaChallengeService.invalidate(mfaToken);
+
+        User user = userRepository.findById(userId)
+                .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        loginSuccessCounter.increment();
+        log.info("User authenticated via MFA: {}", EmailMasker.mask(user.getEmail()));
+        return completeLogin(user, ipAddress, userAgent);
+    }
+
+    @Transactional
+    public TokenResponse refresh(String rawRefreshToken, String ipAddress, String userAgent) {
         UUID userId = refreshTokenService.rotate(rawRefreshToken);
         User user = userRepository.findById(userId)
                 .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
                 .orElseThrow(InvalidRefreshTokenException::new);
-        return issueTokens(user);
+        return issueTokens(user, ipAddress, userAgent);
     }
 
     @Transactional
@@ -101,9 +144,20 @@ public class AuthService {
         refreshTokenService.revoke(rawRefreshToken);
     }
 
-    private TokenResponse issueTokens(User user) {
+    private TokenResponse completeLogin(User user, String ipAddress, String userAgent) {
+        boolean knownDevice = refreshTokenService.isKnownDevice(user.getId(), ipAddress);
+        TokenResponse tokens = issueTokens(user, ipAddress, userAgent);
+        if (!knownDevice && ipAddress != null) {
+            eventPublisher.publishEvent(new NewLoginEvent(
+                    user.getEmail(), ipAddress, userAgent, LocalDateTime.now(ZoneOffset.UTC)));
+            log.info("New-device login detected for {}", EmailMasker.mask(user.getEmail()));
+        }
+        return tokens;
+    }
+
+    private TokenResponse issueTokens(User user, String ipAddress, String userAgent) {
         String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole());
-        String refreshToken = refreshTokenService.issue(user.getId());
+        String refreshToken = refreshTokenService.issue(user.getId(), ipAddress, userAgent);
         return new TokenResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
     }
 }

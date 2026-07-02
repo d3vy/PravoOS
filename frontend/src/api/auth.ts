@@ -1,7 +1,9 @@
 import apiClient from './client'
 import type {
   LoginRequest,
+  LoginResponse,
   AuthResponse,
+  MfaLoginRequest,
   ApplyRequest,
   ApplicationResponse,
   ApplicationSubmissionResponse,
@@ -9,8 +11,13 @@ import type {
 } from '../types'
 
 export const authApi = {
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/api/auth/login', data)
+  login: async (data: LoginRequest): Promise<LoginResponse> => {
+    const response = await apiClient.post<LoginResponse>('/api/auth/login', data)
+    return response.data
+  },
+
+  loginMfa: async (data: MfaLoginRequest): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/api/auth/login/mfa', data)
     return response.data
   },
 

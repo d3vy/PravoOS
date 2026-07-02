@@ -72,6 +72,21 @@ public class ResendEmailClient {
         log.info("Deadline email sent to {}", EmailMasker.mask(to));
     }
 
+    public void sendNewLoginEmail(String to, String ipAddress, String device, String when) {
+        String deviceText = (device == null || device.isBlank()) ? "неизвестное устройство" : escapeHtml(device);
+        String bodyText = String.format(
+                "Зафиксирован вход в ваш аккаунт PravoOS с нового устройства.<br><br>"
+                        + "Время (UTC): %s<br>IP-адрес: %s<br>Устройство: %s",
+                escapeHtml(when), escapeHtml(ipAddress), deviceText);
+        send(to, "Новый вход в аккаунт — PravoOS", buildHtml(
+                bodyText,
+                "Управление сессиями",
+                properties.frontendBaseUrl() + "/profile",
+                "Если это были вы — ничего делать не нужно. Если нет — немедленно смените пароль и завершите активные сессии в профиле."
+        ));
+        log.info("New-login email sent to {}", EmailMasker.mask(to));
+    }
+
     public void sendPasswordResetEmail(String to, String resetLink) {
         send(to, "Сброс пароля — PravoOS", buildHtml(
                 "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",
@@ -97,6 +112,16 @@ public class ResendEmailClient {
                 .body(body)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
     private String buildHtml(String bodyText, String buttonText, String link, String footnote) {

@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-@EnableConfigurationProperties({JwtProperties.class, AdminProperties.class, RefreshCookieProperties.class, BruteForceProperties.class, InternalSecretProperties.class, ResendProperties.class, TestLawyerProperties.class, TelegramProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, AdminProperties.class, RefreshCookieProperties.class, BruteForceProperties.class, InternalSecretProperties.class, ResendProperties.class, TestLawyerProperties.class, TelegramProperties.class, PasswordPolicyProperties.class, MfaProperties.class})
 @EnableScheduling
 @EnableAsync
 public class UserServiceApplication {
