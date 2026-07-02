@@ -8,5 +8,6 @@ public record DocumentProperties(
         int chunkSize,
         int chunkOverlap,
         int topKResults,
-        int contextMaxChars
+        int contextMaxChars,
+        int maxPerCase
 ) {}

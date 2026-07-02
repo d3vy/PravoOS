@@ -40,6 +40,7 @@ public class LegalDomainGuard {
 
     private final RestClient restClient;
     private final OpenAiProperties properties;
+    private final boolean failOpen;
     private final Cache<String, Boolean> verdictCache;
     private final Counter passCounter;
     private final Counter blockCounter;
@@ -48,9 +49,11 @@ public class LegalDomainGuard {
 
     public LegalDomainGuard(@Qualifier("openAiGuardRestClient") RestClient openAiGuardRestClient,
                             OpenAiProperties properties,
+                            @org.springframework.beans.factory.annotation.Value("${llm.guard.fail-open:true}") boolean failOpen,
                             MeterRegistry registry) {
         this.restClient = openAiGuardRestClient;
         this.properties = properties;
+        this.failOpen = failOpen;
         this.verdictCache = Caffeine.newBuilder()
                 .maximumSize(CACHE_MAX_SIZE)
                 .expireAfterWrite(CACHE_TTL)
@@ -91,15 +94,15 @@ public class LegalDomainGuard {
                     .body(OpenAiChatResponse.class);
 
             if (response == null) {
-                log.warn("Guard classifier returned empty response, allowing query (fail-open)");
+                log.warn("Guard classifier returned empty response, fail-open={}", failOpen);
                 failOpenCounter.increment();
-                return true;
+                return failOpen;
             }
             verdict = response.firstContent().trim().toUpperCase();
         } catch (RestClientException e) {
-            log.warn("Guard classifier unavailable, allowing query (fail-open): {}", e.getMessage());
+            log.warn("Guard classifier unavailable, fail-open={}: {}", failOpen, e.getMessage());
             failOpenCounter.increment();
-            return true;
+            return failOpen;
         }
 
         boolean legal = "YES".equals(verdict);

@@ -32,4 +32,12 @@ class InternalSecretVerifierTest {
     void verify_passes_forCorrectSecret() {
         assertThatCode(() -> verifier.verify("super-secret-value")).doesNotThrowAnyException();
     }
+
+    @Test
+    void matches_returnsFalse_whenConfiguredSecretBlank() {
+        InternalSecretVerifier blankVerifier = new InternalSecretVerifier(new InternalSecretProperties(""));
+        assertThat(blankVerifier.matches("")).isFalse();
+        assertThat(blankVerifier.matches("anything")).isFalse();
+        assertThat(blankVerifier.matches(null)).isFalse();
+    }
 }

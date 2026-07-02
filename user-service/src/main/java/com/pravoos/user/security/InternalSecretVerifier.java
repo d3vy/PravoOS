@@ -25,8 +25,12 @@ public class InternalSecretVerifier {
     }
 
     public boolean matches(String secret) {
+        String configuredSecret = secretProperties.secret();
+        if (configuredSecret == null || configuredSecret.isBlank()) {
+            return false;
+        }
         return secret != null
-                && MessageDigest.isEqual(sha256(secretProperties.secret()), sha256(secret));
+                && MessageDigest.isEqual(sha256(configuredSecret), sha256(secret));
     }
 
     private byte[] sha256(String value) {

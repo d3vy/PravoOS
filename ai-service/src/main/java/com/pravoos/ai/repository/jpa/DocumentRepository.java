@@ -23,6 +23,8 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     List<Document> findByCaseIdOrderByUploadedAtDesc(UUID caseId);
 
+    long countByCaseId(UUID caseId);
+
     @Query("""
             SELECT d FROM Document d
             WHERE d.caseId IS NOT NULL

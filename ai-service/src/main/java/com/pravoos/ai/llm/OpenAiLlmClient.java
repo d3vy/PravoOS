@@ -13,8 +13,12 @@ import org.springframework.web.client.RestClientResponseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.springframework.beans.factory.annotation.Value;
 
 @Component
 public class OpenAiLlmClient implements LlmClient {
@@ -28,11 +32,19 @@ public class OpenAiLlmClient implements LlmClient {
     private final RestClient restClient;
     private final OpenAiProperties properties;
     private final LlmMetrics llmMetrics;
+    private final Semaphore inFlightLimit;
+    private final long acquireTimeoutMs;
 
-    public OpenAiLlmClient(RestClient openAiRestClient, OpenAiProperties properties, LlmMetrics llmMetrics) {
+    public OpenAiLlmClient(RestClient openAiRestClient,
+                           OpenAiProperties properties,
+                           LlmMetrics llmMetrics,
+                           @Value("${llm.openai.max-concurrent-requests:20}") int maxConcurrentRequests,
+                           @Value("${llm.openai.acquire-timeout-ms:2000}") long acquireTimeoutMs) {
         this.restClient = openAiRestClient;
         this.properties = properties;
         this.llmMetrics = llmMetrics;
+        this.inFlightLimit = new Semaphore(maxConcurrentRequests);
+        this.acquireTimeoutMs = acquireTimeoutMs;
     }
 
     @Override
@@ -88,6 +100,26 @@ public class OpenAiLlmClient implements LlmClient {
     }
 
     private <T> T executeWithRetry(String operation, Supplier<T> call) {
+        boolean acquired;
+        try {
+            acquired = inFlightLimit.tryAcquire(acquireTimeoutMs, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new LlmException("OpenAI " + operation + " interrupted while waiting for a slot");
+        }
+        if (!acquired) {
+            log.warn("OpenAI {} rejected: concurrency limit reached ({} in flight)",
+                    operation, inFlightLimit.availablePermits());
+            throw new LlmException("OpenAI " + operation + " overloaded, please retry shortly");
+        }
+        try {
+            return executeWithRetryInternal(operation, call);
+        } finally {
+            inFlightLimit.release();
+        }
+    }
+
+    private <T> T executeWithRetryInternal(String operation, Supplier<T> call) {
         RestClientException lastException = null;
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {

@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RagServiceContextBudgetTest {
 
     private RagService ragService(int contextMaxChars) {
-        return new RagService(new DocumentProperties(null, 512, 50, 5, contextMaxChars));
+        return new RagService(new DocumentProperties(null, 512, 50, 5, contextMaxChars, 200));
     }
 
     @Test

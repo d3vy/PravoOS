@@ -85,9 +85,7 @@ public class ChatService {
         Conversation conversation = resolveConversation(request.conversationId(), lawyerId, request.message());
         boolean isNewConversation = conversation.getId() == null;
 
-        if (isNewConversation) {
-            legalDomainGuard.assertLegalQuery(request.message());
-        }
+        legalDomainGuard.assertLegalQuery(request.message());
 
         log.info("Chat request received: conversation={}, lawyer={}",
                 isNewConversation ? "new" : conversation.getId(), lawyerId);
@@ -122,6 +120,7 @@ public class ChatService {
 
         String systemPrompt = ragService.buildSystemPrompt(relevantChunks);
         LlmResult completion = llmClient.complete(systemPrompt, historyForLlm, request.message());
+        llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
         FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(completion.content());
         log.info("LLM chat tokens for lawyer {}: total={}, prompt={}, completion={}",
                 lawyerId, completion.usage().totalTokens(),

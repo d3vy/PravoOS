@@ -75,6 +75,9 @@ llm:
     max-tokens: ${OPENAI_MAX_TOKENS:4096}
   quota:
     daily-requests: ${LLM_DAILY_QUOTA:200}
+    daily-tokens: ${LLM_DAILY_TOKEN_BUDGET:0}
+  guard:
+    fail-open: ${LLM_GUARD_FAIL_OPEN:true}
   history-max-chars: ${LLM_HISTORY_MAX_CHARS:12000}
 
 chat:
@@ -86,6 +89,8 @@ document:
   chunk-overlap: 50
   top-k-results: 5
   context-max-chars: ${RAG_CONTEXT_MAX_CHARS:24000}
+  max-distance: ${RAG_MAX_DISTANCE:0.85}
+  max-per-case: ${DOCUMENT_MAX_PER_CASE:200}
 
 arbitr:
   api:

@@ -72,6 +72,7 @@ public class DraftService {
         List<String> chunks = matches.stream().map(ChunkMatch::content).toList();
         String systemPrompt = ragService.buildWorkflowPrompt(draftType.instruction(), chunks);
         LlmResult completion = llmClient.complete(systemPrompt, List.of(), "Выполни задачу.");
+        llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
         log.info("LLM draft tokens for lawyer {}: total={}", lawyerId, completion.usage().totalTokens());
 
         CaseDraft draft = new CaseDraft();

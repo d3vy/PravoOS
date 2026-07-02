@@ -77,6 +77,7 @@ public class WorkflowService {
 
         String systemPrompt = ragService.buildWorkflowPrompt(instruction, chunks);
         LlmResult completion = llmClient.complete(systemPrompt, List.of(), instruction);
+        llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
         FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(completion.content());
         log.info("LLM workflow tokens for lawyer {}: total={}", lawyerId, completion.usage().totalTokens());
 

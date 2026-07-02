@@ -15,7 +15,7 @@ fi
 : "${TELEGRAM_ADMIN_CHAT_ID:?TELEGRAM_ADMIN_CHAT_ID not set}"
 
 BACKUP_DIR="$ROOT/backups"
-LATEST=$(ls -t "$BACKUP_DIR"/backup-*.tar.gz 2>/dev/null | head -1)
+LATEST=$(ls -t "$BACKUP_DIR"/backup-*.tar.gz.gpg 2>/dev/null | head -1)
 
 if [ -z "$LATEST" ]; then
     echo "[backup-send] No backup file found in $BACKUP_DIR"

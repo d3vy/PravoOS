@@ -14,6 +14,8 @@ import com.pravoos.ai.pipeline.ChunkData;
 import com.pravoos.ai.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.repository.jpa.DocumentRepository;
 import com.pravoos.ai.util.PageRequests;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -39,15 +41,21 @@ public class DocumentService {
     private final DocumentChunkRepository documentChunkRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final DocumentProperties documentProperties;
+    private final Counter processingFailedCounter;
 
     public DocumentService(DocumentRepository documentRepository,
                            DocumentChunkRepository documentChunkRepository,
                            ApplicationEventPublisher eventPublisher,
-                           DocumentProperties documentProperties) {
+                           DocumentProperties documentProperties,
+                           MeterRegistry meterRegistry) {
         this.documentRepository = documentRepository;
         this.documentChunkRepository = documentChunkRepository;
         this.eventPublisher = eventPublisher;
         this.documentProperties = documentProperties;
+        this.processingFailedCounter = Counter.builder("pravoos.document.processing")
+                .description("Document embedding-pipeline outcomes")
+                .tag("result", "failed")
+                .register(meterRegistry);
     }
 
     @Transactional
@@ -61,6 +69,16 @@ public class DocumentService {
             log.warn("Document upload rejected: empty file from {}", uploadedBy);
             throw new DocumentProcessingException("Uploaded file is empty");
         }
+        if (caseId != null) {
+            long existing = documentRepository.countByCaseId(caseId);
+            if (existing >= documentProperties.maxPerCase()) {
+                log.warn("Document upload rejected: case {} reached the limit of {} documents",
+                        caseId, documentProperties.maxPerCase());
+                throw new DocumentProcessingException(
+                        "Достигнут лимит документов на дело (" + documentProperties.maxPerCase() + ")");
+            }
+        }
+
         String originalName = file.getOriginalFilename();
         String fileType = extractFileType(originalName);
         validateContentMatchesType(file, fileType);
@@ -108,6 +126,7 @@ public class DocumentService {
         documentRepository.findById(documentId).ifPresent(document -> {
             document.setStatus(DocumentStatus.FAILED);
             documentRepository.save(document);
+            processingFailedCounter.increment();
             log.warn("Document {} marked FAILED", documentId);
         });
     }

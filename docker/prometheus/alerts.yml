@@ -39,6 +39,15 @@ groups:
           summary: "Сообщения попали в DLT: {{ $labels.topic }}"
           description: "За 10 минут в DLT-топик {{ $labels.topic }} попали сообщения — требуется разбор."
 
+      - alert: DocumentProcessingFailing
+        expr: increase(pravoos_document_processing_total{result="failed"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Документы не проходят обработку (embedding pipeline)"
+          description: "За 15 минут были провалы обработки загруженных документов — они остаются в статусе FAILED и не попадают в RAG. Проверь OpenAI embeddings и парсинг файлов."
+
       - alert: LoginFailureSpike
         expr: sum(rate(pravoos_login_total{result="failure"}[5m])) > 1
         for: 10m

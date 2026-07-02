@@ -99,6 +99,14 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx200m"
+      # Secret isolation: blank out secrets this service never reads (overrides env_file).
+      OPENAI_API_KEY: ""
+      ARBITR_API_KEY: ""
+      MONGO_USERNAME: ""
+      MONGO_PASSWORD: ""
+      TELEGRAM_BOT_TOKEN: ""
+      BACKUP_ENCRYPTION_KEY: ""
+      GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
       postgres:
         condition: service_healthy
@@ -136,6 +144,14 @@ services:
       JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx300m"
+      # Secret isolation: blank out secrets this service never reads (overrides env_file).
+      RESEND_API_KEY: ""
+      ADMIN_PASSWORD: ""
+      ADMIN_PASSWORD_2: ""
+      INTERNAL_SERVICE_SECRET: ""
+      TELEGRAM_BOT_TOKEN: ""
+      BACKUP_ENCRYPTION_KEY: ""
+      GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
       postgres:
         condition: service_healthy
@@ -173,6 +189,17 @@ services:
       JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx100m"
+      # Secret isolation: blank out secrets this service never reads (overrides env_file).
+      OPENAI_API_KEY: ""
+      ARBITR_API_KEY: ""
+      MONGO_USERNAME: ""
+      MONGO_PASSWORD: ""
+      RESEND_API_KEY: ""
+      ADMIN_PASSWORD: ""
+      ADMIN_PASSWORD_2: ""
+      DB_PASSWORD: ""
+      BACKUP_ENCRYPTION_KEY: ""
+      GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
       kafka:
         condition: service_healthy
@@ -204,6 +231,19 @@ services:
       CORS_INCLUDE_LOCALHOST: ${CORS_INCLUDE_LOCALHOST:-true}
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx150m"
+      # Secret isolation: blank out secrets this service never reads (overrides env_file).
+      OPENAI_API_KEY: ""
+      ARBITR_API_KEY: ""
+      MONGO_USERNAME: ""
+      MONGO_PASSWORD: ""
+      RESEND_API_KEY: ""
+      ADMIN_PASSWORD: ""
+      ADMIN_PASSWORD_2: ""
+      INTERNAL_SERVICE_SECRET: ""
+      TELEGRAM_BOT_TOKEN: ""
+      DB_PASSWORD: ""
+      BACKUP_ENCRYPTION_KEY: ""
+      GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
       user-service:
         condition: service_healthy

@@ -16,37 +16,86 @@ import java.util.UUID;
 public class LlmQuotaService {
 
     private static final Logger log = LoggerFactory.getLogger(LlmQuotaService.class);
-    private static final String KEY_PREFIX = "llm_quota:";
+    private static final String REQUEST_KEY_PREFIX = "llm_quota:";
+    private static final String TOKEN_KEY_PREFIX = "llm_tokens:";
     private static final Duration WINDOW = Duration.ofDays(1);
 
     private final StringRedisTemplate redisTemplate;
-    private final int dailyLimit;
+    private final int dailyRequestLimit;
+    private final long dailyTokenLimit;
 
     public LlmQuotaService(StringRedisTemplate redisTemplate,
-                           @Value("${llm.quota.daily-requests:200}") int dailyLimit) {
+                           @Value("${llm.quota.daily-requests:200}") int dailyRequestLimit,
+                           @Value("${llm.quota.daily-tokens:0}") long dailyTokenLimit) {
         this.redisTemplate = redisTemplate;
-        this.dailyLimit = dailyLimit;
+        this.dailyRequestLimit = dailyRequestLimit;
+        this.dailyTokenLimit = dailyTokenLimit;
     }
 
     public void assertWithinQuota(UUID lawyerId) {
-        if (dailyLimit <= 0) {
+        if (dailyRequestLimit <= 0 && dailyTokenLimit <= 0) {
             return;
         }
-        String key = KEY_PREFIX + lawyerId + ":" + LocalDate.now();
         try {
-            Long count = redisTemplate.opsForValue().increment(key);
-            if (count == null) {
-                return;
+            if (dailyRequestLimit > 0) {
+                long requests = readCounter(requestKey(lawyerId));
+                if (requests >= dailyRequestLimit) {
+                    log.warn("LLM daily request quota exceeded for lawyer {} ({}/{})",
+                            lawyerId, requests, dailyRequestLimit);
+                    throw new LlmQuotaExceededException();
+                }
             }
-            if (count == 1L) {
-                redisTemplate.expire(key, WINDOW);
-            }
-            if (count > dailyLimit) {
-                log.warn("LLM daily quota exceeded for lawyer {} ({}/{})", lawyerId, count, dailyLimit);
-                throw new LlmQuotaExceededException();
+            if (dailyTokenLimit > 0) {
+                long tokens = readCounter(tokenKey(lawyerId));
+                if (tokens >= dailyTokenLimit) {
+                    log.warn("LLM daily token budget exceeded for lawyer {} ({}/{})",
+                            lawyerId, tokens, dailyTokenLimit);
+                    throw new LlmQuotaExceededException();
+                }
             }
         } catch (DataAccessException ex) {
             log.warn("Redis unavailable during LLM quota check, allowing", ex);
         }
+    }
+
+    public void recordUsage(UUID lawyerId, long totalTokens) {
+        if (dailyRequestLimit <= 0 && dailyTokenLimit <= 0) {
+            return;
+        }
+        try {
+            incrementWithTtl(requestKey(lawyerId), 1L);
+            if (totalTokens > 0) {
+                incrementWithTtl(tokenKey(lawyerId), totalTokens);
+            }
+        } catch (DataAccessException ex) {
+            log.warn("Redis unavailable during LLM usage recording for lawyer {}", lawyerId, ex);
+        }
+    }
+
+    private void incrementWithTtl(String key, long delta) {
+        Long value = redisTemplate.opsForValue().increment(key, delta);
+        if (value != null && value == delta) {
+            redisTemplate.expire(key, WINDOW);
+        }
+    }
+
+    private long readCounter(String key) {
+        String value = redisTemplate.opsForValue().get(key);
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    private String requestKey(UUID lawyerId) {
+        return REQUEST_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
+    }
+
+    private String tokenKey(UUID lawyerId) {
+        return TOKEN_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
     }
 }
