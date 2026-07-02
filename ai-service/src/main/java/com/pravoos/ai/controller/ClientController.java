@@ -4,9 +4,12 @@ import com.pravoos.ai.model.dto.ClientDetailResponse;
 import com.pravoos.ai.model.dto.ClientResponse;
 import com.pravoos.ai.model.dto.CreateClientRequest;
 import com.pravoos.ai.model.dto.UpdateClientRequest;
+import com.pravoos.ai.model.enums.AuditAction;
+import com.pravoos.ai.service.AccessAuditService;
 import com.pravoos.ai.service.ClientService;
 import com.pravoos.ai.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +24,11 @@ import java.util.UUID;
 public class ClientController {
 
     private final ClientService clientService;
+    private final AccessAuditService accessAuditService;
 
-    public ClientController(ClientService clientService) {
+    public ClientController(ClientService clientService, AccessAuditService accessAuditService) {
         this.clientService = clientService;
+        this.accessAuditService = accessAuditService;
     }
 
     @PostMapping
@@ -42,8 +47,11 @@ public class ClientController {
 
     @GetMapping("/{clientId}")
     public ResponseEntity<ClientDetailResponse> get(@PathVariable UUID clientId,
-                                                    Authentication authentication) {
-        return ResponseEntity.ok(clientService.get(clientId, SecurityUtils.currentUserId(authentication)));
+                                                    Authentication authentication,
+                                                    HttpServletRequest request) {
+        ClientDetailResponse client = clientService.get(clientId, SecurityUtils.currentUserId(authentication));
+        accessAuditService.record(authentication, AuditAction.CLIENT_VIEW, clientId, request);
+        return ResponseEntity.ok(client);
     }
 
     @PutMapping("/{clientId}")

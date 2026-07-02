@@ -91,6 +91,13 @@ document:
   context-max-chars: ${RAG_CONTEXT_MAX_CHARS:24000}
   max-distance: ${RAG_MAX_DISTANCE:0.85}
   max-per-case: ${DOCUMENT_MAX_PER_CASE:200}
+  crypto:
+    key: ${FILE_ENCRYPTION_KEY:}
+  malware-scan:
+    host: ${CLAMAV_HOST:}
+    port: ${CLAMAV_PORT:3310}
+    timeout-ms: ${CLAMAV_TIMEOUT_MS:15000}
+    fail-open: ${CLAMAV_FAIL_OPEN:false}
 
 arbitr:
   api:

@@ -4,6 +4,7 @@ import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.model.enums.CaseStatus;
 import com.pravoos.ai.service.*;
 import com.pravoos.ai.util.PagedResponse;
+import com.pravoos.ai.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.*;
@@ -175,6 +176,7 @@ public class CaseController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(
                 ContentDisposition.attachment().filename(file.fileName(), StandardCharsets.UTF_8).build());
+        SecureFileHeaders.apply(headers);
 
         return ResponseEntity.ok()
                 .headers(headers)

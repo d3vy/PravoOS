@@ -12,6 +12,7 @@ services:
     environment:
       SWAGGER_ENABLED: "true"
       TRACING_SAMPLE_PROBABILITY: "1.0"
+      CLAMAV_HOST: ""
 
   notification-service:
     environment:

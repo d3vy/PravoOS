@@ -8,6 +8,7 @@ import com.pravoos.ai.model.entity.Document;
 import com.pravoos.ai.repository.jpa.DocumentRepository;
 import com.pravoos.ai.service.DocumentService;
 import com.pravoos.ai.service.EmbeddingService;
+import com.pravoos.ai.service.FileCryptoService;
 import com.pravoos.ai.service.LlmQuotaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ public class EmbeddingPipeline {
     private final DocumentRepository documentRepository;
     private final DocumentService documentService;
     private final DocumentParser documentParser;
+    private final FileCryptoService fileCryptoService;
     private final TextChunker textChunker;
     private final EmbeddingService embeddingService;
     private final DocumentProperties documentProperties;
@@ -38,6 +40,7 @@ public class EmbeddingPipeline {
     public EmbeddingPipeline(DocumentRepository documentRepository,
                              DocumentService documentService,
                              DocumentParser documentParser,
+                             FileCryptoService fileCryptoService,
                              TextChunker textChunker,
                              EmbeddingService embeddingService,
                              DocumentProperties documentProperties,
@@ -45,6 +48,7 @@ public class EmbeddingPipeline {
         this.documentRepository = documentRepository;
         this.documentService = documentService;
         this.documentParser = documentParser;
+        this.fileCryptoService = fileCryptoService;
         this.textChunker = textChunker;
         this.embeddingService = embeddingService;
         this.documentProperties = documentProperties;
@@ -61,10 +65,8 @@ public class EmbeddingPipeline {
             Document document = documentRepository.findById(documentId)
                     .orElseThrow(() -> new DocumentNotFoundException(documentId));
 
-            String text = documentParser.extractText(
-                    Paths.get(document.getFilePath()),
-                    document.getFileType()
-            );
+            byte[] content = fileCryptoService.decryptFile(Paths.get(document.getFilePath()));
+            String text = documentParser.extractText(content, document.getFileType());
 
             List<String> chunkTexts = textChunker.chunk(
                     text,

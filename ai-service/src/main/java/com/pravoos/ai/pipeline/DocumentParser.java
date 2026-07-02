@@ -8,43 +8,36 @@ import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.stereotype.Component;
 
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 @Component
 public class DocumentParser {
 
-    public String extractText(Path filePath, String fileType) {
+    public String extractText(byte[] content, String fileType) {
         return switch (fileType.toLowerCase()) {
-            case "pdf" -> extractPdfText(filePath);
-            case "docx" -> extractDocxText(filePath);
-            case "txt" -> extractPlainText(filePath);
+            case "pdf" -> extractPdfText(content);
+            case "docx" -> extractDocxText(content);
+            case "txt" -> extractPlainText(content);
             default -> throw new DocumentProcessingException("Unsupported file type: " + fileType);
         };
     }
 
-    private String extractPlainText(Path filePath) {
-        try {
-            return Files.readString(filePath, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new DocumentProcessingException("Failed to read text file: " + e.getMessage());
-        }
+    private String extractPlainText(byte[] content) {
+        return new String(content, StandardCharsets.UTF_8);
     }
 
-    private String extractPdfText(Path filePath) {
-        try (PDDocument document = Loader.loadPDF(filePath.toFile())) {
+    private String extractPdfText(byte[] content) {
+        try (PDDocument document = Loader.loadPDF(content)) {
             return new PDFTextStripper().getText(document);
         } catch (IOException e) {
             throw new DocumentProcessingException("Failed to parse PDF: " + e.getMessage());
         }
     }
 
-    private String extractDocxText(Path filePath) {
-        try (FileInputStream fis = new FileInputStream(filePath.toFile());
-             XWPFDocument document = new XWPFDocument(fis);
+    private String extractDocxText(byte[] content) {
+        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(content));
              XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
             return extractor.getText();
         } catch (IOException e) {

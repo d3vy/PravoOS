@@ -80,6 +80,20 @@ services:
       retries: 10
       start_period: 90s
 
+  clamav:
+    image: clamav/clamav:1.3
+    container_name: pravoos-clamav
+    environment:
+      CLAMAV_NO_MILTERD: "true"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+
   user-service:
     build:
       context: .
@@ -106,6 +120,7 @@ services:
       MONGO_PASSWORD: ""
       TELEGRAM_BOT_TOKEN: ""
       BACKUP_ENCRYPTION_KEY: ""
+      FILE_ENCRYPTION_KEY: ""
       GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
       postgres:
@@ -144,6 +159,8 @@ services:
       JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx300m"
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: "3310"
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       RESEND_API_KEY: ""
       ADMIN_PASSWORD: ""
@@ -161,6 +178,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      clamav:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health/readiness || exit 1"]
       interval: 30s
@@ -199,6 +218,7 @@ services:
       ADMIN_PASSWORD_2: ""
       DB_PASSWORD: ""
       BACKUP_ENCRYPTION_KEY: ""
+      FILE_ENCRYPTION_KEY: ""
       GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
       kafka:
@@ -243,6 +263,7 @@ services:
       TELEGRAM_BOT_TOKEN: ""
       DB_PASSWORD: ""
       BACKUP_ENCRYPTION_KEY: ""
+      FILE_ENCRYPTION_KEY: ""
       GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
       user-service:
@@ -337,6 +358,7 @@ volumes:
   mongo_data:
   kafka_data:
   documents_data:
+  clamav_data:
   redis_data:
   prometheus_data:
   grafana_data:

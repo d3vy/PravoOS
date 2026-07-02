@@ -56,29 +56,30 @@
 
 ---
 
-## Блок C — Защита данных (утечки паролей/файлов)  `[ ]`
+## Блок C — Защита данных (утечки паролей/файлов)  `[x]`
 
-- [ ] **C7. Файлы клиентов лежат на диске в открытом виде.**
+- [x] **C7. Файлы клиентов лежат на диске в открытом виде.**
   `/app/documents` — plaintext. Бэкапы шифруются (GPG), живые файлы — нет.
-  → Шифрование at-rest (AES-GCM, ключ из env), прозрачно на read/write.
-  Файлы: `DocumentService.java` (storeFile/loadContent), новый `FileCryptoService`.
+  → Шифрование at-rest (AES-256-GCM, ключ `FILE_ENCRYPTION_KEY`), прозрачно на read/write.
+  `FileCryptoService` (magic-заголовок + legacy-plaintext passthrough), `DocumentParser`
+  переведён на `byte[]`, `EmbeddingPipeline`/`DocumentService.loadContent` расшифровывают.
+  `FileCryptoKeyGuard` (@Profile docker) фейлит старт без ключа. Тест `FileCryptoServiceTest`.
 
-- [ ] **C8. Нет журнала доступа (audit trail).**
-  Не фиксируется, кто/когда открывал/скачивал файл клиента или карточку дела.
-  Требование 152-ФЗ (перс.данные).
-  → Таблица `access_audit` (кто, что, когда, IP) на скачивание файлов и просмотр PII.
-  Файлы: миграция ai-service, новый `AccessAuditService`, точки в контроллерах.
+- [x] **C8. Нет журнала доступа (audit trail).**
+  → Миграция V17 `access_audit` (actor_id/role, action, resource_type/id, ip, user_agent).
+  `AccessAudit` + `AccessAuditRepository` + `AccessAuditService` (best-effort, не ломает запрос).
+  Точки: `DocumentController.content` (DOCUMENT_DOWNLOAD), `ClientController.get` (CLIENT_VIEW).
+  IP из `X-Client-Ip` (gateway) через `ClientIpResolver`.
 
-- [ ] **C9. Отдача документов без `nosniff`/строгих заголовков.**
-  `DocumentController` отдаёт файлы `inline` для pdf/txt без `X-Content-Type-Options: nosniff`.
-  MIME-sniffing-вектор.
-  → nosniff + `Content-Security-Policy: sandbox` на ответах с файлами.
-  Файлы: `DocumentController.java`, `CaseController.java` (download-эндпоинт).
+- [x] **C9. Отдача документов без `nosniff`/строгих заголовков.**
+  → `SecureFileHeaders` (nosniff + `Content-Security-Policy: sandbox`) на
+  `DocumentController.content`, `CaseController.export`, `DraftController.downloadDraft`.
 
-- [ ] **C10. Нет антивирус-проверки загрузок.**
-  Проверяется только сигнатура (magic bytes), не малварь. Сервер как вектор распространения.
-  → ClamAV (clamd) в pipeline загрузки, карантин при детекте.
-  Файлы: docker-compose (clamav), `DocumentService.upload`, новый `MalwareScanClient`.
+- [x] **C10. Нет антивирус-проверки загрузок.**
+  → Сервис `clamav` в docker-compose, `MalwareScanClient` (clamd INSTREAM по TCP, без либ),
+  скан в `DocumentService.upload` до сохранения. Gate по `CLAMAV_HOST` (пуст → off),
+  `CLAMAV_FAIL_OPEN=false` (fail-closed). Детект → `MalwareDetectedException` (422).
+  Метрика `pravoos.document.malware{result}`.
 
 ---
 

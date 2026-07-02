@@ -3,9 +3,13 @@ package com.pravoos.ai.controller;
 import com.pravoos.ai.model.dto.DocumentContent;
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;
+import com.pravoos.ai.model.enums.AuditAction;
+import com.pravoos.ai.service.AccessAuditService;
 import com.pravoos.ai.service.DocumentService;
 import com.pravoos.ai.util.PagedResponse;
+import com.pravoos.ai.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -21,9 +25,11 @@ import java.util.UUID;
 public class DocumentController {
 
     private final DocumentService documentService;
+    private final AccessAuditService accessAuditService;
 
-    public DocumentController(DocumentService documentService) {
+    public DocumentController(DocumentService documentService, AccessAuditService accessAuditService) {
         this.documentService = documentService;
+        this.accessAuditService = accessAuditService;
     }
 
     @PostMapping
@@ -42,8 +48,11 @@ public class DocumentController {
     }
 
     @GetMapping("/{id}/content")
-    public ResponseEntity<Resource> content(@PathVariable UUID id) {
+    public ResponseEntity<Resource> content(@PathVariable UUID id,
+                                            Authentication authentication,
+                                            HttpServletRequest request) {
         DocumentContent document = documentService.loadContent(id);
+        accessAuditService.record(authentication, AuditAction.DOCUMENT_DOWNLOAD, id, request);
 
         boolean inline = !"docx".equals(document.fileType());
         ContentDisposition disposition = (inline
@@ -54,6 +63,7 @@ public class DocumentController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(disposition);
+        SecureFileHeaders.apply(headers);
 
         return ResponseEntity.ok()
                 .headers(headers)

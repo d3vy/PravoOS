@@ -19,12 +19,13 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,17 +42,23 @@ public class DocumentService {
     private final DocumentChunkRepository documentChunkRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final DocumentProperties documentProperties;
+    private final FileCryptoService fileCryptoService;
+    private final MalwareScanClient malwareScanClient;
     private final Counter processingFailedCounter;
 
     public DocumentService(DocumentRepository documentRepository,
                            DocumentChunkRepository documentChunkRepository,
                            ApplicationEventPublisher eventPublisher,
                            DocumentProperties documentProperties,
+                           FileCryptoService fileCryptoService,
+                           MalwareScanClient malwareScanClient,
                            MeterRegistry meterRegistry) {
         this.documentRepository = documentRepository;
         this.documentChunkRepository = documentChunkRepository;
         this.eventPublisher = eventPublisher;
         this.documentProperties = documentProperties;
+        this.fileCryptoService = fileCryptoService;
+        this.malwareScanClient = malwareScanClient;
         this.processingFailedCounter = Counter.builder("pravoos.document.processing")
                 .description("Document embedding-pipeline outcomes")
                 .tag("result", "failed")
@@ -81,9 +88,12 @@ public class DocumentService {
 
         String originalName = file.getOriginalFilename();
         String fileType = extractFileType(originalName);
-        validateContentMatchesType(file, fileType);
 
-        Path filePath = storeFile(file, UUID.randomUUID().toString(), fileType);
+        byte[] content = readBytes(file);
+        validateContentMatchesType(content, fileType);
+        malwareScanClient.scan(content, originalName);
+
+        Path filePath = storeFile(content, UUID.randomUUID().toString(), fileType);
 
         Document document = new Document();
         document.setTitle(resolveTitle(title, originalName));
@@ -180,15 +190,12 @@ public class DocumentService {
             throw new DocumentNotFoundException(documentId);
         }
 
-        try {
-            return new DocumentContent(
-                    new FileSystemResource(path),
-                    document.getFileName(),
-                    document.getFileType(),
-                    Files.size(path));
-        } catch (IOException e) {
-            throw new DocumentProcessingException("Failed to read file: " + e.getMessage());
-        }
+        byte[] content = fileCryptoService.decryptFile(path);
+        return new DocumentContent(
+                new ByteArrayResource(content),
+                document.getFileName(),
+                document.getFileType(),
+                content.length);
     }
 
     @Transactional(readOnly = true)
@@ -206,12 +213,20 @@ public class DocumentService {
         }
     }
 
-    private Path storeFile(MultipartFile file, String storageKey, String fileType) {
+    private byte[] readBytes(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException e) {
+            throw new DocumentProcessingException("Failed to read uploaded file: " + e.getMessage());
+        }
+    }
+
+    private Path storeFile(byte[] content, String storageKey, String fileType) {
         try {
             Path dir = Paths.get(documentProperties.storagePath(), storageKey);
             Files.createDirectories(dir);
             Path filePath = dir.resolve("document." + fileType);
-            file.transferTo(filePath);
+            fileCryptoService.encryptToFile(content, filePath);
             return filePath;
         } catch (IOException e) {
             throw new DocumentProcessingException("Failed to store file: " + e.getMessage());
@@ -232,10 +247,10 @@ public class DocumentService {
 
     private static final String DOCX_CONTENT_TYPES_ENTRY = "[Content_Types].xml";
 
-    private void validateContentMatchesType(MultipartFile file, String fileType) {
+    private void validateContentMatchesType(byte[] content, String fileType) {
         boolean matches = switch (fileType) {
-            case "pdf" -> startsWith(readHeader(file), PDF_SIGNATURE);
-            case "docx" -> isValidDocx(file);
+            case "pdf" -> startsWith(content, PDF_SIGNATURE);
+            case "docx" -> isValidDocx(content);
             case "txt" -> true;
             default -> false;
         };
@@ -244,8 +259,11 @@ public class DocumentService {
         }
     }
 
-    private boolean isValidDocx(MultipartFile file) {
-        try (var zipInputStream = new java.util.zip.ZipInputStream(file.getInputStream())) {
+    private boolean isValidDocx(byte[] content) {
+        if (!startsWith(content, ZIP_SIGNATURE)) {
+            return false;
+        }
+        try (var zipInputStream = new java.util.zip.ZipInputStream(new ByteArrayInputStream(content))) {
             java.util.zip.ZipEntry entry;
             while ((entry = zipInputStream.getNextEntry()) != null) {
                 if (DOCX_CONTENT_TYPES_ENTRY.equals(entry.getName())) {
@@ -253,14 +271,6 @@ public class DocumentService {
                 }
             }
             return false;
-        } catch (IOException e) {
-            throw new DocumentProcessingException("Failed to read uploaded file: " + e.getMessage());
-        }
-    }
-
-    private byte[] readHeader(MultipartFile file) {
-        try (var inputStream = file.getInputStream()) {
-            return inputStream.readNBytes(ZIP_SIGNATURE.length);
         } catch (IOException e) {
             throw new DocumentProcessingException("Failed to read uploaded file: " + e.getMessage());
         }

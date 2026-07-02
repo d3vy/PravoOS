@@ -7,6 +7,7 @@ import com.pravoos.ai.model.dto.GenerateDraftRequest;
 import com.pravoos.ai.model.entity.CaseDraft;
 import com.pravoos.ai.service.DocxExportService;
 import com.pravoos.ai.service.DraftService;
+import com.pravoos.ai.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
@@ -64,6 +65,7 @@ public class DraftController {
         String fileName = draft.getTitle().replaceAll("[^а-яА-Яa-zA-Z0-9]", "_") + ".docx";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment().filename(fileName, StandardCharsets.UTF_8).build());
+        SecureFileHeaders.apply(headers);
 
         return ResponseEntity.ok()
                 .headers(headers)
