@@ -1,0 +1,3 @@
+ALTER TABLE users
+    ADD COLUMN login_alert_email    BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN login_alert_telegram BOOLEAN NOT NULL DEFAULT FALSE;

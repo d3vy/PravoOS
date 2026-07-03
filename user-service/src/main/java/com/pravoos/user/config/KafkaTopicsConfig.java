@@ -28,4 +28,9 @@ public class KafkaTopicsConfig {
     public NewTopic lawyerDeletedTopic() {
         return topic("lawyer.deleted");
     }
+
+    @Bean
+    public NewTopic newLoginTopic() {
+        return topic("user.new_login");
+    }
 }

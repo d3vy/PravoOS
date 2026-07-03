@@ -1,6 +1,7 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.event.NewLoginEvent;
+import com.pravoos.user.event.NewLoginKafkaPayload;
 import com.pravoos.user.exception.AccountLockedException;
 import com.pravoos.user.exception.InvalidCredentialsException;
 import com.pravoos.user.exception.InvalidRefreshTokenException;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +38,8 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final String DUMMY_PASSWORD_HASH =
             "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+    private static final String NEW_LOGIN_TOPIC = "user.new_login";
+    private static final DateTimeFormatter LOGIN_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final UserRepository userRepository;
     private final OrganizationMembershipRepository membershipRepository;
@@ -46,6 +50,7 @@ public class AuthService {
     private final MfaService mfaService;
     private final MfaChallengeService mfaChallengeService;
     private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventService outboxEventService;
     private final Counter loginSuccessCounter;
     private final Counter loginFailureCounter;
     private final Counter loginLockedCounter;
@@ -60,6 +65,7 @@ public class AuthService {
                        MfaService mfaService,
                        MfaChallengeService mfaChallengeService,
                        ApplicationEventPublisher eventPublisher,
+                       OutboxEventService outboxEventService,
                        MeterRegistry meterRegistry) {
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
@@ -70,6 +76,7 @@ public class AuthService {
         this.mfaService = mfaService;
         this.mfaChallengeService = mfaChallengeService;
         this.eventPublisher = eventPublisher;
+        this.outboxEventService = outboxEventService;
         this.loginSuccessCounter = Counter.builder("pravoos.login").tag("result", "success").register(meterRegistry);
         this.loginFailureCounter = Counter.builder("pravoos.login").tag("result", "failure").register(meterRegistry);
         this.loginLockedCounter = Counter.builder("pravoos.login").tag("result", "locked").register(meterRegistry);
@@ -154,8 +161,16 @@ public class AuthService {
         boolean knownDevice = refreshTokenService.isKnownDevice(user.getId(), ipAddress);
         TokenResponse tokens = issueTokens(user, ipAddress, userAgent);
         if (!knownDevice && ipAddress != null) {
-            eventPublisher.publishEvent(new NewLoginEvent(
-                    user.getEmail(), ipAddress, userAgent, LocalDateTime.now(ZoneOffset.UTC)));
+            LocalDateTime occurredAt = LocalDateTime.now(ZoneOffset.UTC);
+            if (user.isLoginAlertEmail()) {
+                eventPublisher.publishEvent(new NewLoginEvent(
+                        user.getEmail(), ipAddress, userAgent, occurredAt));
+            }
+            if (user.isLoginAlertTelegram()) {
+                outboxEventService.enqueue(NEW_LOGIN_TOPIC, user.getId().toString(),
+                        new NewLoginKafkaPayload(user.getId(), ipAddress, userAgent,
+                                occurredAt.format(LOGIN_TIME_FORMATTER)));
+            }
             log.info("New-device login detected for {}", EmailMasker.mask(user.getEmail()));
         }
         return tokens;

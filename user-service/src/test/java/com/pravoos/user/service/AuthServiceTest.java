@@ -3,6 +3,7 @@ package com.pravoos.user.service;
 import com.pravoos.user.exception.AccountLockedException;
 import com.pravoos.user.exception.InvalidCredentialsException;
 import com.pravoos.user.event.NewLoginEvent;
+import com.pravoos.user.event.NewLoginKafkaPayload;
 import com.pravoos.user.exception.MfaException;
 import com.pravoos.user.model.dto.LoginRequest;
 import com.pravoos.user.model.dto.LoginResult;
@@ -48,6 +49,7 @@ class AuthServiceTest {
     @Mock private MfaService mfaService;
     @Mock private MfaChallengeService mfaChallengeService;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private OutboxEventService outboxEventService;
 
     private AuthService authService;
     private SimpleMeterRegistry meterRegistry;
@@ -57,7 +59,7 @@ class AuthServiceTest {
         meterRegistry = new SimpleMeterRegistry();
         authService = new AuthService(userRepository, membershipRepository, jwtTokenProvider, passwordEncoder,
                 refreshTokenService, loginAttemptService, mfaService, mfaChallengeService,
-                eventPublisher, meterRegistry);
+                eventPublisher, outboxEventService, meterRegistry);
     }
 
     @Test
@@ -95,6 +97,43 @@ class AuthServiceTest {
         authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
 
         verify(eventPublisher).publishEvent(any(NewLoginEvent.class));
+        verify(outboxEventService, never()).enqueue(anyString(), anyString(), any());
+    }
+
+    @Test
+    void login_enqueuesTelegramOutbox_whenTelegramAlertEnabled_forUnknownDevice() {
+        User user = activeUser();
+        user.setLoginAlertEmail(false);
+        user.setLoginAlertTelegram(true);
+        when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+        when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
+        when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
+        when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(false);
+        when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+
+        authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
+
+        verify(eventPublisher, never()).publishEvent(any(NewLoginEvent.class));
+        verify(outboxEventService).enqueue(eq("user.new_login"), eq(user.getId().toString()),
+                any(NewLoginKafkaPayload.class));
+    }
+
+    @Test
+    void login_doesNotNotify_forKnownDevice_evenWhenAlertsEnabled() {
+        User user = activeUser();
+        user.setLoginAlertTelegram(true);
+        when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+        when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
+        when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
+        when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
+        when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+
+        authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
+
+        verify(eventPublisher, never()).publishEvent(any(NewLoginEvent.class));
+        verify(outboxEventService, never()).enqueue(anyString(), anyString(), any());
     }
 
     @Test

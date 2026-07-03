@@ -510,3 +510,14 @@ export interface UpdateProfileRequest {
   specialization?: string
   phone?: string
 }
+
+export interface NotificationSettingsResponse {
+  loginAlertEmail: boolean
+  loginAlertTelegram: boolean
+  telegramLinked: boolean
+}
+
+export interface UpdateNotificationSettingsRequest {
+  loginAlertEmail: boolean
+  loginAlertTelegram: boolean
+}

@@ -2,8 +2,10 @@ package com.pravoos.user.controller;
 
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
+import com.pravoos.user.model.dto.NotificationSettingsResponse;
 import com.pravoos.user.model.dto.SessionResponse;
 import com.pravoos.user.model.dto.TelegramLinkResponse;
+import com.pravoos.user.model.dto.UpdateNotificationSettingsRequest;
 import com.pravoos.user.model.dto.UpdateProfileRequest;
 import com.pravoos.user.service.RefreshTokenService;
 import com.pravoos.user.service.TelegramLinkService;
@@ -53,6 +55,20 @@ public class UserController {
     public ResponseEntity<Void> unlinkTelegram(Authentication authentication) {
         telegramLinkService.unlink(SecurityUtils.currentUserId(authentication));
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/settings/notifications")
+    public ResponseEntity<NotificationSettingsResponse> getNotificationSettings(Authentication authentication) {
+        return ResponseEntity.ok(
+                userService.getNotificationSettings(SecurityUtils.currentUserId(authentication)));
+    }
+
+    @PutMapping("/settings/notifications")
+    public ResponseEntity<NotificationSettingsResponse> updateNotificationSettings(
+            @Valid @RequestBody UpdateNotificationSettingsRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(
+                userService.updateNotificationSettings(SecurityUtils.currentUserId(authentication), request));
     }
 
     @GetMapping("/sessions")

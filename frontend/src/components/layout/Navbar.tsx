@@ -20,6 +20,7 @@ const lawyerLinks: NavLinkItem[] = [
   { to: '/templates', label: 'Шаблоны' },
   { to: '/chat', label: 'AI-чат' },
   { to: '/profile', label: 'Профиль' },
+  { to: '/settings', label: 'Настройки' },
 ]
 
 export function Navbar(): JSX.Element {

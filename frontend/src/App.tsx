@@ -27,6 +27,7 @@ import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
 import UsersPage from './pages/admin/UsersPage'
 import ProfilePage from './pages/profile/ProfilePage'
+import SettingsPage from './pages/settings/SettingsPage'
 
 export default function App(): JSX.Element {
   const { isAuthenticated, bootstrapped, effectiveRole } = useAuthStore()
@@ -142,6 +143,15 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute requiredRole="LAWYER">
             <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute requiredRole="LAWYER">
+            <SettingsPage />
           </ProtectedRoute>
         }
       />

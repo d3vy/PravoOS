@@ -6,6 +6,8 @@ import type {
   MfaStatusResponse,
   MfaSetupResponse,
   SessionResponse,
+  NotificationSettingsResponse,
+  UpdateNotificationSettingsRequest,
 } from '../types'
 
 export const usersApi = {
@@ -53,5 +55,17 @@ export const usersApi = {
 
   revokeSession: async (sessionId: string): Promise<void> => {
     await apiClient.delete(`/api/user/sessions/${sessionId}`)
+  },
+
+  getNotificationSettings: async (): Promise<NotificationSettingsResponse> => {
+    const response = await apiClient.get<NotificationSettingsResponse>('/api/user/settings/notifications')
+    return response.data
+  },
+
+  updateNotificationSettings: async (
+    data: UpdateNotificationSettingsRequest,
+  ): Promise<NotificationSettingsResponse> => {
+    const response = await apiClient.put<NotificationSettingsResponse>('/api/user/settings/notifications', data)
+    return response.data
   },
 }

@@ -32,6 +32,12 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "login_alert_email", nullable = false)
+    private boolean loginAlertEmail = true;
+
+    @Column(name = "login_alert_telegram", nullable = false)
+    private boolean loginAlertTelegram = false;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private LawyerProfile lawyerProfile;
 
@@ -57,6 +63,12 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public boolean isLoginAlertEmail() { return loginAlertEmail; }
+    public void setLoginAlertEmail(boolean loginAlertEmail) { this.loginAlertEmail = loginAlertEmail; }
+
+    public boolean isLoginAlertTelegram() { return loginAlertTelegram; }
+    public void setLoginAlertTelegram(boolean loginAlertTelegram) { this.loginAlertTelegram = loginAlertTelegram; }
 
     public LawyerProfile getLawyerProfile() { return lawyerProfile; }
     public void setLawyerProfile(LawyerProfile lawyerProfile) { this.lawyerProfile = lawyerProfile; }

@@ -7,6 +7,7 @@ import com.pravoos.notification.config.TelegramBotProperties;
 import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
+import com.pravoos.notification.event.NewLoginKafkaPayload;
 import com.pravoos.notification.exception.NotificationDeliveryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +80,36 @@ public class TelegramNotificationService {
         message.setText(formatHearingMessage(payload));
         message.setParseMode("HTML");
         send(message, payload.caseId().toString());
+    }
+
+    public void notifyNewLogin(NewLoginKafkaPayload payload) {
+        Optional<Long> chatId = telegramChatIdResolver.resolve(payload.userId());
+        if (chatId.isEmpty()) {
+            log.info("User {} has no linked Telegram, skipping new-login alert", payload.userId());
+            return;
+        }
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.get().toString());
+        message.setText(formatNewLoginMessage(payload));
+        message.setParseMode("HTML");
+        send(message, payload.userId().toString());
+    }
+
+    private String formatNewLoginMessage(NewLoginKafkaPayload payload) {
+        String userAgent = payload.userAgent() == null || payload.userAgent().isBlank()
+                ? "неизвестно"
+                : payload.userAgent();
+        return String.format("""
+                <b>Новый вход в аккаунт</b>
+
+                <b>Время (UTC):</b> %s
+                <b>IP:</b> %s
+                <b>Устройство:</b> %s
+
+                Если это были не вы — смените пароль и завершите сессии в настройках.""",
+                escapeHtml(payload.occurredAt()),
+                escapeHtml(payload.ipAddress()),
+                escapeHtml(userAgent));
     }
 
     private String formatHearingMessage(CaseHearingUpdatedKafkaPayload payload) {
