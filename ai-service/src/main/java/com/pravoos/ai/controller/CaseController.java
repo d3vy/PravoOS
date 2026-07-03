@@ -69,7 +69,8 @@ public class CaseController {
                                                @Valid @RequestBody UpdateCaseRequest request,
                                                Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(caseService.update(caseId, request, lawyerId));
+        return ResponseEntity.ok(caseService.update(caseId, request, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @PatchMapping("/{caseId}/status")
@@ -77,7 +78,25 @@ public class CaseController {
                                                      @Valid @RequestBody UpdateCaseStatusRequest request,
                                                      Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(caseService.updateStatus(caseId, request.status(), lawyerId));
+        return ResponseEntity.ok(caseService.updateStatus(caseId, request.status(), lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @PatchMapping("/{caseId}/org")
+    public ResponseEntity<CaseResponse> changeOrg(@PathVariable UUID caseId,
+                                                  @RequestBody ChangeCaseOrgRequest request,
+                                                  Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseService.changeOrg(caseId, request.orgId(), lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @PatchMapping("/{caseId}/owner")
+    public ResponseEntity<CaseResponse> transferOwner(@PathVariable UUID caseId,
+                                                      @Valid @RequestBody TransferCaseOwnerRequest request,
+                                                      Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseService.transferOwner(caseId, request.newOwnerId(), lawyerId));
     }
 
     @DeleteMapping("/{caseId}")
@@ -94,7 +113,8 @@ public class CaseController {
             Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(caseService.uploadDocument(caseId, file, title, lawyerId));
+                .body(caseService.uploadDocument(caseId, file, title, lawyerId,
+                        SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/{caseId}/documents")
@@ -115,7 +135,8 @@ public class CaseController {
     public ResponseEntity<List<CaseHearingEventResponse>> syncArbitr(@PathVariable UUID caseId,
                                                                      Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(caseService.syncArbitr(caseId, lawyerId));
+        return ResponseEntity.ok(caseService.syncArbitr(caseId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @PostMapping("/{caseId}/workflows/{workflowId}/run")
@@ -125,19 +146,22 @@ public class CaseController {
             @Valid @RequestBody(required = false) RunWorkflowRequest request,
             Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(workflowService.run(caseId, workflowId, request, lawyerId));
+        return ResponseEntity.ok(workflowService.run(caseId, workflowId, request, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/{caseId}/responses")
     public ResponseEntity<List<AiResponseDto>> responses(@PathVariable UUID caseId,
                                                          Authentication authentication) {
-        return ResponseEntity.ok(aiResponseService.findByCase(caseId, SecurityUtils.currentUserId(authentication)));
+        return ResponseEntity.ok(aiResponseService.findByCase(caseId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/{caseId}/tasks")
     public ResponseEntity<List<CaseTaskResponse>> tasks(@PathVariable UUID caseId,
                                                         Authentication authentication) {
-        return ResponseEntity.ok(caseTaskService.findByCase(caseId, SecurityUtils.currentUserId(authentication)));
+        return ResponseEntity.ok(caseTaskService.findByCase(caseId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 
     @PostMapping("/{caseId}/tasks")
@@ -145,7 +169,8 @@ public class CaseController {
                                                        @Valid @RequestBody CreateCaseTaskRequest request,
                                                        Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.status(HttpStatus.CREATED).body(caseTaskService.create(caseId, request, lawyerId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(caseTaskService.create(caseId, request, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @PatchMapping("/{caseId}/tasks/{taskId}")
@@ -154,14 +179,16 @@ public class CaseController {
                                                        @Valid @RequestBody UpdateCaseTaskRequest request,
                                                        Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(caseTaskService.update(caseId, taskId, request, lawyerId));
+        return ResponseEntity.ok(caseTaskService.update(caseId, taskId, request, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @DeleteMapping("/{caseId}/tasks/{taskId}")
     public ResponseEntity<Void> deleteTask(@PathVariable UUID caseId,
                                            @PathVariable UUID taskId,
                                            Authentication authentication) {
-        caseTaskService.delete(caseId, taskId, SecurityUtils.currentUserId(authentication));
+        caseTaskService.delete(caseId, taskId, SecurityUtils.currentUserId(authentication),
+                SecurityUtils.currentOrgIds(authentication));
         return ResponseEntity.noContent().build();
     }
 
@@ -169,7 +196,8 @@ public class CaseController {
     public ResponseEntity<List<CaseTaskResponse>> generateTasks(@PathVariable UUID caseId,
                                                                 Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(caseTaskService.generateFromChecklist(caseId, lawyerId));
+        return ResponseEntity.ok(caseTaskService.generateFromChecklist(caseId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/{caseId}/export")
@@ -177,7 +205,8 @@ public class CaseController {
                                          @RequestParam(defaultValue = "docx") String format,
                                          Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        ExportedFile file = caseExportService.export(caseId, lawyerId, format);
+        ExportedFile file = caseExportService.export(caseId, lawyerId, format,
+                SecurityUtils.currentOrgIds(authentication));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(

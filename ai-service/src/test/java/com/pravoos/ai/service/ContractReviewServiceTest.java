@@ -71,7 +71,7 @@ class ContractReviewServiceTest {
                 """, new LlmUsage(100, 200, 300)));
         when(contractReviewRepository.save(any(ContractReview.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ContractReviewDto dto = service.review(document.getId(), lawyerId);
+        ContractReviewDto dto = service.review(document.getId(), lawyerId, List.of());
 
         assertThat(dto.riskScore()).isEqualTo((short) 72);
         assertThat(dto.findings()).hasSize(2);
@@ -90,7 +90,7 @@ class ContractReviewServiceTest {
                 "```json\n{\"summary\":\"Ок\",\"riskScore\":10,\"risks\":[]}\n```", new LlmUsage(1, 1, 2)));
         when(contractReviewRepository.save(any(ContractReview.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ContractReviewDto dto = service.review(document.getId(), UUID.randomUUID());
+        ContractReviewDto dto = service.review(document.getId(), UUID.randomUUID(), List.of());
 
         assertThat(dto.riskScore()).isEqualTo((short) 10);
         assertThat(dto.findings()).isEmpty();
@@ -106,7 +106,7 @@ class ContractReviewServiceTest {
         lenient().when(spy.getCaseId()).thenReturn(null);
         when(documentRepository.findById(documentId)).thenReturn(Optional.of(spy));
 
-        assertThatThrownBy(() -> service.review(documentId, UUID.randomUUID()))
+        assertThatThrownBy(() -> service.review(documentId, UUID.randomUUID(), List.of()))
                 .isInstanceOf(DocumentNotFoundException.class);
     }
 
@@ -119,7 +119,7 @@ class ContractReviewServiceTest {
         when(llmClient.complete(anyString(), anyList(), anyString()))
                 .thenReturn(new LlmResult("Извините, не могу.", new LlmUsage(1, 1, 2)));
 
-        assertThatThrownBy(() -> service.review(document.getId(), UUID.randomUUID()))
+        assertThatThrownBy(() -> service.review(document.getId(), UUID.randomUUID(), List.of()))
                 .isInstanceOf(ContractReviewFailedException.class);
     }
 

@@ -7,6 +7,7 @@ import com.pravoos.user.repository.OutboxEventRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,7 +23,7 @@ class OutboxEventServiceTest {
     void enqueue_persistsEvent_withSerializedPayload() {
         UUID userId = UUID.randomUUID();
 
-        service.enqueue("lawyer.deleted", userId.toString(), new LawyerDeletedKafkaPayload(userId));
+        service.enqueue("lawyer.deleted", userId.toString(), new LawyerDeletedKafkaPayload(userId, Map.of()));
 
         ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
         verify(repository).save(captor.capture());

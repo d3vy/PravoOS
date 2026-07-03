@@ -37,8 +37,8 @@ public class CaseTaskService {
     }
 
     @Transactional
-    public CaseTaskResponse create(UUID caseId, CreateCaseTaskRequest request, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public CaseTaskResponse create(UUID caseId, CreateCaseTaskRequest request, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
 
         CaseTask task = new CaseTask();
         task.setCaseId(caseId);
@@ -51,8 +51,8 @@ public class CaseTaskService {
     }
 
     @Transactional(readOnly = true)
-    public List<CaseTaskResponse> findByCase(UUID caseId, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public List<CaseTaskResponse> findByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         return caseTaskRepository.findByCaseIdOrderByDoneAscCreatedAtAsc(caseId)
                 .stream()
                 .map(CaseTaskResponse::from)
@@ -60,8 +60,9 @@ public class CaseTaskService {
     }
 
     @Transactional
-    public CaseTaskResponse update(UUID caseId, UUID taskId, UpdateCaseTaskRequest request, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public CaseTaskResponse update(UUID caseId, UUID taskId, UpdateCaseTaskRequest request,
+                                   UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         CaseTask task = requireTaskInCase(caseId, taskId);
 
         task.setText(request.text().trim());
@@ -73,18 +74,18 @@ public class CaseTaskService {
     }
 
     @Transactional
-    public void delete(UUID caseId, UUID taskId, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public void delete(UUID caseId, UUID taskId, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         CaseTask task = requireTaskInCase(caseId, taskId);
         caseTaskRepository.delete(task);
         log.info("Case task deleted: {} on case {} by lawyer {}", taskId, caseId, lawyerId);
     }
 
-    public List<CaseTaskResponse> generateFromChecklist(UUID caseId, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public List<CaseTaskResponse> generateFromChecklist(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
 
         AiResponseDto checklist = workflowService.run(
-                caseId, BankruptcyWorkflow.DOCUMENT_CHECKLIST.name(), null, lawyerId);
+                caseId, BankruptcyWorkflow.DOCUMENT_CHECKLIST.name(), null, lawyerId, orgIds);
         List<String> extracted = ChecklistTableParser.extractMissingDocumentTasks(checklist.result());
 
         if (extracted.isEmpty()) {

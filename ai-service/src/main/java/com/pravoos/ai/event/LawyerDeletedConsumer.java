@@ -24,6 +24,6 @@ public class LawyerDeletedConsumer {
             return;
         }
         log.info("Received lawyer.deleted for {}", payload.userId());
-        lawyerDataCleanupService.purgeLawyerData(payload.userId());
+        lawyerDataCleanupService.purgeLawyerData(payload.userId(), payload.orgCaseOwners());
     }
 }

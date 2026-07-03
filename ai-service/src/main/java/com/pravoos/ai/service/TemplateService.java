@@ -85,10 +85,10 @@ public class TemplateService {
     }
 
     @Transactional
-    public CaseDraftDto applyToCase(UUID caseId, UUID templateId, UUID lawyerId) {
-        Case caseEntity = caseService.requireOwnedCase(caseId, lawyerId);
+    public CaseDraftDto applyToCase(UUID caseId, UUID templateId, UUID lawyerId, List<UUID> orgIds) {
+        Case caseEntity = caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         DocumentTemplate template = requireOwnedTemplate(templateId, lawyerId);
-        Client client = resolveClient(caseEntity.getClientId(), lawyerId);
+        Client client = resolveClient(caseEntity.getClientId(), caseEntity.getLawyerId());
 
         String content = TemplatePlaceholderResolver.resolve(template.getContent(), caseEntity, client);
 

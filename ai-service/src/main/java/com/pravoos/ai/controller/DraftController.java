@@ -43,7 +43,8 @@ public class DraftController {
             @Valid @RequestBody GenerateDraftRequest request,
             Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(draftService.generate(caseId, request, lawyerId));
+        return ResponseEntity.ok(draftService.generate(caseId, request, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/api/ai/cases/{caseId}/drafts")
@@ -51,7 +52,8 @@ public class DraftController {
             @PathVariable UUID caseId,
             Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(draftService.findByCase(caseId, lawyerId));
+        return ResponseEntity.ok(draftService.findByCase(caseId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/api/ai/drafts/{draftId}/download")
@@ -59,7 +61,8 @@ public class DraftController {
             @PathVariable UUID draftId,
             Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        CaseDraft draft = draftService.requireOwnedDraft(draftId, lawyerId);
+        CaseDraft draft = draftService.requireVisibleDraft(draftId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication));
         byte[] docxBytes = docxExportService.export(draft.getTitle(), draft.getContent());
 
         String fileName = draft.getTitle().replaceAll("[^а-яА-Яa-zA-Z0-9]", "_") + ".docx";

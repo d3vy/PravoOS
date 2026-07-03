@@ -63,6 +63,7 @@ public class TemplateController {
                                                    Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(templateService.applyToCase(caseId, templateId, lawyerId));
+                .body(templateService.applyToCase(caseId, templateId, lawyerId,
+                        SecurityUtils.currentOrgIds(authentication)));
     }
 }

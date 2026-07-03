@@ -54,9 +54,9 @@ public class CaseExportService {
     }
 
     @Transactional(readOnly = true)
-    public ExportedFile export(UUID caseId, UUID lawyerId, String formatValue) {
+    public ExportedFile export(UUID caseId, UUID lawyerId, String formatValue, List<UUID> orgIds) {
         ExportFormat format = ExportFormat.parse(formatValue);
-        Case caseEntity = caseService.requireOwnedCase(caseId, lawyerId);
+        Case caseEntity = caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         CaseExportModel model = assemble(caseEntity);
 
         byte[] content = switch (format) {

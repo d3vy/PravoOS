@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -56,9 +57,28 @@ public class LawyerDataCleanupService {
         this.self = self;
     }
 
-    public void purgeLawyerData(UUID lawyerId) {
+    public void purgeLawyerData(UUID lawyerId, Map<UUID, UUID> orgCaseOwners) {
+        self.reassignOrgCases(lawyerId, orgCaseOwners);
         self.recordPurgeIntent(lawyerId);
         attemptPurge(lawyerId);
+    }
+
+    @Transactional
+    public void reassignOrgCases(UUID lawyerId, Map<UUID, UUID> orgCaseOwners) {
+        if (orgCaseOwners == null || orgCaseOwners.isEmpty()) {
+            return;
+        }
+        int reassigned = 0;
+        for (Map.Entry<UUID, UUID> entry : orgCaseOwners.entrySet()) {
+            UUID orgId = entry.getKey();
+            UUID newOwnerId = entry.getValue();
+            if (orgId == null || newOwnerId == null || newOwnerId.equals(lawyerId)) {
+                continue;
+            }
+            caseDraftRepository.reassignForOrgCases(lawyerId, orgId, newOwnerId);
+            reassigned += caseRepository.reassignOrgCasesToOwner(lawyerId, orgId, newOwnerId);
+        }
+        log.info("Reassigned {} org case(s) of deleted lawyer {} to their organization owners", reassigned, lawyerId);
     }
 
     @Transactional

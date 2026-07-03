@@ -26,6 +26,7 @@ public class AiResponseController {
                                               @Valid @RequestBody RateRequest request,
                                               Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(aiResponseService.rate(responseId, request, lawyerId));
+        return ResponseEntity.ok(aiResponseService.rate(responseId, request, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 }

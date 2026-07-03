@@ -70,7 +70,7 @@ public class ContractReviewService {
     }
 
     @Transactional
-    public ContractReviewDto review(UUID documentId, UUID lawyerId) {
+    public ContractReviewDto review(UUID documentId, UUID lawyerId, List<UUID> orgIds) {
         llmQuotaService.assertWithinQuota(lawyerId);
 
         Document document = documentRepository.findById(documentId)
@@ -79,7 +79,7 @@ public class ContractReviewService {
             log.warn("Lawyer {} attempted contract review on non-case document {}", lawyerId, documentId);
             throw new DocumentNotFoundException(documentId);
         }
-        caseService.requireOwnedCase(document.getCaseId(), lawyerId);
+        caseService.requireVisibleCase(document.getCaseId(), lawyerId, orgIds);
 
         String contractText = extractText(document);
         if (contractText.isBlank()) {
@@ -100,21 +100,18 @@ public class ContractReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<ContractReviewDto> findByCase(UUID caseId, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public List<ContractReviewDto> findByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         return contractReviewRepository.findByCaseIdOrderByCreatedAtDesc(caseId).stream()
                 .map(ContractReviewDto::from)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public ContractReviewDto get(UUID reviewId, UUID lawyerId) {
+    public ContractReviewDto get(UUID reviewId, UUID lawyerId, List<UUID> orgIds) {
         ContractReview review = contractReviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ContractReviewNotFoundException(reviewId));
-        if (!review.getLawyerId().equals(lawyerId)) {
-            log.warn("Lawyer {} attempted to access contract review {} owned by another user", lawyerId, reviewId);
-            throw new ContractReviewNotFoundException(reviewId);
-        }
+        caseService.requireVisibleCase(review.getCaseId(), lawyerId, orgIds);
         return ContractReviewDto.from(review);
     }
 

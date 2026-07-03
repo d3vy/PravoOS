@@ -5,6 +5,7 @@ import com.pravoos.ai.model.enums.CaseStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -126,6 +127,13 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
                            @Param("orgFilter") UUID orgFilter,
                            @Param("pattern") String pattern,
                            Pageable pageable);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Case c SET c.lawyerId = :newOwnerId, c.orgId = null "
+            + "WHERE c.lawyerId = :lawyerId AND c.orgId = :orgId")
+    int reassignOrgCasesToOwner(@Param("lawyerId") UUID lawyerId,
+                                @Param("orgId") UUID orgId,
+                                @Param("newOwnerId") UUID newOwnerId);
 
     int deleteByLawyerId(UUID lawyerId);
 }

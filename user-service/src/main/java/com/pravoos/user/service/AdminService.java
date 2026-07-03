@@ -5,10 +5,13 @@ import com.pravoos.user.exception.LawyerNotFoundException;
 import com.pravoos.user.model.dto.ClientStatsResponse;
 import com.pravoos.user.model.dto.LawyerProfileResponse;
 import com.pravoos.user.model.entity.LawyerProfile;
+import com.pravoos.user.model.entity.OrganizationMembership;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.LawyerApplicationRepository;
+import com.pravoos.user.repository.OrganizationMembershipRepository;
+import com.pravoos.user.repository.OrganizationRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.util.EmailMasker;
 import com.pravoos.user.util.PaginationSupport;
@@ -18,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,15 +35,21 @@ public class AdminService {
     private final LawyerApplicationRepository lawyerApplicationRepository;
     private final OutboxEventService outboxEventService;
     private final TokenDenylistService tokenDenylistService;
+    private final OrganizationMembershipRepository membershipRepository;
+    private final OrganizationRepository organizationRepository;
 
     public AdminService(UserRepository userRepository,
                         LawyerApplicationRepository lawyerApplicationRepository,
                         OutboxEventService outboxEventService,
-                        TokenDenylistService tokenDenylistService) {
+                        TokenDenylistService tokenDenylistService,
+                        OrganizationMembershipRepository membershipRepository,
+                        OrganizationRepository organizationRepository) {
         this.userRepository = userRepository;
         this.lawyerApplicationRepository = lawyerApplicationRepository;
         this.outboxEventService = outboxEventService;
         this.tokenDenylistService = tokenDenylistService;
+        this.membershipRepository = membershipRepository;
+        this.organizationRepository = organizationRepository;
     }
 
     @Transactional(readOnly = true)
@@ -62,14 +73,30 @@ public class AdminService {
 
         String email = lawyer.getEmail();
 
+        List<OrganizationMembership> memberships = membershipRepository.findByUserIdOrderByCreatedAtAsc(userId);
+        Map<UUID, UUID> orgCaseOwners = resolveOrgCaseOwners(memberships, userId);
+
         userRepository.delete(lawyer);
         userRepository.flush();
         lawyerApplicationRepository.deleteByEmail(email);
+        membershipRepository.deleteAll(memberships);
 
         tokenDenylistService.revokeAccessTokensFor(userId);
-        outboxEventService.enqueue("lawyer.deleted", userId.toString(), new LawyerDeletedKafkaPayload(userId));
+        outboxEventService.enqueue("lawyer.deleted", userId.toString(),
+                new LawyerDeletedKafkaPayload(userId, orgCaseOwners));
 
-        log.warn("Lawyer {} ({}) deleted by admin {}", userId, EmailMasker.mask(email), adminId);
+        log.warn("Lawyer {} ({}) deleted by admin {}, {} org case owner(s) resolved",
+                userId, EmailMasker.mask(email), adminId, orgCaseOwners.size());
+    }
+
+    private Map<UUID, UUID> resolveOrgCaseOwners(List<OrganizationMembership> memberships, UUID deletedUserId) {
+        Map<UUID, UUID> orgCaseOwners = new HashMap<>();
+        for (OrganizationMembership membership : memberships) {
+            organizationRepository.findById(membership.getOrgId())
+                    .filter(org -> !org.getOwnerId().equals(deletedUserId))
+                    .ifPresent(org -> orgCaseOwners.put(org.getId(), org.getOwnerId()));
+        }
+        return orgCaseOwners;
     }
 
     @Transactional(readOnly = true)

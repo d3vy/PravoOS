@@ -27,8 +27,8 @@ public class AiResponseService {
     }
 
     @Transactional(readOnly = true)
-    public List<AiResponseDto> findByCase(UUID caseId, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public List<AiResponseDto> findByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         return aiResponseRepository.findByCaseIdOrderByCreatedAtDesc(caseId)
                 .stream()
                 .map(AiResponseDto::from)
@@ -36,13 +36,10 @@ public class AiResponseService {
     }
 
     @Transactional
-    public AiResponseDto rate(UUID responseId, RateRequest request, UUID lawyerId) {
+    public AiResponseDto rate(UUID responseId, RateRequest request, UUID lawyerId, List<UUID> orgIds) {
         AiResponse response = aiResponseRepository.findById(responseId)
                 .orElseThrow(() -> new AiResponseNotFoundException(responseId));
-        if (!response.getLawyerId().equals(lawyerId)) {
-            log.warn("Lawyer {} attempted to rate response {} owned by another user", lawyerId, responseId);
-            throw new AiResponseNotFoundException(responseId);
-        }
+        caseService.requireVisibleCase(response.getCaseId(), lawyerId, orgIds);
 
         response.setRating(request.rating().shortValue());
         response.setRatingComment(request.comment());

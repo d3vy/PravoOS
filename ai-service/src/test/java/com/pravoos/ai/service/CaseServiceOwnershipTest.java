@@ -1,6 +1,9 @@
 package com.pravoos.ai.service;
 
 import com.pravoos.ai.exception.CaseNotFoundException;
+import com.pravoos.ai.exception.CaseTransferNotAllowedException;
+import com.pravoos.ai.exception.OrganizationAccessException;
+import com.pravoos.ai.model.dto.CaseResponse;
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.repository.jpa.CaseRepository;
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -60,5 +64,75 @@ class CaseServiceOwnershipTest {
 
         assertThatThrownBy(() -> caseService().requireOwnedCase(caseId, UUID.randomUUID()))
                 .isInstanceOf(CaseNotFoundException.class);
+    }
+
+    @Test
+    void changeOrgMovesCaseIntoCallerOrg() {
+        UUID caseId = UUID.randomUUID();
+        UUID lawyerId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        Case owned = new Case();
+        owned.setLawyerId(lawyerId);
+        when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+
+        CaseResponse response = caseService().changeOrg(caseId, orgId, lawyerId, List.of(orgId));
+
+        assertThat(response.orgId()).isEqualTo(orgId);
+        assertThat(owned.getOrgId()).isEqualTo(orgId);
+    }
+
+    @Test
+    void changeOrgToNullMakesCasePersonal() {
+        UUID caseId = UUID.randomUUID();
+        UUID lawyerId = UUID.randomUUID();
+        Case owned = new Case();
+        owned.setLawyerId(lawyerId);
+        owned.setOrgId(UUID.randomUUID());
+        when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+
+        CaseResponse response = caseService().changeOrg(caseId, null, lawyerId, List.of(UUID.randomUUID()));
+
+        assertThat(response.orgId()).isNull();
+        assertThat(owned.getOrgId()).isNull();
+    }
+
+    @Test
+    void changeOrgRejectsForeignOrg() {
+        UUID caseId = UUID.randomUUID();
+        UUID lawyerId = UUID.randomUUID();
+        Case owned = new Case();
+        owned.setLawyerId(lawyerId);
+        when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+
+        assertThatThrownBy(() -> caseService().changeOrg(caseId, UUID.randomUUID(), lawyerId, List.of()))
+                .isInstanceOf(OrganizationAccessException.class);
+    }
+
+    @Test
+    void transferOwnerReassignsOrgCase() {
+        UUID caseId = UUID.randomUUID();
+        UUID lawyerId = UUID.randomUUID();
+        UUID newOwnerId = UUID.randomUUID();
+        Case owned = new Case();
+        owned.setLawyerId(lawyerId);
+        owned.setOrgId(UUID.randomUUID());
+        when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+
+        CaseResponse response = caseService().transferOwner(caseId, newOwnerId, lawyerId);
+
+        assertThat(response.ownerId()).isEqualTo(newOwnerId);
+        assertThat(owned.getLawyerId()).isEqualTo(newOwnerId);
+    }
+
+    @Test
+    void transferOwnerRejectsPersonalCase() {
+        UUID caseId = UUID.randomUUID();
+        UUID lawyerId = UUID.randomUUID();
+        Case owned = new Case();
+        owned.setLawyerId(lawyerId);
+        when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+
+        assertThatThrownBy(() -> caseService().transferOwner(caseId, UUID.randomUUID(), lawyerId))
+                .isInstanceOf(CaseTransferNotAllowedException.class);
     }
 }

@@ -59,9 +59,10 @@ public class WorkflowService {
                 .toList();
     }
 
-    public AiResponseDto run(UUID caseId, String workflowId, RunWorkflowRequest request, UUID lawyerId) {
+    public AiResponseDto run(UUID caseId, String workflowId, RunWorkflowRequest request,
+                             UUID lawyerId, List<UUID> orgIds) {
         llmQuotaService.assertWithinQuota(lawyerId);
-        caseService.requireOwnedCase(caseId, lawyerId);
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         BankruptcyWorkflow workflow = BankruptcyWorkflow.fromId(workflowId);
 
         String question = request != null && request.question() != null ? request.question().trim() : null;

@@ -1,6 +1,7 @@
 package com.pravoos.ai.service;
 
 import com.pravoos.ai.exception.CaseNotFoundException;
+import com.pravoos.ai.exception.CaseTransferNotAllowedException;
 import com.pravoos.ai.exception.ClientNotFoundException;
 import com.pravoos.ai.exception.OrganizationAccessException;
 import com.pravoos.ai.model.dto.*;
@@ -72,9 +73,9 @@ public class CaseService {
     }
 
     @Transactional
-    public CaseResponse update(UUID caseId, UpdateCaseRequest request, UUID lawyerId) {
-        Case caseEntity = requireOwnedCase(caseId, lawyerId);
-        Client client = resolveOwnedClient(request.clientId(), lawyerId);
+    public CaseResponse update(UUID caseId, UpdateCaseRequest request, UUID lawyerId, List<UUID> orgIds) {
+        Case caseEntity = requireVisibleCase(caseId, lawyerId, orgIds);
+        Client client = resolveOwnedClient(request.clientId(), caseEntity.getLawyerId());
 
         caseEntity.setTitle(request.title().trim());
         caseEntity.setDescription(request.description());
@@ -94,8 +95,8 @@ public class CaseService {
         return fetchHearingEvents(caseId);
     }
 
-    public List<CaseHearingEventResponse> syncArbitr(UUID caseId, UUID lawyerId) {
-        requireOwnedCase(caseId, lawyerId);
+    public List<CaseHearingEventResponse> syncArbitr(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        requireVisibleCase(caseId, lawyerId, orgIds);
         arbitrSyncService.syncCase(caseId);
         return fetchHearingEvents(caseId);
     }
@@ -141,24 +142,49 @@ public class CaseService {
     }
 
     @Transactional
-    public CaseResponse updateStatus(UUID caseId, CaseStatus status, UUID lawyerId) {
-        Case caseEntity = requireOwnedCase(caseId, lawyerId);
+    public CaseResponse updateStatus(UUID caseId, CaseStatus status, UUID lawyerId, List<UUID> orgIds) {
+        Case caseEntity = requireVisibleCase(caseId, lawyerId, orgIds);
         CaseStatus previous = caseEntity.getStatus();
         caseEntity.setStatus(status);
         log.info("Case {} status changed {} -> {} by lawyer {}", caseId, previous, status, lawyerId);
-        String clientName = caseEntity.getClientId() == null
+        return CaseResponse.from(caseEntity, resolveClientName(caseEntity.getClientId()));
+    }
+
+    @Transactional
+    public CaseResponse changeOrg(UUID caseId, UUID targetOrgId, UUID lawyerId, List<UUID> orgIds) {
+        Case caseEntity = requireOwnedCase(caseId, lawyerId);
+        UUID resolvedOrgId = resolveOrgId(targetOrgId, orgIds);
+        UUID previous = caseEntity.getOrgId();
+        caseEntity.setOrgId(resolvedOrgId);
+        log.info("Case {} org changed {} -> {} by lawyer {}", caseId, previous, resolvedOrgId, lawyerId);
+        return CaseResponse.from(caseEntity, resolveClientName(caseEntity.getClientId()));
+    }
+
+    @Transactional
+    public CaseResponse transferOwner(UUID caseId, UUID newOwnerId, UUID lawyerId) {
+        Case caseEntity = requireOwnedCase(caseId, lawyerId);
+        if (caseEntity.getOrgId() == null) {
+            throw new CaseTransferNotAllowedException(
+                    "Передать владельца можно только у дела, привязанного к организации");
+        }
+        if (newOwnerId.equals(caseEntity.getLawyerId())) {
+            throw new CaseTransferNotAllowedException("Дело уже принадлежит указанному участнику");
+        }
+        caseEntity.setLawyerId(newOwnerId);
+        log.info("Case {} ownership transferred from {} to {}", caseId, lawyerId, newOwnerId);
+        return CaseResponse.from(caseEntity, resolveClientName(caseEntity.getClientId()));
+    }
+
+    private String resolveClientName(UUID clientId) {
+        return clientId == null
                 ? null
-                : clientRepository.findById(caseEntity.getClientId()).map(Client::getName).orElse(null);
-        return CaseResponse.from(caseEntity, clientName);
+                : clientRepository.findById(clientId).map(Client::getName).orElse(null);
     }
 
     @Transactional(readOnly = true)
     public CaseResponse get(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
         Case caseEntity = requireVisibleCase(caseId, lawyerId, orgIds);
-        String clientName = caseEntity.getClientId() == null
-                ? null
-                : clientRepository.findById(caseEntity.getClientId()).map(Client::getName).orElse(null);
-        return CaseResponse.from(caseEntity, clientName);
+        return CaseResponse.from(caseEntity, resolveClientName(caseEntity.getClientId()));
     }
 
     @Transactional
@@ -170,8 +196,9 @@ public class CaseService {
     }
 
     @Transactional
-    public DocumentUploadResponse uploadDocument(UUID caseId, MultipartFile file, String title, UUID lawyerId) {
-        requireOwnedCase(caseId, lawyerId);
+    public DocumentUploadResponse uploadDocument(UUID caseId, MultipartFile file, String title,
+                                                 UUID lawyerId, List<UUID> orgIds) {
+        requireVisibleCase(caseId, lawyerId, orgIds);
         return documentService.upload(file, title, lawyerId, caseId);
     }
 

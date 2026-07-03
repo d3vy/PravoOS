@@ -59,9 +59,9 @@ public class DraftService {
                 .toList();
     }
 
-    public CaseDraftDto generate(UUID caseId, GenerateDraftRequest request, UUID lawyerId) {
+    public CaseDraftDto generate(UUID caseId, GenerateDraftRequest request, UUID lawyerId, List<UUID> orgIds) {
         llmQuotaService.assertWithinQuota(lawyerId);
-        caseService.requireOwnedCase(caseId, lawyerId);
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         DraftType draftType = DraftType.fromId(request.draftType());
         log.info("Generating draft {} for case {} by lawyer {}", draftType.name(), caseId, lawyerId);
 
@@ -87,16 +87,18 @@ public class DraftService {
         return CaseDraftDto.from(saved);
     }
 
-    public List<CaseDraftSummaryDto> findByCase(UUID caseId, UUID lawyerId) {
-        caseService.requireOwnedCase(caseId, lawyerId);
+    public List<CaseDraftSummaryDto> findByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         return caseDraftRepository.findByCaseIdOrderByCreatedAtDesc(caseId)
                 .stream()
                 .map(CaseDraftSummaryDto::from)
                 .toList();
     }
 
-    public CaseDraft requireOwnedDraft(UUID draftId, UUID lawyerId) {
-        return caseDraftRepository.findByIdAndLawyerId(draftId, lawyerId)
+    public CaseDraft requireVisibleDraft(UUID draftId, UUID lawyerId, List<UUID> orgIds) {
+        CaseDraft draft = caseDraftRepository.findById(draftId)
                 .orElseThrow(() -> new DraftNotFoundException(draftId));
+        caseService.requireVisibleCase(draft.getCaseId(), lawyerId, orgIds);
+        return draft;
     }
 }

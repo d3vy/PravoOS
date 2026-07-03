@@ -6,11 +6,13 @@ import com.pravoos.ai.repository.mongo.ConversationRepository;
 import com.pravoos.ai.repository.mongo.MessageRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
@@ -58,12 +60,36 @@ class LawyerDataCleanupServiceTest {
         when(conversationRepository.findByLawyerId(lawyerId)).thenReturn(List.of(conversation));
 
         LawyerDataCleanupService self = mock(LawyerDataCleanupService.class);
-        service(self).purgeLawyerData(lawyerId);
+        service(self).purgeLawyerData(lawyerId, Map.of());
 
+        verify(self).reassignOrgCases(lawyerId, Map.of());
         verify(self).recordPurgeIntent(lawyerId);
         verify(self).purgeRelationalData(lawyerId);
         verify(messageRepository).deleteByConversationIdIn(List.of(conversation.getId()));
         verify(conversationRepository).deleteByLawyerId(lawyerId);
         verify(pendingLawyerPurgeRepository).deleteById(lawyerId);
+    }
+
+    @Test
+    void reassignOrgCasesTransfersDraftsThenCasesToOrgOwner() {
+        UUID lawyerId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+
+        service(null).reassignOrgCases(lawyerId, Map.of(orgId, ownerId));
+
+        InOrder order = inOrder(caseDraftRepository, caseRepository);
+        order.verify(caseDraftRepository).reassignForOrgCases(lawyerId, orgId, ownerId);
+        order.verify(caseRepository).reassignOrgCasesToOwner(lawyerId, orgId, ownerId);
+    }
+
+    @Test
+    void reassignOrgCasesSkipsSelfOwnedOrgs() {
+        UUID lawyerId = UUID.randomUUID();
+        UUID orgId = UUID.randomUUID();
+
+        service(null).reassignOrgCases(lawyerId, Map.of(orgId, lawyerId));
+
+        verifyNoInteractions(caseDraftRepository, caseRepository);
     }
 }

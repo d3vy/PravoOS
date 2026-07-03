@@ -28,19 +28,22 @@ public class ContractReviewController {
                                                     Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(contractReviewService.review(request.documentId(), lawyerId));
+                .body(contractReviewService.review(request.documentId(), lawyerId,
+                        SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping
     public ResponseEntity<List<ContractReviewDto>> listByCase(@RequestParam UUID caseId,
                                                              Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(contractReviewService.findByCase(caseId, lawyerId));
+        return ResponseEntity.ok(contractReviewService.findByCase(caseId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/{reviewId}")
     public ResponseEntity<ContractReviewDto> get(@PathVariable UUID reviewId, Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(contractReviewService.get(reviewId, lawyerId));
+        return ResponseEntity.ok(contractReviewService.get(reviewId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
     }
 }
