@@ -157,6 +157,26 @@
   org-дропдаун в форме дела + фильтр + бейдж. Тесты: `OrganizationServiceTest`,
   `OrganizationInviteServiceTest`, `CaseServiceVisibilityTest`.
 
+- [ ] **E20. Write-коллаборация над делами орги (follow-up E19).**
+  Сейчас shared-дело коллеги видят read-only; мутации/AI-фичи (update/status/upload/drafts/
+  workflows/tasks/responses/export) — owner-only (`requireOwnedCase`).
+  → Перевести эти пути на `requireVisibleCase` (или роль-aware: MANAGER+ или assignee).
+  Роли в claim не лежат — либо добавить `orgRoles` в JWT, либо проверять членство/роль в ai-service.
+  Точки: `WorkflowService`, `DraftService`, `TemplateService`, `AiResponseService`, `CaseTaskService`,
+  `CaseExportService`, `CaseService.update/updateStatus/uploadDocument/syncArbitr`.
+
+- [ ] **E21. Перенос дела между личным/орг + владением (follow-up E19).**
+  Сейчас `org_id` ставится только при создании; `update` его не трогает (edit-форма без org-поля
+  затирала бы в NULL).
+  → Отдельный эндпоинт `PATCH /cases/{id}/org` (валид. ∈ мои орги, owner/MANAGER), org-поле в
+  edit-форме. Плюс передача владельца дела (`lawyerId`) другому участнику.
+
+- [ ] **E22. Судьба org-дел при удалении юриста (follow-up E19).**
+  `LawyerDataCleanupService` по `lawyer.deleted` сносит ВСЕ дела юриста, включая созданные им
+  org-дела → данные фирмы теряются.
+  → При удалении: org-дела передавать OWNER-у фирмы (или оставлять, обнуляя `lawyerId`), сносить
+  только личные (`org_id IS NULL`).
+
 ---
 
 ## Порядок реализации (рекомендация)
