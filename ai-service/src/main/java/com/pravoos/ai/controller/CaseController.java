@@ -42,22 +42,26 @@ public class CaseController {
     public ResponseEntity<CaseResponse> create(@Valid @RequestBody CreateCaseRequest request,
                                                Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.status(HttpStatus.CREATED).body(caseService.create(request, lawyerId));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(caseService.create(request, lawyerId, SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping
     public ResponseEntity<List<CaseResponse>> list(@RequestParam(required = false) CaseStatus status,
+                                                   @RequestParam(required = false) UUID orgId,
                                                    @RequestParam(required = false) String q,
                                                    @RequestParam(defaultValue = "0") int page,
                                                    @RequestParam(defaultValue = "20") int size,
                                                    Authentication authentication) {
-        return PagedResponse.of(
-                caseService.findByLawyer(SecurityUtils.currentUserId(authentication), status, q, page, size));
+        return PagedResponse.of(caseService.findByLawyer(
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication),
+                status, orgId, q, page, size));
     }
 
     @GetMapping("/{caseId}")
     public ResponseEntity<CaseResponse> get(@PathVariable UUID caseId, Authentication authentication) {
-        return ResponseEntity.ok(caseService.get(caseId, SecurityUtils.currentUserId(authentication)));
+        return ResponseEntity.ok(caseService.get(caseId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 
     @PatchMapping("/{caseId}")
@@ -96,13 +100,15 @@ public class CaseController {
     @GetMapping("/{caseId}/documents")
     public ResponseEntity<List<DocumentResponse>> documents(@PathVariable UUID caseId,
                                                             Authentication authentication) {
-        return ResponseEntity.ok(caseService.findDocuments(caseId, SecurityUtils.currentUserId(authentication)));
+        return ResponseEntity.ok(caseService.findDocuments(caseId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/{caseId}/hearings")
     public ResponseEntity<List<CaseHearingEventResponse>> hearings(@PathVariable UUID caseId,
                                                                    Authentication authentication) {
-        return ResponseEntity.ok(caseService.findHearingEvents(caseId, SecurityUtils.currentUserId(authentication)));
+        return ResponseEntity.ok(caseService.findHearingEvents(caseId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 
     @PostMapping("/{caseId}/arbitr/sync")

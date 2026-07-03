@@ -8,8 +8,10 @@ import com.pravoos.user.exception.MfaException;
 import com.pravoos.user.model.dto.LoginRequest;
 import com.pravoos.user.model.dto.LoginResult;
 import com.pravoos.user.model.dto.TokenResponse;
+import com.pravoos.user.model.entity.OrganizationMembership;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.model.enums.UserStatus;
+import com.pravoos.user.repository.OrganizationMembershipRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.security.JwtTokenProvider;
 import com.pravoos.user.util.EmailMasker;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -35,6 +38,7 @@ public class AuthService {
             "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
     private final UserRepository userRepository;
+    private final OrganizationMembershipRepository membershipRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -48,6 +52,7 @@ public class AuthService {
     private final Counter loginMfaChallengedCounter;
 
     public AuthService(UserRepository userRepository,
+                       OrganizationMembershipRepository membershipRepository,
                        JwtTokenProvider jwtTokenProvider,
                        PasswordEncoder passwordEncoder,
                        RefreshTokenService refreshTokenService,
@@ -57,6 +62,7 @@ public class AuthService {
                        ApplicationEventPublisher eventPublisher,
                        MeterRegistry meterRegistry) {
         this.userRepository = userRepository;
+        this.membershipRepository = membershipRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
@@ -156,7 +162,10 @@ public class AuthService {
     }
 
     private TokenResponse issueTokens(User user, String ipAddress, String userAgent) {
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole());
+        List<UUID> orgIds = membershipRepository.findByUserIdOrderByCreatedAtAsc(user.getId()).stream()
+                .map(OrganizationMembership::getOrgId)
+                .toList();
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole(), orgIds);
         String refreshToken = refreshTokenService.issue(user.getId(), ipAddress, userAgent);
         return new TokenResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
     }

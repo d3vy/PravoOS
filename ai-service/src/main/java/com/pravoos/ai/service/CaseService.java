@@ -2,6 +2,7 @@ package com.pravoos.ai.service;
 
 import com.pravoos.ai.exception.CaseNotFoundException;
 import com.pravoos.ai.exception.ClientNotFoundException;
+import com.pravoos.ai.exception.OrganizationAccessException;
 import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.model.entity.Client;
@@ -14,12 +15,11 @@ import com.pravoos.ai.util.PageRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class CaseService {
 
     private static final Logger log = LoggerFactory.getLogger(CaseService.class);
+    private static final UUID NIL_ORG_SENTINEL = new UUID(0L, 0L);
 
     private final CaseRepository caseRepository;
     private final ClientRepository clientRepository;
@@ -50,11 +51,12 @@ public class CaseService {
     }
 
     @Transactional
-    public CaseResponse create(CreateCaseRequest request, UUID lawyerId) {
+    public CaseResponse create(CreateCaseRequest request, UUID lawyerId, List<UUID> orgIds) {
         Client client = resolveOwnedClient(request.clientId(), lawyerId);
 
         Case caseEntity = new Case();
         caseEntity.setLawyerId(lawyerId);
+        caseEntity.setOrgId(resolveOrgId(request.orgId(), orgIds));
         caseEntity.setTitle(request.title().trim());
         caseEntity.setDescription(request.description());
         caseEntity.setClientId(client != null ? client.getId() : null);
@@ -87,18 +89,22 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<CaseHearingEventResponse> findHearingEvents(UUID caseId, UUID lawyerId) {
-        requireOwnedCase(caseId, lawyerId);
-        return hearingEventRepository.findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId)
-                .stream()
-                .map(CaseHearingEventResponse::from)
-                .toList();
+    public List<CaseHearingEventResponse> findHearingEvents(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        requireVisibleCase(caseId, lawyerId, orgIds);
+        return fetchHearingEvents(caseId);
     }
 
     public List<CaseHearingEventResponse> syncArbitr(UUID caseId, UUID lawyerId) {
         requireOwnedCase(caseId, lawyerId);
         arbitrSyncService.syncCase(caseId);
-        return findHearingEvents(caseId, lawyerId);
+        return fetchHearingEvents(caseId);
+    }
+
+    private List<CaseHearingEventResponse> fetchHearingEvents(UUID caseId) {
+        return hearingEventRepository.findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId)
+                .stream()
+                .map(CaseHearingEventResponse::from)
+                .toList();
     }
 
     private void applyArbitrNumber(Case caseEntity, String requestedNumber) {
@@ -118,21 +124,16 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public Page<CaseResponse> findByLawyer(UUID lawyerId, CaseStatus status, String query, int page, int size) {
-        Map<UUID, String> clientNames = clientNamesFor(lawyerId);
+    public Page<CaseResponse> findByLawyer(UUID lawyerId, List<UUID> orgIds, CaseStatus status,
+                                           UUID orgFilter, String query, int page, int size) {
+        UUID effectiveOrgFilter = resolveOrgFilter(orgFilter, orgIds);
         String trimmedQuery = query == null ? null : query.trim();
-        PageRequest pageRequest = PageRequests.of(page, size);
-        Page<Case> cases = (trimmedQuery == null || trimmedQuery.isEmpty())
-                ? findByStatus(lawyerId, status, pageRequest)
-                : caseRepository.search(lawyerId, status, likePattern(trimmedQuery), pageRequest);
+        String pattern = (trimmedQuery == null || trimmedQuery.isEmpty()) ? null : likePattern(trimmedQuery);
+        Page<Case> cases = caseRepository.findVisible(
+                lawyerId, orgIdsOrSentinel(orgIds), status, effectiveOrgFilter, pattern, PageRequests.of(page, size));
+        Map<UUID, String> clientNames = clientNamesForCases(cases.getContent());
         return cases.map(caseEntity ->
                 CaseResponse.from(caseEntity, clientName(clientNames, caseEntity.getClientId())));
-    }
-
-    private Page<Case> findByStatus(UUID lawyerId, CaseStatus status, Pageable pageable) {
-        return status == null
-                ? caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId, pageable)
-                : caseRepository.findByLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, status, pageable);
     }
 
     private String likePattern(String query) {
@@ -152,8 +153,8 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public CaseResponse get(UUID caseId, UUID lawyerId) {
-        Case caseEntity = requireOwnedCase(caseId, lawyerId);
+    public CaseResponse get(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        Case caseEntity = requireVisibleCase(caseId, lawyerId, orgIds);
         String clientName = caseEntity.getClientId() == null
                 ? null
                 : clientRepository.findById(caseEntity.getClientId()).map(Client::getName).orElse(null);
@@ -175,8 +176,8 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentResponse> findDocuments(UUID caseId, UUID lawyerId) {
-        requireOwnedCase(caseId, lawyerId);
+    public List<DocumentResponse> findDocuments(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        requireVisibleCase(caseId, lawyerId, orgIds);
         return documentService.findByCase(caseId);
     }
 
@@ -185,6 +186,19 @@ public class CaseService {
                 .orElseThrow(() -> new CaseNotFoundException(caseId));
         if (!caseEntity.getLawyerId().equals(lawyerId)) {
             log.warn("Lawyer {} attempted to access case {} owned by another user", lawyerId, caseId);
+            throw new CaseNotFoundException(caseId);
+        }
+        return caseEntity;
+    }
+
+    public Case requireVisibleCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        Case caseEntity = caseRepository.findById(caseId)
+                .orElseThrow(() -> new CaseNotFoundException(caseId));
+        boolean owned = caseEntity.getLawyerId().equals(lawyerId);
+        boolean sharedWithOrg = caseEntity.getOrgId() != null
+                && orgIds != null && orgIds.contains(caseEntity.getOrgId());
+        if (!owned && !sharedWithOrg) {
+            log.warn("Lawyer {} attempted to access case {} not visible to them", lawyerId, caseId);
             throw new CaseNotFoundException(caseId);
         }
         return caseEntity;
@@ -203,13 +217,44 @@ public class CaseService {
         return client;
     }
 
-    private Map<UUID, String> clientNamesFor(UUID lawyerId) {
-        return clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)
-                .stream()
+    private Map<UUID, String> clientNamesForCases(List<Case> cases) {
+        List<UUID> clientIds = cases.stream()
+                .map(Case::getClientId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (clientIds.isEmpty()) {
+            return Map.of();
+        }
+        return clientRepository.findAllById(clientIds).stream()
                 .collect(Collectors.toMap(Client::getId, Client::getName));
     }
 
     private String clientName(Map<UUID, String> clientNames, UUID clientId) {
         return clientId == null ? null : clientNames.get(clientId);
+    }
+
+    private UUID resolveOrgId(UUID requestedOrgId, List<UUID> callerOrgIds) {
+        if (requestedOrgId == null) {
+            return null;
+        }
+        if (callerOrgIds == null || !callerOrgIds.contains(requestedOrgId)) {
+            throw new OrganizationAccessException(requestedOrgId);
+        }
+        return requestedOrgId;
+    }
+
+    private UUID resolveOrgFilter(UUID orgFilter, List<UUID> callerOrgIds) {
+        if (orgFilter == null) {
+            return null;
+        }
+        if (callerOrgIds == null || !callerOrgIds.contains(orgFilter)) {
+            throw new OrganizationAccessException(orgFilter);
+        }
+        return orgFilter;
+    }
+
+    private Collection<UUID> orgIdsOrSentinel(List<UUID> orgIds) {
+        return (orgIds == null || orgIds.isEmpty()) ? List.of(NIL_ORG_SENTINEL) : orgIds;
     }
 }

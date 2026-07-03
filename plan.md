@@ -141,8 +141,21 @@
 - [ ] **E18. Электронная подпись документов.**
   Подписание черновиков/актов внутри платформы.
 
-- [ ] **E19. Мульти-юзер (фирмы/команды).**
+- [x] **E19. Мульти-юзер (фирмы/команды).**
   Несколько юристов в одной организации, шаринг дел, роли.
+  → **Мульти-орг**: юрист состоит в N организациях (`unique(org_id,user_id)`). Юрист регается
+  как соло, потом сам создаёт орг (становится OWNER) и зовёт коллег. Роли `OWNER/MANAGER/MEMBER`.
+  user-service: `organizations`/`organization_memberships` (V14), инвайты по токену через Resend
+  (`organization_invites` V15, `OrganizationInviteService`), управление участниками (роли, удаление,
+  leave). JWT несёт claim `orgs` (список орг юриста, из membership на login+refresh) → gateway не
+  трогали (ai-service читает подписанный claim сам, `SecurityUtils.currentOrgIds`, `OrgContext`).
+  ai-service: `cases.org_id` nullable (V18), выбор орги при создании дела (валид. ∈ мои орги),
+  общий список = `lawyerId=me OR org_id ∈ мои орги` + фильтр `?orgId=`, read-видимость shared-дел
+  (`requireVisibleCase`). **v1: мутации/AI-фичи (update/status/upload/drafts/workflows/export) —
+  owner-only; коллеги видят shared-дело + документы + слушания.** Смена орги у дела и write-
+  коллаборация — следующая итерация. Фронт: `/team` (орг/участники/инвайты), `/invite` (приём),
+  org-дропдаун в форме дела + фильтр + бейдж. Тесты: `OrganizationServiceTest`,
+  `OrganizationInviteServiceTest`, `CaseServiceVisibilityTest`.
 
 ---
 

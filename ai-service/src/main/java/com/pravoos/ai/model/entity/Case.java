@@ -19,6 +19,9 @@ public class Case {
     @Column(nullable = false)
     private UUID lawyerId;
 
+    @Column(name = "org_id")
+    private UUID orgId;
+
     @Column(nullable = false, length = 500)
     private String title;
 
@@ -59,6 +62,9 @@ public class Case {
 
     public UUID getLawyerId() { return lawyerId; }
     public void setLawyerId(UUID lawyerId) { this.lawyerId = lawyerId; }
+
+    public UUID getOrgId() { return orgId; }
+    public void setOrgId(UUID orgId) { this.orgId = orgId; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

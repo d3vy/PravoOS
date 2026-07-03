@@ -5,8 +5,9 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
 import { clientsApi } from '../../api/clients'
+import { organizationsApi } from '../../api/organizations'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type Page } from '../../api/pagination'
-import type { CaseResponse, CaseStatus, ClientResponse } from '../../types'
+import type { CaseResponse, CaseStatus, ClientResponse, Organization } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -22,6 +23,8 @@ export default function CasesPage(): JSX.Element {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [clientId, setClientId] = useState('')
+  const [orgId, setOrgId] = useState('')
+  const [orgFilter, setOrgFilter] = useState('')
   const [filingDeadline, setFilingDeadline] = useState('')
   const [nextHearingDate, setNextHearingDate] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
@@ -43,13 +46,19 @@ export default function CasesPage(): JSX.Element {
 
   useEffect(() => {
     setPage(0)
-  }, [view, serverStatus, debouncedSearch])
+  }, [view, serverStatus, debouncedSearch, orgFilter])
 
   const isBoard = view === 'board'
   const { data: casesPage, isLoading } = useQuery<Page<CaseResponse>>({
-    queryKey: ['cases', view, serverStatus ?? 'all', debouncedSearch, page],
+    queryKey: ['cases', view, serverStatus ?? 'all', debouncedSearch, orgFilter || 'all-orgs', page],
     queryFn: () =>
-      casesApi.list(serverStatus, debouncedSearch || undefined, isBoard ? 0 : page, isBoard ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE),
+      casesApi.list(
+        serverStatus,
+        debouncedSearch || undefined,
+        isBoard ? 0 : page,
+        isBoard ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE,
+        orgFilter || undefined
+      ),
     placeholderData: keepPreviousData,
   })
   const cases = casesPage?.items ?? []
@@ -60,6 +69,12 @@ export default function CasesPage(): JSX.Element {
     queryFn: clientsApi.getAll,
   })
 
+  const { data: organizations = [] } = useQuery<Organization[]>({
+    queryKey: ['organizations'],
+    queryFn: organizationsApi.list,
+  })
+  const orgNameById = new Map(organizations.map((org) => [org.id, org.name]))
+
   const createMutation = useMutation({
     mutationFn: casesApi.create,
     onSuccess: () => {
@@ -68,6 +83,7 @@ export default function CasesPage(): JSX.Element {
       setTitle('')
       setDescription('')
       setClientId('')
+      setOrgId('')
       setFilingDeadline('')
       setNextHearingDate('')
       setExpiresAt('')
@@ -93,6 +109,7 @@ export default function CasesPage(): JSX.Element {
       title: title.trim(),
       description: description.trim() || undefined,
       clientId: clientId || undefined,
+      orgId: orgId || undefined,
       filingDeadline: filingDeadline || undefined,
       nextHearingDate: nextHearingDate || undefined,
       expiresAt: expiresAt || undefined,
@@ -181,6 +198,28 @@ export default function CasesPage(): JSX.Element {
                     ))}
                   </select>
                 </div>
+                {organizations.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
+                      Организация <span className="text-light-secondary dark:text-dark-secondary font-normal">(опционально)</span>
+                    </label>
+                    <select
+                      value={orgId}
+                      onChange={(e) => setOrgId(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                    >
+                      <option value="">Личное дело</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-light-secondary dark:text-dark-secondary">
+                      Дело организации видят все её участники. Личное дело — только вы.
+                    </p>
+                  </div>
+                )}
                 <div className="grid gap-4 sm:grid-cols-3">
                   <DateField label="Срок подачи" value={filingDeadline} onChange={setFilingDeadline} />
                   <DateField label="Заседание" value={nextHearingDate} onChange={setNextHearingDate} />
@@ -213,6 +252,23 @@ export default function CasesPage(): JSX.Element {
             className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
           />
         </div>
+
+        {organizations.length > 0 && (
+          <div className="mb-4">
+            <select
+              value={orgFilter}
+              onChange={(e) => setOrgFilter(e.target.value)}
+              className="w-full sm:w-72 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+            >
+              <option value="">Все дела</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {view === 'list' && (
           <div className="flex flex-wrap gap-2 mb-6">
@@ -262,6 +318,11 @@ export default function CasesPage(): JSX.Element {
                     <h3 className="font-medium text-light-text dark:text-dark-text line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{caseItem.title}</h3>
                     <CaseStatusBadge status={caseItem.status} />
                   </div>
+                  {caseItem.orgId && (
+                    <span className="inline-block mb-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                      {orgNameById.get(caseItem.orgId) ?? 'Организация'}
+                    </span>
+                  )}
                   {caseItem.clientName && (
                     <p className="text-xs text-light-accent dark:text-dark-accent mb-2 truncate">{caseItem.clientName}</p>
                   )}

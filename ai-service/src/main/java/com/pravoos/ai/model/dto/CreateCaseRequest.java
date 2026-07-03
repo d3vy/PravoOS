@@ -10,6 +10,7 @@ public record CreateCaseRequest(
         @NotBlank @Size(max = 500) String title,
         @Size(max = 5000) String description,
         UUID clientId,
+        UUID orgId,
         LocalDate filingDeadline,
         LocalDate nextHearingDate,
         LocalDate expiresAt,

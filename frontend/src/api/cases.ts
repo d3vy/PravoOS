@@ -23,11 +23,13 @@ export const casesApi = {
     status?: CaseStatus,
     q?: string,
     page = 0,
-    size = DEFAULT_PAGE_SIZE
+    size = DEFAULT_PAGE_SIZE,
+    orgId?: string
   ): Promise<Page<CaseResponse>> => {
     const params: Record<string, string | number> = { page, size }
     if (status) params.status = status
     if (q && q.trim()) params.q = q.trim()
+    if (orgId) params.orgId = orgId
     const response = await apiClient.get<CaseResponse[]>('/api/ai/cases', { params })
     return { items: response.data, total: readTotal(response.headers, response.data.length) }
   },

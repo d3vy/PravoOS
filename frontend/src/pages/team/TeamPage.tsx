@@ -1,0 +1,285 @@
+import { useEffect, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { organizationsApi } from '../../api/organizations'
+import { refreshSession } from '../../api/client'
+import { useAuthStore } from '../../store/authStore'
+import type { OrgInvite, OrgRole, Organization, OrganizationMember } from '../../types'
+import { Navbar } from '../../components/layout/Navbar'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { Spinner } from '../../components/ui/Spinner'
+
+const ROLE_LABEL: Record<OrgRole, string> = {
+  OWNER: 'Владелец',
+  MANAGER: 'Менеджер',
+  MEMBER: 'Участник',
+}
+
+export default function TeamPage(): JSX.Element {
+  const queryClient = useQueryClient()
+  const currentUserId = useAuthStore((state) => state.user?.userId)
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('')
+  const [orgName, setOrgName] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<OrgRole>('MEMBER')
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: organizations = [], isLoading } = useQuery<Organization[]>({
+    queryKey: ['organizations'],
+    queryFn: organizationsApi.list,
+  })
+
+  useEffect(() => {
+    if (organizations.length > 0 && !organizations.some((org) => org.id === selectedOrgId)) {
+      setSelectedOrgId(organizations[0].id)
+    }
+  }, [organizations, selectedOrgId])
+
+  const selectedOrg = organizations.find((org) => org.id === selectedOrgId)
+  const canManage = selectedOrg && selectedOrg.myRole !== 'MEMBER'
+  const isOwner = selectedOrg?.myRole === 'OWNER'
+
+  const { data: members = [] } = useQuery<OrganizationMember[]>({
+    queryKey: ['org-members', selectedOrgId],
+    queryFn: () => organizationsApi.members(selectedOrgId),
+    enabled: Boolean(selectedOrgId),
+  })
+
+  const { data: invites = [] } = useQuery<OrgInvite[]>({
+    queryKey: ['org-invites', selectedOrgId],
+    queryFn: () => organizationsApi.invites(selectedOrgId),
+    enabled: Boolean(selectedOrgId) && Boolean(canManage),
+  })
+
+  const refreshOrgs = async (): Promise<void> => {
+    await refreshSession()
+    queryClient.invalidateQueries({ queryKey: ['organizations'] })
+    queryClient.invalidateQueries({ queryKey: ['cases'] })
+  }
+
+  const createOrgMutation = useMutation({
+    mutationFn: () => organizationsApi.create({ name: orgName.trim() }),
+    onSuccess: async (org) => {
+      setOrgName('')
+      setError(null)
+      await refreshOrgs()
+      setSelectedOrgId(org.id)
+    },
+    onError: () => setError('Не удалось создать организацию.'),
+  })
+
+  const inviteMutation = useMutation({
+    mutationFn: () => organizationsApi.invite(selectedOrgId, { email: inviteEmail.trim(), orgRole: inviteRole }),
+    onSuccess: () => {
+      setInviteEmail('')
+      setInviteRole('MEMBER')
+      setError(null)
+      queryClient.invalidateQueries({ queryKey: ['org-invites', selectedOrgId] })
+    },
+    onError: () => setError('Не удалось отправить приглашение. Проверьте email и права.'),
+  })
+
+  const revokeInviteMutation = useMutation({
+    mutationFn: (inviteId: string) => organizationsApi.revokeInvite(selectedOrgId, inviteId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['org-invites', selectedOrgId] }),
+  })
+
+  const changeRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: OrgRole }) =>
+      organizationsApi.changeRole(selectedOrgId, userId, role),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['org-members', selectedOrgId] }),
+  })
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (userId: string) => organizationsApi.removeMember(selectedOrgId, userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['org-members', selectedOrgId] }),
+  })
+
+  const leaveMutation = useMutation({
+    mutationFn: () => organizationsApi.leave(selectedOrgId),
+    onSuccess: async () => {
+      setSelectedOrgId('')
+      await refreshOrgs()
+      queryClient.invalidateQueries({ queryKey: ['org-members'] })
+    },
+    onError: () => setError('Не удалось покинуть организацию.'),
+  })
+
+  return (
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
+      <Navbar />
+      <div className="page-container py-8 max-w-4xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Организации</h1>
+          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            Фирмы и команды: общий доступ к делам и управление участниками
+          </p>
+        </div>
+
+        {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+        {isLoading ? (
+          <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+        ) : (
+          <div className="flex flex-col gap-8">
+            {organizations.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {organizations.map((org) => (
+                  <button
+                    key={org.id}
+                    type="button"
+                    onClick={() => setSelectedOrgId(org.id)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      org.id === selectedOrgId
+                        ? 'bg-light-text dark:bg-dark-text text-light-bg dark:text-dark-bg border-transparent'
+                        : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+                    }`}
+                  >
+                    {org.name} · {ROLE_LABEL[org.myRole]}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedOrg && (
+              <div className="flex flex-col gap-6 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{selectedOrg.name}</h2>
+                    <p className="text-xs text-light-secondary dark:text-dark-secondary">
+                      Участников: {selectedOrg.memberCount} · Ваша роль: {ROLE_LABEL[selectedOrg.myRole]}
+                    </p>
+                  </div>
+                  {!isOwner && (
+                    <Button variant="secondary" size="sm" loading={leaveMutation.isPending} onClick={() => leaveMutation.mutate()}>
+                      Покинуть
+                    </Button>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">Участники</h3>
+                  <div className="flex flex-col divide-y divide-light-border dark:divide-dark-border">
+                    {members.map((member) => {
+                      const isOrgOwner = member.userId === selectedOrg.ownerId
+                      const isSelf = member.userId === currentUserId
+                      return (
+                        <div key={member.userId} className="flex items-center justify-between gap-3 py-3 min-w-0">
+                          <div className="min-w-0">
+                            <p className="text-sm text-light-text dark:text-dark-text truncate">
+                              {member.fullName || member.email || member.userId}
+                              {isSelf && <span className="text-light-secondary dark:text-dark-secondary"> (вы)</span>}
+                            </p>
+                            {member.email && (
+                              <p className="text-xs text-light-secondary dark:text-dark-secondary truncate">{member.email}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isOwner && !isOrgOwner ? (
+                              <select
+                                value={member.orgRole}
+                                onChange={(e) => changeRoleMutation.mutate({ userId: member.userId, role: e.target.value as OrgRole })}
+                                className="px-2 py-1 rounded-md border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-xs"
+                              >
+                                <option value="MEMBER">{ROLE_LABEL.MEMBER}</option>
+                                <option value="MANAGER">{ROLE_LABEL.MANAGER}</option>
+                              </select>
+                            ) : (
+                              <span className="text-xs text-light-secondary dark:text-dark-secondary">{ROLE_LABEL[member.orgRole]}</span>
+                            )}
+                            {canManage && !isOrgOwner && !isSelf && (
+                              <button
+                                type="button"
+                                onClick={() => removeMemberMutation.mutate(member.userId)}
+                                className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                              >
+                                Удалить
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {canManage && (
+                  <div>
+                    <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">Пригласить участника</h3>
+                    <div className="flex gap-2 flex-wrap items-end">
+                      <div className="flex-1 min-w-[200px]">
+                        <Input
+                          type="email"
+                          placeholder="email@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                        />
+                      </div>
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value as OrgRole)}
+                        className="px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm"
+                      >
+                        <option value="MEMBER">{ROLE_LABEL.MEMBER}</option>
+                        {isOwner && <option value="MANAGER">{ROLE_LABEL.MANAGER}</option>}
+                      </select>
+                      <Button
+                        variant="primary"
+                        loading={inviteMutation.isPending}
+                        disabled={!inviteEmail.trim()}
+                        onClick={() => inviteMutation.mutate()}
+                      >
+                        Пригласить
+                      </Button>
+                    </div>
+
+                    {invites.length > 0 && (
+                      <div className="mt-4 flex flex-col divide-y divide-light-border dark:divide-dark-border">
+                        {invites.map((invite) => (
+                          <div key={invite.id} className="flex items-center justify-between gap-3 py-2 min-w-0">
+                            <p className="text-sm text-light-secondary dark:text-dark-secondary truncate">
+                              {invite.email} · {ROLE_LABEL[invite.orgRole]}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => revokeInviteMutation.mutate(invite.id)}
+                              className="text-xs text-red-600 dark:text-red-400 hover:underline shrink-0"
+                            >
+                              Отозвать
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+              <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">Создать организацию</h3>
+              <div className="flex gap-2 flex-wrap items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <Input
+                    placeholder="Название фирмы"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    maxLength={200}
+                  />
+                </div>
+                <Button
+                  variant="primary"
+                  loading={createOrgMutation.isPending}
+                  disabled={!orgName.trim()}
+                  onClick={() => createOrgMutation.mutate()}
+                >
+                  Создать
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

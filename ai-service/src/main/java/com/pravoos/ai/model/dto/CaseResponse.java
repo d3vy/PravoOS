@@ -9,6 +9,8 @@ import java.util.UUID;
 
 public record CaseResponse(
         UUID id,
+        UUID ownerId,
+        UUID orgId,
         String title,
         String description,
         UUID clientId,
@@ -27,6 +29,8 @@ public record CaseResponse(
     public static CaseResponse from(Case caseEntity, String clientName) {
         return new CaseResponse(
                 caseEntity.getId(),
+                caseEntity.getLawyerId(),
+                caseEntity.getOrgId(),
                 caseEntity.getTitle(),
                 caseEntity.getDescription(),
                 caseEntity.getClientId(),

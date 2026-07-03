@@ -97,5 +97,35 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
                       @Param("pattern") String pattern,
                       Pageable pageable);
 
+    @Query(value = """
+            SELECT c FROM Case c
+            WHERE (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
+              AND (:status IS NULL OR c.status = :status)
+              AND (:orgFilter IS NULL OR c.orgId = :orgFilter)
+              AND (:pattern IS NULL
+                   OR LOWER(c.title) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+                   OR EXISTS (SELECT 1 FROM Client cl
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+            ORDER BY c.createdAt DESC
+            """,
+            countQuery = """
+            SELECT COUNT(c) FROM Case c
+            WHERE (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
+              AND (:status IS NULL OR c.status = :status)
+              AND (:orgFilter IS NULL OR c.orgId = :orgFilter)
+              AND (:pattern IS NULL
+                   OR LOWER(c.title) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+                   OR EXISTS (SELECT 1 FROM Client cl
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+            """)
+    Page<Case> findVisible(@Param("lawyerId") UUID lawyerId,
+                           @Param("orgIds") Collection<UUID> orgIds,
+                           @Param("status") CaseStatus status,
+                           @Param("orgFilter") UUID orgFilter,
+                           @Param("pattern") String pattern,
+                           Pageable pageable);
+
     int deleteByLawyerId(UUID lawyerId);
 }

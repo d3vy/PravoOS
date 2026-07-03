@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,4 +35,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByRoleAndStatusWithProfile(@Param("role") UserRole role,
                                               @Param("status") UserStatus status,
                                               Pageable pageable);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.lawyerProfile WHERE u.id IN :ids")
+    List<User> findByIdInWithProfile(@Param("ids") Collection<UUID> ids);
 }

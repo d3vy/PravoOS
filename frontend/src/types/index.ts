@@ -138,6 +138,8 @@ export type CaseStatus = 'INTAKE' | 'IN_PROGRESS' | 'SUBMITTED' | 'CLOSED_WON' |
 
 export interface CaseResponse {
   id: string
+  ownerId: string
+  orgId: string | null
   title: string
   description: string | null
   clientId: string | null
@@ -164,6 +166,7 @@ export interface CreateCaseRequest {
   title: string
   description?: string
   clientId?: string | null
+  orgId?: string | null
   filingDeadline?: string | null
   nextHearingDate?: string | null
   expiresAt?: string | null
@@ -178,6 +181,45 @@ export interface UpdateCaseRequest {
   nextHearingDate?: string | null
   expiresAt?: string | null
   arbitrCaseNumber?: string | null
+}
+
+export type OrgRole = 'OWNER' | 'MANAGER' | 'MEMBER'
+
+export interface Organization {
+  id: string
+  name: string
+  ownerId: string
+  myRole: OrgRole
+  memberCount: number
+  createdAt: string
+}
+
+export interface OrganizationMember {
+  userId: string
+  email: string | null
+  fullName: string | null
+  orgRole: OrgRole
+  joinedAt: string
+}
+
+export type InviteStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED'
+
+export interface OrgInvite {
+  id: string
+  email: string
+  orgRole: OrgRole
+  status: InviteStatus
+  expiresAt: string
+  createdAt: string
+}
+
+export interface CreateOrganizationRequest {
+  name: string
+}
+
+export interface CreateInviteRequest {
+  email: string
+  orgRole: OrgRole
 }
 
 export interface UpdateCaseStatusRequest {

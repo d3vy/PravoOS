@@ -87,6 +87,21 @@ public class ResendEmailClient {
         log.info("New-login email sent to {}", EmailMasker.mask(to));
     }
 
+    public void sendOrgInviteEmail(String to, String organizationName, String inviterName, String inviteLink) {
+        String inviter = (inviterName == null || inviterName.isBlank()) ? "Коллега" : escapeHtml(inviterName);
+        String bodyText = String.format(
+                "%s приглашает вас присоединиться к организации «%s» в PravoOS. "
+                        + "Войдите в свой аккаунт и примите приглашение по кнопке ниже.",
+                inviter, escapeHtml(organizationName));
+        send(to, "Приглашение в организацию — PravoOS", buildHtml(
+                bodyText,
+                "Принять приглашение",
+                inviteLink,
+                "Приглашение действительно 7 дней. Если вы не ожидали его — просто проигнорируйте это письмо."
+        ));
+        log.info("Org invite email sent to {}", EmailMasker.mask(to));
+    }
+
     public void sendPasswordResetEmail(String to, String resetLink) {
         send(to, "Сброс пароля — PravoOS", buildHtml(
                 "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",

@@ -20,6 +20,8 @@ import ClientsPage from './pages/clients/ClientsPage'
 import ClientDetailPage from './pages/clients/ClientDetailPage'
 import SearchPage from './pages/search/SearchPage'
 import TemplatesPage from './pages/templates/TemplatesPage'
+import TeamPage from './pages/team/TeamPage'
+import InvitePage from './pages/team/InvitePage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
@@ -113,6 +115,24 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute requiredRole="LAWYER">
             <SearchPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/team"
+        element={
+          <ProtectedRoute requiredRole="LAWYER">
+            <TeamPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/invite"
+        element={
+          <ProtectedRoute requiredRole="LAWYER">
+            <InvitePage />
           </ProtectedRoute>
         }
       />
