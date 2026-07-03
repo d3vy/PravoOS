@@ -54,6 +54,16 @@ export const casesApi = {
     return response.data
   },
 
+  changeOrg: async (caseId: string, orgId: string | null): Promise<CaseResponse> => {
+    const response = await apiClient.patch<CaseResponse>(`/api/ai/cases/${caseId}/org`, { orgId })
+    return response.data
+  },
+
+  transferOwner: async (caseId: string, newOwnerId: string): Promise<CaseResponse> => {
+    const response = await apiClient.patch<CaseResponse>(`/api/ai/cases/${caseId}/owner`, { newOwnerId })
+    return response.data
+  },
+
   delete: async (caseId: string): Promise<void> => {
     await apiClient.delete(`/api/ai/cases/${caseId}`)
   },

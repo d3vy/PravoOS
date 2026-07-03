@@ -157,25 +157,34 @@
   org-дропдаун в форме дела + фильтр + бейдж. Тесты: `OrganizationServiceTest`,
   `OrganizationInviteServiceTest`, `CaseServiceVisibilityTest`.
 
-- [ ] **E20. Write-коллаборация над делами орги (follow-up E19).**
-  Сейчас shared-дело коллеги видят read-only; мутации/AI-фичи (update/status/upload/drafts/
-  workflows/tasks/responses/export) — owner-only (`requireOwnedCase`).
-  → Перевести эти пути на `requireVisibleCase` (или роль-aware: MANAGER+ или assignee).
-  Роли в claim не лежат — либо добавить `orgRoles` в JWT, либо проверять членство/роль в ai-service.
-  Точки: `WorkflowService`, `DraftService`, `TemplateService`, `AiResponseService`, `CaseTaskService`,
-  `CaseExportService`, `CaseService.update/updateStatus/uploadDocument/syncArbitr`.
+- [x] **E20. Write-коллаборация над делами орги (follow-up E19).**
+  **Модель: любой участник орги пишет** (без ролей в JWT — read=write для членов орги).
+  Мутации/AI-фичи (`update/status/upload/syncArbitr/workflows/drafts/templates/tasks/responses/
+  contract-review/export`) переведены с `requireOwnedCase` на `requireVisibleCase`. `delete` дела
+  остаётся owner-only. Индивидуальные under-resource by-id (`draft download`, `response rate`,
+  `contract-review get`) проверяют видимость родительского дела. Клиент дела резолвится по
+  **владельцу дела** (`caseEntity.lawyerId`), а не по caller — иначе коллаборатор не смог бы
+  редактировать (клиенты приватны). Затронуто: `CaseService`, `WorkflowService`, `DraftService`,
+  `TemplateService`, `AiResponseService`, `CaseTaskService`, `CaseExportService`,
+  `ContractReviewService` + 5 контроллеров (проброс `orgIds`).
+  *Известное ограничение:* клиенты не шарятся между юристами → после переноса владельца
+  (E21) новый владелец не сможет менять клиента дела, пока клиент принадлежит старому. Отдельный эпик.
 
-- [ ] **E21. Перенос дела между личным/орг + владением (follow-up E19).**
-  Сейчас `org_id` ставится только при создании; `update` его не трогает (edit-форма без org-поля
-  затирала бы в NULL).
-  → Отдельный эндпоинт `PATCH /cases/{id}/org` (валид. ∈ мои орги, owner/MANAGER), org-поле в
-  edit-форме. Плюс передача владельца дела (`lawyerId`) другому участнику.
+- [x] **E21. Перенос дела между личным/орг + владением (follow-up E19).**
+  `PATCH /cases/{id}/org` (`ChangeCaseOrgRequest{orgId}`, null = сделать личным, валид. ∈ мои орги,
+  **case-owner-only**) + `PATCH /cases/{id}/owner` (`TransferCaseOwnerRequest{newOwnerId}`,
+  case-owner-only, только для org-дел, иначе `CaseTransferNotAllowedException` 400). Фронт: методы
+  `casesApi.changeOrg/transferOwner` добавлены; UI (org-поле в edit-форме + пикер участника для
+  передачи) — оставлен как отдельная задача.
 
-- [ ] **E22. Судьба org-дел при удалении юриста (follow-up E19).**
-  `LawyerDataCleanupService` по `lawyer.deleted` сносит ВСЕ дела юриста, включая созданные им
-  org-дела → данные фирмы теряются.
-  → При удалении: org-дела передавать OWNER-у фирмы (или оставлять, обнуляя `lawyerId`), сносить
-  только личные (`org_id IS NULL`).
+- [x] **E22. Судьба org-дел при удалении юриста (follow-up E19).**
+  `lawyer.deleted` обогащён `Map<orgId,ownerId>` (user-service: `AdminService` резолвит владельцев
+  орг юриста, исключая орги где удаляемый — сам OWNER, и чистит его memberships). ai-service:
+  `LawyerDataCleanupService.reassignOrgCases` (идемпотентно, до purge; Kafka-ретраи сохраняют map)
+  переводит org-дела на OWNER-а фирмы как **личные** (`lawyerId→owner, orgId→null`) + переносит их
+  черновики; личные дела сносятся как раньше. Задачи дел keyed по case-owner → переживают перенос.
+  *Не покрыто:* если удаляется сам OWNER орги — его org-дела уходят в общий purge (наследование
+  владения оргой — отдельная задача).
 
 ---
 
