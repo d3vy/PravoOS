@@ -30,15 +30,21 @@ if ! command -v envsubst >/dev/null 2>&1; then
   exit 1
 fi
 
+CF_ORIGIN_PULL="${CF_ORIGIN_PULL:-off}"
+if [[ "$CF_ORIGIN_PULL" != "on" && "$CF_ORIGIN_PULL" != "off" ]]; then
+  echo "CF_ORIGIN_PULL must be 'on' or 'off', got: $CF_ORIGIN_PULL"
+  exit 1
+fi
+
 mkdir -p docker/nginx/generated
-export SERVER_DOMAIN SERVER_IP
+export SERVER_DOMAIN SERVER_IP CF_ORIGIN_PULL
 
 if [[ "$MODE" == "init" ]]; then
   envsubst '${SERVER_DOMAIN} ${SERVER_IP}' \
     < docker/nginx/app.init.conf.template \
     > docker/nginx/generated/default.conf
 else
-  envsubst '${SERVER_DOMAIN} ${SERVER_IP}' \
+  envsubst '${SERVER_DOMAIN} ${SERVER_IP} ${CF_ORIGIN_PULL}' \
     < docker/nginx/app.prod.conf.template \
     > docker/nginx/generated/default.conf
 fi

@@ -22,6 +22,13 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_protocols TLSv1.2 TLSv1.3;
 
+    # Authenticated Origin Pulls: only Cloudflare edges holding the CF client
+    # cert can complete the TLS handshake. Turn CF_ORIGIN_PULL=on only AFTER
+    # enabling the zone toggle in Cloudflare (SSL/TLS -> Origin Server),
+    # otherwise every request is rejected with 400.
+    ssl_client_certificate /etc/nginx/cloudflare-origin-pull-ca.pem;
+    ssl_verify_client ${CF_ORIGIN_PULL};
+
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -62,44 +69,9 @@ server {
     }
 }
 
+# Direct hits by IP or unknown Host bypass Cloudflare — drop the connection.
 server {
-    listen 80;
-    server_name ${SERVER_IP};
-
-    add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
-
-    client_max_body_size 50M;
-
-    location /api/ {
-        proxy_pass http://api-gateway:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-    }
-
-    location /grafana/ {
-        proxy_pass http://grafana:3000/grafana/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    }
-
-    location / {
-        root /usr/share/nginx/html;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
+    listen 80 default_server;
+    server_name _;
+    return 444;
 }

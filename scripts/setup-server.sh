@@ -25,9 +25,9 @@ systemctl start docker
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
 ufw --force enable
+
+"$(dirname "$0")/lockdown-origin.sh"
 
 echo ""
 echo "Server ready. Next steps:"
