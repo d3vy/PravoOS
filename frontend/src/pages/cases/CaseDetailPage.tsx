@@ -4,11 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
 import { clientsApi } from '../../api/clients'
+import { organizationsApi } from '../../api/organizations'
+import { useAuthStore } from '../../store/authStore'
 import { templatesApi } from '../../api/templates'
 import { workflowsApi } from '../../api/workflows'
 import { contractReviewsApi } from '../../api/contractReviews'
 import { citationsApi } from '../../api/citations'
-import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, CitationCheck, CitationStatus, ClientResponse, ContractReviewDto, ContractRiskLevel, DocumentResponse, DraftTypeInfo, WorkflowInfo } from '../../types'
+import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, CitationCheck, CitationStatus, ClientResponse, ContractReviewDto, ContractRiskLevel, DocumentResponse, DraftTypeInfo, Organization, OrganizationMember, WorkflowInfo } from '../../types'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -142,9 +144,13 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
   const [nextHearingDate, setNextHearingDate] = useState(caseItem.nextHearingDate ?? '')
   const [expiresAt, setExpiresAt] = useState(caseItem.expiresAt ?? '')
   const [arbitrCaseNumber, setArbitrCaseNumber] = useState(caseItem.arbitrCaseNumber ?? '')
+  const [transferTo, setTransferTo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState<'docx' | 'pdf' | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
+
+  const currentUserId = useAuthStore((state) => state.user?.userId)
+  const isOwner = currentUserId === caseItem.ownerId
 
   const statusMutation = useMutation({
     mutationFn: (status: CaseStatus) => casesApi.updateStatus(caseItem.id, status),
@@ -171,6 +177,48 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
     queryKey: ['clients'],
     queryFn: clientsApi.getAll,
   })
+
+  const { data: organizations = [] } = useQuery<Organization[]>({
+    queryKey: ['organizations'],
+    queryFn: organizationsApi.list,
+    enabled: isOwner,
+  })
+
+  const { data: orgMembers = [] } = useQuery<OrganizationMember[]>({
+    queryKey: ['org-members', caseItem.orgId],
+    queryFn: () => organizationsApi.members(caseItem.orgId as string),
+    enabled: isOwner && Boolean(caseItem.orgId),
+  })
+
+  const changeOrgMutation = useMutation({
+    mutationFn: (newOrgId: string | null) => casesApi.changeOrg(caseItem.id, newOrgId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+      setError(null)
+    },
+    onError: () => setError('Не удалось изменить организацию дела.'),
+  })
+
+  const transferMutation = useMutation({
+    mutationFn: (newOwnerId: string) => casesApi.transferOwner(caseItem.id, newOwnerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+      setTransferTo('')
+      setIsEditing(false)
+      setError(null)
+    },
+    onError: () => setError('Не удалось передать владельца дела.'),
+  })
+
+  const handleTransfer = (): void => {
+    if (!transferTo) return
+    const member = orgMembers.find((m) => m.userId === transferTo)
+    const name = member?.fullName || member?.email || 'выбранного участника'
+    if (!window.confirm(`Передать дело участнику «${name}»? Вы перестанете быть владельцем дела.`)) return
+    transferMutation.mutate(transferTo)
+  }
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -254,6 +302,62 @@ function CaseHeaderSection({ caseItem, queryClient }: { caseItem: CaseResponse; 
             maxLength={50}
             placeholder="А40-12345/2024"
           />
+          {isOwner && (
+            <div className="flex flex-col gap-4 pt-4 border-t border-light-border dark:border-dark-border">
+              <div>
+                <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
+                  Организация
+                </label>
+                <select
+                  value={caseItem.orgId ?? ''}
+                  disabled={changeOrgMutation.isPending}
+                  onChange={(e) => changeOrgMutation.mutate(e.target.value || null)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent disabled:opacity-60"
+                >
+                  <option value="">Личное дело</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-light-secondary dark:text-dark-secondary">
+                  Дело в организации видят и редактируют её участники. «Личное дело» — только вы.
+                </p>
+              </div>
+              {caseItem.orgId && (
+                <div>
+                  <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
+                    Передать владельца
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={transferTo}
+                      onChange={(e) => setTransferTo(e.target.value)}
+                      className="flex-1 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                    >
+                      <option value="">Выберите участника</option>
+                      {orgMembers
+                        .filter((member) => member.userId !== caseItem.ownerId)
+                        .map((member) => (
+                          <option key={member.userId} value={member.userId}>
+                            {member.fullName || member.email || member.userId}
+                          </option>
+                        ))}
+                    </select>
+                    <Button
+                      variant="secondary"
+                      disabled={!transferTo}
+                      loading={transferMutation.isPending}
+                      onClick={handleTransfer}
+                    >
+                      Передать
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex gap-2">
             <Button variant="primary" loading={updateMutation.isPending} onClick={handleSave}>
