@@ -1,5 +1,6 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.client.UserServiceClient;
 import com.pravoos.ai.exception.CaseNotFoundException;
 import com.pravoos.ai.exception.CaseTransferNotAllowedException;
 import com.pravoos.ai.exception.OrganizationAccessException;
@@ -29,10 +30,11 @@ class CaseServiceOwnershipTest {
     @Mock private DocumentService documentService;
     @Mock private CaseHearingEventRepository hearingEventRepository;
     @Mock private ArbitrSyncService arbitrSyncService;
+    @Mock private UserServiceClient userServiceClient;
 
     private CaseService caseService() {
         return new CaseService(caseRepository, clientRepository, documentService,
-                hearingEventRepository, arbitrSyncService);
+                hearingEventRepository, arbitrSyncService, userServiceClient);
     }
 
     @Test
@@ -115,13 +117,32 @@ class CaseServiceOwnershipTest {
         UUID newOwnerId = UUID.randomUUID();
         Case owned = new Case();
         owned.setLawyerId(lawyerId);
-        owned.setOrgId(UUID.randomUUID());
+        UUID orgId = UUID.randomUUID();
+        owned.setOrgId(orgId);
         when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+        when(userServiceClient.isOrgMember(orgId, newOwnerId)).thenReturn(true);
 
         CaseResponse response = caseService().transferOwner(caseId, newOwnerId, lawyerId);
 
         assertThat(response.ownerId()).isEqualTo(newOwnerId);
         assertThat(owned.getLawyerId()).isEqualTo(newOwnerId);
+    }
+
+    @Test
+    void transferOwnerRejectsNonMember() {
+        UUID caseId = UUID.randomUUID();
+        UUID lawyerId = UUID.randomUUID();
+        UUID newOwnerId = UUID.randomUUID();
+        Case owned = new Case();
+        owned.setLawyerId(lawyerId);
+        UUID orgId = UUID.randomUUID();
+        owned.setOrgId(orgId);
+        when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+        when(userServiceClient.isOrgMember(orgId, newOwnerId)).thenReturn(false);
+
+        assertThatThrownBy(() -> caseService().transferOwner(caseId, newOwnerId, lawyerId))
+                .isInstanceOf(CaseTransferNotAllowedException.class);
+        assertThat(owned.getLawyerId()).isEqualTo(lawyerId);
     }
 
     @Test

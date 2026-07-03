@@ -152,5 +152,9 @@ management:
     tracing:
       endpoint: ${OTLP_TRACING_ENDPOINT:http://tempo:4318/v1/traces}
 
+user-service:
+  base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
+  internal-secret: ${INTERNAL_SERVICE_SECRET:}
+
 logging:
   config: classpath:logback-spring.xml

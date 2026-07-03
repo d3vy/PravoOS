@@ -110,6 +110,11 @@ public class OrganizationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public boolean isMember(UUID orgId, UUID userId) {
+        return membershipRepository.existsByOrgIdAndUserId(orgId, userId);
+    }
+
     @Transactional
     public OrganizationMemberResponse changeMemberRole(UUID callerId, UUID orgId, UUID targetUserId, OrgRole newRole) {
         accessGuard.requireOwner(orgId, callerId);

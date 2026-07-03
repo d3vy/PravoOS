@@ -1,5 +1,6 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.client.UserServiceClient;
 import com.pravoos.ai.exception.CaseNotFoundException;
 import com.pravoos.ai.exception.OrganizationAccessException;
 import com.pravoos.ai.model.dto.CaseResponse;
@@ -30,10 +31,11 @@ class CaseServiceVisibilityTest {
     @Mock private DocumentService documentService;
     @Mock private CaseHearingEventRepository hearingEventRepository;
     @Mock private ArbitrSyncService arbitrSyncService;
+    @Mock private UserServiceClient userServiceClient;
 
     private CaseService caseService() {
         return new CaseService(caseRepository, clientRepository, documentService,
-                hearingEventRepository, arbitrSyncService);
+                hearingEventRepository, arbitrSyncService, userServiceClient);
     }
 
     @Test

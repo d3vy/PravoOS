@@ -1,5 +1,6 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.client.UserServiceClient;
 import com.pravoos.ai.exception.CaseNotFoundException;
 import com.pravoos.ai.exception.CaseTransferNotAllowedException;
 import com.pravoos.ai.exception.ClientNotFoundException;
@@ -38,17 +39,20 @@ public class CaseService {
     private final DocumentService documentService;
     private final CaseHearingEventRepository hearingEventRepository;
     private final ArbitrSyncService arbitrSyncService;
+    private final UserServiceClient userServiceClient;
 
     public CaseService(CaseRepository caseRepository,
                        ClientRepository clientRepository,
                        DocumentService documentService,
                        CaseHearingEventRepository hearingEventRepository,
-                       ArbitrSyncService arbitrSyncService) {
+                       ArbitrSyncService arbitrSyncService,
+                       UserServiceClient userServiceClient) {
         this.caseRepository = caseRepository;
         this.clientRepository = clientRepository;
         this.documentService = documentService;
         this.hearingEventRepository = hearingEventRepository;
         this.arbitrSyncService = arbitrSyncService;
+        this.userServiceClient = userServiceClient;
     }
 
     @Transactional
@@ -169,6 +173,9 @@ public class CaseService {
         }
         if (newOwnerId.equals(caseEntity.getLawyerId())) {
             throw new CaseTransferNotAllowedException("Дело уже принадлежит указанному участнику");
+        }
+        if (!userServiceClient.isOrgMember(caseEntity.getOrgId(), newOwnerId)) {
+            throw new CaseTransferNotAllowedException("Новый владелец не состоит в организации дела");
         }
         caseEntity.setLawyerId(newOwnerId);
         log.info("Case {} ownership transferred from {} to {}", caseId, lawyerId, newOwnerId);

@@ -161,11 +161,11 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx300m"
       CLAMAV_HOST: clamav
       CLAMAV_PORT: "3310"
+      USER_SERVICE_BASE_URL: http://user-service:8081
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       RESEND_API_KEY: ""
       ADMIN_PASSWORD: ""
       ADMIN_PASSWORD_2: ""
-      INTERNAL_SERVICE_SECRET: ""
       TELEGRAM_BOT_TOKEN: ""
       BACKUP_ENCRYPTION_KEY: ""
       GRAFANA_ADMIN_PASSWORD: ""
