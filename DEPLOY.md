@@ -6,7 +6,7 @@
 - Docker Engine + Compose v2.23+
 - Домен с A-записью на IP сервера (`pravoos.ru` → `77.110.116.203`)
 - A-запись для `www.pravoos.ru` (тот же IP или CNAME на `pravoos.ru`)
-- Порты **80** и **443** открыты (ufw / панель хостинга)
+- Домен проксируется через Cloudflare (оранжевое облако) — порты **80/443** открыты только с диапазонов Cloudflare (см. раздел «Закрытие origin»)
 
 ## 1. Подготовка сервера (один раз)
 
@@ -23,7 +23,7 @@ chmod +x scripts/*.sh
 sudo ./scripts/setup-server.sh
 ```
 
-`setup-server.sh` установит Docker, `gettext-base` (envsubst), настроит ufw (22, 80, 443).
+`setup-server.sh` установит Docker, `gettext-base` (envsubst), настроит ufw: 22 отовсюду, 80/443 — только с диапазонов Cloudflare (через `lockdown-origin.sh`).
 
 ## 2. Конфигурация `.env`
 
@@ -76,7 +76,7 @@ openssl rand -base64 64
 После успеха:
 
 - **https://pravoos.ru** — основной вход
-- **http://SERVER_IP** — по IP без TLS (для проверки)
+- Доступ по голому IP закрыт намеренно: nginx отвечает `444` на запросы без известного Host, ufw пускает 80/443 только с Cloudflare
 
 ## 4. Обновление версии
 
@@ -113,7 +113,25 @@ crontab -e
 0 3 * * * /opt/pravoos/scripts/renew-ssl.sh >> /var/log/pravoos-ssl-renew.log 2>&1
 ```
 
-## 6. Локальная разработка
+## 6. Закрытие origin (Cloudflare-only доступ)
+
+Origin недостижим напрямую — только через Cloudflare. Два слоя:
+
+**Слой 1 — ufw (сеть).** `sudo ./scripts/lockdown-origin.sh` тянет актуальные диапазоны с cloudflare.com/ips, разрешает 80/443 только с них и удаляет широкие allow-правила. Идемпотентен; предупреждает о дрейфе относительно `docker/nginx/cloudflare-realip.conf`. Прогонять при изменении диапазонов Cloudflare (можно в cron раз в месяц).
+
+**Слой 2 — Authenticated Origin Pulls (mTLS).** Nginx требует клиентский сертификат Cloudflare на TLS-хендшейке — защищает даже при смене IP/дырке в ufw. Порядок включения строго такой:
+
+1. Cloudflare dashboard → SSL/TLS → Origin Server → **Authenticated Origin Pulls: On** (и режим SSL — Full (strict))
+2. В `.env`: `CF_ORIGIN_PULL=on`
+3. `./scripts/render-nginx.sh prod && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec frontend nginx -s reload`
+
+Если включить nginx-часть раньше тумблера в Cloudflare — весь трафик получит 400. CA-сертификат уже в репо (`docker/nginx/cloudflare-origin-pull-ca.pem`, истекает 2029-11-01).
+
+**Первичная выдача сертификата Let's Encrypt:** HTTP-01 challenge проходит через Cloudflare-прокси, поэтому работает при закрытом ufw — но только если домен уже проксируется (оранжевое облако). Если прокси ещё выключен — временно `ufw allow 80/tcp`, после выдачи `sudo ./scripts/lockdown-origin.sh`.
+
+**IP сервера засвечен в старых конфигах/git-истории** — после включения обоих слоёв желательно сменить IP у хостера и обновить `SERVER_IP` в `.env`.
+
+## 7. Локальная разработка
 
 На машине разработчика (без prod-оверрайда):
 
@@ -124,13 +142,17 @@ cd frontend && npm run dev
 
 API: `http://localhost:8080`, фронт: `http://localhost:3000`.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 **Сертификат не выдаётся**
 
 - DNS должен указывать на сервер до запуска `deploy.sh`
-- Порт 80 доступен из интернета
+- Домен проксируется через Cloudflare (иначе порт 80 закрыт ufw — см. раздел 6)
 - Домен в `.env` совпадает с DNS
+
+**Все запросы падают с 400 «No required SSL certificate was sent»**
+
+`CF_ORIGIN_PULL=on` в nginx, но тумблер Authenticated Origin Pulls в Cloudflare выключен. Включи тумблер или откати `CF_ORIGIN_PULL=off` + re-render + reload.
 
 **502 / API не отвечает**
 
