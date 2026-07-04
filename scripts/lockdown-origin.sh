@@ -19,6 +19,12 @@ if [[ "${EUID:-}" -ne 0 ]]; then
   exit 1
 fi
 
+if ! ufw status | grep -q "Status: active"; then
+  echo "ufw is not active — rules would be written but never applied."
+  echo "Check SSH is allowed (ufw show added | grep -w 22), then: sudo ufw enable"
+  exit 1
+fi
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALIP_CONF="$ROOT/docker/nginx/cloudflare-realip.conf"
 AFTER_RULES="/etc/ufw/after.rules"
