@@ -59,9 +59,11 @@ public class RefreshTokenService {
         return rawToken;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public boolean isKnownDevice(UUID userId, String ipAddress) {
-        return ipAddress != null && refreshTokenRepository.existsByUserIdAndIpAddress(userId, ipAddress);
+        return ipAddress != null && refreshTokenRepository
+                .existsByUserIdAndIpAddressAndRevokedAtIsNullAndExpiresAtAfter(
+                        userId, ipAddress, LocalDateTime.now());
     }
 
     @Transactional(readOnly = true)

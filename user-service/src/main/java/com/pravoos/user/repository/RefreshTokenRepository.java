@@ -15,7 +15,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
 
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
-    boolean existsByUserIdAndIpAddress(UUID userId, String ipAddress);
+    boolean existsByUserIdAndIpAddressAndRevokedAtIsNullAndExpiresAtAfter(
+            UUID userId, String ipAddress, LocalDateTime now);
 
     List<RefreshToken> findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
             UUID userId, LocalDateTime now);
