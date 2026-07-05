@@ -6,6 +6,7 @@ import com.pravoos.user.model.dto.UpdateNotificationSettingsRequest;
 import com.pravoos.user.model.entity.LawyerProfile;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.repository.LawyerProfileRepository;
+import com.pravoos.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,80 +18,93 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
     @Mock private LawyerProfileRepository lawyerProfileRepository;
+    @Mock private UserRepository userRepository;
 
     private UserService service;
 
     @BeforeEach
     void setUp() {
-        service = new UserService(lawyerProfileRepository);
+        service = new UserService(lawyerProfileRepository, userRepository);
     }
 
     @Test
     void getNotificationSettings_returnsDefaults_andTelegramLinkedFlag() {
         UUID userId = UUID.randomUUID();
-        LawyerProfile profile = profile(userId, 555L);
-        when(lawyerProfileRepository.findByUserIdWithUser(userId)).thenReturn(Optional.of(profile));
+        User user = user(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(lawyerProfileRepository.findByUserIdWithUser(userId))
+                .thenReturn(Optional.of(profile(user, 555L)));
 
         NotificationSettingsResponse response = service.getNotificationSettings(userId);
 
         assertThat(response.loginAlertEmail()).isTrue();
         assertThat(response.loginAlertTelegram()).isFalse();
+        assertThat(response.caseMessageEmail()).isTrue();
+        assertThat(response.caseMessageTelegram()).isFalse();
         assertThat(response.telegramLinked()).isTrue();
     }
 
     @Test
-    void getNotificationSettings_reportsTelegramNotLinked_whenChatIdMissing() {
+    void getNotificationSettings_reportsTelegramNotLinked_forClientWithoutProfile() {
         UUID userId = UUID.randomUUID();
-        when(lawyerProfileRepository.findByUserIdWithUser(userId)).thenReturn(Optional.of(profile(userId, null)));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user(userId)));
+        when(lawyerProfileRepository.findByUserIdWithUser(userId)).thenReturn(Optional.empty());
 
         assertThat(service.getNotificationSettings(userId).telegramLinked()).isFalse();
     }
 
     @Test
-    void getNotificationSettings_throws_whenProfileMissing() {
+    void getNotificationSettings_throws_whenUserMissing() {
         UUID userId = UUID.randomUUID();
-        when(lawyerProfileRepository.findByUserIdWithUser(userId)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getNotificationSettings(userId))
                 .isInstanceOf(ProfileNotFoundException.class);
     }
 
     @Test
-    void updateNotificationSettings_persistsChannelsOnUser() {
+    void updateNotificationSettings_persistsAllChannels() {
         UUID userId = UUID.randomUUID();
-        LawyerProfile profile = profile(userId, 555L);
-        when(lawyerProfileRepository.findByUserIdWithUser(userId)).thenReturn(Optional.of(profile));
+        User user = user(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        lenient().when(lawyerProfileRepository.findByUserIdWithUser(userId))
+                .thenReturn(Optional.of(profile(user, 555L)));
 
         NotificationSettingsResponse response = service.updateNotificationSettings(
-                userId, new UpdateNotificationSettingsRequest(false, true));
+                userId, new UpdateNotificationSettingsRequest(false, true, false, true));
 
-        assertThat(profile.getUser().isLoginAlertEmail()).isFalse();
-        assertThat(profile.getUser().isLoginAlertTelegram()).isTrue();
-        assertThat(response.loginAlertEmail()).isFalse();
-        assertThat(response.loginAlertTelegram()).isTrue();
+        assertThat(user.isLoginAlertEmail()).isFalse();
+        assertThat(user.isLoginAlertTelegram()).isTrue();
+        assertThat(user.isCaseMessageEmail()).isFalse();
+        assertThat(user.isCaseMessageTelegram()).isTrue();
+        assertThat(response.caseMessageTelegram()).isTrue();
     }
 
     @Test
-    void updateNotificationSettings_throws_whenProfileMissing() {
+    void updateNotificationSettings_throws_whenUserMissing() {
         UUID userId = UUID.randomUUID();
-        when(lawyerProfileRepository.findByUserIdWithUser(userId)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.updateNotificationSettings(
-                userId, new UpdateNotificationSettingsRequest(true, true)))
+                userId, new UpdateNotificationSettingsRequest(true, true, true, true)))
                 .isInstanceOf(ProfileNotFoundException.class);
     }
 
-    private LawyerProfile profile(UUID userId, Long telegramChatId) {
+    private User user(UUID userId) {
         User user = new User();
         user.setId(userId);
         user.setEmail("lawyer@example.com");
+        return user;
+    }
 
+    private LawyerProfile profile(User user, Long telegramChatId) {
         LawyerProfile profile = new LawyerProfile();
         profile.setUser(user);
         profile.setFullName("Иван Юрист");

@@ -102,6 +102,33 @@ public class ResendEmailClient {
         log.info("Org invite email sent to {}", EmailMasker.mask(to));
     }
 
+    public void sendClientPortalInviteEmail(String to, String clientName, String acceptLink) {
+        String greeting = (clientName == null || clientName.isBlank())
+                ? "Ваш юрист приглашает вас в клиентский портал PravoOS."
+                : escapeHtml(clientName) + ", ваш юрист приглашает вас в клиентский портал PravoOS.";
+        send(to, "Приглашение в клиентский портал — PravoOS", buildHtml(
+                greeting + " По кнопке ниже задайте пароль и получите доступ к статусу ваших дел, документам и переписке.",
+                "Создать доступ",
+                acceptLink,
+                "Приглашение действительно 7 дней. Если вы не ожидали его — просто проигнорируйте это письмо."
+        ));
+        log.info("Client portal invite email sent to {}", EmailMasker.mask(to));
+    }
+
+    public void sendCaseMessageEmail(String to, String caseTitle, String senderLabel,
+                                     String preview, String caseLink) {
+        String bodyText = String.format(
+                "%s оставил новое сообщение по делу «%s».<br><br>«%s»",
+                escapeHtml(senderLabel), escapeHtml(caseTitle), escapeHtml(preview));
+        send(to, "Новое сообщение по делу — PravoOS", buildHtml(
+                bodyText,
+                "Открыть переписку",
+                caseLink,
+                "Вы получаете это письмо, так как включены уведомления о сообщениях. Отключить можно в настройках PravoOS."
+        ));
+        log.info("Case message email sent to {}", EmailMasker.mask(to));
+    }
+
     public void sendPasswordResetEmail(String to, String resetLink) {
         send(to, "Сброс пароля — PravoOS", buildHtml(
                 "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",

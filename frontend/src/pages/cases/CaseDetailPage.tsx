@@ -19,6 +19,7 @@ import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 import { DateField } from '../../components/cases/DateField'
 import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
+import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 import type { CaseStatus } from '../../types'
 
@@ -115,6 +116,15 @@ export default function CaseDetailPage(): JSX.Element {
         <DocumentsSection caseId={caseId} documents={documents} queryClient={queryClient} />
 
         <CaseTasksSection caseId={caseId} />
+
+        <div className="mb-10">
+          <CaseMessageThread
+            queryKey={['case', caseId, 'messages']}
+            viewerRole="LAWYER"
+            listMessages={() => casesApi.listMessages(caseId)}
+            sendMessage={(body) => casesApi.sendMessage(caseId, body)}
+          />
+        </div>
 
         <ArbitrSection caseItem={caseItem} queryClient={queryClient} />
 
@@ -569,7 +579,21 @@ function ArbitrSection({ caseItem, queryClient }: { caseItem: CaseResponse; quer
 function DocumentsSection({ caseId, documents, queryClient }: SectionProps & { documents: DocumentResponse[] }): JSX.Element {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const toggleVisibility = async (doc: DocumentResponse): Promise<void> => {
+    setError(null)
+    setTogglingId(doc.id)
+    try {
+      await casesApi.setDocumentVisibility(caseId, doc.id, !doc.visibleToClient)
+      queryClient.invalidateQueries({ queryKey: ['case-documents', caseId] })
+    } catch {
+      setError('Не удалось изменить видимость документа.')
+    } finally {
+      setTogglingId(null)
+    }
+  }
 
   const handleFiles = async (files: FileList | null): Promise<void> => {
     if (!files || files.length === 0) return
@@ -637,6 +661,19 @@ function DocumentsSection({ caseId, documents, queryClient }: SectionProps & { d
                 {doc.fileName.split('.').pop()}
               </span>
               <p className="flex-1 min-w-0 text-sm text-light-text dark:text-dark-text truncate">{doc.title}</p>
+              <button
+                type="button"
+                onClick={() => void toggleVisibility(doc)}
+                disabled={togglingId === doc.id}
+                title={doc.visibleToClient ? 'Виден клиенту в портале' : 'Скрыт от клиента'}
+                className={`text-xs px-2 py-1 rounded-md border transition-colors disabled:opacity-60 ${
+                  doc.visibleToClient
+                    ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                    : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
+                }`}
+              >
+                {doc.visibleToClient ? 'Виден клиенту' : 'Скрыт'}
+              </button>
               <DocumentStatusBadge status={doc.status} />
             </div>
           ))}

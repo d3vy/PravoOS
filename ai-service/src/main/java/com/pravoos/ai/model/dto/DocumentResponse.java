@@ -11,5 +11,6 @@ public record DocumentResponse(
         String fileName,
         String fileType,
         DocumentStatus status,
-        LocalDateTime uploadedAt
+        LocalDateTime uploadedAt,
+        boolean visibleToClient
 ) {}

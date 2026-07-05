@@ -1,10 +1,13 @@
 package com.pravoos.notification.service;
 
 import com.pravoos.notification.bot.PravoOsAdminBot;
+import com.pravoos.notification.client.CaseMessageNotificationRequest;
+import com.pravoos.notification.client.CaseMessageNotificationResult;
 import com.pravoos.notification.client.DeadlineEmailRequest;
 import com.pravoos.notification.client.UserServiceClient;
 import com.pravoos.notification.config.TelegramBotProperties;
 import com.pravoos.notification.event.ApplicationSubmittedKafkaPayload;
+import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
@@ -82,6 +85,25 @@ public class TelegramNotificationService {
         send(message, payload.caseId().toString());
     }
 
+    public void notifyCaseMessage(CaseMessageCreatedKafkaPayload payload) {
+        CaseMessageNotificationResult result = userServiceClient.dispatchCaseMessage(
+                new CaseMessageNotificationRequest(
+                        payload.caseId(),
+                        payload.caseTitle(),
+                        payload.authorRole(),
+                        payload.recipientLawyerId(),
+                        payload.recipientClientId(),
+                        payload.preview()));
+        if (result.telegramChatId() == null) {
+            return;
+        }
+        SendMessage message = new SendMessage();
+        message.setChatId(result.telegramChatId().toString());
+        message.setText(formatCaseMessage(payload));
+        message.setParseMode("HTML");
+        send(message, payload.caseId().toString());
+    }
+
     public void notifyNewLogin(NewLoginKafkaPayload payload) {
         Optional<Long> chatId = telegramChatIdResolver.resolve(payload.userId());
         if (chatId.isEmpty()) {
@@ -153,6 +175,20 @@ public class TelegramNotificationService {
                 escapeHtml(payload.deadlineTypeName()),
                 escapeHtml(payload.deadlineDate()),
                 payload.daysLeft());
+    }
+
+    private String formatCaseMessage(CaseMessageCreatedKafkaPayload payload) {
+        String senderLabel = "CLIENT".equals(payload.authorRole()) ? "Клиент" : "Ваш юрист";
+        return String.format("""
+                <b>Новое сообщение по делу</b>
+
+                <b>Дело:</b> %s
+                <b>От:</b> %s
+
+                %s""",
+                escapeHtml(payload.caseTitle()),
+                escapeHtml(senderLabel),
+                escapeHtml(payload.preview()));
     }
 
     private void send(SendMessage message, String context) {

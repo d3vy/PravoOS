@@ -3,6 +3,7 @@ package com.pravoos.ai.controller;
 import com.pravoos.ai.model.dto.ClientDetailResponse;
 import com.pravoos.ai.model.dto.ClientResponse;
 import com.pravoos.ai.model.dto.CreateClientRequest;
+import com.pravoos.ai.model.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.model.dto.UpdateClientRequest;
 import com.pravoos.ai.model.enums.AuditAction;
 import com.pravoos.ai.service.AccessAuditService;
@@ -60,6 +61,26 @@ public class ClientController {
                                                  Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.ok(clientService.update(clientId, request, lawyerId));
+    }
+
+    @PostMapping("/{clientId}/portal/invite")
+    public ResponseEntity<Void> invitePortal(@PathVariable UUID clientId,
+                                             Authentication authentication) {
+        clientService.invitePortal(clientId, SecurityUtils.currentUserId(authentication));
+        return ResponseEntity.accepted().build();
+    }
+
+    @GetMapping("/{clientId}/portal/invite")
+    public ResponseEntity<PortalInviteStatusResponse> portalInviteStatus(@PathVariable UUID clientId,
+                                                                         Authentication authentication) {
+        return ResponseEntity.ok(clientService.portalInviteStatus(clientId, SecurityUtils.currentUserId(authentication)));
+    }
+
+    @DeleteMapping("/{clientId}/portal/invite")
+    public ResponseEntity<Void> revokePortalInvite(@PathVariable UUID clientId,
+                                                   Authentication authentication) {
+        clientService.revokePortalInvite(clientId, SecurityUtils.currentUserId(authentication));
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{clientId}")

@@ -6,6 +6,7 @@ import type {
   CaseDraftDto,
   CaseDraftSummaryDto,
   CaseHearingEvent,
+  CaseMessageResponse,
   CaseStatus,
   CaseTaskResponse,
   CreateCaseRequest,
@@ -82,6 +83,28 @@ export const casesApi = {
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     )
+    return response.data
+  },
+
+  setDocumentVisibility: async (
+    caseId: string,
+    documentId: string,
+    visibleToClient: boolean
+  ): Promise<DocumentResponse> => {
+    const response = await apiClient.patch<DocumentResponse>(
+      `/api/ai/cases/${caseId}/documents/${documentId}/visibility`,
+      { visibleToClient }
+    )
+    return response.data
+  },
+
+  listMessages: async (caseId: string): Promise<CaseMessageResponse[]> => {
+    const response = await apiClient.get<CaseMessageResponse[]>(`/api/ai/cases/${caseId}/messages`)
+    return response.data
+  },
+
+  sendMessage: async (caseId: string, body: string): Promise<CaseMessageResponse> => {
+    const response = await apiClient.post<CaseMessageResponse>(`/api/ai/cases/${caseId}/messages`, { body })
     return response.data
   },
 

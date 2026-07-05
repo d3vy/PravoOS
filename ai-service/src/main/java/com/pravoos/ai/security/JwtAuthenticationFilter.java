@@ -44,7 +44,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
-                authentication.setDetails(new OrgContext(extractOrgIds(claims)));
+                authentication.setDetails(new OrgContext(
+                        extractUuidList(claims, "orgs"), extractUuidList(claims, "clients")));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
@@ -52,19 +53,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private List<UUID> extractOrgIds(Claims claims) {
-        Object raw = claims.get("orgs");
+    private List<UUID> extractUuidList(Claims claims, String claimName) {
+        Object raw = claims.get(claimName);
         if (!(raw instanceof List<?> values)) {
             return List.of();
         }
-        List<UUID> orgIds = new java.util.ArrayList<>(values.size());
+        List<UUID> ids = new java.util.ArrayList<>(values.size());
         for (Object value : values) {
             try {
-                orgIds.add(UUID.fromString(String.valueOf(value)));
+                ids.add(UUID.fromString(String.valueOf(value)));
             } catch (IllegalArgumentException ignored) {
             }
         }
-        return Collections.unmodifiableList(orgIds);
+        return Collections.unmodifiableList(ids);
     }
 
     private boolean isRevoked(Claims claims) {

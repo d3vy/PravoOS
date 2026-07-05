@@ -11,7 +11,9 @@ import com.pravoos.user.model.dto.LoginResult;
 import com.pravoos.user.model.dto.TokenResponse;
 import com.pravoos.user.model.entity.OrganizationMembership;
 import com.pravoos.user.model.entity.User;
+import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
+import com.pravoos.user.repository.ClientPortalInviteRepository;
 import com.pravoos.user.repository.OrganizationMembershipRepository;
 import com.pravoos.user.repository.UserRepository;
 import com.pravoos.user.security.JwtTokenProvider;
@@ -43,6 +45,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationMembershipRepository membershipRepository;
+    private final ClientPortalInviteRepository clientPortalInviteRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -58,6 +61,7 @@ public class AuthService {
 
     public AuthService(UserRepository userRepository,
                        OrganizationMembershipRepository membershipRepository,
+                       ClientPortalInviteRepository clientPortalInviteRepository,
                        JwtTokenProvider jwtTokenProvider,
                        PasswordEncoder passwordEncoder,
                        RefreshTokenService refreshTokenService,
@@ -69,6 +73,7 @@ public class AuthService {
                        MeterRegistry meterRegistry) {
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
+        this.clientPortalInviteRepository = clientPortalInviteRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
@@ -157,6 +162,15 @@ public class AuthService {
         refreshTokenService.revoke(rawRefreshToken);
     }
 
+    @Transactional
+    public TokenResponse issueTokensForUser(UUID userId, String ipAddress, String userAgent) {
+        User user = userRepository.findById(userId)
+                .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
+                .orElseThrow(InvalidCredentialsException::new);
+        loginSuccessCounter.increment();
+        return issueTokens(user, ipAddress, userAgent);
+    }
+
     private TokenResponse completeLogin(User user, String ipAddress, String userAgent) {
         boolean knownDevice = refreshTokenService.isKnownDevice(user.getId(), ipAddress);
         TokenResponse tokens = issueTokens(user, ipAddress, userAgent);
@@ -180,7 +194,11 @@ public class AuthService {
         List<UUID> orgIds = membershipRepository.findByUserIdOrderByCreatedAtAsc(user.getId()).stream()
                 .map(OrganizationMembership::getOrgId)
                 .toList();
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole(), orgIds);
+        List<UUID> clientIds = user.getRole() == UserRole.CLIENT
+                ? clientPortalInviteRepository.findAcceptedClientIdsByUserId(user.getId())
+                : List.of();
+        String accessToken = jwtTokenProvider.generateToken(
+                user.getId(), user.getEmail(), user.getRole(), orgIds, clientIds);
         String refreshToken = refreshTokenService.issue(user.getId(), ipAddress, userAgent);
         return new TokenResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
     }

@@ -33,4 +33,9 @@ public class KafkaTopicsConfig {
     public NewTopic caseHearingUpdatedDltTopic() {
         return topic("case.hearing.updated.DLT");
     }
+
+    @Bean
+    public NewTopic caseMessageCreatedDltTopic() {
+        return topic("case.message.created.DLT");
+    }
 }

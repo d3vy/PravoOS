@@ -76,6 +76,12 @@ public class DocumentService {
 
     @Transactional
     public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy, UUID caseId) {
+        return upload(file, title, uploadedBy, caseId, false);
+    }
+
+    @Transactional
+    public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy, UUID caseId,
+                                         boolean visibleToClient) {
         if (file == null || file.isEmpty()) {
             log.warn("Document upload rejected: empty file from {}", uploadedBy);
             throw new DocumentProcessingException("Uploaded file is empty");
@@ -109,6 +115,7 @@ public class DocumentService {
         document.setUploadedBy(uploadedBy);
         document.setCaseId(caseId);
         document.setSizeBytes(content.length);
+        document.setVisibleToClient(visibleToClient);
 
         Document saved = documentRepository.save(document);
 
@@ -190,13 +197,41 @@ public class DocumentService {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
         requireKnowledgeBaseDocument(document);
+        return buildContent(document);
+    }
 
-        Path path = Paths.get(document.getFilePath());
-        if (!Files.isReadable(path)) {
-            log.warn("Document {} has missing file on disk: {}", documentId, path);
+    @Transactional(readOnly = true)
+    public DocumentContent loadClientContent(UUID documentId, UUID caseId) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new DocumentNotFoundException(documentId));
+        if (!caseId.equals(document.getCaseId()) || !document.isVisibleToClient()) {
+            log.warn("Client document access denied: doc {} (case {}, visible {}) for requested case {}",
+                    documentId, document.getCaseId(), document.isVisibleToClient(), caseId);
             throw new DocumentNotFoundException(documentId);
         }
+        return buildContent(document);
+    }
 
+    @Transactional
+    public DocumentResponse setClientVisibility(UUID documentId, UUID caseId, boolean visibleToClient) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new DocumentNotFoundException(documentId));
+        if (!caseId.equals(document.getCaseId())) {
+            log.warn("Visibility change denied: doc {} does not belong to case {}", documentId, caseId);
+            throw new DocumentNotFoundException(documentId);
+        }
+        document.setVisibleToClient(visibleToClient);
+        Document saved = documentRepository.save(document);
+        log.info("Document {} client-visibility set to {}", documentId, visibleToClient);
+        return toDocumentResponse(saved);
+    }
+
+    private DocumentContent buildContent(Document document) {
+        Path path = Paths.get(document.getFilePath());
+        if (!Files.isReadable(path)) {
+            log.warn("Document {} has missing file on disk: {}", document.getId(), path);
+            throw new DocumentNotFoundException(document.getId());
+        }
         byte[] content = fileCryptoService.decryptFile(path);
         return new DocumentContent(
                 new ByteArrayResource(content),
@@ -208,6 +243,14 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public List<DocumentResponse> findByCase(UUID caseId) {
         return documentRepository.findByCaseIdOrderByUploadedAtDesc(caseId)
+                .stream()
+                .map(this::toDocumentResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentResponse> findClientVisibleByCase(UUID caseId) {
+        return documentRepository.findByCaseIdAndVisibleToClientTrueOrderByUploadedAtDesc(caseId)
                 .stream()
                 .map(this::toDocumentResponse)
                 .toList();
@@ -346,7 +389,8 @@ public class DocumentService {
                 document.getFileName(),
                 document.getFileType(),
                 document.getStatus(),
-                document.getUploadedAt()
+                document.getUploadedAt(),
+                document.isVisibleToClient()
         );
     }
 }

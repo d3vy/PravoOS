@@ -1,0 +1,3 @@
+ALTER TABLE users
+    ADD COLUMN case_message_email    BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN case_message_telegram BOOLEAN NOT NULL DEFAULT FALSE;

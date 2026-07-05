@@ -6,6 +6,7 @@ import type {
   ContactResponse,
   CreateClientRequest,
   CreateContactRequest,
+  PortalInviteStatusResponse,
   UpdateClientRequest,
   UpdateContactRequest,
 } from '../types'
@@ -68,5 +69,20 @@ export const clientsApi = {
 
   deleteContact: async (clientId: string, contactId: string): Promise<void> => {
     await apiClient.delete(`/api/ai/clients/${clientId}/contacts/${contactId}`)
+  },
+
+  getPortalStatus: async (clientId: string): Promise<PortalInviteStatusResponse> => {
+    const response = await apiClient.get<PortalInviteStatusResponse>(
+      `/api/ai/clients/${clientId}/portal/invite`,
+    )
+    return response.data
+  },
+
+  invitePortal: async (clientId: string): Promise<void> => {
+    await apiClient.post(`/api/ai/clients/${clientId}/portal/invite`)
+  },
+
+  revokePortal: async (clientId: string): Promise<void> => {
+    await apiClient.delete(`/api/ai/clients/${clientId}/portal/invite`)
   },
 }

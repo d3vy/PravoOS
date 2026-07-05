@@ -103,6 +103,18 @@ public class UserServiceClient {
         log.info("Deadline email requested for lawyer {} case {}", request.lawyerId(), request.caseId());
     }
 
+    public CaseMessageNotificationResult dispatchCaseMessage(CaseMessageNotificationRequest request) {
+        CaseMessageNotificationResult result = restClient.post()
+                .uri("/internal/notifications/case-message")
+                .header("X-Internal-Secret", internalSecret)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(CaseMessageNotificationResult.class);
+        log.info("Case message notification dispatched for case {}", request.caseId());
+        return result == null ? CaseMessageNotificationResult.none() : result;
+    }
+
     public Optional<Long> resolveTelegramChatId(UUID lawyerId) {
         try {
             TelegramChatIdResponse response = restClient.get()

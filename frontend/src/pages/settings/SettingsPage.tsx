@@ -72,14 +72,31 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
     return <Spinner size="sm" />
   }
 
-  const toggleChannel = (channel: 'email' | 'telegram'): void => {
+  const currentRequest = {
+    loginAlertEmail: settings.loginAlertEmail,
+    loginAlertTelegram: settings.loginAlertTelegram,
+    caseMessageEmail: settings.caseMessageEmail,
+    caseMessageTelegram: settings.caseMessageTelegram,
+  }
+
+  const toggleLoginChannel = (channel: 'email' | 'telegram'): void => {
     updateMutation.mutate({
+      ...currentRequest,
       loginAlertEmail: channel === 'email' ? !settings.loginAlertEmail : settings.loginAlertEmail,
       loginAlertTelegram: channel === 'telegram' ? !settings.loginAlertTelegram : settings.loginAlertTelegram,
     })
   }
 
-  const telegramSelectedButNotLinked = settings.loginAlertTelegram && !settings.telegramLinked
+  const toggleCaseMessageChannel = (channel: 'email' | 'telegram'): void => {
+    updateMutation.mutate({
+      ...currentRequest,
+      caseMessageEmail: channel === 'email' ? !settings.caseMessageEmail : settings.caseMessageEmail,
+      caseMessageTelegram: channel === 'telegram' ? !settings.caseMessageTelegram : settings.caseMessageTelegram,
+    })
+  }
+
+  const telegramSelectedButNotLinked =
+    (settings.loginAlertTelegram || settings.caseMessageTelegram) && !settings.telegramLinked
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,7 +112,23 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
           { key: 'email', label: 'На почту', checked: settings.loginAlertEmail },
           { key: 'telegram', label: 'В Telegram', checked: settings.loginAlertTelegram },
         ]}
-        onToggle={toggleChannel}
+        onToggle={toggleLoginChannel}
+        disabled={updateMutation.isPending}
+      />
+
+      <div>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Сообщения по делу</h2>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+          Куда присылать уведомление о новом сообщении в переписке по делу.
+        </p>
+      </div>
+
+      <ChannelSelect
+        options={[
+          { key: 'email', label: 'На почту', checked: settings.caseMessageEmail },
+          { key: 'telegram', label: 'В Telegram', checked: settings.caseMessageTelegram },
+        ]}
+        onToggle={toggleCaseMessageChannel}
         disabled={updateMutation.isPending}
       />
 

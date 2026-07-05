@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { authApi } from '../api/auth'
+import type { UserRole } from '../types'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
@@ -29,8 +30,7 @@ export default function LoginPage(): JSX.Element {
   }, [lockSeconds])
 
   if (isAuthenticated()) {
-    const path = user?.role === 'ADMIN' ? '/admin/applications' : '/dashboard'
-    return <Navigate to={path} replace />
+    return <Navigate to={homePathForRole(user?.role)} replace />
   }
 
   const isLocked = lockSeconds > 0
@@ -39,15 +39,14 @@ export default function LoginPage(): JSX.Element {
     accessToken: string
     userId: string
     email: string
-    role: 'LAWYER' | 'ADMIN'
+    role: UserRole
   }): void => {
     setSession(auth.accessToken, {
       userId: auth.userId,
       email: auth.email,
       role: auth.role,
     })
-    const path = auth.role === 'ADMIN' ? '/admin/applications' : '/dashboard'
-    navigate(path, { replace: true })
+    navigate(homePathForRole(auth.role), { replace: true })
   }
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
@@ -299,6 +298,12 @@ export default function LoginPage(): JSX.Element {
       </main>
     </div>
   )
+}
+
+function homePathForRole(role: UserRole | undefined): string {
+  if (role === 'ADMIN') return '/admin/applications'
+  if (role === 'CLIENT') return '/portal'
+  return '/dashboard'
 }
 
 function EyeIcon(): JSX.Element {

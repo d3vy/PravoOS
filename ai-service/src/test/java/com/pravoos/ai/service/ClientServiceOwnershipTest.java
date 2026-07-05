@@ -1,5 +1,6 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.client.UserServiceClient;
 import com.pravoos.ai.exception.ClientNotFoundException;
 import com.pravoos.ai.model.entity.Client;
 import com.pravoos.ai.repository.jpa.CaseRepository;
@@ -22,9 +23,10 @@ class ClientServiceOwnershipTest {
     @Mock private ClientRepository clientRepository;
     @Mock private CaseRepository caseRepository;
     @Mock private CaseService caseService;
+    @Mock private UserServiceClient userServiceClient;
 
     private ClientService clientService() {
-        return new ClientService(clientRepository, caseRepository, caseService);
+        return new ClientService(clientRepository, caseRepository, caseService, userServiceClient);
     }
 
     @Test

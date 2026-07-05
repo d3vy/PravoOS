@@ -8,6 +8,7 @@ import com.pravoos.user.model.dto.UpdateProfileRequest;
 import com.pravoos.user.model.entity.LawyerProfile;
 import com.pravoos.user.model.entity.User;
 import com.pravoos.user.repository.LawyerProfileRepository;
+import com.pravoos.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +18,11 @@ import java.util.UUID;
 public class UserService {
 
     private final LawyerProfileRepository lawyerProfileRepository;
+    private final UserRepository userRepository;
 
-    public UserService(LawyerProfileRepository lawyerProfileRepository) {
+    public UserService(LawyerProfileRepository lawyerProfileRepository, UserRepository userRepository) {
         this.lawyerProfileRepository = lawyerProfileRepository;
+        this.userRepository = userRepository;
     }
 
     public LawyerProfileResponse getProfile(UUID userId) {
@@ -39,28 +42,33 @@ public class UserService {
     }
 
     public NotificationSettingsResponse getNotificationSettings(UUID userId) {
-        LawyerProfile profile = lawyerProfileRepository.findByUserIdWithUser(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(ProfileNotFoundException::new);
-        return toSettingsResponse(profile);
+        return toSettingsResponse(user);
     }
 
     @Transactional
     public NotificationSettingsResponse updateNotificationSettings(UUID userId,
                                                                    UpdateNotificationSettingsRequest request) {
-        LawyerProfile profile = lawyerProfileRepository.findByUserIdWithUser(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(ProfileNotFoundException::new);
-        User user = profile.getUser();
         user.setLoginAlertEmail(request.loginAlertEmail());
         user.setLoginAlertTelegram(request.loginAlertTelegram());
-        return toSettingsResponse(profile);
+        user.setCaseMessageEmail(request.caseMessageEmail());
+        user.setCaseMessageTelegram(request.caseMessageTelegram());
+        return toSettingsResponse(user);
     }
 
-    private NotificationSettingsResponse toSettingsResponse(LawyerProfile profile) {
-        User user = profile.getUser();
+    private NotificationSettingsResponse toSettingsResponse(User user) {
+        boolean telegramLinked = lawyerProfileRepository.findByUserIdWithUser(user.getId())
+                .map(profile -> profile.getTelegramChatId() != null)
+                .orElse(false);
         return new NotificationSettingsResponse(
                 user.isLoginAlertEmail(),
                 user.isLoginAlertTelegram(),
-                profile.getTelegramChatId() != null
+                user.isCaseMessageEmail(),
+                user.isCaseMessageTelegram(),
+                telegramLinked
         );
     }
 

@@ -124,6 +124,17 @@ public class CaseController {
                 SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 
+    @PatchMapping("/{caseId}/documents/{documentId}/visibility")
+    public ResponseEntity<DocumentResponse> setDocumentVisibility(
+            @PathVariable UUID caseId,
+            @PathVariable UUID documentId,
+            @RequestBody DocumentVisibilityRequest request,
+            Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(caseService.setDocumentVisibility(caseId, documentId,
+                request.visibleToClient(), lawyerId, SecurityUtils.currentOrgIds(authentication)));
+    }
+
     @GetMapping("/{caseId}/hearings")
     public ResponseEntity<List<CaseHearingEventResponse>> hearings(@PathVariable UUID caseId,
                                                                    Authentication authentication) {

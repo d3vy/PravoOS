@@ -27,4 +27,11 @@ public final class SecurityUtils {
         }
         return List.of();
     }
+
+    public static List<UUID> currentClientIds(Authentication authentication) {
+        if (authentication != null && authentication.getDetails() instanceof OrgContext orgContext) {
+            return orgContext.clientIds();
+        }
+        return List.of();
+    }
 }

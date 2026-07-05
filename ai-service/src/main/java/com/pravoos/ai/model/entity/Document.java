@@ -35,6 +35,9 @@ public class Document {
     @Column(name = "size_bytes", nullable = false)
     private long sizeBytes;
 
+    @Column(name = "visible_to_client", nullable = false)
+    private boolean visibleToClient = false;
+
     @Column(nullable = false)
     private LocalDateTime uploadedAt;
 
@@ -72,6 +75,9 @@ public class Document {
 
     public long getSizeBytes() { return sizeBytes; }
     public void setSizeBytes(long sizeBytes) { this.sizeBytes = sizeBytes; }
+
+    public boolean isVisibleToClient() { return visibleToClient; }
+    public void setVisibleToClient(boolean visibleToClient) { this.visibleToClient = visibleToClient; }
 
     public LocalDateTime getUploadedAt() { return uploadedAt; }
 

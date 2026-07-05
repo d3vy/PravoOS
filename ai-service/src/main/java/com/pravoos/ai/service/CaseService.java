@@ -215,6 +215,13 @@ public class CaseService {
         return documentService.findByCase(caseId);
     }
 
+    @Transactional
+    public DocumentResponse setDocumentVisibility(UUID caseId, UUID documentId, boolean visibleToClient,
+                                                  UUID lawyerId, List<UUID> orgIds) {
+        requireVisibleCase(caseId, lawyerId, orgIds);
+        return documentService.setClientVisibility(documentId, caseId, visibleToClient);
+    }
+
     public Case requireOwnedCase(UUID caseId, UUID lawyerId) {
         Case caseEntity = caseRepository.findById(caseId)
                 .orElseThrow(() -> new CaseNotFoundException(caseId));

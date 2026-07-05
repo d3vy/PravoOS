@@ -1,5 +1,7 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.client.UserServiceClient;
+import com.pravoos.ai.exception.ClientEmailRequiredException;
 import com.pravoos.ai.exception.ClientNotFoundException;
 import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.model.entity.Case;
@@ -28,13 +30,39 @@ public class ClientService {
     private final ClientRepository clientRepository;
     private final CaseRepository caseRepository;
     private final CaseService caseService;
+    private final UserServiceClient userServiceClient;
 
     public ClientService(ClientRepository clientRepository,
                          CaseRepository caseRepository,
-                         CaseService caseService) {
+                         CaseService caseService,
+                         UserServiceClient userServiceClient) {
         this.clientRepository = clientRepository;
         this.caseRepository = caseRepository;
         this.caseService = caseService;
+        this.userServiceClient = userServiceClient;
+    }
+
+    @Transactional(readOnly = true)
+    public void invitePortal(UUID clientId, UUID lawyerId) {
+        Client client = requireOwnedClient(clientId, lawyerId);
+        if (client.getEmail() == null || client.getEmail().isBlank()) {
+            throw new ClientEmailRequiredException(clientId);
+        }
+        userServiceClient.createPortalInvite(clientId, lawyerId, client.getEmail(), client.getName());
+        log.info("Portal invite requested for client {} by lawyer {}", clientId, lawyerId);
+    }
+
+    @Transactional(readOnly = true)
+    public PortalInviteStatusResponse portalInviteStatus(UUID clientId, UUID lawyerId) {
+        requireOwnedClient(clientId, lawyerId);
+        return userServiceClient.getPortalInviteStatus(clientId);
+    }
+
+    @Transactional(readOnly = true)
+    public void revokePortalInvite(UUID clientId, UUID lawyerId) {
+        requireOwnedClient(clientId, lawyerId);
+        userServiceClient.revokePortalInvite(clientId);
+        log.info("Portal invite revoked for client {} by lawyer {}", clientId, lawyerId);
     }
 
     @Transactional

@@ -4,6 +4,7 @@ import { useAuthBootstrap } from './hooks/useAuthBootstrap'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { FullScreenLoader } from './components/ui/FullScreenLoader'
 import { AdminLayout } from './components/layout/AdminLayout'
+import type { UserRole } from './types'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import ApplyPage from './pages/ApplyPage'
@@ -12,6 +13,9 @@ import EditApplicationPage from './pages/EditApplicationPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
+import PortalAcceptPage from './pages/PortalAcceptPage'
+import PortalCasesPage from './pages/portal/PortalCasesPage'
+import PortalCaseDetailPage from './pages/portal/PortalCaseDetailPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
 import ChatPage from './pages/chat/ChatPage'
 import CasesPage from './pages/cases/CasesPage'
@@ -28,6 +32,12 @@ import AiStatsPage from './pages/admin/AiStatsPage'
 import UsersPage from './pages/admin/UsersPage'
 import ProfilePage from './pages/profile/ProfilePage'
 import SettingsPage from './pages/settings/SettingsPage'
+
+function homePathForRole(role: UserRole | undefined): string {
+  if (role === 'ADMIN') return '/admin/applications'
+  if (role === 'CLIENT') return '/portal'
+  return '/chat'
+}
 
 export default function App(): JSX.Element {
   const { isAuthenticated, bootstrapped, effectiveRole } = useAuthStore()
@@ -47,6 +57,25 @@ export default function App(): JSX.Element {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/portal/accept" element={<PortalAcceptPage />} />
+
+      <Route
+        path="/portal"
+        element={
+          <ProtectedRoute requiredRole="CLIENT">
+            <PortalCasesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/portal/cases/:caseId"
+        element={
+          <ProtectedRoute requiredRole="CLIENT">
+            <PortalCaseDetailPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/dashboard"
@@ -176,7 +205,7 @@ export default function App(): JSX.Element {
         path="*"
         element={
           isAuthenticated() ? (
-            <Navigate to={effectiveRole() === 'ADMIN' ? '/admin/applications' : '/chat'} replace />
+            <Navigate to={homePathForRole(effectiveRole())} replace />
           ) : (
             <Navigate to="/" replace />
           )

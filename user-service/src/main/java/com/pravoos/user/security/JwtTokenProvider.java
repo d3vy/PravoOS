@@ -22,13 +22,16 @@ public class JwtTokenProvider {
         this.accessExpirationMs = jwtProperties.accessExpirationMs();
     }
 
-    public String generateToken(UUID userId, String email, UserRole role, List<UUID> orgIds) {
+    public String generateToken(UUID userId, String email, UserRole role, List<UUID> orgIds, List<UUID> clientIds) {
         var builder = Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
                 .claim("role", role.name());
         if (orgIds != null && !orgIds.isEmpty()) {
             builder.claim("orgs", orgIds.stream().map(UUID::toString).toList());
+        }
+        if (clientIds != null && !clientIds.isEmpty()) {
+            builder.claim("clients", clientIds.stream().map(UUID::toString).toList());
         }
         return builder
                 .issuedAt(new Date())

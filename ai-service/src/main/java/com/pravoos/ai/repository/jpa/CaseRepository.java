@@ -52,6 +52,8 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
     List<Case> findByClientIdAndLawyerIdOrderByCreatedAtDesc(UUID clientId, UUID lawyerId);
 
+    List<Case> findByClientIdInOrderByCreatedAtDesc(Collection<UUID> clientIds);
+
     List<Case> findByFilingDeadline(LocalDate filingDeadline);
 
     List<Case> findByNextHearingDate(LocalDate nextHearingDate);

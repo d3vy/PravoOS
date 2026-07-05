@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { ClientForm } from '../../components/clients/ClientForm'
 import { ClientContactsSection } from '../../components/clients/ClientContactsSection'
+import { ClientPortalSection } from '../../components/clients/ClientPortalSection'
 
 export default function ClientDetailPage(): JSX.Element {
   const { clientId = '' } = useParams()
@@ -151,6 +152,8 @@ export default function ClientDetailPage(): JSX.Element {
             )}
           </section>
         )}
+
+        <ClientPortalSection clientId={clientId} email={client.email} />
 
         <ClientContactsSection clientId={clientId} />
 

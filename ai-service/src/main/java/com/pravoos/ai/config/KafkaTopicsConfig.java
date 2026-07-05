@@ -30,6 +30,11 @@ public class KafkaTopicsConfig {
     }
 
     @Bean
+    public NewTopic caseMessageCreatedTopic() {
+        return topic("case.message.created");
+    }
+
+    @Bean
     public NewTopic lawyerDeletedDltTopic() {
         return topic("lawyer.deleted.DLT");
     }

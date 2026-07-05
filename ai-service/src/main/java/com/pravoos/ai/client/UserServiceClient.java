@@ -2,8 +2,11 @@ package com.pravoos.ai.client;
 
 import com.pravoos.ai.config.UserServiceProperties;
 import com.pravoos.ai.exception.OrgMembershipCheckException;
+import com.pravoos.ai.exception.PortalInviteException;
+import com.pravoos.ai.model.dto.PortalInviteStatusResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -47,5 +50,52 @@ public class UserServiceClient {
         }
     }
 
+    public void createPortalInvite(UUID clientId, UUID lawyerId, String email, String clientName) {
+        try {
+            restClient.post()
+                    .uri("/internal/portal-invites")
+                    .header("X-Internal-Secret", internalSecret)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new CreatePortalInviteRequest(clientId, lawyerId, email, clientName))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException e) {
+            log.error("Failed to create portal invite for client {} via user-service", clientId, e);
+            throw new PortalInviteException(clientId);
+        }
+    }
+
+    public PortalInviteStatusResponse getPortalInviteStatus(UUID clientId) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/internal/portal-invites/status")
+                            .queryParam("clientId", clientId)
+                            .build())
+                    .header("X-Internal-Secret", internalSecret)
+                    .retrieve()
+                    .body(PortalInviteStatusResponse.class);
+        } catch (RestClientException e) {
+            log.error("Failed to fetch portal invite status for client {} via user-service", clientId, e);
+            throw new PortalInviteException(clientId);
+        }
+    }
+
+    public void revokePortalInvite(UUID clientId) {
+        try {
+            restClient.delete()
+                    .uri(uriBuilder -> uriBuilder.path("/internal/portal-invites")
+                            .queryParam("clientId", clientId)
+                            .build())
+                    .header("X-Internal-Secret", internalSecret)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException e) {
+            log.error("Failed to revoke portal invite for client {} via user-service", clientId, e);
+            throw new PortalInviteException(clientId);
+        }
+    }
+
     private record OrgMembershipCheckResponse(boolean member) {}
+
+    private record CreatePortalInviteRequest(UUID clientId, UUID lawyerId, String email, String clientName) {}
 }

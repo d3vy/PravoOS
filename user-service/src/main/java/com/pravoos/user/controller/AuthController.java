@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -29,6 +30,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final ApplicationService applicationService;
+    private final ClientPortalInviteService clientPortalInviteService;
     private final RefreshCookieFactory refreshCookieFactory;
     private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
@@ -38,6 +40,7 @@ public class AuthController {
 
     public AuthController(AuthService authService,
                           ApplicationService applicationService,
+                          ClientPortalInviteService clientPortalInviteService,
                           RefreshCookieFactory refreshCookieFactory,
                           EmailVerificationService emailVerificationService,
                           PasswordResetService passwordResetService,
@@ -46,6 +49,7 @@ public class AuthController {
                           IpRateLimiter ipRateLimiter) {
         this.authService = authService;
         this.applicationService = applicationService;
+        this.clientPortalInviteService = clientPortalInviteService;
         this.refreshCookieFactory = refreshCookieFactory;
         this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
@@ -127,6 +131,24 @@ public class AuthController {
         }
         emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
         return ResponseEntity.ok(applicationService.updateApplication(token, request));
+    }
+
+    @GetMapping("/portal/invite")
+    public ResponseEntity<PortalInvitePreviewResponse> portalInvitePreview(@RequestParam("token") String token) {
+        return ResponseEntity.ok(clientPortalInviteService.preview(token));
+    }
+
+    @PostMapping("/portal/accept")
+    public ResponseEntity<LoginResponse> acceptPortalInvite(@Valid @RequestBody PortalAcceptRequest request,
+                                                            HttpServletRequest httpRequest) {
+        String clientIp = ClientIpResolver.resolve(httpRequest);
+        if (!ipRateLimiter.allow("portal-accept", clientIp, APPLY_MAX_PER_IP, APPLY_WINDOW)) {
+            throw new TooManyRequestsException();
+        }
+        passwordPolicyService.validate(request.password());
+        UUID userId = clientPortalInviteService.accept(request.token(), request.password());
+        TokenResponse tokens = authService.issueTokensForUser(userId, clientIp, userAgent(httpRequest));
+        return loginSuccess(tokens);
     }
 
     @PostMapping("/verify-email")

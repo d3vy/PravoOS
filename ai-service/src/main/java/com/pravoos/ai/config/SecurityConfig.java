@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/ai/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
+                        .requestMatchers("/api/ai/portal/**").hasRole("CLIENT")
                         .requestMatchers("/api/ai/cases/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/dashboard").hasRole("LAWYER")
                         .requestMatchers("/api/ai/clients/**").hasRole("LAWYER")

@@ -7,6 +7,7 @@ import type {
   ApplyRequest,
   ApplicationResponse,
   ApplicationSubmissionResponse,
+  PortalInvitePreviewResponse,
   UpdateApplicationRequest,
 } from '../types'
 
@@ -61,5 +62,17 @@ export const authApi = {
 
   resendVerification: async (email: string): Promise<void> => {
     await apiClient.post('/api/auth/resend-verification', { email })
+  },
+
+  portalInvitePreview: async (token: string): Promise<PortalInvitePreviewResponse> => {
+    const response = await apiClient.get<PortalInvitePreviewResponse>('/api/auth/portal/invite', {
+      params: { token },
+    })
+    return response.data
+  },
+
+  portalAccept: async (token: string, password: string): Promise<LoginResponse> => {
+    const response = await apiClient.post<LoginResponse>('/api/auth/portal/accept', { token, password })
+    return response.data
   },
 }

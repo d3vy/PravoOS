@@ -23,6 +23,8 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     List<Document> findByCaseIdOrderByUploadedAtDesc(UUID caseId);
 
+    List<Document> findByCaseIdAndVisibleToClientTrueOrderByUploadedAtDesc(UUID caseId);
+
     long countByCaseId(UUID caseId);
 
     long countByUploadedBy(UUID uploadedBy);

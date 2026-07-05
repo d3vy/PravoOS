@@ -1,4 +1,4 @@
-export type UserRole = 'LAWYER' | 'ADMIN'
+export type UserRole = 'LAWYER' | 'ADMIN' | 'CLIENT'
 
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -117,6 +117,7 @@ export interface DocumentResponse {
   fileName: string
   status: DocumentStatus
   uploadedAt: string
+  visibleToClient?: boolean
 }
 
 export interface DocumentUploadResponse {
@@ -326,6 +327,44 @@ export interface ClientDetailResponse {
   cases: CaseResponse[]
 }
 
+export type PortalAccessStatus = 'NONE' | 'PENDING' | 'ACCEPTED'
+
+export interface PortalInviteStatusResponse {
+  status: PortalAccessStatus
+  email: string | null
+  expiresAt: string | null
+}
+
+export interface PortalCaseResponse {
+  id: string
+  title: string
+  description: string | null
+  status: CaseStatus
+  statusName: string
+  filingDeadline: string | null
+  nextHearingDate: string | null
+  createdAt: string
+}
+
+export interface PortalCaseDetailResponse {
+  id: string
+  title: string
+  description: string | null
+  status: CaseStatus
+  statusName: string
+  filingDeadline: string | null
+  nextHearingDate: string | null
+  arbitrCaseNumber: string | null
+  arbitrCardUrl: string | null
+  createdAt: string
+  hearings: CaseHearingEvent[]
+}
+
+export interface PortalInvitePreviewResponse {
+  email: string
+  clientName: string | null
+}
+
 export interface CreateClientRequest {
   name: string
   type: ClientType
@@ -514,10 +553,24 @@ export interface UpdateProfileRequest {
 export interface NotificationSettingsResponse {
   loginAlertEmail: boolean
   loginAlertTelegram: boolean
+  caseMessageEmail: boolean
+  caseMessageTelegram: boolean
   telegramLinked: boolean
 }
 
 export interface UpdateNotificationSettingsRequest {
   loginAlertEmail: boolean
   loginAlertTelegram: boolean
+  caseMessageEmail: boolean
+  caseMessageTelegram: boolean
+}
+
+export type MessageAuthorRole = 'LAWYER' | 'CLIENT'
+
+export interface CaseMessageResponse {
+  id: string
+  authorUserId: string
+  authorRole: MessageAuthorRole
+  body: string
+  createdAt: string
 }
