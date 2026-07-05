@@ -37,6 +37,7 @@
         <postgresql.version>42.7.5</postgresql.version>
         <springdoc.version>2.6.0</springdoc.version>
         <shedlock.version>5.16.0</shedlock.version>
+        <spring-modulith.version>1.2.13</spring-modulith.version>
     </properties>
 
     <dependencyManagement>
@@ -45,6 +46,13 @@
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.modulith</groupId>
+                <artifactId>spring-modulith-bom</artifactId>
+                <version>${spring-modulith.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
