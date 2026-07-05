@@ -7,16 +7,15 @@ import com.pravoos.user.shared.exception.AccountLockedException;
 import com.pravoos.user.shared.exception.InvalidCredentialsException;
 import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.shared.exception.MfaException;
-import com.pravoos.user.model.dto.LoginRequest;
-import com.pravoos.user.model.dto.LoginResult;
-import com.pravoos.user.model.dto.TokenResponse;
-import com.pravoos.user.model.entity.OrganizationMembership;
-import com.pravoos.user.identity.internal.model.entity.User;
-import com.pravoos.user.model.enums.UserRole;
-import com.pravoos.user.model.enums.UserStatus;
-import com.pravoos.user.repository.ClientPortalInviteRepository;
-import com.pravoos.user.repository.OrganizationMembershipRepository;
-import com.pravoos.user.identity.internal.repository.UserRepository;
+import com.pravoos.user.identity.internal.dto.LoginRequest;
+import com.pravoos.user.identity.internal.dto.LoginResult;
+import com.pravoos.user.identity.internal.dto.TokenResponse;
+import com.pravoos.user.identity.api.OrgMembershipProvider;
+import com.pravoos.user.identity.api.PortalAccessProvider;
+import com.pravoos.user.identity.model.entity.User;
+import com.pravoos.user.identity.model.enums.UserRole;
+import com.pravoos.user.identity.model.enums.UserStatus;
+import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.identity.internal.security.JwtTokenProvider;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
@@ -45,8 +44,8 @@ public class AuthService {
     private static final DateTimeFormatter LOGIN_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final UserRepository userRepository;
-    private final OrganizationMembershipRepository membershipRepository;
-    private final ClientPortalInviteRepository clientPortalInviteRepository;
+    private final OrgMembershipProvider orgMembershipProvider;
+    private final PortalAccessProvider portalAccessProvider;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -61,8 +60,8 @@ public class AuthService {
     private final Counter loginMfaChallengedCounter;
 
     public AuthService(UserRepository userRepository,
-                       OrganizationMembershipRepository membershipRepository,
-                       ClientPortalInviteRepository clientPortalInviteRepository,
+                       OrgMembershipProvider orgMembershipProvider,
+                       PortalAccessProvider portalAccessProvider,
                        JwtTokenProvider jwtTokenProvider,
                        PasswordEncoder passwordEncoder,
                        RefreshTokenService refreshTokenService,
@@ -73,8 +72,8 @@ public class AuthService {
                        OutboxEventService outboxEventService,
                        MeterRegistry meterRegistry) {
         this.userRepository = userRepository;
-        this.membershipRepository = membershipRepository;
-        this.clientPortalInviteRepository = clientPortalInviteRepository;
+        this.orgMembershipProvider = orgMembershipProvider;
+        this.portalAccessProvider = portalAccessProvider;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
@@ -192,11 +191,9 @@ public class AuthService {
     }
 
     private TokenResponse issueTokens(User user, String ipAddress, String userAgent) {
-        List<UUID> orgIds = membershipRepository.findByUserIdOrderByCreatedAtAsc(user.getId()).stream()
-                .map(OrganizationMembership::getOrgId)
-                .toList();
+        List<UUID> orgIds = orgMembershipProvider.orgIdsForUser(user.getId());
         List<UUID> clientIds = user.getRole() == UserRole.CLIENT
-                ? clientPortalInviteRepository.findAcceptedClientIdsByUserId(user.getId())
+                ? portalAccessProvider.acceptedClientIdsForUser(user.getId())
                 : List.of();
         String accessToken = jwtTokenProvider.generateToken(
                 user.getId(), user.getEmail(), user.getRole(), orgIds, clientIds);

@@ -6,7 +6,7 @@ import com.pravoos.user.identity.internal.config.JwtProperties;
 import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.identity.internal.model.entity.RefreshToken;
 import com.pravoos.user.identity.internal.repository.RefreshTokenRepository;
-import com.pravoos.user.identity.internal.security.TokenHasher;
+import com.pravoos.user.shared.security.TokenHasher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

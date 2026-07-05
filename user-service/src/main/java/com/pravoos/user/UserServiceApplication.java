@@ -1,6 +1,6 @@
 package com.pravoos.user;
 
-import com.pravoos.user.config.TelegramProperties;
+import com.pravoos.user.collaboration.internal.config.TelegramProperties;
 import com.pravoos.common.web.RequestIdFilter;
 import com.pravoos.user.identity.internal.config.*;
 import com.pravoos.user.shared.config.*;

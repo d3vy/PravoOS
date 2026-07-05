@@ -11,15 +11,15 @@ import com.pravoos.user.shared.exception.InvalidCredentialsException;
 import com.pravoos.user.identity.internal.event.NewLoginEvent;
 import com.pravoos.user.identity.internal.event.NewLoginKafkaPayload;
 import com.pravoos.user.shared.exception.MfaException;
-import com.pravoos.user.model.dto.LoginRequest;
-import com.pravoos.user.model.dto.LoginResult;
-import com.pravoos.user.model.dto.TokenResponse;
-import com.pravoos.user.identity.internal.model.entity.User;
-import com.pravoos.user.model.enums.UserRole;
-import com.pravoos.user.model.enums.UserStatus;
-import com.pravoos.user.repository.ClientPortalInviteRepository;
-import com.pravoos.user.repository.OrganizationMembershipRepository;
-import com.pravoos.user.identity.internal.repository.UserRepository;
+import com.pravoos.user.identity.internal.dto.LoginRequest;
+import com.pravoos.user.identity.internal.dto.LoginResult;
+import com.pravoos.user.identity.internal.dto.TokenResponse;
+import com.pravoos.user.identity.model.entity.User;
+import com.pravoos.user.identity.model.enums.UserRole;
+import com.pravoos.user.identity.model.enums.UserStatus;
+import com.pravoos.user.identity.api.OrgMembershipProvider;
+import com.pravoos.user.identity.api.PortalAccessProvider;
+import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.identity.internal.security.JwtTokenProvider;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,8 +48,8 @@ class AuthServiceTest {
     private static final String UA = "JUnit-UA";
 
     @Mock private UserRepository userRepository;
-    @Mock private OrganizationMembershipRepository membershipRepository;
-    @Mock private ClientPortalInviteRepository clientPortalInviteRepository;
+    @Mock private OrgMembershipProvider orgMembershipProvider;
+    @Mock private PortalAccessProvider portalAccessProvider;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private RefreshTokenService refreshTokenService;
@@ -65,7 +65,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        authService = new AuthService(userRepository, membershipRepository, clientPortalInviteRepository,
+        authService = new AuthService(userRepository, orgMembershipProvider, portalAccessProvider,
                 jwtTokenProvider, passwordEncoder,
                 refreshTokenService, loginAttemptService, mfaService, mfaChallengeService,
                 eventPublisher, outboxEventService, meterRegistry);

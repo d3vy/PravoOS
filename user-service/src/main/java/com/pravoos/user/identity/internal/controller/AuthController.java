@@ -1,61 +1,50 @@
 package com.pravoos.user.identity.internal.controller;
 
-import com.pravoos.user.service.ClientPortalInviteService;
-import com.pravoos.user.service.ApplicationService;
+import com.pravoos.user.identity.api.AuthResponse;
+import com.pravoos.user.identity.api.LoginResponse;
+import com.pravoos.user.identity.api.PasswordPolicyService;
+import com.pravoos.user.identity.internal.dto.ForgotPasswordRequest;
+import com.pravoos.user.identity.internal.dto.LoginRequest;
+import com.pravoos.user.identity.internal.dto.LoginResult;
+import com.pravoos.user.identity.internal.dto.MfaLoginRequest;
+import com.pravoos.user.identity.internal.dto.ResetPasswordRequest;
+import com.pravoos.user.identity.internal.dto.TokenResponse;
+import com.pravoos.user.identity.internal.security.RefreshCookieFactory;
+import com.pravoos.user.identity.internal.service.AuthService;
+import com.pravoos.user.identity.internal.service.PasswordResetService;
 import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.shared.exception.TooManyRequestsException;
-import com.pravoos.user.model.dto.*;
-import com.pravoos.user.identity.internal.security.RefreshCookieFactory;
-import com.pravoos.user.identity.internal.service.*;
+import com.pravoos.user.shared.service.IpRateLimiter;
 import com.pravoos.user.shared.util.ClientIpResolver;
-import com.pravoos.user.shared.util.EmailDeliverabilityValidator;
-import com.pravoos.user.shared.util.EmailNormalizer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final int APPLY_MAX_PER_IP = 5;
-    private static final Duration APPLY_WINDOW = Duration.ofHours(1);
     private static final int LOGIN_MAX_PER_IP = 30;
     private static final Duration LOGIN_WINDOW = Duration.ofMinutes(5);
 
     private final AuthService authService;
-    private final ApplicationService applicationService;
-    private final ClientPortalInviteService clientPortalInviteService;
     private final RefreshCookieFactory refreshCookieFactory;
-    private final EmailVerificationService emailVerificationService;
     private final PasswordResetService passwordResetService;
-    private final EmailDeliverabilityValidator emailDeliverabilityValidator;
     private final PasswordPolicyService passwordPolicyService;
     private final IpRateLimiter ipRateLimiter;
 
     public AuthController(AuthService authService,
-                          ApplicationService applicationService,
-                          ClientPortalInviteService clientPortalInviteService,
                           RefreshCookieFactory refreshCookieFactory,
-                          EmailVerificationService emailVerificationService,
                           PasswordResetService passwordResetService,
-                          EmailDeliverabilityValidator emailDeliverabilityValidator,
                           PasswordPolicyService passwordPolicyService,
                           IpRateLimiter ipRateLimiter) {
         this.authService = authService;
-        this.applicationService = applicationService;
-        this.clientPortalInviteService = clientPortalInviteService;
         this.refreshCookieFactory = refreshCookieFactory;
-        this.emailVerificationService = emailVerificationService;
         this.passwordResetService = passwordResetService;
-        this.emailDeliverabilityValidator = emailDeliverabilityValidator;
         this.passwordPolicyService = passwordPolicyService;
         this.ipRateLimiter = ipRateLimiter;
     }
@@ -104,64 +93,6 @@ public class AuthController {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.clear().toString())
                 .build();
-    }
-
-    @PostMapping("/apply")
-    public ResponseEntity<ApplicationSubmissionResponse> apply(@Valid @RequestBody ApplyRequest request,
-                                                               HttpServletRequest httpRequest) {
-        String clientIp = ClientIpResolver.resolve(httpRequest);
-        if (!ipRateLimiter.allow("apply", clientIp, APPLY_MAX_PER_IP, APPLY_WINDOW)) {
-            throw new TooManyRequestsException();
-        }
-        passwordPolicyService.validate(request.password());
-        emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
-        return ResponseEntity.status(HttpStatus.CREATED).body(applicationService.submitApplication(request));
-    }
-
-    @GetMapping("/application")
-    public ResponseEntity<ApplicationResponse> getApplicationByStatusToken(
-            @RequestHeader("X-Application-Token") String token) {
-        return ResponseEntity.ok(applicationService.getApplicationByStatusToken(token));
-    }
-
-    @PutMapping("/application")
-    public ResponseEntity<ApplicationResponse> updateApplication(
-            @RequestHeader("X-Application-Token") String token,
-            @Valid @RequestBody UpdateApplicationRequest request) {
-        if (request.password() != null && !request.password().isBlank()) {
-            passwordPolicyService.validate(request.password());
-        }
-        emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
-        return ResponseEntity.ok(applicationService.updateApplication(token, request));
-    }
-
-    @GetMapping("/portal/invite")
-    public ResponseEntity<PortalInvitePreviewResponse> portalInvitePreview(@RequestParam("token") String token) {
-        return ResponseEntity.ok(clientPortalInviteService.preview(token));
-    }
-
-    @PostMapping("/portal/accept")
-    public ResponseEntity<LoginResponse> acceptPortalInvite(@Valid @RequestBody PortalAcceptRequest request,
-                                                            HttpServletRequest httpRequest) {
-        String clientIp = ClientIpResolver.resolve(httpRequest);
-        if (!ipRateLimiter.allow("portal-accept", clientIp, APPLY_MAX_PER_IP, APPLY_WINDOW)) {
-            throw new TooManyRequestsException();
-        }
-        UUID userId = clientPortalInviteService.accept(request.token(), request.password());
-        TokenResponse tokens = authService.issueTokensForUser(userId, clientIp, userAgent(httpRequest));
-        return loginSuccess(tokens);
-    }
-
-    @PostMapping("/verify-email")
-    public ResponseEntity<Map<String, Boolean>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        emailVerificationService.verifyToken(request.token());
-        return ResponseEntity.ok(Map.of("verified", true));
-    }
-
-    @PostMapping("/resend-verification")
-    public ResponseEntity<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
-        emailVerificationService.resendVerification(request.email());
-        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/forgot-password")

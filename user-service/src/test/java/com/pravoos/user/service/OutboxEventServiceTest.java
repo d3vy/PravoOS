@@ -2,7 +2,7 @@ package com.pravoos.user.service;
 
 import com.pravoos.user.shared.service.OutboxEventService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pravoos.user.event.LawyerDeletedKafkaPayload;
+import com.pravoos.user.registration.internal.event.LawyerDeletedKafkaPayload;
 import com.pravoos.user.shared.model.entity.OutboxEvent;
 import com.pravoos.user.shared.repository.OutboxEventRepository;
 import org.junit.jupiter.api.Test;

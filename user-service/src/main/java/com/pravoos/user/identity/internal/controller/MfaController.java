@@ -1,9 +1,9 @@
 package com.pravoos.user.identity.internal.controller;
 
 import com.pravoos.common.web.SecurityUtils;
-import com.pravoos.user.model.dto.MfaCodeRequest;
-import com.pravoos.user.model.dto.MfaSetupResponse;
-import com.pravoos.user.model.dto.MfaStatusResponse;
+import com.pravoos.user.identity.internal.dto.MfaCodeRequest;
+import com.pravoos.user.identity.internal.dto.MfaSetupResponse;
+import com.pravoos.user.identity.internal.dto.MfaStatusResponse;
 import com.pravoos.user.identity.internal.service.MfaService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

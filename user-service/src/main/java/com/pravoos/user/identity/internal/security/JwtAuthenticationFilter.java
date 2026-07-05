@@ -1,7 +1,7 @@
 package com.pravoos.user.identity.internal.security;
 
 import com.pravoos.common.security.JwtVerifier;
-import com.pravoos.user.identity.internal.service.TokenDenylistService;
+import com.pravoos.user.identity.api.TokenDenylistService;
 import io.jsonwebtoken.Claims;
 import io.micrometer.common.lang.NonNullApi;
 import jakarta.servlet.FilterChain;

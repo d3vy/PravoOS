@@ -2,11 +2,11 @@ package com.pravoos.user.identity.internal.service;
 
 import com.pravoos.common.util.PhoneNormalizer;
 import com.pravoos.user.identity.internal.config.TestLawyerProperties;
-import com.pravoos.user.identity.internal.model.entity.LawyerProfile;
-import com.pravoos.user.identity.internal.model.entity.User;
-import com.pravoos.user.model.enums.UserRole;
-import com.pravoos.user.model.enums.UserStatus;
-import com.pravoos.user.identity.internal.repository.UserRepository;
+import com.pravoos.user.identity.model.entity.LawyerProfile;
+import com.pravoos.user.identity.model.entity.User;
+import com.pravoos.user.identity.model.enums.UserRole;
+import com.pravoos.user.identity.model.enums.UserStatus;
+import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
 import org.slf4j.Logger;

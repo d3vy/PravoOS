@@ -4,7 +4,7 @@ import com.pravoos.user.identity.internal.config.JwtProperties;
 import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.identity.internal.model.entity.RefreshToken;
 import com.pravoos.user.identity.internal.repository.RefreshTokenRepository;
-import com.pravoos.user.identity.internal.security.TokenHasher;
+import com.pravoos.user.shared.security.TokenHasher;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pravoos.user.model.dto.SessionResponse;
+import com.pravoos.user.identity.internal.dto.SessionResponse;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;

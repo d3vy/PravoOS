@@ -1,6 +1,6 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.identity.internal.service.TokenDenylistService;
+import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.internal.config.JwtProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

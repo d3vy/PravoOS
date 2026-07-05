@@ -2,7 +2,7 @@ package com.pravoos.user.identity.internal.security;
 
 import com.pravoos.common.security.RsaKeyLoader;
 import com.pravoos.user.identity.internal.config.JwtProperties;
-import com.pravoos.user.model.enums.UserRole;
+import com.pravoos.user.identity.model.enums.UserRole;
 import io.jsonwebtoken.Jwts;
 import org.springframework.stereotype.Component;
 

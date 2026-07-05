@@ -1,7 +1,7 @@
 # Рефакторинг: модуляризация ai-service / user-service (Spring Modulith)
 
 > План для себя. Правило CLAUDE.md: сначала план по модулям без кода → подтверждение → по одному модулю за раз → `/clear` между модулями.
-> Статус: **Ф0 ✅, Ф1 ✅ (user-service `identity` + `shared` выделены). Дальше — Ф2.**
+> Статус: **Ф0 ✅, Ф1 ✅, Ф2 ✅ (user-service разбит на `identity`/`registration`/`collaboration`/`shared`, ацикличный граф, фасады). Дальше — Ф3 (ai-service).**
 
 ## 0. Контекст и цель
 
@@ -69,10 +69,10 @@
 
 - **Ф0 ✅ — каркас.** Modulith-зависимости (test-scope) в оба сервиса + `ModularityTests` (bootstrap+docs, без `verify()`). Прод-classpath не тронут. Зелёная сборка.
 - **Ф1 ✅ — user-service `identity` (+ `shared`).** Перенесены auth/jwt/mfa/refresh/password/login-attempt/email-verif/`User` → `com.pravoos.user.identity.internal.*`. Сквозная инфра (SecurityConfig, InternalSecret*, exception, util, kafka/outbox, ResendEmailClient) → `com.pravoos.user.shared.*`. DTO/enums и registration/collaboration-классы пока в старых пакетах (Ф2). `@ApplicationModule`+`allowedDependencies` не ставим (нужен `starter-core` на main — придёт с Ф2/Ф5, `verify()` off). Все 74 теста зелёные. → `/clear`.
-- **Ф2 — user-service `registration` + `collaboration`.** Заявки/admin отдельно; орги/инвайты/telegram/деленированные email отдельно. Зафиксировать `allowedDependencies` (registration→identity на выпуск токена через фасад). → `/clear`.
+- **Ф2 ✅ — user-service `registration` + `collaboration`.** Разнесены по `*.internal.*`. Граф ацикличный: `shared` ← `identity` ← `collaboration` ← `registration` (registration трогает только `collaboration.api`). Введены фасады/порты в `identity.api`: `AuthTokens` (выпуск токена + refresh-cookie для portal/accept), SPI `OrgMembershipProvider`/`PortalAccessProvider` (identity объявляет, collaboration реализует — так разорван цикл JWT-claims). `collaboration.api.LawyerMembershipCleanup` (для каскада удаления юриста из AdminService). `User`/`UserRepository`/`LawyerProfile`(+repo)/`UserRole`/`UserStatus`/`PasswordPolicyService`/`TokenDenylistService` — published-API identity. `TokenHasher`/`EmailRateLimiter`/`IpRateLimiter` → `shared`. `SecurityConfig` → `identity.internal.config` (иначе цикл shared↔identity). Контроллеры-миксы разрезаны на per-module (URL без изменений): `AuthApplicationController`/`PortalAuthController`/`TelegramUserController`. **2 отклонения от §2:** (1) email-верификация ушла в `registration` (работает над `LawyerApplication`), (2) `User`+repo — published-API. Все 74 теста зелёные. **Найдено для Ф5:** Modulith по умолчанию экспонирует только top-пакет модуля — `api`/`model`/`repository` требуют `@NamedInterface` + `spring-modulith-core` на main; `@ApplicationModule(allowedDependencies)` + `verify()`-gate — это работа Ф5 «замкнуть границы». Пока `ModularityTests` = bootstrap+docs (как в Ф1). → `/clear`.
 - **Ф3 — ai-service `ai` (ядро).** Выделить RAG/LLM/chat/embeddings/documents. Ввести фасад `LegalAiPort` + `DocumentQuery`. Пока practice ещё в общем пакете. Тесты `RagServiceContextBudgetTest`, guard/quota. → `/clear`.
 - **Ф4 — ai-service `practice`.** Перенести cases/clients/drafts/workflows/portal/arbitr/dashboard/search. Переключить их AI-зависимости на `LegalAiPort`. Ввести `CaseAccessQuery`, `ChatService` → на него. Тесты IDOR (CaseService/ClientService), `LawyerDataCleanupServiceTest`. → `/clear`.
-- **Ф5 — замкнуть границы.** Убрать `open`, прописать финальные `allowedDependencies`, включить `verify()` в CI как gate. Прогон полного набора тестов + smoke по §8.
+- **Ф5 — замкнуть границы.** Добавить `spring-modulith-core` на main-classpath; `@NamedInterface` на `api`/`model`/`repository`-пакеты модулей (по умолчанию Modulith экспонирует только top-пакет); `package-info` `@ApplicationModule(allowedDependencies)` для `shared`/`identity`/`registration`/`collaboration` (+ ai-service модулей); разобраться с root-модулем (`*Properties` из app-пакета). Включить `modules.verify()` в CI как gate. Прогон полного набора тестов + smoke по §8.
 
 Каждая фаза = перемещение пакетов (без изменения логики) + минимальные фасады. Никаких новых БД, портов, gateway-маршрутов, Kafka-топиков — топология §Топология памяти не меняется.
 

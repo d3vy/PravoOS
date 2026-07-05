@@ -1,14 +1,12 @@
 package com.pravoos.user.identity.internal.controller;
 
 import com.pravoos.common.web.SecurityUtils;
-import com.pravoos.user.model.dto.LawyerProfileResponse;
-import com.pravoos.user.model.dto.NotificationSettingsResponse;
-import com.pravoos.user.model.dto.SessionResponse;
-import com.pravoos.user.model.dto.TelegramLinkResponse;
-import com.pravoos.user.model.dto.UpdateNotificationSettingsRequest;
-import com.pravoos.user.model.dto.UpdateProfileRequest;
+import com.pravoos.user.identity.api.LawyerProfileResponse;
+import com.pravoos.user.identity.internal.dto.NotificationSettingsResponse;
+import com.pravoos.user.identity.internal.dto.SessionResponse;
+import com.pravoos.user.identity.internal.dto.UpdateNotificationSettingsRequest;
+import com.pravoos.user.identity.internal.dto.UpdateProfileRequest;
 import com.pravoos.user.identity.internal.service.RefreshTokenService;
-import com.pravoos.user.service.TelegramLinkService;
 import com.pravoos.user.identity.internal.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +21,11 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
-    private final TelegramLinkService telegramLinkService;
     private final RefreshTokenService refreshTokenService;
 
     public UserController(UserService userService,
-                          TelegramLinkService telegramLinkService,
                           RefreshTokenService refreshTokenService) {
         this.userService = userService;
-        this.telegramLinkService = telegramLinkService;
         this.refreshTokenService = refreshTokenService;
     }
 
@@ -44,17 +39,6 @@ public class UserController {
             @Valid @RequestBody UpdateProfileRequest request,
             Authentication authentication) {
         return ResponseEntity.ok(userService.updateProfile(SecurityUtils.currentUserId(authentication), request));
-    }
-
-    @PostMapping("/profile/telegram/link-code")
-    public ResponseEntity<TelegramLinkResponse> createTelegramLinkCode(Authentication authentication) {
-        return ResponseEntity.ok(telegramLinkService.createLinkCode(SecurityUtils.currentUserId(authentication)));
-    }
-
-    @DeleteMapping("/profile/telegram")
-    public ResponseEntity<Void> unlinkTelegram(Authentication authentication) {
-        telegramLinkService.unlink(SecurityUtils.currentUserId(authentication));
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/settings/notifications")

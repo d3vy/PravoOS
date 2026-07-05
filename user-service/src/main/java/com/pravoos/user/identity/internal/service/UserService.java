@@ -1,14 +1,14 @@
 package com.pravoos.user.identity.internal.service;
 
 import com.pravoos.user.shared.exception.ProfileNotFoundException;
-import com.pravoos.user.model.dto.LawyerProfileResponse;
-import com.pravoos.user.model.dto.NotificationSettingsResponse;
-import com.pravoos.user.model.dto.UpdateNotificationSettingsRequest;
-import com.pravoos.user.model.dto.UpdateProfileRequest;
-import com.pravoos.user.identity.internal.model.entity.LawyerProfile;
-import com.pravoos.user.identity.internal.model.entity.User;
-import com.pravoos.user.identity.internal.repository.LawyerProfileRepository;
-import com.pravoos.user.identity.internal.repository.UserRepository;
+import com.pravoos.user.identity.api.LawyerProfileResponse;
+import com.pravoos.user.identity.internal.dto.NotificationSettingsResponse;
+import com.pravoos.user.identity.internal.dto.UpdateNotificationSettingsRequest;
+import com.pravoos.user.identity.internal.dto.UpdateProfileRequest;
+import com.pravoos.user.identity.model.entity.LawyerProfile;
+import com.pravoos.user.identity.model.entity.User;
+import com.pravoos.user.identity.repository.LawyerProfileRepository;
+import com.pravoos.user.identity.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
