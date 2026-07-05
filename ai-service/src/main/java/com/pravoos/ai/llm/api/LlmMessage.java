@@ -1,4 +1,4 @@
-package com.pravoos.ai.core.internal.llm.dto;
+package com.pravoos.ai.llm.api;
 
 public record LlmMessage(
         String role,

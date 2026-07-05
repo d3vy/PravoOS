@@ -1,4 +1,6 @@
-package com.pravoos.ai.core.internal.llm;
+package com.pravoos.ai.llm.internal;
+
+import com.pravoos.ai.llm.api.LlmUsage;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

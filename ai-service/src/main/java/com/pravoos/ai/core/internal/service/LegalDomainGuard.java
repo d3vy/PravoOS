@@ -4,9 +4,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.pravoos.ai.shared.config.OpenAiProperties;
 import com.pravoos.ai.shared.exception.NonLegalQueryException;
-import com.pravoos.ai.core.internal.llm.dto.LlmMessage;
-import com.pravoos.ai.core.internal.llm.dto.OpenAiChatRequest;
-import com.pravoos.ai.core.internal.llm.dto.OpenAiChatResponse;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.pravoos.ai.llm.api.LlmMessage;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -75,7 +74,7 @@ public class LegalDomainGuard {
     }
 
     private boolean classify(String userMessage) {
-        OpenAiChatRequest request = new OpenAiChatRequest(
+        GuardChatRequest request = new GuardChatRequest(
                 properties.guardModel(),
                 List.of(
                         new LlmMessage("system", CLASSIFIER_SYSTEM_PROMPT),
@@ -87,11 +86,11 @@ public class LegalDomainGuard {
 
         String verdict;
         try {
-            OpenAiChatResponse response = restClient.post()
+            GuardChatResponse response = restClient.post()
                     .uri("/chat/completions")
                     .body(request)
                     .retrieve()
-                    .body(OpenAiChatResponse.class);
+                    .body(GuardChatResponse.class);
 
             if (response == null) {
                 log.warn("Guard classifier returned empty response, fail-open={}", failOpen);
@@ -131,5 +130,23 @@ public class LegalDomainGuard {
                 .description("Legal-domain guard classifier outcomes")
                 .tag("result", result)
                 .register(registry);
+    }
+
+    record GuardChatRequest(
+            String model,
+            List<LlmMessage> messages,
+            @JsonProperty("max_tokens") int maxTokens,
+            double temperature
+    ) {}
+
+    record GuardChatResponse(List<Choice> choices) {
+        record Choice(LlmMessage message) {}
+
+        String firstContent() {
+            if (choices == null || choices.isEmpty()) return "";
+            Choice first = choices.get(0);
+            if (first == null || first.message() == null || first.message().content() == null) return "";
+            return first.message().content();
+        }
     }
 }

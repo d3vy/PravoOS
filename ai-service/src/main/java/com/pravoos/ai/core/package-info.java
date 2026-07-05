@@ -1,3 +1,3 @@
 @org.springframework.modulith.ApplicationModule(
-        allowedDependencies = {"shared"})
+        allowedDependencies = {"shared", "llm :: api"})
 package com.pravoos.ai.core;

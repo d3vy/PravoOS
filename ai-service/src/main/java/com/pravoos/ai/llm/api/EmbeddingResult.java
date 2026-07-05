@@ -1,4 +1,4 @@
-package com.pravoos.ai.core.internal.llm;
+package com.pravoos.ai.llm.api;
 
 import java.util.List;
 

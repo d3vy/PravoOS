@@ -1,4 +1,4 @@
-package com.pravoos.ai.core.internal.llm;
+package com.pravoos.ai.llm.api;
 
 public record LlmUsage(int promptTokens, int completionTokens, int totalTokens) {
 

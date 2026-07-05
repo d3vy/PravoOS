@@ -2,8 +2,8 @@ package com.pravoos.ai.core.internal.service;
 
 import com.pravoos.ai.shared.config.OpenAiProperties;
 import com.pravoos.ai.shared.exception.LlmException;
-import com.pravoos.ai.core.internal.llm.EmbeddingResult;
-import com.pravoos.ai.core.internal.llm.LlmClient;
+import com.pravoos.ai.llm.api.EmbeddingResult;
+import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.core.internal.model.entity.DocumentChunk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
