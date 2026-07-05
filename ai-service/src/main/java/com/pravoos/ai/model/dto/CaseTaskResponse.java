@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.CaseTask;
+import com.pravoos.ai.practice.internal.model.entity.CaseTask;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

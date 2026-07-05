@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.service.CaseService;
+import com.pravoos.ai.practice.api.CaseAccessQuery;
 
 import com.pravoos.ai.exception.AiResponseNotFoundException;
 import com.pravoos.ai.model.dto.AiResponseDto;
@@ -21,16 +21,16 @@ public class AiResponseService {
     private static final Logger log = LoggerFactory.getLogger(AiResponseService.class);
 
     private final AiResponseRepository aiResponseRepository;
-    private final CaseService caseService;
+    private final CaseAccessQuery caseAccessQuery;
 
-    public AiResponseService(AiResponseRepository aiResponseRepository, CaseService caseService) {
+    public AiResponseService(AiResponseRepository aiResponseRepository, CaseAccessQuery caseAccessQuery) {
         this.aiResponseRepository = aiResponseRepository;
-        this.caseService = caseService;
+        this.caseAccessQuery = caseAccessQuery;
     }
 
     @Transactional(readOnly = true)
     public List<AiResponseDto> findByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
-        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
+        caseAccessQuery.assertCaseVisible(caseId, lawyerId, orgIds);
         return aiResponseRepository.findByCaseIdOrderByCreatedAtDesc(caseId)
                 .stream()
                 .map(AiResponseDto::from)
@@ -41,7 +41,7 @@ public class AiResponseService {
     public AiResponseDto rate(UUID responseId, RateRequest request, UUID lawyerId, List<UUID> orgIds) {
         AiResponse response = aiResponseRepository.findById(responseId)
                 .orElseThrow(() -> new AiResponseNotFoundException(responseId));
-        caseService.requireVisibleCase(response.getCaseId(), lawyerId, orgIds);
+        caseAccessQuery.assertCaseVisible(response.getCaseId(), lawyerId, orgIds);
 
         response.setRating(request.rating().shortValue());
         response.setRatingComment(request.comment());

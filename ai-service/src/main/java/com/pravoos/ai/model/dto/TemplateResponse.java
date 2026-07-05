@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.DocumentTemplate;
+import com.pravoos.ai.practice.internal.model.entity.DocumentTemplate;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

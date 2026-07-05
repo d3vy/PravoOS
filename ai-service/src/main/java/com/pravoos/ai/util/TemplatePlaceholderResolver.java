@@ -1,7 +1,7 @@
 package com.pravoos.ai.util;
 
-import com.pravoos.ai.model.entity.Case;
-import com.pravoos.ai.model.entity.Client;
+import com.pravoos.ai.practice.internal.model.entity.Case;
+import com.pravoos.ai.practice.internal.model.entity.Client;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;

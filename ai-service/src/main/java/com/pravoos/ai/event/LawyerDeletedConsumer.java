@@ -1,6 +1,6 @@
 package com.pravoos.ai.event;
 
-import com.pravoos.ai.service.LawyerDataCleanupService;
+import com.pravoos.ai.practice.internal.service.LawyerDataCleanupService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;

@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.CaseMessage;
+import com.pravoos.ai.practice.internal.model.entity.CaseMessage;
 import com.pravoos.ai.model.enums.MessageAuthorRole;
 
 import java.time.LocalDateTime;

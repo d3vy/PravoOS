@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.CaseHearingEvent;
+import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
 
 import java.time.LocalDate;
 import java.util.UUID;

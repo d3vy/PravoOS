@@ -84,4 +84,5 @@ public class User {
 
     public LawyerProfile getLawyerProfile() { return lawyerProfile; }
     public void setLawyerProfile(LawyerProfile lawyerProfile) { this.lawyerProfile = lawyerProfile; }
+
 }

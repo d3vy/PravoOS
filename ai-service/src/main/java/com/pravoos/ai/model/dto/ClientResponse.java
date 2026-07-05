@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.Client;
+import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.model.enums.ClientType;
 
 import java.time.LocalDateTime;

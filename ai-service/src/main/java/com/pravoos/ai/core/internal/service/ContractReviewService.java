@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.service.CaseService;
+import com.pravoos.ai.practice.api.CaseAccessQuery;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +38,7 @@ public class ContractReviewService {
     private static final int CLAUSE_MAX_LENGTH = 500;
     private static final int TEXT_FIELD_MAX_LENGTH = 2000;
 
-    private final CaseService caseService;
+    private final CaseAccessQuery caseAccessQuery;
     private final DocumentRepository documentRepository;
     private final FileCryptoService fileCryptoService;
     private final DocumentParser documentParser;
@@ -49,7 +49,7 @@ public class ContractReviewService {
     private final ContractReviewProperties properties;
     private final ObjectMapper objectMapper;
 
-    public ContractReviewService(CaseService caseService,
+    public ContractReviewService(CaseAccessQuery caseAccessQuery,
                                  DocumentRepository documentRepository,
                                  FileCryptoService fileCryptoService,
                                  DocumentParser documentParser,
@@ -59,7 +59,7 @@ public class ContractReviewService {
                                  ContractReviewPrompt contractReviewPrompt,
                                  ContractReviewProperties properties,
                                  ObjectMapper objectMapper) {
-        this.caseService = caseService;
+        this.caseAccessQuery = caseAccessQuery;
         this.documentRepository = documentRepository;
         this.fileCryptoService = fileCryptoService;
         this.documentParser = documentParser;
@@ -81,7 +81,7 @@ public class ContractReviewService {
             log.warn("Lawyer {} attempted contract review on non-case document {}", lawyerId, documentId);
             throw new DocumentNotFoundException(documentId);
         }
-        caseService.requireVisibleCase(document.getCaseId(), lawyerId, orgIds);
+        caseAccessQuery.assertCaseVisible(document.getCaseId(), lawyerId, orgIds);
 
         String contractText = extractText(document);
         if (contractText.isBlank()) {
@@ -103,7 +103,7 @@ public class ContractReviewService {
 
     @Transactional(readOnly = true)
     public List<ContractReviewDto> findByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
-        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
+        caseAccessQuery.assertCaseVisible(caseId, lawyerId, orgIds);
         return contractReviewRepository.findByCaseIdOrderByCreatedAtDesc(caseId).stream()
                 .map(ContractReviewDto::from)
                 .toList();
@@ -113,7 +113,7 @@ public class ContractReviewService {
     public ContractReviewDto get(UUID reviewId, UUID lawyerId, List<UUID> orgIds) {
         ContractReview review = contractReviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ContractReviewNotFoundException(reviewId));
-        caseService.requireVisibleCase(review.getCaseId(), lawyerId, orgIds);
+        caseAccessQuery.assertCaseVisible(review.getCaseId(), lawyerId, orgIds);
         return ContractReviewDto.from(review);
     }
 

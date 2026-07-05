@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.Case;
+import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.model.enums.CaseStatus;
 
 import java.time.LocalDate;

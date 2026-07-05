@@ -5,6 +5,7 @@ import com.pravoos.ai.core.internal.service.FileCryptoService;
 import com.pravoos.ai.core.internal.service.ContractReviewPrompt;
 
 import com.pravoos.ai.core.internal.service.ContractReviewService;
+import com.pravoos.ai.practice.api.CaseAccessQuery;
 
 import com.pravoos.ai.core.internal.service.LlmQuotaService;
 
@@ -46,7 +47,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ContractReviewServiceTest {
 
-    @Mock private CaseService caseService;
+    @Mock private CaseAccessQuery caseAccessQuery;
     @Mock private DocumentRepository documentRepository;
     @Mock private FileCryptoService fileCryptoService;
     @Mock private DocumentParser documentParser;
@@ -59,7 +60,7 @@ class ContractReviewServiceTest {
     @BeforeEach
     void setUp() {
         ContractReviewProperties properties = new ContractReviewProperties(40000, 30);
-        service = new ContractReviewService(caseService, documentRepository, fileCryptoService,
+        service = new ContractReviewService(caseAccessQuery, documentRepository, fileCryptoService,
                 documentParser, llmClient, llmQuotaService, contractReviewRepository,
                 new ContractReviewPrompt(), properties, new ObjectMapper());
     }
