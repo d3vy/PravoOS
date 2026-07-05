@@ -1,21 +1,22 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.exception.InvalidInviteException;
-import com.pravoos.user.exception.OrganizationAccessDeniedException;
+import com.pravoos.user.identity.internal.service.EmailRateLimiter;
+import com.pravoos.user.shared.exception.InvalidInviteException;
+import com.pravoos.user.shared.exception.OrganizationAccessDeniedException;
 import com.pravoos.user.model.dto.CreateInviteRequest;
 import com.pravoos.user.model.dto.OrganizationResponse;
 import com.pravoos.user.model.entity.Organization;
 import com.pravoos.user.model.entity.OrganizationInvite;
 import com.pravoos.user.model.entity.OrganizationMembership;
-import com.pravoos.user.model.entity.User;
+import com.pravoos.user.identity.internal.model.entity.User;
 import com.pravoos.user.model.enums.InviteStatus;
 import com.pravoos.user.model.enums.OrgRole;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.repository.OrganizationInviteRepository;
 import com.pravoos.user.repository.OrganizationMembershipRepository;
 import com.pravoos.user.repository.OrganizationRepository;
-import com.pravoos.user.repository.UserRepository;
-import com.pravoos.user.security.TokenHasher;
+import com.pravoos.user.identity.internal.repository.UserRepository;
+import com.pravoos.user.identity.internal.security.TokenHasher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

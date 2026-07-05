@@ -1,7 +1,7 @@
 # Рефакторинг: модуляризация ai-service / user-service (Spring Modulith)
 
 > План для себя. Правило CLAUDE.md: сначала план по модулям без кода → подтверждение → по одному модулю за раз → `/clear` между модулями.
-> Статус: **план утверждён (вариант C), реализация не начата.**
+> Статус: **Ф0 ✅, Ф1 ✅ (user-service `identity` + `shared` выделены). Дальше — Ф2.**
 
 ## 0. Контекст и цель
 
@@ -67,8 +67,8 @@
 
 Порядок — от наименее связного к самому связному, чтобы каждый шаг был отдельно верифицируем и деплоился.
 
-- **Ф0 — каркас.** Добавить Modulith-зависимости в оба сервиса. Создать пустые модульные пакеты + `package-info.java` (пока `open`/без ограничений). Добавить `ModularityTests`. Зелёная сборка. Ничего не двигаем. → commit.
-- **Ф1 — user-service `identity`.** Перенести auth/jwt/mfa/refresh/password/login-attempt в `identity`. Самый изолированный. Прогнать `AuthServiceTest`/`RefreshTokenServiceTest`/`JwtAuthFilterTest`. → `/clear`.
+- **Ф0 ✅ — каркас.** Modulith-зависимости (test-scope) в оба сервиса + `ModularityTests` (bootstrap+docs, без `verify()`). Прод-classpath не тронут. Зелёная сборка.
+- **Ф1 ✅ — user-service `identity` (+ `shared`).** Перенесены auth/jwt/mfa/refresh/password/login-attempt/email-verif/`User` → `com.pravoos.user.identity.internal.*`. Сквозная инфра (SecurityConfig, InternalSecret*, exception, util, kafka/outbox, ResendEmailClient) → `com.pravoos.user.shared.*`. DTO/enums и registration/collaboration-классы пока в старых пакетах (Ф2). `@ApplicationModule`+`allowedDependencies` не ставим (нужен `starter-core` на main — придёт с Ф2/Ф5, `verify()` off). Все 74 теста зелёные. → `/clear`.
 - **Ф2 — user-service `registration` + `collaboration`.** Заявки/admin отдельно; орги/инвайты/telegram/деленированные email отдельно. Зафиксировать `allowedDependencies` (registration→identity на выпуск токена через фасад). → `/clear`.
 - **Ф3 — ai-service `ai` (ядро).** Выделить RAG/LLM/chat/embeddings/documents. Ввести фасад `LegalAiPort` + `DocumentQuery`. Пока practice ещё в общем пакете. Тесты `RagServiceContextBudgetTest`, guard/quota. → `/clear`.
 - **Ф4 — ai-service `practice`.** Перенести cases/clients/drafts/workflows/portal/arbitr/dashboard/search. Переключить их AI-зависимости на `LegalAiPort`. Ввести `CaseAccessQuery`, `ChatService` → на него. Тесты IDOR (CaseService/ClientService), `LawyerDataCleanupServiceTest`. → `/clear`.

@@ -1,8 +1,9 @@
 package com.pravoos.user.email;
 
-import com.pravoos.user.config.ResendProperties;
+import com.pravoos.user.shared.email.ResendEmailClient;
+import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.event.ApplicationApprovedSpringEvent;
-import com.pravoos.user.util.EmailMasker;
+import com.pravoos.user.shared.util.EmailMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;

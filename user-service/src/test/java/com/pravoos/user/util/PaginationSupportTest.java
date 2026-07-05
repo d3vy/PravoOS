@@ -1,4 +1,4 @@
-package com.pravoos.user.util;
+package com.pravoos.user.shared.util;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;

@@ -1,8 +1,9 @@
 package com.pravoos.user.email;
 
-import com.pravoos.user.config.ResendProperties;
+import com.pravoos.user.shared.email.ResendEmailClient;
+import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.event.ClientPortalInviteCreatedEvent;
-import com.pravoos.user.util.EmailMasker;
+import com.pravoos.user.shared.util.EmailMasker;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;

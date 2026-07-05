@@ -1,18 +1,18 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.exception.NotOrganizationMemberException;
-import com.pravoos.user.exception.OrganizationAccessDeniedException;
-import com.pravoos.user.exception.PravoosException;
+import com.pravoos.user.shared.exception.NotOrganizationMemberException;
+import com.pravoos.user.shared.exception.OrganizationAccessDeniedException;
+import com.pravoos.user.shared.exception.PravoosException;
 import com.pravoos.user.model.dto.CreateOrganizationRequest;
 import com.pravoos.user.model.dto.OrganizationResponse;
 import com.pravoos.user.model.entity.Organization;
 import com.pravoos.user.model.entity.OrganizationMembership;
-import com.pravoos.user.model.entity.User;
+import com.pravoos.user.identity.internal.model.entity.User;
 import com.pravoos.user.model.enums.OrgRole;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.repository.OrganizationMembershipRepository;
 import com.pravoos.user.repository.OrganizationRepository;
-import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.identity.internal.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

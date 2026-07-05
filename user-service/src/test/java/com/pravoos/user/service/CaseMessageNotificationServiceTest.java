@@ -1,14 +1,14 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.config.ResendProperties;
-import com.pravoos.user.email.ResendEmailClient;
+import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.shared.email.ResendEmailClient;
 import com.pravoos.user.model.dto.CaseMessageNotificationRequest;
 import com.pravoos.user.model.dto.CaseMessageNotificationResult;
-import com.pravoos.user.model.entity.User;
+import com.pravoos.user.identity.internal.model.entity.User;
 import com.pravoos.user.model.enums.UserRole;
 import com.pravoos.user.model.enums.UserStatus;
 import com.pravoos.user.repository.ClientPortalInviteRepository;
-import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.identity.internal.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -1,6 +1,7 @@
 package com.pravoos.user.security;
 
-import com.pravoos.user.config.InternalSecretProperties;
+import com.pravoos.user.shared.security.InternalSecretVerifier;
+import com.pravoos.user.shared.config.InternalSecretProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 

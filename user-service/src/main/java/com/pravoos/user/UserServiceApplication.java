@@ -1,7 +1,9 @@
 package com.pravoos.user;
 
+import com.pravoos.user.config.TelegramProperties;
 import com.pravoos.common.web.RequestIdFilter;
-import com.pravoos.user.config.*;
+import com.pravoos.user.identity.internal.config.*;
+import com.pravoos.user.shared.config.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;

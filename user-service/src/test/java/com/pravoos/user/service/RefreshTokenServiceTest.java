@@ -1,10 +1,12 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.config.JwtProperties;
-import com.pravoos.user.exception.InvalidRefreshTokenException;
-import com.pravoos.user.model.entity.RefreshToken;
-import com.pravoos.user.repository.RefreshTokenRepository;
-import com.pravoos.user.security.TokenHasher;
+import com.pravoos.user.identity.internal.service.RefreshTokenService;
+import com.pravoos.user.identity.internal.service.RefreshTokenFamilyRevoker;
+import com.pravoos.user.identity.internal.config.JwtProperties;
+import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
+import com.pravoos.user.identity.internal.model.entity.RefreshToken;
+import com.pravoos.user.identity.internal.repository.RefreshTokenRepository;
+import com.pravoos.user.identity.internal.security.TokenHasher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

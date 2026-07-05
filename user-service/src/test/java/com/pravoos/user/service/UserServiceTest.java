@@ -1,12 +1,13 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.exception.ProfileNotFoundException;
+import com.pravoos.user.identity.internal.service.UserService;
+import com.pravoos.user.shared.exception.ProfileNotFoundException;
 import com.pravoos.user.model.dto.NotificationSettingsResponse;
 import com.pravoos.user.model.dto.UpdateNotificationSettingsRequest;
-import com.pravoos.user.model.entity.LawyerProfile;
-import com.pravoos.user.model.entity.User;
-import com.pravoos.user.repository.LawyerProfileRepository;
-import com.pravoos.user.repository.UserRepository;
+import com.pravoos.user.identity.internal.model.entity.LawyerProfile;
+import com.pravoos.user.identity.internal.model.entity.User;
+import com.pravoos.user.identity.internal.repository.LawyerProfileRepository;
+import com.pravoos.user.identity.internal.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

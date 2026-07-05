@@ -1,7 +1,7 @@
 package com.pravoos.user.service;
 
-import com.pravoos.user.exception.NotOrganizationMemberException;
-import com.pravoos.user.exception.OrganizationAccessDeniedException;
+import com.pravoos.user.shared.exception.NotOrganizationMemberException;
+import com.pravoos.user.shared.exception.OrganizationAccessDeniedException;
 import com.pravoos.user.model.entity.OrganizationMembership;
 import com.pravoos.user.model.enums.OrgRole;
 import com.pravoos.user.repository.OrganizationMembershipRepository;

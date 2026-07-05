@@ -1,12 +1,12 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.config.TelegramProperties;
-import com.pravoos.user.exception.InvalidTelegramLinkCodeException;
-import com.pravoos.user.exception.ProfileNotFoundException;
+import com.pravoos.user.shared.exception.InvalidTelegramLinkCodeException;
+import com.pravoos.user.shared.exception.ProfileNotFoundException;
 import com.pravoos.user.model.dto.TelegramLinkResponse;
-import com.pravoos.user.model.entity.LawyerProfile;
+import com.pravoos.user.identity.internal.model.entity.LawyerProfile;
 import com.pravoos.user.model.entity.TelegramLinkCode;
-import com.pravoos.user.repository.LawyerProfileRepository;
+import com.pravoos.user.identity.internal.repository.LawyerProfileRepository;
 import com.pravoos.user.repository.TelegramLinkCodeRepository;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
