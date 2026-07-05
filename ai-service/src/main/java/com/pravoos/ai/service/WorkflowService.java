@@ -1,17 +1,25 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.FollowUpParser;
+
+import com.pravoos.ai.core.internal.service.LlmQuotaService;
+
+import com.pravoos.ai.core.internal.service.EmbeddingService;
+
+import com.pravoos.ai.core.internal.service.RagService;
+
 import com.pravoos.ai.config.DocumentProperties;
-import com.pravoos.ai.llm.LlmClient;
-import com.pravoos.ai.llm.LlmResult;
+import com.pravoos.ai.core.internal.llm.LlmClient;
+import com.pravoos.ai.core.internal.llm.LlmResult;
 import com.pravoos.ai.model.dto.AiResponseDto;
 import com.pravoos.ai.model.dto.RunWorkflowRequest;
 import com.pravoos.ai.model.dto.SourceReference;
 import com.pravoos.ai.model.dto.WorkflowInfo;
-import com.pravoos.ai.model.entity.AiResponse;
+import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.model.enums.BankruptcyWorkflow;
-import com.pravoos.ai.repository.ChunkMatch;
-import com.pravoos.ai.repository.VectorSearchRepository;
-import com.pravoos.ai.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.core.internal.repository.ChunkMatch;
+import com.pravoos.ai.core.internal.repository.VectorSearchRepository;
+import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

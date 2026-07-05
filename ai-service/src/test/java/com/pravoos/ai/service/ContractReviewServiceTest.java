@@ -1,19 +1,27 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.FileCryptoService;
+
+import com.pravoos.ai.core.internal.service.ContractReviewPrompt;
+
+import com.pravoos.ai.core.internal.service.ContractReviewService;
+
+import com.pravoos.ai.core.internal.service.LlmQuotaService;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.config.ContractReviewProperties;
 import com.pravoos.ai.exception.ContractReviewFailedException;
 import com.pravoos.ai.exception.DocumentNotFoundException;
-import com.pravoos.ai.llm.LlmClient;
-import com.pravoos.ai.llm.LlmResult;
-import com.pravoos.ai.llm.LlmUsage;
+import com.pravoos.ai.core.internal.llm.LlmClient;
+import com.pravoos.ai.core.internal.llm.LlmResult;
+import com.pravoos.ai.core.internal.llm.LlmUsage;
 import com.pravoos.ai.model.dto.ContractReviewDto;
-import com.pravoos.ai.model.entity.ContractReview;
-import com.pravoos.ai.model.entity.Document;
+import com.pravoos.ai.core.internal.model.entity.ContractReview;
+import com.pravoos.ai.core.internal.model.entity.Document;
 import com.pravoos.ai.model.enums.ContractRiskLevel;
-import com.pravoos.ai.pipeline.DocumentParser;
-import com.pravoos.ai.repository.jpa.ContractReviewRepository;
-import com.pravoos.ai.repository.jpa.DocumentRepository;
+import com.pravoos.ai.core.internal.pipeline.DocumentParser;
+import com.pravoos.ai.core.internal.repository.jpa.ContractReviewRepository;
+import com.pravoos.ai.core.internal.repository.jpa.DocumentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

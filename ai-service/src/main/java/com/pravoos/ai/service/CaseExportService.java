@@ -1,5 +1,7 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.DocumentService;
+
 import com.pravoos.ai.model.dto.AiResponseDto;
 import com.pravoos.ai.model.dto.CaseExportModel;
 import com.pravoos.ai.model.dto.CaseExportModel.*;
@@ -9,7 +11,7 @@ import com.pravoos.ai.model.entity.Case;
 import com.pravoos.ai.model.enums.DocumentStatus;
 import com.pravoos.ai.model.enums.DraftType;
 import com.pravoos.ai.model.enums.ExportFormat;
-import com.pravoos.ai.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.repository.jpa.CaseTaskRepository;
 import com.pravoos.ai.repository.jpa.ClientRepository;

@@ -1,5 +1,7 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.DocumentService;
+
 import com.pravoos.ai.client.UserServiceClient;
 import com.pravoos.ai.exception.CaseNotFoundException;
 import com.pravoos.ai.exception.OrganizationAccessException;

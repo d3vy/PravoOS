@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.AiResponse;
+import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.model.enums.BankruptcyWorkflow;
 
 import java.time.LocalDateTime;

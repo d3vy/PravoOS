@@ -1,5 +1,7 @@
 package com.pravoos.ai.controller;
 
+import com.pravoos.ai.core.internal.service.AiResponseService;
+
 import com.pravoos.ai.model.dto.*;
 import com.pravoos.ai.model.enums.CaseStatus;
 import com.pravoos.ai.service.*;

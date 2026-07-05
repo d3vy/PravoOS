@@ -23,8 +23,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({OpenAiProperties.class, DocumentProperties.class, JwtProperties.class,
         ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class,
         ContractReviewProperties.class, CitationCheckProperties.class, UserServiceProperties.class})
-@EnableJpaRepositories(basePackages = "com.pravoos.ai.repository.jpa")
-@EnableMongoRepositories(basePackages = "com.pravoos.ai.repository.mongo")
+@EnableJpaRepositories(basePackages = {"com.pravoos.ai.repository.jpa", "com.pravoos.ai.core.internal.repository.jpa"})
+@EnableMongoRepositories(basePackages = "com.pravoos.ai.core.internal.repository.mongo")
 @EnableScheduling
 public class AiServiceApplication {
 

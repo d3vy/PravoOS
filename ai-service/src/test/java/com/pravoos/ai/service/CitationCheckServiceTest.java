@@ -1,15 +1,21 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.LegalActRegistry;
+
+import com.pravoos.ai.core.internal.service.CitationExtractor;
+
+import com.pravoos.ai.core.internal.service.CitationCheckService;
+
 import com.pravoos.ai.arbitr.ArbitrCaseData;
 import com.pravoos.ai.arbitr.ArbitrCaseProvider;
 import com.pravoos.ai.config.CitationCheckProperties;
 import com.pravoos.ai.exception.AiResponseNotFoundException;
 import com.pravoos.ai.model.dto.CitationCheckResult;
-import com.pravoos.ai.model.entity.AiResponse;
+import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.model.enums.CitationStatus;
 import com.pravoos.ai.model.enums.CitationType;
-import com.pravoos.ai.repository.jpa.AiResponseRepository;
-import com.pravoos.ai.repository.jpa.DocumentChunkRepository;
+import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

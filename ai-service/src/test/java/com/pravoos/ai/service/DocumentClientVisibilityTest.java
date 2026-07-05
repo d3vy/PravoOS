@@ -1,11 +1,19 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.UploadRateLimiter;
+
+import com.pravoos.ai.core.internal.service.FileCryptoService;
+
+import com.pravoos.ai.core.internal.service.MalwareScanClient;
+
+import com.pravoos.ai.core.internal.service.DocumentService;
+
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.exception.DocumentNotFoundException;
 import com.pravoos.ai.model.dto.DocumentResponse;
-import com.pravoos.ai.model.entity.Document;
-import com.pravoos.ai.repository.jpa.DocumentChunkRepository;
-import com.pravoos.ai.repository.jpa.DocumentRepository;
+import com.pravoos.ai.core.internal.model.entity.Document;
+import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
+import com.pravoos.ai.core.internal.repository.jpa.DocumentRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

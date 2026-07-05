@@ -1,7 +1,11 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.LegalActRegistry;
+
+import com.pravoos.ai.core.internal.service.CitationExtractor;
+
 import com.pravoos.ai.model.enums.CitationType;
-import com.pravoos.ai.service.CitationExtractor.ExtractedCitation;
+import com.pravoos.ai.core.internal.service.CitationExtractor.ExtractedCitation;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

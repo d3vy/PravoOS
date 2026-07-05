@@ -4,7 +4,7 @@ import com.pravoos.ai.model.dto.AiResponseDto;
 import com.pravoos.ai.model.dto.AiStatsResponse;
 import com.pravoos.ai.model.dto.WorkflowStat;
 import com.pravoos.ai.model.enums.BankruptcyWorkflow;
-import com.pravoos.ai.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

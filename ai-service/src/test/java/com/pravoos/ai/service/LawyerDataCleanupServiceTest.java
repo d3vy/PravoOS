@@ -1,9 +1,9 @@
 package com.pravoos.ai.service;
 
-import com.pravoos.ai.model.mongo.Conversation;
+import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.repository.jpa.*;
-import com.pravoos.ai.repository.mongo.ConversationRepository;
-import com.pravoos.ai.repository.mongo.MessageRepository;
+import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
+import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;

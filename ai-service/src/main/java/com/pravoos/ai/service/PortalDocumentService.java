@@ -1,5 +1,7 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.DocumentService;
+
 import com.pravoos.ai.model.dto.DocumentContent;
 import com.pravoos.ai.model.dto.DocumentResponse;
 import com.pravoos.ai.model.dto.DocumentUploadResponse;

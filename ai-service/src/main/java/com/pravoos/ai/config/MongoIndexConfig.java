@@ -1,7 +1,7 @@
 package com.pravoos.ai.config;
 
-import com.pravoos.ai.model.mongo.Conversation;
-import com.pravoos.ai.model.mongo.Message;
+import com.pravoos.ai.core.internal.model.mongo.Conversation;
+import com.pravoos.ai.core.internal.model.mongo.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

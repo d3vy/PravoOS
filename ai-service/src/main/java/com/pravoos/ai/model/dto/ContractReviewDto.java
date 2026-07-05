@@ -1,6 +1,6 @@
 package com.pravoos.ai.model.dto;
 
-import com.pravoos.ai.model.entity.ContractReview;
+import com.pravoos.ai.core.internal.model.entity.ContractReview;
 
 import java.time.LocalDateTime;
 import java.util.List;

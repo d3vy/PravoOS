@@ -1,17 +1,23 @@
 package com.pravoos.ai.service;
 
+import com.pravoos.ai.core.internal.service.LlmQuotaService;
+
+import com.pravoos.ai.core.internal.service.EmbeddingService;
+
+import com.pravoos.ai.core.internal.service.RagService;
+
 import com.pravoos.ai.config.DocumentProperties;
 import com.pravoos.ai.exception.DraftNotFoundException;
-import com.pravoos.ai.llm.LlmClient;
-import com.pravoos.ai.llm.LlmResult;
+import com.pravoos.ai.core.internal.llm.LlmClient;
+import com.pravoos.ai.core.internal.llm.LlmResult;
 import com.pravoos.ai.model.dto.CaseDraftDto;
 import com.pravoos.ai.model.dto.CaseDraftSummaryDto;
 import com.pravoos.ai.model.dto.DraftTypeInfo;
 import com.pravoos.ai.model.dto.GenerateDraftRequest;
 import com.pravoos.ai.model.entity.CaseDraft;
 import com.pravoos.ai.model.enums.DraftType;
-import com.pravoos.ai.repository.ChunkMatch;
-import com.pravoos.ai.repository.VectorSearchRepository;
+import com.pravoos.ai.core.internal.repository.ChunkMatch;
+import com.pravoos.ai.core.internal.repository.VectorSearchRepository;
 import com.pravoos.ai.repository.jpa.CaseDraftRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

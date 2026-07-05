@@ -1,0 +1,12 @@
+package com.pravoos.ai.core.api;
+
+import java.util.UUID;
+
+public interface LegalAiPort {
+
+    void assertWithinQuota(UUID lawyerId);
+
+    float[] embed(String text);
+
+    LegalAiAnswer answerForCase(UUID caseId, String instruction, String userMessage, UUID lawyerId);
+}

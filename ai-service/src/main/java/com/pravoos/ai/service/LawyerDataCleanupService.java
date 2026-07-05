@@ -1,10 +1,10 @@
 package com.pravoos.ai.service;
 
 import com.pravoos.ai.model.entity.PendingLawyerPurge;
-import com.pravoos.ai.model.mongo.Conversation;
+import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.repository.jpa.*;
-import com.pravoos.ai.repository.mongo.ConversationRepository;
-import com.pravoos.ai.repository.mongo.MessageRepository;
+import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
+import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
