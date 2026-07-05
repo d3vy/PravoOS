@@ -1,8 +1,9 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.event.ClientPortalInviteCreatedEvent;
-import com.pravoos.user.exception.EmailAlreadyExistsException;
+import com.pravoos.user.exception.InvalidCredentialsException;
 import com.pravoos.user.exception.InvalidInviteException;
+import com.pravoos.user.exception.PortalAccountConflictException;
 import com.pravoos.user.exception.TooManyRequestsException;
 import com.pravoos.user.model.dto.CreatePortalInviteRequest;
 import com.pravoos.user.model.dto.PortalInvitePreviewResponse;
@@ -43,6 +44,7 @@ public class ClientPortalInviteService {
     private final ClientPortalInviteRepository inviteRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordPolicyService passwordPolicyService;
     private final TokenHasher tokenHasher;
     private final EmailRateLimiter emailRateLimiter;
     private final ApplicationEventPublisher eventPublisher;
@@ -52,6 +54,7 @@ public class ClientPortalInviteService {
     public ClientPortalInviteService(ClientPortalInviteRepository inviteRepository,
                                      UserRepository userRepository,
                                      PasswordEncoder passwordEncoder,
+                                     PasswordPolicyService passwordPolicyService,
                                      TokenHasher tokenHasher,
                                      EmailRateLimiter emailRateLimiter,
                                      ApplicationEventPublisher eventPublisher,
@@ -59,6 +62,7 @@ public class ClientPortalInviteService {
         this.inviteRepository = inviteRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.passwordPolicyService = passwordPolicyService;
         this.tokenHasher = tokenHasher;
         this.emailRateLimiter = emailRateLimiter;
         this.eventPublisher = eventPublisher;
@@ -118,31 +122,45 @@ public class ClientPortalInviteService {
     @Transactional(readOnly = true)
     public PortalInvitePreviewResponse preview(String rawToken) {
         ClientPortalInvite invite = requirePendingInvite(rawToken);
-        return new PortalInvitePreviewResponse(invite.getEmail(), null);
+        boolean accountExists = userRepository.existsByEmail(invite.getEmail());
+        return new PortalInvitePreviewResponse(invite.getEmail(), null, accountExists);
     }
 
     @Transactional
     public UUID accept(String rawToken, String rawPassword) {
         ClientPortalInvite invite = requirePendingInvite(rawToken);
 
-        if (userRepository.existsByEmail(invite.getEmail())) {
-            throw new EmailAlreadyExistsException(invite.getEmail());
-        }
-
-        User user = new User();
-        user.setEmail(invite.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(rawPassword));
-        user.setRole(UserRole.CLIENT);
-        user.setStatus(UserStatus.ACTIVE);
-        User saved = userRepository.save(user);
+        UUID userId = userRepository.findByEmail(invite.getEmail())
+                .map(existing -> linkExistingAccount(existing, rawPassword))
+                .orElseGet(() -> createClientAccount(invite.getEmail(), rawPassword));
 
         invite.setStatus(InviteStatus.ACCEPTED);
         invite.setAcceptedAt(LocalDateTime.now(ZoneOffset.UTC));
-        invite.setUserId(saved.getId());
+        invite.setUserId(userId);
 
-        log.info("Client portal access created for {} (client {})",
+        log.info("Client portal access granted for {} (client {})",
                 EmailMasker.mask(invite.getEmail()), invite.getClientId());
-        return saved.getId();
+        return userId;
+    }
+
+    private UUID createClientAccount(String email, String rawPassword) {
+        passwordPolicyService.validate(rawPassword);
+        User user = new User();
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setRole(UserRole.CLIENT);
+        user.setStatus(UserStatus.ACTIVE);
+        return userRepository.save(user).getId();
+    }
+
+    private UUID linkExistingAccount(User existing, String rawPassword) {
+        if (existing.getRole() != UserRole.CLIENT || existing.getStatus() != UserStatus.ACTIVE) {
+            throw new PortalAccountConflictException();
+        }
+        if (!passwordEncoder.matches(rawPassword, existing.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+        return existing.getId();
     }
 
     private ClientPortalInvite requirePendingInvite(String rawToken) {

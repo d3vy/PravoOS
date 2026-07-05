@@ -29,6 +29,7 @@ export default function PortalAcceptPage(): JSX.Element {
   }, [searchParams])
 
   const [email, setEmail] = useState<string | null>(null)
+  const [accountExists, setAccountExists] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(true)
   const [linkInvalid, setLinkInvalid] = useState(false)
 
@@ -48,7 +49,10 @@ export default function PortalAcceptPage(): JSX.Element {
     authApi
       .portalInvitePreview(token)
       .then((preview) => {
-        if (active) setEmail(preview.email)
+        if (active) {
+          setEmail(preview.email)
+          setAccountExists(preview.accountExists)
+        }
       })
       .catch(() => {
         if (active) setLinkInvalid(true)
@@ -63,6 +67,11 @@ export default function PortalAcceptPage(): JSX.Element {
 
   const validate = (): boolean => {
     const next: FieldErrors = {}
+    if (accountExists) {
+      if (!password) next.password = 'Введите пароль от аккаунта'
+      setErrors(next)
+      return Object.keys(next).length === 0
+    }
     const passwordError = validatePassword(password)
     if (passwordError) next.password = passwordError
     if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают'
@@ -87,13 +96,15 @@ export default function PortalAcceptPage(): JSX.Element {
         navigate('/portal', { replace: true })
       }
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 400) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setSubmitError('Неверный пароль от аккаунта. Попробуйте снова.')
+      } else if (axios.isAxiosError(err) && err.response?.status === 409) {
+        setSubmitError('Этот email нельзя использовать для входа в клиентский портал.')
+      } else if (axios.isAxiosError(err) && err.response?.status === 400) {
         const message = err.response.data?.message as string | undefined
         setSubmitError(message ?? 'Ссылка недействительна или истекла. Запросите новое приглашение у вашего юриста.')
-      } else if (axios.isAxiosError(err) && err.response?.status === 409) {
-        setSubmitError('На этот email уже есть аккаунт. Войдите под своими данными.')
       } else {
-        setSubmitError('Не удалось создать доступ. Попробуйте позже.')
+        setSubmitError('Не удалось получить доступ. Попробуйте позже.')
       }
     } finally {
       setLoading(false)
@@ -155,7 +166,10 @@ export default function PortalAcceptPage(): JSX.Element {
                   Доступ к порталу
                 </h1>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
-                  Задайте пароль для входа{email ? ' — ' : ''}
+                  {accountExists
+                    ? 'У вас уже есть аккаунт — войдите, чтобы привязать новое дело'
+                    : 'Задайте пароль для входа'}
+                  {email ? ' — ' : ''}
                   {email && <span className="text-light-text dark:text-dark-text font-medium">{email}</span>}
                 </p>
               </div>
@@ -163,32 +177,34 @@ export default function PortalAcceptPage(): JSX.Element {
               <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
                 <Input
                   id="password"
-                  label="Пароль"
+                  label={accountExists ? 'Пароль от аккаунта' : 'Пароль'}
                   type="password"
-                  placeholder="Не менее 8 символов, буква и цифра"
+                  placeholder={accountExists ? '••••••••' : 'Не менее 8 символов, буква и цифра'}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value)
                     if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }))
                   }}
                   error={errors.password}
-                  autoComplete="new-password"
+                  autoComplete={accountExists ? 'current-password' : 'new-password'}
                   autoFocus
                 />
 
-                <Input
-                  id="confirmPassword"
-                  label="Повторите пароль"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value)
-                    if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: undefined }))
-                  }}
-                  error={errors.confirmPassword}
-                  autoComplete="new-password"
-                />
+                {!accountExists && (
+                  <Input
+                    id="confirmPassword"
+                    label="Повторите пароль"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value)
+                      if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: undefined }))
+                    }}
+                    error={errors.confirmPassword}
+                    autoComplete="new-password"
+                  />
+                )}
 
                 {submitError && (
                   <motion.div
@@ -201,7 +217,7 @@ export default function PortalAcceptPage(): JSX.Element {
                 )}
 
                 <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full mt-1">
-                  Создать доступ и войти
+                  {accountExists ? 'Войти и привязать дело' : 'Создать доступ и войти'}
                 </Button>
               </form>
             </div>

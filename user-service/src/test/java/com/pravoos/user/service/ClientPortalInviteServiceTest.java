@@ -1,8 +1,9 @@
 package com.pravoos.user.service;
 
 import com.pravoos.user.event.ClientPortalInviteCreatedEvent;
-import com.pravoos.user.exception.EmailAlreadyExistsException;
+import com.pravoos.user.exception.InvalidCredentialsException;
 import com.pravoos.user.exception.InvalidInviteException;
+import com.pravoos.user.exception.PortalAccountConflictException;
 import com.pravoos.user.exception.TooManyRequestsException;
 import com.pravoos.user.model.dto.CreatePortalInviteRequest;
 import com.pravoos.user.model.dto.PortalInvitePreviewResponse;
@@ -44,6 +45,7 @@ class ClientPortalInviteServiceTest {
     @Mock private ClientPortalInviteRepository inviteRepository;
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private PasswordPolicyService passwordPolicyService;
     @Mock private EmailRateLimiter emailRateLimiter;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private TokenDenylistService tokenDenylistService;
@@ -54,7 +56,7 @@ class ClientPortalInviteServiceTest {
     @BeforeEach
     void setUp() {
         service = new ClientPortalInviteService(inviteRepository, userRepository, passwordEncoder,
-                tokenHasher, emailRateLimiter, eventPublisher, tokenDenylistService);
+                passwordPolicyService, tokenHasher, emailRateLimiter, eventPublisher, tokenDenylistService);
     }
 
     @Test
@@ -102,7 +104,7 @@ class ClientPortalInviteServiceTest {
         UUID generatedUserId = UUID.randomUUID();
         ClientPortalInvite invite = pendingInvite(clientId, "client@example.com", rawToken);
         when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))).thenReturn(Optional.of(invite));
-        when(userRepository.existsByEmail("client@example.com")).thenReturn(false);
+        when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("Passw0rd!")).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
@@ -160,26 +162,79 @@ class ClientPortalInviteServiceTest {
     }
 
     @Test
-    void acceptRejectsWhenEmailAlreadyRegistered() {
+    void acceptLinksExistingClientAccountWhenPasswordMatches() {
+        String rawToken = "raw-token";
+        UUID clientId = UUID.randomUUID();
+        UUID existingUserId = UUID.randomUUID();
+        ClientPortalInvite invite = pendingInvite(clientId, "client@example.com", rawToken);
+        User existing = clientUser(existingUserId, "existing-hash", UserStatus.ACTIVE);
+        when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))).thenReturn(Optional.of(invite));
+        when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(existing));
+        when(passwordEncoder.matches("Passw0rd!", "existing-hash")).thenReturn(true);
+
+        UUID result = service.accept(rawToken, "Passw0rd!");
+
+        assertThat(result).isEqualTo(existingUserId);
+        assertThat(invite.getStatus()).isEqualTo(InviteStatus.ACCEPTED);
+        assertThat(invite.getUserId()).isEqualTo(existingUserId);
+        verify(userRepository, never()).save(any());
+        verify(passwordEncoder, never()).encode(any());
+    }
+
+    @Test
+    void acceptRejectsExistingClientAccountWhenPasswordWrong() {
+        String rawToken = "raw-token";
+        ClientPortalInvite invite = pendingInvite(UUID.randomUUID(), "client@example.com", rawToken);
+        User existing = clientUser(UUID.randomUUID(), "existing-hash", UserStatus.ACTIVE);
+        when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))).thenReturn(Optional.of(invite));
+        when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(existing));
+        when(passwordEncoder.matches("wrong", "existing-hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.accept(rawToken, "wrong"))
+                .isInstanceOf(InvalidCredentialsException.class);
+        assertThat(invite.getStatus()).isEqualTo(InviteStatus.PENDING);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void acceptRejectsWhenExistingAccountIsNotClient() {
+        String rawToken = "raw-token";
+        ClientPortalInvite invite = pendingInvite(UUID.randomUUID(), "client@example.com", rawToken);
+        User lawyer = clientUser(UUID.randomUUID(), "existing-hash", UserStatus.ACTIVE);
+        lawyer.setRole(UserRole.LAWYER);
+        when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))).thenReturn(Optional.of(invite));
+        when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(lawyer));
+
+        assertThatThrownBy(() -> service.accept(rawToken, "Passw0rd!"))
+                .isInstanceOf(PortalAccountConflictException.class);
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void acceptRejectsWhenExistingClientAccountIsNotActive() {
+        String rawToken = "raw-token";
+        ClientPortalInvite invite = pendingInvite(UUID.randomUUID(), "client@example.com", rawToken);
+        User disabled = clientUser(UUID.randomUUID(), "existing-hash", UserStatus.REJECTED);
+        when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))).thenReturn(Optional.of(invite));
+        when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(disabled));
+
+        assertThatThrownBy(() -> service.accept(rawToken, "Passw0rd!"))
+                .isInstanceOf(PortalAccountConflictException.class);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void previewReturnsInviteEmailAndAccountExistsFlag() {
         String rawToken = "raw-token";
         ClientPortalInvite invite = pendingInvite(UUID.randomUUID(), "client@example.com", rawToken);
         when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))).thenReturn(Optional.of(invite));
         when(userRepository.existsByEmail("client@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.accept(rawToken, "Passw0rd!"))
-                .isInstanceOf(EmailAlreadyExistsException.class);
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void previewReturnsInviteEmail() {
-        String rawToken = "raw-token";
-        ClientPortalInvite invite = pendingInvite(UUID.randomUUID(), "client@example.com", rawToken);
-        when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))).thenReturn(Optional.of(invite));
-
         PortalInvitePreviewResponse preview = service.preview(rawToken);
 
         assertThat(preview.email()).isEqualTo("client@example.com");
+        assertThat(preview.accountExists()).isTrue();
     }
 
     @Test
@@ -269,5 +324,15 @@ class ClientPortalInviteServiceTest {
         invite.setStatus(InviteStatus.PENDING);
         invite.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(7));
         return invite;
+    }
+
+    private User clientUser(UUID id, String passwordHash, UserStatus status) {
+        User user = new User();
+        user.setId(id);
+        user.setEmail("client@example.com");
+        user.setPasswordHash(passwordHash);
+        user.setRole(UserRole.CLIENT);
+        user.setStatus(status);
+        return user;
     }
 }

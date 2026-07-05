@@ -145,7 +145,6 @@ public class AuthController {
         if (!ipRateLimiter.allow("portal-accept", clientIp, APPLY_MAX_PER_IP, APPLY_WINDOW)) {
             throw new TooManyRequestsException();
         }
-        passwordPolicyService.validate(request.password());
         UUID userId = clientPortalInviteService.accept(request.token(), request.password());
         TokenResponse tokens = authService.issueTokensForUser(userId, clientIp, userAgent(httpRequest));
         return loginSuccess(tokens);

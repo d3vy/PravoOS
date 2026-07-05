@@ -363,6 +363,7 @@ export interface PortalCaseDetailResponse {
 export interface PortalInvitePreviewResponse {
   email: string
   clientName: string | null
+  accountExists: boolean
 }
 
 export interface CreateClientRequest {

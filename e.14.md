@@ -164,9 +164,15 @@ already-accepted/email-exists, preview).
 - ai-service репозитории: JPA→`repository/jpa/`, Mongo→`repository/mongo/`.
 - `INTERNAL_SERVICE_SECRET` fail-closed; новые `/internal/**` автоматически под `InternalSecretFilter`.
 
-## Открытые вопросы на потом
-- Повторный инвайт при уже существующем аккаунте клиента → сейчас accept падает
-  `EmailAlreadyExistsException`. Возможно нужен «переиспользовать существующий User и просто
-  привязать clientId» (мульти-клиент на один email: физлицо + его ООО).
-- list/revoke pending-инвайтов (endpoint) — вынесено в M2.
-- Разграничение видимости документов клиенту (M4).
+## Открытые вопросы (решены)
+- ✅ **Мульти-клиент на один email** (физлицо + его ООО). `accept` больше не падает
+  `EmailAlreadyExistsException`: если email нет — создаём CLIENT и задаём пароль (валидация
+  парольной политики перенесена из `AuthController` в `ClientPortalInviteService.createClientAccount`);
+  если email принадлежит **активному CLIENT** — поле `password` трактуется как ВХОД:
+  `passwordEncoder.matches` против текущего хэша (пароль НЕ меняется) → привязка `clientId` +
+  авто-логин с обоими `clientId`; неверный пароль → `InvalidCredentialsException` (401);
+  email принадлежит не-CLIENT/неактивному → `PortalAccountConflictException` (409).
+  `preview` отдаёт `accountExists`; `PortalAcceptPage` показывает «войти и привязать» vs «задать пароль».
+  Тесты `ClientPortalInviteServiceTest`: link happy/wrong-pass/non-client/inactive + create (17/17).
+- ✅ list/revoke pending-инвайтов — сделано в M2.
+- ✅ Разграничение видимости документов клиенту — сделано в M4.
