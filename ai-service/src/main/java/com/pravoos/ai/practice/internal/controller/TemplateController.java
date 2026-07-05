@@ -1,9 +1,9 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.CaseDraftDto;
-import com.pravoos.ai.model.dto.CreateTemplateRequest;
-import com.pravoos.ai.model.dto.TemplateResponse;
-import com.pravoos.ai.model.dto.UpdateTemplateRequest;
+import com.pravoos.ai.practice.internal.dto.CaseDraftDto;
+import com.pravoos.ai.practice.internal.dto.CreateTemplateRequest;
+import com.pravoos.ai.practice.internal.dto.TemplateResponse;
+import com.pravoos.ai.practice.internal.dto.UpdateTemplateRequest;
 import com.pravoos.ai.practice.internal.service.TemplateService;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;

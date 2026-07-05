@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.controller;
 
-import com.pravoos.ai.model.dto.CheckCitationsRequest;
-import com.pravoos.ai.model.dto.CitationCheckResult;
+import com.pravoos.ai.core.internal.dto.CheckCitationsRequest;
+import com.pravoos.ai.core.internal.dto.CitationCheckResult;
 import com.pravoos.ai.core.internal.service.CitationCheckService;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;

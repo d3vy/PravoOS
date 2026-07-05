@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.model.entity;
 
-import com.pravoos.ai.model.enums.DocumentStatus;
+import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;

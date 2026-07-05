@@ -1,17 +1,13 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.internal.model.mongo.Conversation;
+import com.pravoos.ai.core.api.AiDataCleanup;
 import com.pravoos.ai.practice.internal.repository.jpa.*;
-import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
-import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,14 +22,13 @@ class LawyerDataCleanupServiceTest {
     @Mock private ClientRepository clientRepository;
     @Mock private ClientContactRepository clientContactRepository;
     @Mock private DocumentTemplateRepository documentTemplateRepository;
-    @Mock private ConversationRepository conversationRepository;
-    @Mock private MessageRepository messageRepository;
+    @Mock private AiDataCleanup aiDataCleanup;
     @Mock private PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
 
     private LawyerDataCleanupService service(LawyerDataCleanupService self) {
         return new LawyerDataCleanupService(caseRepository, caseTaskRepository, caseDraftRepository,
                 clientRepository, clientContactRepository, documentTemplateRepository,
-                conversationRepository, messageRepository, pendingLawyerPurgeRepository, self);
+                aiDataCleanup, pendingLawyerPurgeRepository, self);
     }
 
     @Test
@@ -53,11 +48,8 @@ class LawyerDataCleanupServiceTest {
     }
 
     @Test
-    void purgeRemovesConversationsAndTheirMessagesAndClearsPendingMarker() {
+    void purgeDelegatesChatCleanupAndClearsPendingMarker() {
         UUID lawyerId = UUID.randomUUID();
-        Conversation conversation = new Conversation(lawyerId, "title");
-        ReflectionTestUtils.setField(conversation, "id", "conv-1");
-        when(conversationRepository.findByLawyerId(lawyerId)).thenReturn(List.of(conversation));
 
         LawyerDataCleanupService self = mock(LawyerDataCleanupService.class);
         service(self).purgeLawyerData(lawyerId, Map.of());
@@ -65,8 +57,7 @@ class LawyerDataCleanupServiceTest {
         verify(self).reassignOrgCases(lawyerId, Map.of());
         verify(self).recordPurgeIntent(lawyerId);
         verify(self).purgeRelationalData(lawyerId);
-        verify(messageRepository).deleteByConversationIdIn(List.of(conversation.getId()));
-        verify(conversationRepository).deleteByLawyerId(lawyerId);
+        verify(aiDataCleanup).purgeChatData(lawyerId);
         verify(pendingLawyerPurgeRepository).deleteById(lawyerId);
     }
 

@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.model.enums.CitationType;
+import com.pravoos.ai.shared.model.enums.CitationType;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

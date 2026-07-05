@@ -1,10 +1,8 @@
 package com.pravoos.ai.practice.internal.service;
 
+import com.pravoos.ai.core.api.AiDataCleanup;
 import com.pravoos.ai.practice.internal.model.entity.PendingLawyerPurge;
-import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.practice.internal.repository.jpa.*;
-import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
-import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +28,7 @@ public class LawyerDataCleanupService {
     private final ClientRepository clientRepository;
     private final ClientContactRepository clientContactRepository;
     private final DocumentTemplateRepository documentTemplateRepository;
-    private final ConversationRepository conversationRepository;
-    private final MessageRepository messageRepository;
+    private final AiDataCleanup aiDataCleanup;
     private final PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
     private final LawyerDataCleanupService self;
 
@@ -41,8 +38,7 @@ public class LawyerDataCleanupService {
                                     ClientRepository clientRepository,
                                     ClientContactRepository clientContactRepository,
                                     DocumentTemplateRepository documentTemplateRepository,
-                                    ConversationRepository conversationRepository,
-                                    MessageRepository messageRepository,
+                                    AiDataCleanup aiDataCleanup,
                                     PendingLawyerPurgeRepository pendingLawyerPurgeRepository,
                                     @Lazy LawyerDataCleanupService self) {
         this.caseRepository = caseRepository;
@@ -51,8 +47,7 @@ public class LawyerDataCleanupService {
         this.clientRepository = clientRepository;
         this.clientContactRepository = clientContactRepository;
         this.documentTemplateRepository = documentTemplateRepository;
-        this.conversationRepository = conversationRepository;
-        this.messageRepository = messageRepository;
+        this.aiDataCleanup = aiDataCleanup;
         this.pendingLawyerPurgeRepository = pendingLawyerPurgeRepository;
         this.self = self;
     }
@@ -102,7 +97,7 @@ public class LawyerDataCleanupService {
     private void attemptPurge(UUID lawyerId) {
         try {
             self.purgeRelationalData(lawyerId);
-            purgeChatData(lawyerId);
+            aiDataCleanup.purgeChatData(lawyerId);
             pendingLawyerPurgeRepository.deleteById(lawyerId);
             log.info("Purged AI data for deleted lawyer {}", lawyerId);
         } catch (Exception e) {
@@ -127,17 +122,5 @@ public class LawyerDataCleanupService {
         int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
         log.info("Deleted {} tasks, {} drafts, {} cases, {} contacts, {} clients and {} templates for lawyer {}",
                 tasks, drafts, cases, contacts, clients, templates, lawyerId);
-    }
-
-    private void purgeChatData(UUID lawyerId) {
-        List<String> conversationIds = conversationRepository.findByLawyerId(lawyerId)
-                .stream()
-                .map(Conversation::getId)
-                .toList();
-        if (!conversationIds.isEmpty()) {
-            messageRepository.deleteByConversationIdIn(conversationIds);
-        }
-        conversationRepository.deleteByLawyerId(lawyerId);
-        log.info("Deleted {} conversations and their messages for lawyer {}", conversationIds.size(), lawyerId);
     }
 }

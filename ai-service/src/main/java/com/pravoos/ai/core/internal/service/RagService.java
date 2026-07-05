@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.config.DocumentProperties;
+import com.pravoos.ai.shared.config.DocumentProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

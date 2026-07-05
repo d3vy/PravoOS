@@ -1,13 +1,13 @@
 package com.pravoos.ai.core.internal.controller;
 
-import com.pravoos.ai.model.dto.DocumentContent;
-import com.pravoos.ai.model.dto.DocumentResponse;
-import com.pravoos.ai.model.dto.DocumentUploadResponse;
-import com.pravoos.ai.model.enums.AuditAction;
-import com.pravoos.ai.service.AccessAuditService;
+import com.pravoos.ai.core.api.DocumentContent;
+import com.pravoos.ai.core.api.DocumentResponse;
+import com.pravoos.ai.core.api.DocumentUploadResponse;
+import com.pravoos.ai.shared.model.enums.AuditAction;
+import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.core.internal.service.DocumentService;
-import com.pravoos.ai.util.PagedResponse;
-import com.pravoos.ai.util.SecureFileHeaders;
+import com.pravoos.ai.shared.util.PagedResponse;
+import com.pravoos.ai.shared.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;

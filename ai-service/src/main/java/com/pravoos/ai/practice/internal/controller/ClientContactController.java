@@ -1,10 +1,10 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.ContactResponse;
-import com.pravoos.ai.model.dto.CreateContactRequest;
-import com.pravoos.ai.model.dto.UpdateContactRequest;
+import com.pravoos.ai.practice.internal.dto.ContactResponse;
+import com.pravoos.ai.practice.internal.dto.CreateContactRequest;
+import com.pravoos.ai.practice.internal.dto.UpdateContactRequest;
 import com.pravoos.ai.practice.internal.service.ClientContactService;
-import com.pravoos.ai.util.PagedResponse;
+import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

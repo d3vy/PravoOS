@@ -1,6 +1,6 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.arbitr.ArbitrCaseProvider;
+import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;

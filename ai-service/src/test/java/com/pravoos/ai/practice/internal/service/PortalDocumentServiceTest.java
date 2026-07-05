@@ -1,12 +1,13 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.internal.service.DocumentService;
+import com.pravoos.ai.core.api.DocumentCommand;
+import com.pravoos.ai.core.api.DocumentQuery;
 
-import com.pravoos.ai.exception.CaseNotFoundException;
-import com.pravoos.ai.model.dto.DocumentContent;
-import com.pravoos.ai.model.dto.DocumentResponse;
+import com.pravoos.ai.shared.exception.CaseNotFoundException;
+import com.pravoos.ai.core.api.DocumentContent;
+import com.pravoos.ai.core.api.DocumentResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,14 +32,15 @@ class PortalDocumentServiceTest {
 
     @Mock private CaseRepository caseRepository;
     @Mock private CaseHearingEventRepository hearingEventRepository;
-    @Mock private DocumentService documentService;
+    @Mock private DocumentCommand documentCommand;
+    @Mock private DocumentQuery documentQuery;
 
     private PortalDocumentService service;
 
     @BeforeEach
     void setUp() {
         PortalCaseService portalCaseService = new PortalCaseService(caseRepository, hearingEventRepository);
-        service = new PortalDocumentService(portalCaseService, documentService);
+        service = new PortalDocumentService(portalCaseService, documentCommand, documentQuery);
     }
 
     private Case caseWithClient(UUID clientId) {
@@ -54,7 +56,7 @@ class PortalDocumentServiceTest {
         UUID caseId = UUID.randomUUID();
         DocumentResponse doc = new DocumentResponse(UUID.randomUUID(), "Иск", "isk.pdf", "pdf", null, null, true);
         when(caseRepository.findById(caseId)).thenReturn(Optional.of(caseWithClient(clientId)));
-        when(documentService.findClientVisibleByCase(caseId)).thenReturn(List.of(doc));
+        when(documentQuery.findClientVisibleByCase(caseId)).thenReturn(List.of(doc));
 
         assertThat(service.listCaseDocuments(caseId, List.of(clientId))).containsExactly(doc);
     }
@@ -66,7 +68,7 @@ class PortalDocumentServiceTest {
 
         assertThatThrownBy(() -> service.listCaseDocuments(caseId, List.of(UUID.randomUUID())))
                 .isInstanceOf(CaseNotFoundException.class);
-        verifyNoInteractions(documentService);
+        verifyNoInteractions(documentCommand, documentQuery);
     }
 
     @Test
@@ -76,7 +78,7 @@ class PortalDocumentServiceTest {
         UUID documentId = UUID.randomUUID();
         DocumentContent content = new DocumentContent(null, "isk.pdf", "pdf", 10);
         when(caseRepository.findById(caseId)).thenReturn(Optional.of(caseWithClient(clientId)));
-        when(documentService.loadClientContent(documentId, caseId)).thenReturn(content);
+        when(documentCommand.loadClientContent(documentId, caseId)).thenReturn(content);
 
         assertThat(service.downloadCaseDocument(caseId, documentId, List.of(clientId))).isSameAs(content);
     }
@@ -89,7 +91,7 @@ class PortalDocumentServiceTest {
 
         assertThatThrownBy(() -> service.downloadCaseDocument(caseId, documentId, List.of(UUID.randomUUID())))
                 .isInstanceOf(CaseNotFoundException.class);
-        verifyNoInteractions(documentService);
+        verifyNoInteractions(documentCommand, documentQuery);
     }
 
     @Test
@@ -102,7 +104,7 @@ class PortalDocumentServiceTest {
 
         service.uploadCaseDocument(caseId, file, "Договор", clientUserId, List.of(clientId));
 
-        verify(documentService).upload(file, "Договор", clientUserId, caseId, true);
+        verify(documentCommand).upload(file, "Договор", clientUserId, caseId, true);
     }
 
     @Test
@@ -112,6 +114,6 @@ class PortalDocumentServiceTest {
 
         assertThatThrownBy(() -> service.uploadCaseDocument(caseId, null, "x", UUID.randomUUID(), List.of(UUID.randomUUID())))
                 .isInstanceOf(CaseNotFoundException.class);
-        verifyNoInteractions(documentService);
+        verifyNoInteractions(documentCommand, documentQuery);
     }
 }

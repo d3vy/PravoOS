@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal;
 
-import com.pravoos.ai.config.DocumentProperties;
+import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.core.api.LegalAiAnswer;
 import com.pravoos.ai.core.api.LegalAiPort;
 import com.pravoos.ai.core.internal.llm.LlmClient;
@@ -13,8 +13,8 @@ import com.pravoos.ai.core.internal.service.EmbeddingService;
 import com.pravoos.ai.core.internal.service.FollowUpParser;
 import com.pravoos.ai.core.internal.service.LlmQuotaService;
 import com.pravoos.ai.core.internal.service.RagService;
-import com.pravoos.ai.model.dto.AiResponseDto;
-import com.pravoos.ai.model.dto.SourceReference;
+import com.pravoos.ai.core.api.AiResponseDto;
+import com.pravoos.ai.core.api.SourceReference;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

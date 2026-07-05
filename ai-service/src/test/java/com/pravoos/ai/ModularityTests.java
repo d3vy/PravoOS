@@ -16,6 +16,11 @@ class ModularityTests {
     }
 
     @Test
+    void verifiesModuleBoundaries() {
+        modules.verify();
+    }
+
+    @Test
     void writesModuleDocumentation() {
         new Documenter(modules)
                 .writeModulesAsPlantUml()

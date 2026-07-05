@@ -1,6 +1,6 @@
 package com.pravoos.ai.practice.internal.model.entity;
 
-import com.pravoos.ai.model.enums.ContactType;
+import com.pravoos.ai.shared.model.enums.ContactType;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;

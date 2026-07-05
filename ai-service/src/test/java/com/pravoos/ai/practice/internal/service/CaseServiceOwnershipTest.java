@@ -1,12 +1,13 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.internal.service.DocumentService;
+import com.pravoos.ai.core.api.DocumentCommand;
+import com.pravoos.ai.core.api.DocumentQuery;
 
-import com.pravoos.ai.client.UserServiceClient;
-import com.pravoos.ai.exception.CaseNotFoundException;
-import com.pravoos.ai.exception.CaseTransferNotAllowedException;
-import com.pravoos.ai.exception.OrganizationAccessException;
-import com.pravoos.ai.model.dto.CaseResponse;
+import com.pravoos.ai.shared.client.UserServiceClient;
+import com.pravoos.ai.shared.exception.CaseNotFoundException;
+import com.pravoos.ai.shared.exception.CaseTransferNotAllowedException;
+import com.pravoos.ai.shared.exception.OrganizationAccessException;
+import com.pravoos.ai.practice.internal.dto.CaseResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
@@ -29,13 +30,14 @@ class CaseServiceOwnershipTest {
 
     @Mock private CaseRepository caseRepository;
     @Mock private ClientRepository clientRepository;
-    @Mock private DocumentService documentService;
+    @Mock private DocumentCommand documentCommand;
+    @Mock private DocumentQuery documentQuery;
     @Mock private CaseHearingEventRepository hearingEventRepository;
     @Mock private ArbitrSyncService arbitrSyncService;
     @Mock private UserServiceClient userServiceClient;
 
     private CaseService caseService() {
-        return new CaseService(caseRepository, clientRepository, documentService,
+        return new CaseService(caseRepository, clientRepository, documentCommand, documentQuery,
                 hearingEventRepository, arbitrSyncService, userServiceClient);
     }
 

@@ -1,21 +1,20 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.internal.service.DocumentService;
-
-import com.pravoos.ai.client.UserServiceClient;
-import com.pravoos.ai.exception.CaseNotFoundException;
-import com.pravoos.ai.exception.CaseTransferNotAllowedException;
-import com.pravoos.ai.exception.ClientNotFoundException;
-import com.pravoos.ai.exception.OrganizationAccessException;
-import com.pravoos.ai.model.dto.*;
+import com.pravoos.ai.shared.client.UserServiceClient;
+import com.pravoos.ai.shared.exception.CaseNotFoundException;
+import com.pravoos.ai.shared.exception.CaseTransferNotAllowedException;
+import com.pravoos.ai.shared.exception.ClientNotFoundException;
+import com.pravoos.ai.shared.exception.OrganizationAccessException;
+import com.pravoos.ai.practice.internal.dto.*;
+import com.pravoos.ai.core.api.*;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Client;
-import com.pravoos.ai.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
-import com.pravoos.ai.util.LikePattern;
-import com.pravoos.ai.util.PageRequests;
+import com.pravoos.ai.shared.util.LikePattern;
+import com.pravoos.ai.shared.util.PageRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -38,20 +37,23 @@ public class CaseService {
 
     private final CaseRepository caseRepository;
     private final ClientRepository clientRepository;
-    private final DocumentService documentService;
+    private final DocumentCommand documentCommand;
+    private final DocumentQuery documentQuery;
     private final CaseHearingEventRepository hearingEventRepository;
     private final ArbitrSyncService arbitrSyncService;
     private final UserServiceClient userServiceClient;
 
     public CaseService(CaseRepository caseRepository,
                        ClientRepository clientRepository,
-                       DocumentService documentService,
+                       DocumentCommand documentCommand,
+                       DocumentQuery documentQuery,
                        CaseHearingEventRepository hearingEventRepository,
                        ArbitrSyncService arbitrSyncService,
                        UserServiceClient userServiceClient) {
         this.caseRepository = caseRepository;
         this.clientRepository = clientRepository;
-        this.documentService = documentService;
+        this.documentCommand = documentCommand;
+        this.documentQuery = documentQuery;
         this.hearingEventRepository = hearingEventRepository;
         this.arbitrSyncService = arbitrSyncService;
         this.userServiceClient = userServiceClient;
@@ -199,7 +201,7 @@ public class CaseService {
     @Transactional
     public void delete(UUID caseId, UUID lawyerId) {
         Case caseEntity = requireOwnedCase(caseId, lawyerId);
-        documentService.deleteByCase(caseId);
+        documentCommand.deleteByCase(caseId);
         caseRepository.delete(caseEntity);
         log.info("Case deleted: {} by lawyer {}", caseId, lawyerId);
     }
@@ -208,20 +210,20 @@ public class CaseService {
     public DocumentUploadResponse uploadDocument(UUID caseId, MultipartFile file, String title,
                                                  UUID lawyerId, List<UUID> orgIds) {
         requireVisibleCase(caseId, lawyerId, orgIds);
-        return documentService.upload(file, title, lawyerId, caseId);
+        return documentCommand.upload(file, title, lawyerId, caseId);
     }
 
     @Transactional(readOnly = true)
     public List<DocumentResponse> findDocuments(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
         requireVisibleCase(caseId, lawyerId, orgIds);
-        return documentService.findByCase(caseId);
+        return documentQuery.findByCase(caseId);
     }
 
     @Transactional
     public DocumentResponse setDocumentVisibility(UUID caseId, UUID documentId, boolean visibleToClient,
                                                   UUID lawyerId, List<UUID> orgIds) {
         requireVisibleCase(caseId, lawyerId, orgIds);
-        return documentService.setClientVisibility(documentId, caseId, visibleToClient);
+        return documentCommand.setClientVisibility(documentId, caseId, visibleToClient);
     }
 
     public Case requireOwnedCase(UUID caseId, UUID lawyerId) {

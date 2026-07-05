@@ -1,13 +1,13 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.CaseDraftDto;
-import com.pravoos.ai.model.dto.CaseDraftSummaryDto;
-import com.pravoos.ai.model.dto.DraftTypeInfo;
-import com.pravoos.ai.model.dto.GenerateDraftRequest;
+import com.pravoos.ai.practice.internal.dto.CaseDraftDto;
+import com.pravoos.ai.practice.internal.dto.CaseDraftSummaryDto;
+import com.pravoos.ai.practice.internal.dto.DraftTypeInfo;
+import com.pravoos.ai.practice.internal.dto.GenerateDraftRequest;
 import com.pravoos.ai.practice.internal.model.entity.CaseDraft;
 import com.pravoos.ai.practice.internal.service.DocxExportService;
 import com.pravoos.ai.practice.internal.service.DraftService;
-import com.pravoos.ai.util.SecureFileHeaders;
+import com.pravoos.ai.shared.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;

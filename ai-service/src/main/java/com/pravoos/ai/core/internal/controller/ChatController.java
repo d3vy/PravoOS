@@ -1,8 +1,9 @@
 package com.pravoos.ai.core.internal.controller;
 
-import com.pravoos.ai.model.dto.*;
+import com.pravoos.ai.core.api.*;
+import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.core.internal.service.ChatService;
-import com.pravoos.ai.util.PagedResponse;
+import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

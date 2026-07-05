@@ -1,21 +1,16 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.model.dto.GlobalSearchResponse;
-import com.pravoos.ai.model.dto.GlobalSearchResponse.CaseHit;
-import com.pravoos.ai.model.dto.GlobalSearchResponse.ConversationHit;
-import com.pravoos.ai.model.dto.GlobalSearchResponse.DocumentHit;
+import com.pravoos.ai.core.api.DocumentSearchQuery;
+import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse;
+import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse.CaseHit;
+import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse.ConversationHit;
+import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse.DocumentHit;
 import com.pravoos.ai.practice.internal.model.entity.Client;
-import com.pravoos.ai.core.internal.model.entity.Document;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
-import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
-import com.pravoos.ai.core.internal.repository.jpa.DocumentRepository;
-import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
-import com.pravoos.ai.util.LikePattern;
-import com.pravoos.ai.util.SnippetExtractor;
+import com.pravoos.ai.shared.util.LikePattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,24 +24,17 @@ public class SearchService {
 
     private static final Logger log = LoggerFactory.getLogger(SearchService.class);
     private static final int MAX_HITS_PER_SOURCE = 10;
-    private static final int SNIPPET_RADIUS = 80;
 
     private final CaseRepository caseRepository;
     private final ClientRepository clientRepository;
-    private final ConversationRepository conversationRepository;
-    private final DocumentRepository documentRepository;
-    private final DocumentChunkRepository documentChunkRepository;
+    private final DocumentSearchQuery documentSearchQuery;
 
     public SearchService(CaseRepository caseRepository,
                          ClientRepository clientRepository,
-                         ConversationRepository conversationRepository,
-                         DocumentRepository documentRepository,
-                         DocumentChunkRepository documentChunkRepository) {
+                         DocumentSearchQuery documentSearchQuery) {
         this.caseRepository = caseRepository;
         this.clientRepository = clientRepository;
-        this.conversationRepository = conversationRepository;
-        this.documentRepository = documentRepository;
-        this.documentChunkRepository = documentChunkRepository;
+        this.documentSearchQuery = documentSearchQuery;
     }
 
     @Transactional(readOnly = true)
@@ -56,11 +44,9 @@ public class SearchService {
             return new GlobalSearchResponse(List.of(), List.of(), List.of());
         }
 
-        String pattern = LikePattern.contains(trimmed);
-
-        List<CaseHit> cases = searchCases(lawyerId, pattern);
+        List<CaseHit> cases = searchCases(lawyerId, LikePattern.contains(trimmed));
         List<ConversationHit> conversations = searchConversations(lawyerId, trimmed);
-        List<DocumentHit> documents = searchDocuments(lawyerId, trimmed, pattern, searchContent);
+        List<DocumentHit> documents = searchDocuments(lawyerId, trimmed, searchContent);
 
         log.info("Global search by lawyer {} for '{}' (content={}): {} cases, {} conversations, {} documents",
                 lawyerId, trimmed, searchContent, cases.size(), conversations.size(), documents.size());
@@ -81,28 +67,15 @@ public class SearchService {
     }
 
     private List<ConversationHit> searchConversations(UUID lawyerId, String query) {
-        return conversationRepository
-                .findTop50ByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(lawyerId, query).stream()
-                .limit(MAX_HITS_PER_SOURCE)
-                .map(c -> new ConversationHit(c.getId(), c.getTitle()))
+        return documentSearchQuery.searchConversations(lawyerId, query, MAX_HITS_PER_SOURCE).stream()
+                .map(c -> new ConversationHit(c.id(), c.title()))
                 .toList();
     }
 
-    private List<DocumentHit> searchDocuments(UUID lawyerId, String query, String pattern, boolean searchContent) {
-        return documentRepository
-                .searchOwnedByLawyer(lawyerId, pattern, searchContent, PageRequest.of(0, MAX_HITS_PER_SOURCE)).stream()
-                .map(d -> new DocumentHit(d.getId(), d.getTitle(), d.getFileName(), d.getCaseId(),
-                        searchContent ? contentSnippet(d, query, pattern) : null))
+    private List<DocumentHit> searchDocuments(UUID lawyerId, String query, boolean searchContent) {
+        return documentSearchQuery.searchDocuments(lawyerId, query, searchContent, MAX_HITS_PER_SOURCE).stream()
+                .map(d -> new DocumentHit(d.id(), d.title(), d.fileName(), d.caseId(), d.snippet()))
                 .toList();
-    }
-
-    private String contentSnippet(Document document, String query, String pattern) {
-        List<String> matchingChunk = documentChunkRepository
-                .findMatchingContent(document.getId(), pattern, PageRequest.of(0, 1));
-        if (matchingChunk.isEmpty()) {
-            return null;
-        }
-        return SnippetExtractor.around(matchingChunk.get(0), query, SNIPPET_RADIUS);
     }
 
     private Map<UUID, String> clientNamesFor(UUID lawyerId) {

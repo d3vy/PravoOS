@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.repository.jpa;
 
 import com.pravoos.ai.core.internal.model.entity.Document;
-import com.pravoos.ai.model.enums.DocumentStatus;
+import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

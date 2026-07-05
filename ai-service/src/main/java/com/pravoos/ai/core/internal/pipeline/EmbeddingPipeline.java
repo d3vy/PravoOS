@@ -1,8 +1,8 @@
 package com.pravoos.ai.core.internal.pipeline;
 
-import com.pravoos.ai.config.DocumentProperties;
+import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.core.internal.event.DocumentCreatedSpringEvent;
-import com.pravoos.ai.exception.DocumentNotFoundException;
+import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.core.internal.llm.EmbeddingResult;
 import com.pravoos.ai.core.internal.model.entity.Document;
 import com.pravoos.ai.core.internal.repository.jpa.DocumentRepository;

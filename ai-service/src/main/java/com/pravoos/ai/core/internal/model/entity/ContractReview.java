@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.model.entity;
 
-import com.pravoos.ai.model.dto.ContractRisk;
+import com.pravoos.ai.core.internal.dto.ContractRisk;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;

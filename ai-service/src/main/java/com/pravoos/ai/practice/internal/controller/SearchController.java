@@ -1,6 +1,6 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.GlobalSearchResponse;
+import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse;
 import com.pravoos.ai.practice.internal.service.SearchService;
 import com.pravoos.common.web.SecurityUtils;
 import org.springframework.http.ResponseEntity;

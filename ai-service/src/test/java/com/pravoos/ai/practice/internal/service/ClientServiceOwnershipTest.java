@@ -1,7 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.client.UserServiceClient;
-import com.pravoos.ai.exception.ClientNotFoundException;
+import com.pravoos.ai.shared.client.UserServiceClient;
+import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;

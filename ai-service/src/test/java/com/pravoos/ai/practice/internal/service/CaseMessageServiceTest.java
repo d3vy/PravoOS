@@ -1,11 +1,11 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.service.OutboxEventService;
-import com.pravoos.ai.event.CaseMessageCreatedKafkaPayload;
-import com.pravoos.ai.model.dto.CaseMessageResponse;
+import com.pravoos.ai.shared.service.OutboxEventService;
+import com.pravoos.ai.shared.event.CaseMessageCreatedKafkaPayload;
+import com.pravoos.ai.practice.internal.dto.CaseMessageResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseMessage;
-import com.pravoos.ai.model.enums.MessageAuthorRole;
+import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseMessageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

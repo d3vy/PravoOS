@@ -1,25 +1,26 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.config.DocumentProperties;
-import com.pravoos.ai.exception.ConversationNotFoundException;
-import com.pravoos.ai.exception.DocumentNotFoundException;
-import com.pravoos.ai.exception.MessageNotFoundException;
+import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.shared.exception.ConversationNotFoundException;
+import com.pravoos.ai.shared.exception.DocumentNotFoundException;
+import com.pravoos.ai.shared.exception.MessageNotFoundException;
 import com.pravoos.ai.core.internal.llm.LlmClient;
 import com.pravoos.ai.core.internal.llm.LlmResult;
 import com.pravoos.ai.core.internal.llm.dto.LlmMessage;
-import com.pravoos.ai.model.dto.*;
+import com.pravoos.ai.core.api.*;
+import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.core.internal.model.entity.Document;
-import com.pravoos.ai.model.enums.MessageRole;
+import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.model.mongo.Message;
 import com.pravoos.ai.core.internal.repository.ChunkMatch;
 import com.pravoos.ai.core.internal.repository.VectorSearchRepository;
-import com.pravoos.ai.practice.api.CaseAccessQuery;
+import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.core.internal.repository.jpa.DocumentRepository;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
 import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
-import com.pravoos.ai.util.PageRequests;
+import com.pravoos.ai.shared.util.PageRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +42,7 @@ public class ChatService {
     private final VectorSearchRepository vectorSearchRepository;
     private final DocumentChunkRepository documentChunkRepository;
     private final DocumentRepository documentRepository;
-    private final CaseAccessQuery caseAccessQuery;
+    private final CaseAccessProvider caseAccessProvider;
     private final EmbeddingService embeddingService;
     private final RagService ragService;
     private final LlmClient llmClient;
@@ -55,7 +56,7 @@ public class ChatService {
                        VectorSearchRepository vectorSearchRepository,
                        DocumentChunkRepository documentChunkRepository,
                        DocumentRepository documentRepository,
-                       CaseAccessQuery caseAccessQuery,
+                       CaseAccessProvider caseAccessProvider,
                        EmbeddingService embeddingService,
                        RagService ragService,
                        LlmClient llmClient,
@@ -68,7 +69,7 @@ public class ChatService {
         this.vectorSearchRepository = vectorSearchRepository;
         this.documentChunkRepository = documentChunkRepository;
         this.documentRepository = documentRepository;
-        this.caseAccessQuery = caseAccessQuery;
+        this.caseAccessProvider = caseAccessProvider;
         this.embeddingService = embeddingService;
         this.ragService = ragService;
         this.llmClient = llmClient;
@@ -157,7 +158,7 @@ public class ChatService {
             throw new DocumentNotFoundException(offending);
         }
 
-        Set<UUID> ownedCaseIds = caseAccessQuery.retainCasesOwnedBy(caseIds, lawyerId);
+        Set<UUID> ownedCaseIds = caseAccessProvider.retainCasesOwnedBy(caseIds, lawyerId);
         for (Document document : documents) {
             if (!ownedCaseIds.contains(document.getCaseId())) {
                 log.warn("Lawyer {} attempted to attach document {} owned by another user", lawyerId, document.getId());

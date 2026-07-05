@@ -1,7 +1,7 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.PortalCaseDetailResponse;
-import com.pravoos.ai.model.dto.PortalCaseResponse;
+import com.pravoos.ai.practice.internal.dto.PortalCaseDetailResponse;
+import com.pravoos.ai.practice.internal.dto.PortalCaseResponse;
 import com.pravoos.ai.practice.internal.service.PortalCaseService;
 import com.pravoos.common.web.SecurityUtils;
 import org.springframework.http.ResponseEntity;

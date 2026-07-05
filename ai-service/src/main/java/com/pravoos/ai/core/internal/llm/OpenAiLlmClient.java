@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.llm;
 
-import com.pravoos.ai.config.OpenAiProperties;
-import com.pravoos.ai.exception.LlmException;
+import com.pravoos.ai.shared.config.OpenAiProperties;
+import com.pravoos.ai.shared.exception.LlmException;
 import com.pravoos.ai.core.internal.llm.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

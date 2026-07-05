@@ -1,7 +1,7 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.CaseMessageResponse;
-import com.pravoos.ai.model.dto.SendMessageRequest;
+import com.pravoos.ai.practice.internal.dto.CaseMessageResponse;
+import com.pravoos.ai.practice.internal.dto.SendMessageRequest;
 import com.pravoos.ai.practice.internal.service.CaseMessageService;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;

@@ -1,6 +1,6 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.WorkflowInfo;
+import com.pravoos.ai.practice.internal.dto.WorkflowInfo;
 import com.pravoos.ai.practice.internal.service.WorkflowService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

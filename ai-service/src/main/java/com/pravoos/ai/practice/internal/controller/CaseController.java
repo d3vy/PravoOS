@@ -2,11 +2,12 @@ package com.pravoos.ai.practice.internal.controller;
 
 import com.pravoos.ai.core.api.AiResponseQuery;
 
-import com.pravoos.ai.model.dto.*;
-import com.pravoos.ai.model.enums.CaseStatus;
+import com.pravoos.ai.practice.internal.dto.*;
+import com.pravoos.ai.core.api.*;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.practice.internal.service.*;
-import com.pravoos.ai.util.PagedResponse;
-import com.pravoos.ai.util.SecureFileHeaders;
+import com.pravoos.ai.shared.util.PagedResponse;
+import com.pravoos.ai.shared.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.*;

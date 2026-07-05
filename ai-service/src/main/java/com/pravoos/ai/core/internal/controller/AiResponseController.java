@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.controller;
 
-import com.pravoos.ai.model.dto.AiResponseDto;
-import com.pravoos.ai.model.dto.RateRequest;
+import com.pravoos.ai.core.api.AiResponseDto;
+import com.pravoos.ai.core.internal.dto.RateRequest;
 import com.pravoos.ai.core.internal.service.AiResponseService;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;

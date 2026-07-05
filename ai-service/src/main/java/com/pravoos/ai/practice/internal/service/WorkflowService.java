@@ -1,10 +1,10 @@
 package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.core.api.LegalAiPort;
-import com.pravoos.ai.model.dto.AiResponseDto;
-import com.pravoos.ai.model.dto.RunWorkflowRequest;
-import com.pravoos.ai.model.dto.WorkflowInfo;
-import com.pravoos.ai.model.enums.BankruptcyWorkflow;
+import com.pravoos.ai.core.api.AiResponseDto;
+import com.pravoos.ai.practice.internal.dto.RunWorkflowRequest;
+import com.pravoos.ai.practice.internal.dto.WorkflowInfo;
+import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

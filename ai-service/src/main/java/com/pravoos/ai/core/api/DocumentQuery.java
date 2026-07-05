@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.api;
 
-import com.pravoos.ai.model.dto.DocumentResponse;
+import com.pravoos.ai.core.api.DocumentResponse;
 
 import java.util.List;
 import java.util.UUID;

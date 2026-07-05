@@ -1,6 +1,6 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.DashboardResponse;
+import com.pravoos.ai.practice.internal.dto.DashboardResponse;
 import com.pravoos.ai.practice.internal.service.DashboardService;
 import com.pravoos.common.web.SecurityUtils;
 import org.springframework.http.ResponseEntity;

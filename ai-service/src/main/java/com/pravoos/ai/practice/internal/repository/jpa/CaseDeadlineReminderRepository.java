@@ -1,7 +1,7 @@
 package com.pravoos.ai.practice.internal.repository.jpa;
 
 import com.pravoos.ai.practice.internal.model.entity.CaseDeadlineReminder;
-import com.pravoos.ai.model.enums.DeadlineType;
+import com.pravoos.ai.shared.model.enums.DeadlineType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;

@@ -2,8 +2,8 @@ package com.pravoos.ai.core.internal.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.pravoos.ai.config.OpenAiProperties;
-import com.pravoos.ai.exception.NonLegalQueryException;
+import com.pravoos.ai.shared.config.OpenAiProperties;
+import com.pravoos.ai.shared.exception.NonLegalQueryException;
 import com.pravoos.ai.core.internal.llm.dto.LlmMessage;
 import com.pravoos.ai.core.internal.llm.dto.OpenAiChatRequest;
 import com.pravoos.ai.core.internal.llm.dto.OpenAiChatResponse;

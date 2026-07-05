@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.controller;
 
-import com.pravoos.ai.model.dto.AiResponseDto;
-import com.pravoos.ai.model.dto.AiStatsResponse;
+import com.pravoos.ai.core.api.AiResponseDto;
+import com.pravoos.ai.core.internal.dto.AiStatsResponse;
 import com.pravoos.ai.core.internal.service.AdminStatsService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

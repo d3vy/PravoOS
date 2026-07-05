@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.model.mongo;
 
-import com.pravoos.ai.model.enums.MessageRole;
+import com.pravoos.ai.shared.model.enums.MessageRole;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 

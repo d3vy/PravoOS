@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.exception.LlmQuotaExceededException;
+import com.pravoos.ai.shared.exception.LlmQuotaExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

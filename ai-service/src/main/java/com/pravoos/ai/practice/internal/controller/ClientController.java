@@ -1,14 +1,14 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.model.dto.ClientDetailResponse;
-import com.pravoos.ai.model.dto.ClientResponse;
-import com.pravoos.ai.model.dto.CreateClientRequest;
-import com.pravoos.ai.model.dto.PortalInviteStatusResponse;
-import com.pravoos.ai.model.dto.UpdateClientRequest;
-import com.pravoos.ai.model.enums.AuditAction;
-import com.pravoos.ai.service.AccessAuditService;
+import com.pravoos.ai.practice.internal.dto.ClientDetailResponse;
+import com.pravoos.ai.practice.internal.dto.ClientResponse;
+import com.pravoos.ai.practice.internal.dto.CreateClientRequest;
+import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
+import com.pravoos.ai.practice.internal.dto.UpdateClientRequest;
+import com.pravoos.ai.shared.model.enums.AuditAction;
+import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.practice.internal.service.ClientService;
-import com.pravoos.ai.util.PagedResponse;
+import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;

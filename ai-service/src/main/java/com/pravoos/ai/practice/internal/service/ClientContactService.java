@@ -1,12 +1,12 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.exception.ClientContactNotFoundException;
-import com.pravoos.ai.model.dto.ContactResponse;
-import com.pravoos.ai.model.dto.CreateContactRequest;
-import com.pravoos.ai.model.dto.UpdateContactRequest;
+import com.pravoos.ai.shared.exception.ClientContactNotFoundException;
+import com.pravoos.ai.practice.internal.dto.ContactResponse;
+import com.pravoos.ai.practice.internal.dto.CreateContactRequest;
+import com.pravoos.ai.practice.internal.dto.UpdateContactRequest;
 import com.pravoos.ai.practice.internal.model.entity.ClientContact;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientContactRepository;
-import com.pravoos.ai.util.PageRequests;
+import com.pravoos.ai.shared.util.PageRequests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;

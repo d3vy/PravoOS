@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.config.FileCryptoProperties;
-import com.pravoos.ai.exception.DocumentProcessingException;
+import com.pravoos.ai.shared.config.FileCryptoProperties;
+import com.pravoos.ai.shared.exception.DocumentProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.controller;
 
-import com.pravoos.ai.model.dto.ContractReviewDto;
-import com.pravoos.ai.model.dto.CreateContractReviewRequest;
+import com.pravoos.ai.core.internal.dto.ContractReviewDto;
+import com.pravoos.ai.core.internal.dto.CreateContractReviewRequest;
 import com.pravoos.ai.core.internal.service.ContractReviewService;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;

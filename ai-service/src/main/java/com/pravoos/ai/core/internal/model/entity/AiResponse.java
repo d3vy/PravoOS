@@ -1,6 +1,6 @@
 package com.pravoos.ai.core.internal.model.entity;
 
-import com.pravoos.ai.model.dto.SourceReference;
+import com.pravoos.ai.core.api.SourceReference;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;

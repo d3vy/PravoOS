@@ -1,7 +1,7 @@
 package com.pravoos.ai.practice.internal.repository.jpa;
 
 import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

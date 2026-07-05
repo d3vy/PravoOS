@@ -1,9 +1,9 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.service.OutboxEventService;
-import com.pravoos.ai.arbitr.ArbitrCaseData;
-import com.pravoos.ai.arbitr.ArbitrCaseProvider;
-import com.pravoos.ai.event.CaseHearingUpdatedKafkaPayload;
+import com.pravoos.ai.shared.service.OutboxEventService;
+import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
+import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
+import com.pravoos.ai.shared.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
