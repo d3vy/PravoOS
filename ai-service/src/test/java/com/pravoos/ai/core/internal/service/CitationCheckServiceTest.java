@@ -14,8 +14,8 @@ import com.pravoos.ai.core.internal.dto.CitationCheckResult;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
 import com.pravoos.ai.shared.model.enums.CitationType;
+import com.pravoos.ai.core.api.DocumentAccess;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
-import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 class CitationCheckServiceTest {
 
     @Mock private ArbitrCaseProvider arbitrCaseProvider;
-    @Mock private DocumentChunkRepository documentChunkRepository;
+    @Mock private DocumentAccess documentAccess;
     @Mock private AiResponseRepository aiResponseRepository;
 
     private CitationCheckService service;
@@ -45,7 +45,7 @@ class CitationCheckServiceTest {
     @BeforeEach
     void setUp() {
         CitationExtractor extractor = new CitationExtractor(new LegalActRegistry());
-        service = new CitationCheckService(extractor, arbitrCaseProvider, documentChunkRepository,
+        service = new CitationCheckService(extractor, arbitrCaseProvider, documentAccess,
                 aiResponseRepository, new CitationCheckProperties(100, 25));
     }
 
@@ -86,7 +86,7 @@ class CitationCheckServiceTest {
 
     @Test
     void verifiesStatuteGroundedInKnowledgeBase() {
-        when(documentChunkRepository.existsInKnowledgeBaseByContent(anyString())).thenReturn(true);
+        when(documentAccess.knowledgeBaseMentions(anyString())).thenReturn(true);
 
         CitationCheckResult result = service.check("Согласно ст. 61.2 Закона о банкротстве.", UUID.randomUUID());
 
@@ -98,7 +98,7 @@ class CitationCheckServiceTest {
 
     @Test
     void marksStatuteUnverifiedWhenNotGrounded() {
-        when(documentChunkRepository.existsInKnowledgeBaseByContent(anyString())).thenReturn(false);
+        when(documentAccess.knowledgeBaseMentions(anyString())).thenReturn(false);
 
         CitationCheckResult result = service.check("Нарушена ст. 42 некоего акта.", UUID.randomUUID());
 

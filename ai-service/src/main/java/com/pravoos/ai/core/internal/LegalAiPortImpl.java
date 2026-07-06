@@ -9,7 +9,6 @@ import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.core.api.DocumentRetrieval;
 import com.pravoos.ai.core.api.RetrievedChunk;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
-import com.pravoos.ai.core.internal.service.EmbeddingService;
 import com.pravoos.ai.core.internal.service.FollowUpParser;
 import com.pravoos.ai.core.internal.service.LlmQuotaService;
 import com.pravoos.ai.core.internal.service.RagService;
@@ -25,7 +24,6 @@ public class LegalAiPortImpl implements LegalAiPort {
 
     private static final int FRAGMENT_MAX_LENGTH = 300;
 
-    private final EmbeddingService embeddingService;
     private final DocumentRetrieval documentRetrieval;
     private final RagService ragService;
     private final LlmClient llmClient;
@@ -33,14 +31,12 @@ public class LegalAiPortImpl implements LegalAiPort {
     private final DocumentProperties documentProperties;
     private final AiResponseRepository aiResponseRepository;
 
-    public LegalAiPortImpl(EmbeddingService embeddingService,
-                           DocumentRetrieval documentRetrieval,
+    public LegalAiPortImpl(DocumentRetrieval documentRetrieval,
                            RagService ragService,
                            LlmClient llmClient,
                            LlmQuotaService llmQuotaService,
                            DocumentProperties documentProperties,
                            AiResponseRepository aiResponseRepository) {
-        this.embeddingService = embeddingService;
         this.documentRetrieval = documentRetrieval;
         this.ragService = ragService;
         this.llmClient = llmClient;
@@ -56,7 +52,7 @@ public class LegalAiPortImpl implements LegalAiPort {
 
     @Override
     public float[] embed(String text) {
-        return embeddingService.embed(text);
+        return llmClient.embed(text);
     }
 
     @Override

@@ -7,8 +7,8 @@ import com.pravoos.ai.core.internal.dto.CitationCheck;
 import com.pravoos.ai.core.internal.dto.CitationCheckResult;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
+import com.pravoos.ai.core.api.DocumentAccess;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
-import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.core.internal.service.CitationExtractor.ExtractedCitation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,18 +26,18 @@ public class CitationCheckService {
 
     private final CitationExtractor citationExtractor;
     private final ArbitrCaseProvider arbitrCaseProvider;
-    private final DocumentChunkRepository documentChunkRepository;
+    private final DocumentAccess documentAccess;
     private final AiResponseRepository aiResponseRepository;
     private final CitationCheckProperties properties;
 
     public CitationCheckService(CitationExtractor citationExtractor,
                                 ArbitrCaseProvider arbitrCaseProvider,
-                                DocumentChunkRepository documentChunkRepository,
+                                DocumentAccess documentAccess,
                                 AiResponseRepository aiResponseRepository,
                                 CitationCheckProperties properties) {
         this.citationExtractor = citationExtractor;
         this.arbitrCaseProvider = arbitrCaseProvider;
-        this.documentChunkRepository = documentChunkRepository;
+        this.documentAccess = documentAccess;
         this.aiResponseRepository = aiResponseRepository;
         this.properties = properties;
     }
@@ -102,8 +102,7 @@ public class CitationCheckService {
     private CitationCheck checkStatute(ExtractedCitation citation) {
         String normalized = "ст. " + citation.core()
                 + (citation.actCanonical() != null ? " — " + citation.actCanonical() : "");
-        boolean grounded = documentChunkRepository.existsInKnowledgeBaseByContent(
-                "%" + escapeLike(citation.core()) + "%");
+        boolean grounded = documentAccess.knowledgeBaseMentions(citation.core());
         if (grounded) {
             String detail = citation.actCanonical() != null
                     ? "Норма упоминается в базе знаний; акт распознан"
@@ -121,7 +120,4 @@ public class CitationCheckService {
         return new CitationCheck(citation.raw(), citation.type(), normalized, status, detail);
     }
 
-    private String escapeLike(String value) {
-        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
-    }
 }

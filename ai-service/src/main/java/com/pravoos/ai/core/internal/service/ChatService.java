@@ -9,13 +9,10 @@ import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmMessage;
 import com.pravoos.ai.core.api.*;
 import com.pravoos.ai.core.internal.dto.*;
-import com.pravoos.ai.core.internal.model.entity.Document;
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.model.mongo.Message;
 import com.pravoos.ai.core.api.CaseAccessProvider;
-import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
-import com.pravoos.ai.core.internal.repository.jpa.DocumentRepository;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
 import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import com.pravoos.ai.shared.util.PageRequests;
@@ -38,8 +35,7 @@ public class ChatService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final DocumentRetrieval documentRetrieval;
-    private final DocumentChunkRepository documentChunkRepository;
-    private final DocumentRepository documentRepository;
+    private final DocumentAccess documentAccess;
     private final CaseAccessProvider caseAccessProvider;
     private final RagService ragService;
     private final LlmClient llmClient;
@@ -51,8 +47,7 @@ public class ChatService {
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
                        DocumentRetrieval documentRetrieval,
-                       DocumentChunkRepository documentChunkRepository,
-                       DocumentRepository documentRepository,
+                       DocumentAccess documentAccess,
                        CaseAccessProvider caseAccessProvider,
                        RagService ragService,
                        LlmClient llmClient,
@@ -63,8 +58,7 @@ public class ChatService {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.documentRetrieval = documentRetrieval;
-        this.documentChunkRepository = documentChunkRepository;
-        this.documentRepository = documentRepository;
+        this.documentAccess = documentAccess;
         this.caseAccessProvider = caseAccessProvider;
         this.ragService = ragService;
         this.llmClient = llmClient;
@@ -84,11 +78,11 @@ public class ChatService {
         log.info("Chat request received: conversation={}, lawyer={}",
                 isNewConversation ? "new" : conversation.getId(), lawyerId);
 
-        List<Document> attachedDocuments = loadOwnedAttachedDocuments(request.attachedDocumentIds(), lawyerId);
+        List<DocumentRef> attachedDocuments = loadOwnedAttachedDocuments(request.attachedDocumentIds(), lawyerId);
         List<String> attachedChunks = attachedDocuments.isEmpty()
                 ? List.of()
-                : documentChunkRepository.findContentByDocumentIdIn(
-                        attachedDocuments.stream().map(Document::getId).collect(Collectors.toSet()));
+                : documentAccess.chunkContentsForDocuments(
+                        attachedDocuments.stream().map(DocumentRef::id).toList());
 
         List<LlmMessage> historyForLlm = isNewConversation
                 ? List.of()
@@ -106,7 +100,7 @@ public class ChatService {
         relevantChunks.addAll(0, attachedChunks);
 
         attachedDocuments.stream()
-                .map(Document::getTitle)
+                .map(DocumentRef::title)
                 .filter(title -> title != null && !title.isBlank())
                 .filter(title -> !sources.contains(title))
                 .forEach(sources::add);
@@ -129,23 +123,23 @@ public class ChatService {
         return new ChatResponse(conversation.getId(), parsed.answer(), sources, parsed.followUps());
     }
 
-    private List<Document> loadOwnedAttachedDocuments(List<UUID> attachedDocumentIds, UUID lawyerId) {
+    private List<DocumentRef> loadOwnedAttachedDocuments(List<UUID> attachedDocumentIds, UUID lawyerId) {
         if (attachedDocumentIds == null || attachedDocumentIds.isEmpty()) {
             return List.of();
         }
         Set<UUID> requestedIds = new HashSet<>(attachedDocumentIds);
-        List<Document> documents = documentRepository.findAllById(requestedIds);
+        List<DocumentRef> documents = documentAccess.findByIds(requestedIds);
         if (documents.size() != requestedIds.size()) {
             throw new DocumentNotFoundException(firstMissing(requestedIds, documents));
         }
 
         Set<UUID> caseIds = documents.stream()
-                .map(Document::getCaseId)
+                .map(DocumentRef::caseId)
                 .collect(Collectors.toSet());
         if (caseIds.contains(null)) {
             UUID offending = documents.stream()
-                    .filter(document -> document.getCaseId() == null)
-                    .map(Document::getId)
+                    .filter(document -> document.caseId() == null)
+                    .map(DocumentRef::id)
                     .findFirst()
                     .orElseThrow();
             log.warn("Lawyer {} attempted to attach non-case document {}", lawyerId, offending);
@@ -153,18 +147,18 @@ public class ChatService {
         }
 
         Set<UUID> ownedCaseIds = caseAccessProvider.retainCasesOwnedBy(caseIds, lawyerId);
-        for (Document document : documents) {
-            if (!ownedCaseIds.contains(document.getCaseId())) {
-                log.warn("Lawyer {} attempted to attach document {} owned by another user", lawyerId, document.getId());
-                throw new DocumentNotFoundException(document.getId());
+        for (DocumentRef document : documents) {
+            if (!ownedCaseIds.contains(document.caseId())) {
+                log.warn("Lawyer {} attempted to attach document {} owned by another user", lawyerId, document.id());
+                throw new DocumentNotFoundException(document.id());
             }
         }
 
         return documents;
     }
 
-    private UUID firstMissing(Set<UUID> requestedIds, List<Document> documents) {
-        Set<UUID> foundIds = documents.stream().map(Document::getId).collect(Collectors.toSet());
+    private UUID firstMissing(Set<UUID> requestedIds, List<DocumentRef> documents) {
+        Set<UUID> foundIds = documents.stream().map(DocumentRef::id).collect(Collectors.toSet());
         return requestedIds.stream()
                 .filter(id -> !foundIds.contains(id))
                 .findFirst()
