@@ -13,8 +13,6 @@ import com.pravoos.ai.core.internal.model.entity.Document;
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.model.mongo.Message;
-import com.pravoos.ai.core.internal.repository.ChunkMatch;
-import com.pravoos.ai.core.internal.repository.VectorSearchRepository;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.core.internal.repository.jpa.DocumentRepository;
@@ -39,11 +37,10 @@ public class ChatService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
-    private final VectorSearchRepository vectorSearchRepository;
+    private final DocumentRetrieval documentRetrieval;
     private final DocumentChunkRepository documentChunkRepository;
     private final DocumentRepository documentRepository;
     private final CaseAccessProvider caseAccessProvider;
-    private final EmbeddingService embeddingService;
     private final RagService ragService;
     private final LlmClient llmClient;
     private final DocumentProperties documentProperties;
@@ -53,11 +50,10 @@ public class ChatService {
 
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
-                       VectorSearchRepository vectorSearchRepository,
+                       DocumentRetrieval documentRetrieval,
                        DocumentChunkRepository documentChunkRepository,
                        DocumentRepository documentRepository,
                        CaseAccessProvider caseAccessProvider,
-                       EmbeddingService embeddingService,
                        RagService ragService,
                        LlmClient llmClient,
                        DocumentProperties documentProperties,
@@ -66,11 +62,10 @@ public class ChatService {
                        @Value("${llm.history-max-chars:12000}") int historyMaxChars) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
-        this.vectorSearchRepository = vectorSearchRepository;
+        this.documentRetrieval = documentRetrieval;
         this.documentChunkRepository = documentChunkRepository;
         this.documentRepository = documentRepository;
         this.caseAccessProvider = caseAccessProvider;
-        this.embeddingService = embeddingService;
         this.ragService = ragService;
         this.llmClient = llmClient;
         this.documentProperties = documentProperties;
@@ -99,13 +94,12 @@ public class ChatService {
                 ? List.of()
                 : buildLlmHistory(messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId()));
 
-        float[] queryEmbedding = embeddingService.embed(request.message());
-        List<ChunkMatch> matches = vectorSearchRepository
-                .findTopKInKnowledgeBase(queryEmbedding, documentProperties.topKResults());
+        List<RetrievedChunk> matches = documentRetrieval
+                .retrieveKnowledgeBase(request.message(), documentProperties.topKResults());
 
-        List<String> relevantChunks = new ArrayList<>(matches.stream().map(ChunkMatch::content).toList());
+        List<String> relevantChunks = new ArrayList<>(matches.stream().map(RetrievedChunk::content).toList());
         List<String> sources = new ArrayList<>(matches.stream()
-                .map(ChunkMatch::documentTitle)
+                .map(RetrievedChunk::documentTitle)
                 .filter(title -> title != null && !title.isBlank())
                 .distinct()
                 .toList());

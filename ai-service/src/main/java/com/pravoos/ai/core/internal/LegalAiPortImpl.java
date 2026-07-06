@@ -6,8 +6,8 @@ import com.pravoos.ai.core.api.LegalAiPort;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
-import com.pravoos.ai.core.internal.repository.ChunkMatch;
-import com.pravoos.ai.core.internal.repository.VectorSearchRepository;
+import com.pravoos.ai.core.api.DocumentRetrieval;
+import com.pravoos.ai.core.api.RetrievedChunk;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.core.internal.service.EmbeddingService;
 import com.pravoos.ai.core.internal.service.FollowUpParser;
@@ -26,7 +26,7 @@ public class LegalAiPortImpl implements LegalAiPort {
     private static final int FRAGMENT_MAX_LENGTH = 300;
 
     private final EmbeddingService embeddingService;
-    private final VectorSearchRepository vectorSearchRepository;
+    private final DocumentRetrieval documentRetrieval;
     private final RagService ragService;
     private final LlmClient llmClient;
     private final LlmQuotaService llmQuotaService;
@@ -34,14 +34,14 @@ public class LegalAiPortImpl implements LegalAiPort {
     private final AiResponseRepository aiResponseRepository;
 
     public LegalAiPortImpl(EmbeddingService embeddingService,
-                           VectorSearchRepository vectorSearchRepository,
+                           DocumentRetrieval documentRetrieval,
                            RagService ragService,
                            LlmClient llmClient,
                            LlmQuotaService llmQuotaService,
                            DocumentProperties documentProperties,
                            AiResponseRepository aiResponseRepository) {
         this.embeddingService = embeddingService;
-        this.vectorSearchRepository = vectorSearchRepository;
+        this.documentRetrieval = documentRetrieval;
         this.ragService = ragService;
         this.llmClient = llmClient;
         this.llmQuotaService = llmQuotaService;
@@ -61,10 +61,9 @@ public class LegalAiPortImpl implements LegalAiPort {
 
     @Override
     public LegalAiAnswer answerForCase(UUID caseId, String instruction, String userMessage, UUID lawyerId) {
-        float[] embedding = embeddingService.embed(instruction);
-        List<ChunkMatch> matches = vectorSearchRepository
-                .findTopKForCase(embedding, documentProperties.topKResults(), caseId);
-        List<String> chunks = matches.stream().map(ChunkMatch::content).toList();
+        List<RetrievedChunk> matches = documentRetrieval
+                .retrieveForCase(instruction, documentProperties.topKResults(), caseId);
+        List<String> chunks = matches.stream().map(RetrievedChunk::content).toList();
         String systemPrompt = ragService.buildWorkflowPrompt(instruction, chunks);
         LlmResult completion = llmClient.complete(systemPrompt, List.of(), userMessage);
         llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
@@ -74,11 +73,10 @@ public class LegalAiPortImpl implements LegalAiPort {
     @Override
     public AiResponseDto runCaseWorkflow(UUID caseId, UUID lawyerId, String workflowId,
                                          String query, String instruction) {
-        float[] embedding = embeddingService.embed(instruction);
-        List<ChunkMatch> matches = vectorSearchRepository
-                .findTopKForCase(embedding, documentProperties.topKResults(), caseId);
+        List<RetrievedChunk> matches = documentRetrieval
+                .retrieveForCase(instruction, documentProperties.topKResults(), caseId);
 
-        List<String> chunks = matches.stream().map(ChunkMatch::content).toList();
+        List<String> chunks = matches.stream().map(RetrievedChunk::content).toList();
         List<SourceReference> sources = toSourceReferences(matches);
 
         String systemPrompt = ragService.buildWorkflowPrompt(instruction, chunks);
@@ -97,7 +95,7 @@ public class LegalAiPortImpl implements LegalAiPort {
         return AiResponseDto.from(saved, parsed.followUps());
     }
 
-    private List<SourceReference> toSourceReferences(List<ChunkMatch> matches) {
+    private List<SourceReference> toSourceReferences(List<RetrievedChunk> matches) {
         return matches.stream()
                 .map(match -> new SourceReference(match.documentTitle(), truncate(match.content())))
                 .toList();
