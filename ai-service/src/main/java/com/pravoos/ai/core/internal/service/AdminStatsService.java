@@ -3,8 +3,8 @@ package com.pravoos.ai.core.internal.service;
 import com.pravoos.ai.core.api.AiResponseDto;
 import com.pravoos.ai.core.internal.dto.AiStatsResponse;
 import com.pravoos.ai.core.internal.dto.WorkflowStat;
-import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

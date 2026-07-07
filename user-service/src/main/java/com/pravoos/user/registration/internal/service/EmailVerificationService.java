@@ -1,13 +1,13 @@
 package com.pravoos.user.registration.internal.service;
-import com.pravoos.user.shared.service.EmailRateLimiter;
 
-import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.registration.internal.event.VerificationEmailRequestedEvent;
-import com.pravoos.user.shared.exception.InvalidVerificationTokenException;
 import com.pravoos.user.registration.internal.model.entity.LawyerApplication;
 import com.pravoos.user.registration.internal.model.enums.ApplicationStatus;
 import com.pravoos.user.registration.internal.repository.LawyerApplicationRepository;
+import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.shared.exception.InvalidVerificationTokenException;
 import com.pravoos.user.shared.security.TokenHasher;
+import com.pravoos.user.shared.service.EmailRateLimiter;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;

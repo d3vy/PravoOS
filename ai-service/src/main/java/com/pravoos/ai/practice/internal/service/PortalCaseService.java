@@ -1,12 +1,12 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.practice.internal.dto.CaseHearingEventResponse;
 import com.pravoos.ai.practice.internal.dto.PortalCaseDetailResponse;
 import com.pravoos.ai.practice.internal.dto.PortalCaseResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

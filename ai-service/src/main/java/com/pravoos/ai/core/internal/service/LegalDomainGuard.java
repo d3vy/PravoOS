@@ -1,11 +1,11 @@
 package com.pravoos.ai.core.internal.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.pravoos.ai.llm.api.LlmMessage;
 import com.pravoos.ai.shared.config.OpenAiProperties;
 import com.pravoos.ai.shared.exception.NonLegalQueryException;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.pravoos.ai.llm.api.LlmMessage;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;

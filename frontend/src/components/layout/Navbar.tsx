@@ -62,7 +62,7 @@ export function Navbar(): JSX.Element {
     >
       <div className="page-container">
         <nav className="flex items-center justify-between h-16">
-          <Link to="/" className="hover:opacity-80 transition-opacity">
+          <Link to={authenticated ? dashboardPath : '/'} className="hover:opacity-80 transition-opacity">
             <Logo />
           </Link>
 

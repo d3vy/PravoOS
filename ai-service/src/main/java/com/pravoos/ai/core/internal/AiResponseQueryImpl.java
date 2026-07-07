@@ -1,9 +1,9 @@
 package com.pravoos.ai.core.internal;
 
+import com.pravoos.ai.core.api.AiResponseDto;
 import com.pravoos.ai.core.api.AiResponseQuery;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.core.internal.service.AiResponseService;
-import com.pravoos.ai.core.api.AiResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

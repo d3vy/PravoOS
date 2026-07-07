@@ -1,26 +1,26 @@
 package com.pravoos.user.service;
-import com.pravoos.user.collaboration.internal.service.ClientPortalInviteService;
 
-import com.pravoos.user.identity.api.TokenDenylistService;
-import com.pravoos.user.shared.service.EmailRateLimiter;
-import com.pravoos.user.identity.api.PasswordPolicyService;
+import com.pravoos.user.collaboration.internal.dto.CreatePortalInviteRequest;
+import com.pravoos.user.collaboration.internal.dto.PortalInvitePreviewResponse;
+import com.pravoos.user.collaboration.internal.dto.PortalInviteStatusResponse;
 import com.pravoos.user.collaboration.internal.event.ClientPortalInviteCreatedEvent;
+import com.pravoos.user.collaboration.internal.model.entity.ClientPortalInvite;
+import com.pravoos.user.collaboration.internal.model.enums.InviteStatus;
+import com.pravoos.user.collaboration.internal.model.enums.PortalAccessStatus;
+import com.pravoos.user.collaboration.internal.repository.ClientPortalInviteRepository;
+import com.pravoos.user.collaboration.internal.service.ClientPortalInviteService;
+import com.pravoos.user.identity.api.PasswordPolicyService;
+import com.pravoos.user.identity.api.TokenDenylistService;
+import com.pravoos.user.identity.model.entity.User;
+import com.pravoos.user.identity.model.enums.UserRole;
+import com.pravoos.user.identity.model.enums.UserStatus;
+import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.shared.exception.InvalidCredentialsException;
 import com.pravoos.user.shared.exception.InvalidInviteException;
 import com.pravoos.user.shared.exception.PortalAccountConflictException;
 import com.pravoos.user.shared.exception.TooManyRequestsException;
-import com.pravoos.user.collaboration.internal.dto.CreatePortalInviteRequest;
-import com.pravoos.user.collaboration.internal.dto.PortalInvitePreviewResponse;
-import com.pravoos.user.collaboration.internal.dto.PortalInviteStatusResponse;
-import com.pravoos.user.collaboration.internal.model.entity.ClientPortalInvite;
-import com.pravoos.user.identity.model.entity.User;
-import com.pravoos.user.collaboration.internal.model.enums.InviteStatus;
-import com.pravoos.user.collaboration.internal.model.enums.PortalAccessStatus;
-import com.pravoos.user.identity.model.enums.UserRole;
-import com.pravoos.user.identity.model.enums.UserStatus;
-import com.pravoos.user.collaboration.internal.repository.ClientPortalInviteRepository;
-import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.shared.security.TokenHasher;
+import com.pravoos.user.shared.service.EmailRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,9 +39,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ClientPortalInviteServiceTest {

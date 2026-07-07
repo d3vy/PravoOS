@@ -1,7 +1,7 @@
 package com.pravoos.user.identity.internal.email;
 
-import com.pravoos.user.shared.email.ResendEmailClient;
 import com.pravoos.user.identity.internal.event.NewLoginEvent;
+import com.pravoos.user.shared.email.ResendEmailClient;
 import com.pravoos.user.shared.util.EmailMasker;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

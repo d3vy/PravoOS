@@ -1,19 +1,19 @@
 package com.pravoos.ai.core.internal;
 
-import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.core.api.AiResponseDto;
 import com.pravoos.ai.core.api.LegalAiAnswer;
 import com.pravoos.ai.core.api.LegalAiPort;
-import com.pravoos.ai.llm.api.LlmClient;
-import com.pravoos.ai.llm.api.LlmResult;
+import com.pravoos.ai.core.api.SourceReference;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
-import com.pravoos.ai.document.api.DocumentRetrieval;
-import com.pravoos.ai.document.api.RetrievedChunk;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.core.internal.service.FollowUpParser;
-import com.pravoos.ai.shared.service.LlmQuotaService;
 import com.pravoos.ai.core.internal.service.RagService;
-import com.pravoos.ai.core.api.AiResponseDto;
-import com.pravoos.ai.core.api.SourceReference;
+import com.pravoos.ai.document.api.DocumentRetrieval;
+import com.pravoos.ai.document.api.RetrievedChunk;
+import com.pravoos.ai.llm.api.LlmClient;
+import com.pravoos.ai.llm.api.LlmResult;
+import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.shared.service.LlmQuotaService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

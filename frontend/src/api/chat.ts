@@ -1,6 +1,98 @@
-import apiClient from './client'
+import apiClient, { refreshSession } from './client'
 import { MAX_PAGE_SIZE } from './pagination'
+import { useAuthStore } from '../store/authStore'
 import type { ChatRequest, ChatResponse, ConversationResponse, MessageResponse, RateRequest } from '../types'
+
+const baseURL = import.meta.env.VITE_API_URL || ''
+const GENERIC_STREAM_ERROR = 'Произошла ошибка при обработке запроса. Попробуйте ещё раз.'
+
+export interface ChatStreamCallbacks {
+  onToken: (token: string) => void
+  onDone: (data: ChatResponse) => void
+  onError: (message: string) => void
+}
+
+export async function streamMessage(data: ChatRequest, callbacks: ChatStreamCallbacks): Promise<void> {
+  try {
+    await runStream(data, callbacks, false)
+  } catch {
+    callbacks.onError(GENERIC_STREAM_ERROR)
+  }
+}
+
+async function runStream(data: ChatRequest, callbacks: ChatStreamCallbacks, isRetry: boolean): Promise<void> {
+  const token = useAuthStore.getState().accessToken
+  const response = await fetch(`${baseURL}/api/ai/chat/stream`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (response.status === 401 && !isRetry) {
+    await refreshSession()
+    await runStream(data, callbacks, true)
+    return
+  }
+
+  if (!response.ok || !response.body) {
+    callbacks.onError(await extractErrorMessage(response))
+    return
+  }
+
+  await consumeEventStream(response.body, callbacks)
+}
+
+async function extractErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = await response.json()
+    if (body && typeof body.message === 'string') return body.message
+  } catch {
+    /* non-JSON body */
+  }
+  return GENERIC_STREAM_ERROR
+}
+
+async function consumeEventStream(body: ReadableStream<Uint8Array>, callbacks: ChatStreamCallbacks): Promise<void> {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    let separatorIdx: number
+    while ((separatorIdx = buffer.indexOf('\n\n')) !== -1) {
+      const rawEvent = buffer.slice(0, separatorIdx)
+      buffer = buffer.slice(separatorIdx + 2)
+      dispatchEvent(rawEvent, callbacks)
+    }
+  }
+}
+
+function dispatchEvent(rawEvent: string, callbacks: ChatStreamCallbacks): void {
+  let eventName = 'message'
+  const dataLines: string[] = []
+  for (const line of rawEvent.split('\n')) {
+    if (line.startsWith('event:')) eventName = line.slice('event:'.length).trim()
+    else if (line.startsWith('data:')) dataLines.push(line.slice('data:'.length).replace(/^ /, ''))
+  }
+  if (dataLines.length === 0) return
+
+  const payload = dataLines.join('\n')
+  try {
+    if (eventName === 'token') callbacks.onToken((JSON.parse(payload) as { content: string }).content)
+    else if (eventName === 'done') callbacks.onDone(JSON.parse(payload) as ChatResponse)
+    else if (eventName === 'error') callbacks.onError((JSON.parse(payload) as { message: string }).message)
+  } catch {
+    callbacks.onError(GENERIC_STREAM_ERROR)
+  }
+}
 
 export const chatApi = {
   sendMessage: async (data: ChatRequest): Promise<ChatResponse> => {

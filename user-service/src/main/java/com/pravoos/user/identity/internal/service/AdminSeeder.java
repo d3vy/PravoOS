@@ -1,10 +1,10 @@
 package com.pravoos.user.identity.internal.service;
 
-import com.pravoos.user.shared.config.AdminProperties;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.shared.config.AdminProperties;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
 import org.slf4j.Logger;

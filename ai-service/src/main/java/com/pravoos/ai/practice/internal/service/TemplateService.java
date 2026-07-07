@@ -1,6 +1,5 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.exception.TemplateNotFoundException;
 import com.pravoos.ai.practice.internal.dto.CaseDraftDto;
 import com.pravoos.ai.practice.internal.dto.CreateTemplateRequest;
 import com.pravoos.ai.practice.internal.dto.TemplateResponse;
@@ -13,6 +12,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.DocumentTemplateRepository;
 import com.pravoos.ai.practice.internal.util.TemplatePlaceholderResolver;
+import com.pravoos.ai.shared.exception.TemplateNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

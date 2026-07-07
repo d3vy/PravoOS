@@ -2,16 +2,15 @@ package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.document.api.DocumentCommand;
 import com.pravoos.ai.document.api.DocumentQuery;
-
-import com.pravoos.ai.shared.client.UserServiceClient;
-import com.pravoos.ai.shared.exception.CaseNotFoundException;
-import com.pravoos.ai.shared.exception.OrganizationAccessException;
 import com.pravoos.ai.practice.internal.dto.CaseResponse;
 import com.pravoos.ai.practice.internal.dto.CreateCaseRequest;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
+import com.pravoos.ai.shared.client.UserServiceClient;
+import com.pravoos.ai.shared.exception.CaseNotFoundException;
+import com.pravoos.ai.shared.exception.OrganizationAccessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

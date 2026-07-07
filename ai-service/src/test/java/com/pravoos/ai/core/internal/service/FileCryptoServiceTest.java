@@ -1,7 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
 import com.pravoos.ai.document.internal.service.FileCryptoService;
-
 import com.pravoos.ai.shared.config.FileCryptoProperties;
 import com.pravoos.ai.shared.exception.DocumentProcessingException;
 import org.junit.jupiter.api.Test;

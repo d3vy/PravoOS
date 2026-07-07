@@ -1,12 +1,7 @@
 package com.pravoos.user.registration.internal.controller;
 
 import com.pravoos.user.identity.api.PasswordPolicyService;
-import com.pravoos.user.registration.internal.dto.ApplicationResponse;
-import com.pravoos.user.registration.internal.dto.ApplicationSubmissionResponse;
-import com.pravoos.user.registration.internal.dto.ApplyRequest;
-import com.pravoos.user.registration.internal.dto.ResendVerificationRequest;
-import com.pravoos.user.registration.internal.dto.UpdateApplicationRequest;
-import com.pravoos.user.registration.internal.dto.VerifyEmailRequest;
+import com.pravoos.user.registration.internal.dto.*;
 import com.pravoos.user.registration.internal.service.ApplicationService;
 import com.pravoos.user.registration.internal.service.EmailVerificationService;
 import com.pravoos.user.shared.exception.TooManyRequestsException;
@@ -18,13 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.util.Map;

@@ -1,16 +1,16 @@
 package com.pravoos.user.identity.internal.service;
 
 import com.pravoos.user.identity.internal.config.MfaProperties;
-import com.pravoos.user.shared.exception.MfaException;
-import com.pravoos.user.shared.exception.ProfileNotFoundException;
 import com.pravoos.user.identity.internal.dto.MfaSetupResponse;
 import com.pravoos.user.identity.internal.dto.MfaStatusResponse;
-import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.internal.model.entity.UserMfa;
-import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.internal.repository.UserMfaRepository;
-import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.identity.internal.security.TotpGenerator;
+import com.pravoos.user.identity.model.entity.User;
+import com.pravoos.user.identity.model.enums.UserRole;
+import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.shared.exception.MfaException;
+import com.pravoos.user.shared.exception.ProfileNotFoundException;
 import com.pravoos.user.shared.util.EmailMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,7 +1,5 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.core.internal.service.RagService;
-
 import com.pravoos.ai.shared.config.DocumentProperties;
 import org.junit.jupiter.api.Test;
 

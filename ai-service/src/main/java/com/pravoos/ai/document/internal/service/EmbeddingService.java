@@ -1,10 +1,10 @@
 package com.pravoos.ai.document.internal.service;
 
-import com.pravoos.ai.shared.config.OpenAiProperties;
-import com.pravoos.ai.shared.exception.LlmException;
+import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
 import com.pravoos.ai.llm.api.EmbeddingResult;
 import com.pravoos.ai.llm.api.LlmClient;
-import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
+import com.pravoos.ai.shared.config.OpenAiProperties;
+import com.pravoos.ai.shared.exception.LlmException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

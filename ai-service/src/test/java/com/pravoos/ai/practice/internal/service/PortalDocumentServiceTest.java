@@ -1,15 +1,14 @@
 package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.document.api.DocumentCommand;
-import com.pravoos.ai.document.api.DocumentQuery;
-
-import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.document.api.DocumentContent;
+import com.pravoos.ai.document.api.DocumentQuery;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.shared.exception.CaseNotFoundException;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,9 +22,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PortalDocumentServiceTest {

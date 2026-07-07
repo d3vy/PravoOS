@@ -5,11 +5,10 @@ import {
   useCallback,
   type KeyboardEvent,
 } from 'react'
-import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { chatApi } from '../../api/chat'
+import { chatApi, streamMessage } from '../../api/chat'
 import { documentsApi } from '../../api/documents'
 import type { MessageResponse, ConversationResponse, DocumentResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
@@ -112,47 +111,6 @@ export default function ChatPage(): JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [attachPickerOpen])
 
-  const sendMessageMutation = useMutation({
-    mutationFn: chatApi.sendMessage,
-    onSuccess: (data) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.isStreaming
-            ? {
-                id: `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                role: 'ASSISTANT' as const,
-                content: data.answer,
-                sources: data.sources,
-                followUps: data.followUps ?? [],
-              }
-            : m
-        )
-      )
-      if (data.conversationId !== activeConversationId) {
-        skipNextHistorySyncRef.current = true
-        setActiveConversationId(data.conversationId)
-      }
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    },
-    onError: (error: unknown) => {
-      const backendMessage =
-        axios.isAxiosError(error) && typeof error.response?.data?.message === 'string'
-          ? (error.response.data.message as string)
-          : null
-      setMessages((prev) => [
-        ...prev.filter((m) => !m.isStreaming),
-        {
-          id: `error-${Date.now()}`,
-          role: 'ASSISTANT' as const,
-          content: backendMessage ?? 'Произошла ошибка при обработке запроса. Попробуйте ещё раз.',
-        },
-      ])
-    },
-    onSettled: () => {
-      setIsSending(false)
-    },
-  })
-
   const rateMutation = useMutation({
     mutationFn: ({ messageId, rating }: { messageId: string; rating: number }) =>
       chatApi.rateMessage(messageId, { rating }),
@@ -170,21 +128,56 @@ export default function ChatPage(): JSX.Element {
     setAttachPickerOpen(false)
 
     const baseId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const streamingId = `loading-${baseId}`
     setMessages((prev) => [
       ...prev,
       { id: `user-${baseId}`, role: 'USER', content: message },
-      { id: `loading-${baseId}`, role: 'ASSISTANT', content: '', isStreaming: true },
+      { id: streamingId, role: 'ASSISTANT', content: '', isStreaming: true },
     ])
 
-    sendMessageMutation.mutate({
-      conversationId: activeConversationId ?? undefined,
-      message,
-      attachedDocumentIds: attachedDocIds.length > 0 ? attachedDocIds : undefined,
-    })
-
+    const attachedDocumentIds = attachedDocIds.length > 0 ? attachedDocIds : undefined
     setAttachedDocIds([])
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-  }, [inputValue, isSending, activeConversationId, attachedDocIds, sendMessageMutation])
+
+    void streamMessage(
+      { conversationId: activeConversationId ?? undefined, message, attachedDocumentIds },
+      {
+        onToken: (token) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamingId ? { ...m, content: m.content + token } : m))
+          )
+        },
+        onDone: (data) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamingId
+                ? {
+                    id: `assistant-${baseId}`,
+                    role: 'ASSISTANT' as const,
+                    content: data.answer,
+                    sources: data.sources,
+                    followUps: data.followUps ?? [],
+                  }
+                : m
+            )
+          )
+          if (data.conversationId !== activeConversationId) {
+            skipNextHistorySyncRef.current = true
+            setActiveConversationId(data.conversationId)
+          }
+          queryClient.invalidateQueries({ queryKey: ['conversations'] })
+          setIsSending(false)
+        },
+        onError: (errorMessage) => {
+          setMessages((prev) => [
+            ...prev.filter((m) => m.id !== streamingId),
+            { id: `error-${Date.now()}`, role: 'ASSISTANT', content: errorMessage },
+          ])
+          setIsSending(false)
+        },
+      }
+    )
+  }, [inputValue, isSending, activeConversationId, attachedDocIds, queryClient])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -559,7 +552,14 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
               : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text dark:text-dark-text rounded-tl-sm'
           }`}
         >
-          {message.isStreaming ? <TypingDots /> : <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{message.content}</p>}
+          {message.isStreaming && !message.content ? (
+            <TypingDots />
+          ) : (
+            <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {message.content}
+              {message.isStreaming && <span className="ml-0.5 inline-block w-1.5 h-4 -mb-0.5 bg-current opacity-60 animate-pulse" />}
+            </p>
+          )}
         </div>
 
         {!message.isStreaming && message.sources && message.sources.length > 0 && (

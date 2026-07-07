@@ -1,15 +1,16 @@
 package com.pravoos.ai.core.internal.controller;
 
-import com.pravoos.ai.core.api.*;
-import com.pravoos.ai.document.api.*;
 import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.core.internal.service.ChatService;
 import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -28,6 +29,16 @@ public class ChatController {
             @Valid @RequestBody ChatRequest request,
             Authentication authentication) {
         return ResponseEntity.ok(chatService.chat(request, SecurityUtils.currentUserId(authentication)));
+    }
+
+    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStream(
+            @Valid @RequestBody ChatRequest request,
+            Authentication authentication,
+            HttpServletResponse response) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
+        return chatService.chatStream(request, SecurityUtils.currentUserId(authentication));
     }
 
     @GetMapping("/conversations")

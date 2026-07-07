@@ -1,11 +1,10 @@
 package com.pravoos.user.identity.internal.config;
 
-import com.pravoos.user.identity.internal.config.JwtProperties;
 import com.pravoos.common.security.JwtVerifier;
+import com.pravoos.user.identity.api.TokenDenylistService;
+import com.pravoos.user.identity.internal.security.JwtAuthenticationFilter;
 import com.pravoos.user.shared.security.InternalSecretFilter;
 import com.pravoos.user.shared.security.InternalSecretVerifier;
-import com.pravoos.user.identity.internal.security.JwtAuthenticationFilter;
-import com.pravoos.user.identity.api.TokenDenylistService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;

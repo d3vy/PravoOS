@@ -1,19 +1,18 @@
 package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.core.api.AiResponseQuery;
+import com.pravoos.ai.core.api.SourceReference;
 import com.pravoos.ai.document.api.DocumentQuery;
-
 import com.pravoos.ai.practice.internal.dto.CaseExportModel;
 import com.pravoos.ai.practice.internal.dto.CaseExportModel.*;
 import com.pravoos.ai.practice.internal.dto.ExportedFile;
-import com.pravoos.ai.core.api.SourceReference;
 import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.shared.model.enums.DocumentStatus;
-import com.pravoos.ai.shared.model.enums.DraftType;
-import com.pravoos.ai.shared.model.enums.ExportFormat;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
+import com.pravoos.ai.shared.model.enums.DocumentStatus;
+import com.pravoos.ai.shared.model.enums.DraftType;
+import com.pravoos.ai.shared.model.enums.ExportFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

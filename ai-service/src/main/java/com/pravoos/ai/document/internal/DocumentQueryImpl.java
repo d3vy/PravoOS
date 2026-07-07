@@ -1,8 +1,8 @@
 package com.pravoos.ai.document.internal;
 
 import com.pravoos.ai.document.api.DocumentQuery;
-import com.pravoos.ai.document.internal.service.DocumentService;
 import com.pravoos.ai.document.api.DocumentResponse;
+import com.pravoos.ai.document.internal.service.DocumentService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

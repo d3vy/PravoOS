@@ -1,16 +1,16 @@
 package com.pravoos.user.service;
-import com.pravoos.user.collaboration.internal.service.TelegramLinkService;
-import com.pravoos.user.collaboration.internal.service.CaseMessageNotificationService;
 
-import com.pravoos.user.shared.config.ResendProperties;
-import com.pravoos.user.shared.email.ResendEmailClient;
 import com.pravoos.user.collaboration.internal.dto.CaseMessageNotificationRequest;
 import com.pravoos.user.collaboration.internal.dto.CaseMessageNotificationResult;
+import com.pravoos.user.collaboration.internal.repository.ClientPortalInviteRepository;
+import com.pravoos.user.collaboration.internal.service.CaseMessageNotificationService;
+import com.pravoos.user.collaboration.internal.service.TelegramLinkService;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
-import com.pravoos.user.collaboration.internal.repository.ClientPortalInviteRepository;
 import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.shared.email.ResendEmailClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,12 +22,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CaseMessageNotificationServiceTest {

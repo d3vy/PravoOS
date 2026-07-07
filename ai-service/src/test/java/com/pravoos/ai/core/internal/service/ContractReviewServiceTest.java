@@ -2,19 +2,19 @@ package com.pravoos.ai.core.internal.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.api.CaseAccessProvider;
+import com.pravoos.ai.core.internal.dto.ContractReviewDto;
+import com.pravoos.ai.core.internal.model.entity.ContractReview;
+import com.pravoos.ai.core.internal.repository.jpa.ContractReviewRepository;
 import com.pravoos.ai.document.api.DocumentAccess;
-import com.pravoos.ai.shared.service.LlmQuotaService;
 import com.pravoos.ai.document.api.DocumentRef;
-import com.pravoos.ai.shared.config.ContractReviewProperties;
-import com.pravoos.ai.shared.exception.ContractReviewFailedException;
-import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
-import com.pravoos.ai.core.internal.dto.ContractReviewDto;
-import com.pravoos.ai.core.internal.model.entity.ContractReview;
+import com.pravoos.ai.shared.config.ContractReviewProperties;
+import com.pravoos.ai.shared.exception.ContractReviewFailedException;
+import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.model.enums.ContractRiskLevel;
-import com.pravoos.ai.core.internal.repository.jpa.ContractReviewRepository;
+import com.pravoos.ai.shared.service.LlmQuotaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,9 +26,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 

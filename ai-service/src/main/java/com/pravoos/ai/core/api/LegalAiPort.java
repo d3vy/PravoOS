@@ -1,7 +1,5 @@
 package com.pravoos.ai.core.api;
 
-import com.pravoos.ai.core.api.AiResponseDto;
-
 import java.util.UUID;
 
 public interface LegalAiPort {

@@ -1,19 +1,19 @@
 package com.pravoos.ai.document.internal.service;
 
-import com.pravoos.ai.shared.config.DocumentProperties;
-import com.pravoos.ai.document.internal.event.DocumentCreatedSpringEvent;
-import com.pravoos.ai.shared.exception.DocumentNotFoundException;
-import com.pravoos.ai.shared.exception.DocumentProcessingException;
-import com.pravoos.ai.shared.exception.StorageQuotaExceededException;
 import com.pravoos.ai.document.api.DocumentContent;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
+import com.pravoos.ai.document.internal.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
-import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import com.pravoos.ai.document.internal.pipeline.ChunkData;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
+import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.shared.exception.DocumentNotFoundException;
+import com.pravoos.ai.shared.exception.DocumentProcessingException;
+import com.pravoos.ai.shared.exception.StorageQuotaExceededException;
+import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import com.pravoos.ai.shared.util.PageRequests;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

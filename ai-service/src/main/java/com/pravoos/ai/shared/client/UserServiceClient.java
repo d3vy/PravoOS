@@ -1,9 +1,9 @@
 package com.pravoos.ai.shared.client;
 
 import com.pravoos.ai.shared.config.UserServiceProperties;
+import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.exception.OrgMembershipCheckException;
 import com.pravoos.ai.shared.exception.PortalInviteException;
-import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;

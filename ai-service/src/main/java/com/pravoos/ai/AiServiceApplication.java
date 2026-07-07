@@ -1,14 +1,6 @@
 package com.pravoos.ai;
 
-import com.pravoos.ai.shared.config.ArbitrProperties;
-import com.pravoos.ai.shared.config.CitationCheckProperties;
-import com.pravoos.ai.shared.config.ContractReviewProperties;
-import com.pravoos.ai.shared.config.DocumentProperties;
-import com.pravoos.ai.shared.config.FileCryptoProperties;
-import com.pravoos.ai.shared.config.JwtProperties;
-import com.pravoos.ai.shared.config.MalwareScanProperties;
-import com.pravoos.ai.shared.config.OpenAiProperties;
-import com.pravoos.ai.shared.config.UserServiceProperties;
+import com.pravoos.ai.shared.config.*;
 import com.pravoos.common.web.RequestIdFilter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

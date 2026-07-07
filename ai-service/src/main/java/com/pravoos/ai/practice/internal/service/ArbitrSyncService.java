@@ -1,13 +1,13 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.service.OutboxEventService;
-import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
-import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
-import com.pravoos.ai.shared.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
+import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
+import com.pravoos.ai.shared.event.CaseHearingUpdatedKafkaPayload;
+import com.pravoos.ai.shared.service.OutboxEventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;

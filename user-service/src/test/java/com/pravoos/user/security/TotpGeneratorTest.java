@@ -1,7 +1,7 @@
 package com.pravoos.user.security;
 
-import com.pravoos.user.identity.internal.security.TotpGenerator;
 import com.pravoos.user.identity.internal.security.Base32;
+import com.pravoos.user.identity.internal.security.TotpGenerator;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

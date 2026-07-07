@@ -1,7 +1,7 @@
 package com.pravoos.ai.core.internal.dto;
 
-import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.core.internal.model.mongo.Message;
+import com.pravoos.ai.shared.model.enums.MessageRole;
 
 import java.time.LocalDateTime;
 import java.util.List;

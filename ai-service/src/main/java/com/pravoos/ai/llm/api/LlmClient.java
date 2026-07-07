@@ -1,12 +1,14 @@
 package com.pravoos.ai.llm.api;
 
-import com.pravoos.ai.llm.api.LlmMessage;
-
 import java.util.List;
+import java.util.function.Consumer;
 
 public interface LlmClient {
 
     LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage);
+
+    LlmUsage streamComplete(String systemPrompt, List<LlmMessage> history, String userMessage,
+                            Consumer<String> tokenConsumer);
 
     float[] embed(String text);
 

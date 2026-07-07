@@ -1,12 +1,12 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.service.OutboxEventService;
-import com.pravoos.ai.shared.event.CaseDeadlineKafkaPayload;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseDeadlineReminder;
-import com.pravoos.ai.shared.model.enums.DeadlineType;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseDeadlineReminderRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.shared.event.CaseDeadlineKafkaPayload;
+import com.pravoos.ai.shared.model.enums.DeadlineType;
+import com.pravoos.ai.shared.service.OutboxEventService;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

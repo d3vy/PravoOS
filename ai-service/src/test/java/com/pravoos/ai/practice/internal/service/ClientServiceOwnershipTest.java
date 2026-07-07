@@ -1,10 +1,10 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.client.UserServiceClient;
-import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
+import com.pravoos.ai.shared.client.UserServiceClient;
+import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

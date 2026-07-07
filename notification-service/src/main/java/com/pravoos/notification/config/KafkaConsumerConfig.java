@@ -1,10 +1,6 @@
 package com.pravoos.notification.config;
 
-import com.pravoos.notification.event.ApplicationSubmittedEvent;
-import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
-import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
-import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
-import com.pravoos.notification.event.NewLoginKafkaPayload;
+import com.pravoos.notification.event.*;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;

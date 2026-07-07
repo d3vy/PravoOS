@@ -1,10 +1,10 @@
 package com.pravoos.user.collaboration.internal.service;
 
-import com.pravoos.user.shared.exception.NotOrganizationMemberException;
-import com.pravoos.user.shared.exception.OrganizationAccessDeniedException;
 import com.pravoos.user.collaboration.internal.model.entity.OrganizationMembership;
 import com.pravoos.user.collaboration.internal.model.enums.OrgRole;
 import com.pravoos.user.collaboration.internal.repository.OrganizationMembershipRepository;
+import com.pravoos.user.shared.exception.NotOrganizationMemberException;
+import com.pravoos.user.shared.exception.OrganizationAccessDeniedException;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;

@@ -1,9 +1,9 @@
 package com.pravoos.user.registration.internal.email;
 
-import com.pravoos.user.shared.email.ResendEmailClient;
-import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.registration.internal.event.ApplicationSubmittedSpringEvent;
 import com.pravoos.user.registration.internal.event.VerificationEmailRequestedEvent;
+import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.shared.email.ResendEmailClient;
 import com.pravoos.user.shared.util.EmailMasker;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

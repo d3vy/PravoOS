@@ -1,12 +1,12 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.practice.internal.dto.PortalCaseDetailResponse;
 import com.pravoos.ai.practice.internal.dto.PortalCaseResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.shared.exception.CaseNotFoundException;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

@@ -1,21 +1,15 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.core.internal.service.LegalActRegistry;
-
-import com.pravoos.ai.core.internal.service.CitationExtractor;
-
-import com.pravoos.ai.core.internal.service.CitationCheckService;
-
+import com.pravoos.ai.core.internal.dto.CitationCheckResult;
+import com.pravoos.ai.core.internal.model.entity.AiResponse;
+import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
 import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
 import com.pravoos.ai.shared.config.CitationCheckProperties;
 import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
-import com.pravoos.ai.core.internal.dto.CitationCheckResult;
-import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
 import com.pravoos.ai.shared.model.enums.CitationType;
-import com.pravoos.ai.document.api.DocumentAccess;
-import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,9 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CitationCheckServiceTest {

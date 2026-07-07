@@ -79,10 +79,11 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
         <Button
           variant="secondary"
           size="sm"
+          title="AI проверит по материалам дела, каких документов не хватает, и добавит задачи на их подготовку"
           loading={generateMutation.isPending}
           onClick={() => generateMutation.mutate()}
         >
-          Сгенерировать из чеклиста
+          AI: задачи по недостающим документам
         </Button>
       </div>
 
@@ -112,7 +113,7 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
 
       {tasks.length === 0 ? (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Задач пока нет. Добавьте вручную или сгенерируйте из чеклиста документов.
+          Задач пока нет. Добавьте вручную или дайте AI проверить, каких документов не хватает по делу.
         </p>
       ) : (
         <div className="flex flex-col gap-2">

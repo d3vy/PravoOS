@@ -1,13 +1,13 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.exception.CaseTaskNotFoundException;
 import com.pravoos.ai.core.api.AiResponseDto;
 import com.pravoos.ai.practice.internal.dto.CaseTaskResponse;
 import com.pravoos.ai.practice.internal.dto.CreateCaseTaskRequest;
 import com.pravoos.ai.practice.internal.dto.UpdateCaseTaskRequest;
 import com.pravoos.ai.practice.internal.model.entity.CaseTask;
-import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
+import com.pravoos.ai.shared.exception.CaseTaskNotFoundException;
+import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
 import com.pravoos.ai.shared.util.ChecklistTableParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

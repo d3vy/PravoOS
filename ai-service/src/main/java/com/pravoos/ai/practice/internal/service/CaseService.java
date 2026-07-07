@@ -1,19 +1,24 @@
 package com.pravoos.ai.practice.internal.service;
 
+import com.pravoos.ai.document.api.DocumentCommand;
+import com.pravoos.ai.document.api.DocumentQuery;
+import com.pravoos.ai.document.api.DocumentResponse;
+import com.pravoos.ai.document.api.DocumentUploadResponse;
+import com.pravoos.ai.practice.internal.dto.CaseHearingEventResponse;
+import com.pravoos.ai.practice.internal.dto.CaseResponse;
+import com.pravoos.ai.practice.internal.dto.CreateCaseRequest;
+import com.pravoos.ai.practice.internal.dto.UpdateCaseRequest;
+import com.pravoos.ai.practice.internal.model.entity.Case;
+import com.pravoos.ai.practice.internal.model.entity.Client;
+import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.CaseTransferNotAllowedException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import com.pravoos.ai.shared.exception.OrganizationAccessException;
-import com.pravoos.ai.practice.internal.dto.*;
-import com.pravoos.ai.core.api.*;
-import com.pravoos.ai.document.api.*;
-import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
-import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
-import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
-import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.util.LikePattern;
 import com.pravoos.ai.shared.util.PageRequests;
 import org.slf4j.Logger;
@@ -23,11 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service

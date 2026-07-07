@@ -5,10 +5,10 @@ import com.pravoos.ai.practice.internal.dto.DashboardResponse.RecentCase;
 import com.pravoos.ai.practice.internal.dto.DashboardResponse.StatusCount;
 import com.pravoos.ai.practice.internal.dto.DashboardResponse.UpcomingDeadline;
 import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.shared.model.enums.CaseStatus;
-import com.pravoos.ai.shared.model.enums.DeadlineType;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.DeadlineType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

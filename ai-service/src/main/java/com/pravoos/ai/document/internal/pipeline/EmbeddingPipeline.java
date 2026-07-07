@@ -1,14 +1,14 @@
 package com.pravoos.ai.document.internal.pipeline;
 
-import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.document.internal.event.DocumentCreatedSpringEvent;
-import com.pravoos.ai.shared.exception.DocumentNotFoundException;
-import com.pravoos.ai.llm.api.EmbeddingResult;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
 import com.pravoos.ai.document.internal.service.DocumentService;
 import com.pravoos.ai.document.internal.service.EmbeddingService;
 import com.pravoos.ai.document.internal.service.FileCryptoService;
+import com.pravoos.ai.llm.api.EmbeddingResult;
+import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.service.LlmQuotaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

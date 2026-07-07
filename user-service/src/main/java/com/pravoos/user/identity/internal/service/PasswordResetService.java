@@ -1,16 +1,16 @@
 package com.pravoos.user.identity.internal.service;
-import com.pravoos.user.identity.api.TokenDenylistService;
-import com.pravoos.user.shared.service.EmailRateLimiter;
 
-import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.internal.event.PasswordResetRequestedEvent;
-import com.pravoos.user.shared.exception.InvalidPasswordResetTokenException;
 import com.pravoos.user.identity.internal.model.entity.PasswordResetToken;
+import com.pravoos.user.identity.internal.repository.PasswordResetTokenRepository;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserStatus;
-import com.pravoos.user.identity.internal.repository.PasswordResetTokenRepository;
 import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.shared.exception.InvalidPasswordResetTokenException;
 import com.pravoos.user.shared.security.TokenHasher;
+import com.pravoos.user.shared.service.EmailRateLimiter;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;

@@ -1,17 +1,15 @@
 package com.pravoos.ai.practice.internal.service;
 
+import com.pravoos.ai.practice.internal.dto.*;
+import com.pravoos.ai.practice.internal.model.entity.Case;
+import com.pravoos.ai.practice.internal.model.entity.Client;
+import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.exception.ClientEmailRequiredException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
-import com.pravoos.ai.practice.internal.dto.*;
-import com.pravoos.ai.core.api.*;
-import com.pravoos.ai.document.api.*;
-import com.pravoos.ai.practice.internal.model.entity.Case;
-import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.shared.model.enums.ClientType;
-import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
-import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.util.PageRequests;
 import com.pravoos.common.util.PhoneNormalizer;
 import org.slf4j.Logger;

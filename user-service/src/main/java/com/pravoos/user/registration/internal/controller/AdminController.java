@@ -1,9 +1,9 @@
 package com.pravoos.user.registration.internal.controller;
 
 import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.user.identity.api.LawyerProfileResponse;
 import com.pravoos.user.registration.internal.dto.ApplicationResponse;
 import com.pravoos.user.registration.internal.dto.ClientStatsResponse;
-import com.pravoos.user.identity.api.LawyerProfileResponse;
 import com.pravoos.user.registration.internal.service.AdminService;
 import com.pravoos.user.registration.internal.service.ApplicationService;
 import org.springframework.http.ResponseEntity;

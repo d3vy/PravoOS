@@ -1,13 +1,7 @@
 package com.pravoos.user.collaboration.internal.controller;
 
 import com.pravoos.common.web.SecurityUtils;
-import com.pravoos.user.collaboration.internal.dto.AcceptInviteRequest;
-import com.pravoos.user.collaboration.internal.dto.ChangeMemberRoleRequest;
-import com.pravoos.user.collaboration.internal.dto.CreateInviteRequest;
-import com.pravoos.user.collaboration.internal.dto.CreateOrganizationRequest;
-import com.pravoos.user.collaboration.internal.dto.InviteResponse;
-import com.pravoos.user.collaboration.internal.dto.OrganizationMemberResponse;
-import com.pravoos.user.collaboration.internal.dto.OrganizationResponse;
+import com.pravoos.user.collaboration.internal.dto.*;
 import com.pravoos.user.collaboration.internal.service.OrganizationInviteService;
 import com.pravoos.user.collaboration.internal.service.OrganizationService;
 import jakarta.validation.Valid;

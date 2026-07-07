@@ -1,8 +1,8 @@
 package com.pravoos.user.collaboration.internal.email;
 
-import com.pravoos.user.shared.email.ResendEmailClient;
-import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.collaboration.internal.event.OrganizationInviteCreatedEvent;
+import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.shared.email.ResendEmailClient;
 import com.pravoos.user.shared.util.EmailMasker;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

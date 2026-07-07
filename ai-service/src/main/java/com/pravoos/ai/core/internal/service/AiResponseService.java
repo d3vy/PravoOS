@@ -1,12 +1,11 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.pravoos.ai.core.api.CaseAccessProvider;
-
-import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
 import com.pravoos.ai.core.api.AiResponseDto;
+import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.internal.dto.RateRequest;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

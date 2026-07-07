@@ -1,12 +1,12 @@
 package com.pravoos.user.collaboration.internal.service;
 
-import com.pravoos.user.shared.config.ResendProperties;
-import com.pravoos.user.shared.email.ResendEmailClient;
 import com.pravoos.user.collaboration.internal.dto.DeadlineEmailRequest;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.shared.config.ResendProperties;
+import com.pravoos.user.shared.email.ResendEmailClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

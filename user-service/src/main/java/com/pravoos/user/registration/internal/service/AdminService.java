@@ -1,18 +1,18 @@
 package com.pravoos.user.registration.internal.service;
 
-import com.pravoos.user.identity.api.TokenDenylistService;
-import com.pravoos.user.shared.service.OutboxEventService;
-import com.pravoos.user.registration.internal.event.LawyerDeletedKafkaPayload;
-import com.pravoos.user.shared.exception.LawyerNotFoundException;
-import com.pravoos.user.registration.internal.dto.ClientStatsResponse;
 import com.pravoos.user.collaboration.api.LawyerMembershipCleanup;
 import com.pravoos.user.identity.api.LawyerProfileResponse;
+import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.model.entity.LawyerProfile;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
-import com.pravoos.user.registration.internal.repository.LawyerApplicationRepository;
 import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.registration.internal.dto.ClientStatsResponse;
+import com.pravoos.user.registration.internal.event.LawyerDeletedKafkaPayload;
+import com.pravoos.user.registration.internal.repository.LawyerApplicationRepository;
+import com.pravoos.user.shared.exception.LawyerNotFoundException;
+import com.pravoos.user.shared.service.OutboxEventService;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.PaginationSupport;
 import org.slf4j.Logger;
