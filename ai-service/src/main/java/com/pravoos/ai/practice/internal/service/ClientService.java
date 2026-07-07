@@ -6,6 +6,7 @@ import com.pravoos.ai.shared.exception.ClientEmailRequiredException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import com.pravoos.ai.practice.internal.dto.*;
 import com.pravoos.ai.core.api.*;
+import com.pravoos.ai.document.api.*;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.shared.model.enums.ClientType;

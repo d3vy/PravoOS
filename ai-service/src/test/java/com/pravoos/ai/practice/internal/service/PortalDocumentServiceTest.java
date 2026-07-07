@@ -1,11 +1,11 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.api.DocumentCommand;
-import com.pravoos.ai.core.api.DocumentQuery;
+import com.pravoos.ai.document.api.DocumentCommand;
+import com.pravoos.ai.document.api.DocumentQuery;
 
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
-import com.pravoos.ai.core.api.DocumentContent;
-import com.pravoos.ai.core.api.DocumentResponse;
+import com.pravoos.ai.document.api.DocumentContent;
+import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;

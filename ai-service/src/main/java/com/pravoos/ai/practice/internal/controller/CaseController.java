@@ -4,6 +4,7 @@ import com.pravoos.ai.core.api.AiResponseQuery;
 
 import com.pravoos.ai.practice.internal.dto.*;
 import com.pravoos.ai.core.api.*;
+import com.pravoos.ai.document.api.*;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.practice.internal.service.*;
 import com.pravoos.ai.shared.util.PagedResponse;

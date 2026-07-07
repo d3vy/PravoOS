@@ -14,7 +14,7 @@ import com.pravoos.ai.core.internal.dto.CitationCheckResult;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
 import com.pravoos.ai.shared.model.enums.CitationType;
-import com.pravoos.ai.core.api.DocumentAccess;
+import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

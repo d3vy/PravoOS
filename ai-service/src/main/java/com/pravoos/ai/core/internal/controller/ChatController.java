@@ -1,6 +1,7 @@
 package com.pravoos.ai.core.internal.controller;
 
 import com.pravoos.ai.core.api.*;
+import com.pravoos.ai.document.api.*;
 import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.core.internal.service.ChatService;
 import com.pravoos.ai.shared.util.PagedResponse;

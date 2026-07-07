@@ -1,6 +1,7 @@
 package com.pravoos.ai.core.internal.service;
 
 import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.shared.service.LlmQuotaService;
 import com.pravoos.ai.shared.exception.ConversationNotFoundException;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.exception.MessageNotFoundException;
@@ -8,6 +9,7 @@ import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmMessage;
 import com.pravoos.ai.core.api.*;
+import com.pravoos.ai.document.api.*;
 import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;

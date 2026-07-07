@@ -1,7 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.core.api.AiResponseQuery;
-import com.pravoos.ai.core.api.DocumentQuery;
+import com.pravoos.ai.document.api.DocumentQuery;
 
 import com.pravoos.ai.practice.internal.dto.CaseExportModel;
 import com.pravoos.ai.practice.internal.dto.CaseExportModel.*;

@@ -1,7 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.api.DocumentCommand;
-import com.pravoos.ai.core.api.DocumentQuery;
+import com.pravoos.ai.document.api.DocumentCommand;
+import com.pravoos.ai.document.api.DocumentQuery;
 
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;

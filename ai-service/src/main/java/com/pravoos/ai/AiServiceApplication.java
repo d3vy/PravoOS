@@ -24,7 +24,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class,
         ContractReviewProperties.class, CitationCheckProperties.class, UserServiceProperties.class})
 @EnableJpaRepositories(basePackages = {"com.pravoos.ai.shared.repository.jpa",
-        "com.pravoos.ai.core.internal.repository.jpa", "com.pravoos.ai.practice.internal.repository.jpa"})
+        "com.pravoos.ai.core.internal.repository.jpa", "com.pravoos.ai.document.internal.repository.jpa",
+        "com.pravoos.ai.practice.internal.repository.jpa"})
 @EnableMongoRepositories(basePackages = "com.pravoos.ai.core.internal.repository.mongo")
 @EnableScheduling
 public class AiServiceApplication {

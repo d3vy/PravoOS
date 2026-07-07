@@ -2,8 +2,9 @@ package com.pravoos.ai.core.internal.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.api.CaseAccessProvider;
-import com.pravoos.ai.core.api.DocumentAccess;
-import com.pravoos.ai.core.api.DocumentRef;
+import com.pravoos.ai.document.api.DocumentAccess;
+import com.pravoos.ai.shared.service.LlmQuotaService;
+import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.shared.config.ContractReviewProperties;
 import com.pravoos.ai.shared.exception.ContractReviewFailedException;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;

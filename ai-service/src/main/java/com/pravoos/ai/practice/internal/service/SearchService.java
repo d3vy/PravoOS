@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.api.DocumentSearchQuery;
+import com.pravoos.ai.core.api.ConversationSearchQuery;
+import com.pravoos.ai.document.api.DocumentSearchQuery;
 import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse;
 import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse.CaseHit;
 import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse.ConversationHit;
@@ -28,13 +29,16 @@ public class SearchService {
     private final CaseRepository caseRepository;
     private final ClientRepository clientRepository;
     private final DocumentSearchQuery documentSearchQuery;
+    private final ConversationSearchQuery conversationSearchQuery;
 
     public SearchService(CaseRepository caseRepository,
                          ClientRepository clientRepository,
-                         DocumentSearchQuery documentSearchQuery) {
+                         DocumentSearchQuery documentSearchQuery,
+                         ConversationSearchQuery conversationSearchQuery) {
         this.caseRepository = caseRepository;
         this.clientRepository = clientRepository;
         this.documentSearchQuery = documentSearchQuery;
+        this.conversationSearchQuery = conversationSearchQuery;
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +71,7 @@ public class SearchService {
     }
 
     private List<ConversationHit> searchConversations(UUID lawyerId, String query) {
-        return documentSearchQuery.searchConversations(lawyerId, query, MAX_HITS_PER_SOURCE).stream()
+        return conversationSearchQuery.searchConversations(lawyerId, query, MAX_HITS_PER_SOURCE).stream()
                 .map(c -> new ConversationHit(c.id(), c.title()))
                 .toList();
     }

@@ -1,8 +1,8 @@
 package com.pravoos.ai.practice.internal.controller;
 
-import com.pravoos.ai.core.api.DocumentContent;
-import com.pravoos.ai.core.api.DocumentResponse;
-import com.pravoos.ai.core.api.DocumentUploadResponse;
+import com.pravoos.ai.document.api.DocumentContent;
+import com.pravoos.ai.document.api.DocumentResponse;
+import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.practice.internal.service.PortalDocumentService;

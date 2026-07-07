@@ -1,10 +1,10 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.core.api.DocumentCommand;
-import com.pravoos.ai.core.api.DocumentContent;
-import com.pravoos.ai.core.api.DocumentQuery;
-import com.pravoos.ai.core.api.DocumentResponse;
-import com.pravoos.ai.core.api.DocumentUploadResponse;
+import com.pravoos.ai.document.api.DocumentCommand;
+import com.pravoos.ai.document.api.DocumentContent;
+import com.pravoos.ai.document.api.DocumentQuery;
+import com.pravoos.ai.document.api.DocumentResponse;
+import com.pravoos.ai.document.api.DocumentUploadResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
