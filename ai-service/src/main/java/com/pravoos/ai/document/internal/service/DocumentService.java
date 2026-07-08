@@ -3,6 +3,7 @@ package com.pravoos.ai.document.internal.service;
 import com.pravoos.ai.document.api.DocumentContent;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
+import com.pravoos.ai.document.internal.dto.LegislationResponse;
 import com.pravoos.ai.document.internal.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
@@ -13,6 +14,7 @@ import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.exception.DocumentProcessingException;
 import com.pravoos.ai.shared.exception.StorageQuotaExceededException;
+import com.pravoos.ai.shared.model.enums.DocumentKind;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import com.pravoos.ai.shared.util.PageRequests;
 import io.micrometer.core.instrument.Counter;
@@ -31,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -99,30 +102,85 @@ public class DocumentService {
 
         String originalName = file.getOriginalFilename();
         String fileType = extractFileType(originalName);
+        byte[] content = validateAndScan(file, uploadedBy, originalName, fileType);
 
+        Document document = new Document();
+        document.setTitle(resolveTitle(title, originalName));
+        document.setUploadedBy(uploadedBy);
+        document.setCaseId(caseId);
+        document.setVisibleToClient(visibleToClient);
+
+        return persistAndEmbed(content, originalName, fileType, document);
+    }
+
+    @Transactional
+    public DocumentUploadResponse uploadLegislation(MultipartFile file, String actCanonical, String articleNumber,
+                                                    LocalDate editionDate, String title, UUID uploadedBy) {
+        if (file == null || file.isEmpty()) {
+            log.warn("Legislation upload rejected: empty file from {}", uploadedBy);
+            throw new DocumentProcessingException("Uploaded file is empty");
+        }
+        uploadRateLimiter.assertWithinLimit(uploadedBy);
+
+        String act = requireText(actCanonical, "act");
+        String article = requireText(articleNumber, "article");
+        if (editionDate == null) {
+            throw new DocumentProcessingException("Дата редакции обязательна для НПА");
+        }
+
+        String originalName = file.getOriginalFilename();
+        String fileType = extractFileType(originalName);
+        byte[] content = validateAndScan(file, uploadedBy, originalName, fileType);
+
+        documentRepository.findByDocumentKindAndActCanonicalAndArticleNumberAndSupersededFalse(
+                        DocumentKind.LEGISLATION, act, article)
+                .ifPresent(current -> {
+                    current.setSuperseded(true);
+                    documentRepository.saveAndFlush(current);
+                    log.info("Legislation superseded: {} {} (doc {})", act, article, current.getId());
+                });
+
+        Document document = new Document();
+        document.setTitle(resolveTitle(title, "ст. " + article + " " + act));
+        document.setUploadedBy(uploadedBy);
+        document.setDocumentKind(DocumentKind.LEGISLATION);
+        document.setActCanonical(act);
+        document.setArticleNumber(article);
+        document.setEditionDate(editionDate);
+
+        DocumentUploadResponse response = persistAndEmbed(content, originalName, fileType, document);
+        log.info("Legislation uploaded: {} {} ред. от {} by {}", act, article, editionDate, uploadedBy);
+        return response;
+    }
+
+    private byte[] validateAndScan(MultipartFile file, UUID uploadedBy, String originalName, String fileType) {
         byte[] content = readBytes(file);
         enforceStorageQuota(uploadedBy, content.length);
         validateContentMatchesType(content, fileType);
         malwareScanClient.scan(content, originalName);
+        return content;
+    }
 
+    private DocumentUploadResponse persistAndEmbed(byte[] content, String originalName, String fileType,
+                                                   Document document) {
         Path filePath = storeFile(content, UUID.randomUUID().toString(), fileType);
-
-        Document document = new Document();
-        document.setTitle(resolveTitle(title, originalName));
         document.setFileName(originalName);
         document.setFileType(fileType);
         document.setFilePath(filePath.toString());
-        document.setUploadedBy(uploadedBy);
-        document.setCaseId(caseId);
         document.setSizeBytes(content.length);
-        document.setVisibleToClient(visibleToClient);
 
         Document saved = documentRepository.save(document);
-
         eventPublisher.publishEvent(new DocumentCreatedSpringEvent(saved.getId()));
 
-        log.info("Document uploaded: '{}' ({}) by {}", saved.getTitle(), originalName, uploadedBy);
+        log.info("Document uploaded: '{}' ({}) by {}", saved.getTitle(), originalName, document.getUploadedBy());
         return new DocumentUploadResponse(saved.getId(), saved.getTitle(), saved.getFileName(), saved.getStatus());
+    }
+
+    private String requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new DocumentProcessingException("Поле '" + field + "' обязательно для НПА");
+        }
+        return value.trim();
     }
 
     @Transactional
@@ -190,6 +248,14 @@ public class DocumentService {
     public Page<DocumentResponse> findAll(int page, int size) {
         return documentRepository.findByCaseIdIsNullOrderByUploadedAtDesc(PageRequests.of(page, size))
                 .map(this::toDocumentResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<LegislationResponse> findLegislation(int page, int size) {
+        return documentRepository
+                .findByDocumentKindAndSupersededFalseOrderByEditionDateDesc(
+                        DocumentKind.LEGISLATION, PageRequests.of(page, size))
+                .map(this::toLegislationResponse);
     }
 
     @Transactional(readOnly = true)
@@ -380,6 +446,18 @@ public class DocumentService {
         if (fileName == null) return "Unnamed";
         int dot = fileName.lastIndexOf('.');
         return dot > 0 ? fileName.substring(0, dot) : fileName;
+    }
+
+    private LegislationResponse toLegislationResponse(Document document) {
+        return new LegislationResponse(
+                document.getId(),
+                document.getTitle(),
+                document.getActCanonical(),
+                document.getArticleNumber(),
+                document.getEditionDate(),
+                document.getStatus(),
+                document.isSuperseded()
+        );
     }
 
     private DocumentResponse toDocumentResponse(Document document) {

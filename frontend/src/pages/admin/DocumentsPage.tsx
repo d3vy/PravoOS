@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { motion, AnimatePresence } from 'framer-motion'
 import { documentsApi } from '../../api/documents'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
-import type { DocumentResponse } from '../../types'
+import type { DocumentResponse, LegislationResponse } from '../../types'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
@@ -236,6 +236,129 @@ export default function DocumentsPage(): JSX.Element {
           <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
         )}
       </div>
+
+      <LegislationSection />
+    </div>
+  )
+}
+
+function LegislationSection(): JSX.Element {
+  const queryClient = useQueryClient()
+  const [actCanonical, setActCanonical] = useState('')
+  const [articleNumber, setArticleNumber] = useState('')
+  const [editionDate, setEditionDate] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const legislationFileRef = useRef<HTMLInputElement>(null)
+
+  const { data: legislationPage, isLoading } = useQuery<Page<LegislationResponse>>({
+    queryKey: ['legislation'],
+    queryFn: () => documentsApi.listLegislation(0, 100),
+    refetchInterval: (query) =>
+      query.state.data?.items?.some((n) => n.status === 'PROCESSING') ? POLLING_INTERVAL_MS : false,
+  })
+  const legislation = legislationPage?.items ?? []
+
+  const uploadMutation = useMutation({
+    mutationFn: documentsApi.uploadLegislation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['legislation'] })
+      setActCanonical('')
+      setArticleNumber('')
+      setEditionDate('')
+      setFile(null)
+      if (legislationFileRef.current) legislationFileRef.current.value = ''
+    },
+    onError: () => setError('Не удалось загрузить НПА. Проверьте поля и формат файла.'),
+  })
+
+  const canSubmit = actCanonical.trim() && articleNumber.trim() && editionDate && file
+
+  const handleSubmit = (e: React.FormEvent): void => {
+    e.preventDefault()
+    setError(null)
+    if (!file || !canSubmit) return
+    uploadMutation.mutate({ file, actCanonical: actCanonical.trim(), articleNumber: articleNumber.trim(), editionDate })
+  }
+
+  return (
+    <div className="mt-12">
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Законодательство (НПА)</h2>
+        <p className="text-xs text-light-secondary dark:text-dark-secondary mt-0.5">
+          Актуальные редакции норм. Новая редакция статьи автоматически заменяет прежнюю.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="mb-6 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <input
+          type="text"
+          value={actCanonical}
+          onChange={(e) => setActCanonical(e.target.value)}
+          placeholder="Акт (напр. ГК РФ)"
+          className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
+        />
+        <input
+          type="text"
+          value={articleNumber}
+          onChange={(e) => setArticleNumber(e.target.value)}
+          placeholder="Статья (напр. 450)"
+          className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
+        />
+        <input
+          type="date"
+          value={editionDate}
+          onChange={(e) => setEditionDate(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
+        />
+        <input
+          ref={legislationFileRef}
+          type="file"
+          accept=".pdf,.docx,.txt"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="text-xs text-light-secondary dark:text-dark-secondary file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-light-border dark:file:border-dark-border file:bg-light-bg dark:file:bg-dark-bg file:text-light-text dark:file:text-dark-text"
+        />
+        <div className="sm:col-span-2 lg:col-span-4 flex items-center justify-between gap-3">
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <Button type="submit" size="sm" disabled={!canSubmit} loading={uploadMutation.isPending} className="ml-auto">
+            Загрузить НПА
+          </Button>
+        </div>
+      </form>
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <Spinner size="md" />
+        </div>
+      ) : legislation.length === 0 ? (
+        <div className="text-center py-10 rounded-xl border border-dashed border-light-border dark:border-dark-border">
+          <p className="text-light-secondary dark:text-dark-secondary text-sm">
+            Нормативные акты ещё не загружены.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {legislation.map((norm) => (
+            <div
+              key={norm.id}
+              className="flex items-center gap-4 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-light-text dark:text-dark-text text-sm truncate">
+                  ст. {norm.articleNumber} {norm.actCanonical}
+                </p>
+                <p className="text-xs text-light-secondary dark:text-dark-secondary truncate mt-0.5">
+                  ред. от {new Date(norm.editionDate).toLocaleDateString('ru-RU')}
+                </p>
+              </div>
+              <DocumentStatusBadge status={norm.status} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

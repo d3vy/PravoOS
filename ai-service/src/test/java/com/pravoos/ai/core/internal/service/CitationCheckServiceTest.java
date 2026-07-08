@@ -4,6 +4,7 @@ import com.pravoos.ai.core.internal.dto.CitationCheckResult;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.document.api.DocumentAccess;
+import com.pravoos.ai.document.api.LegislationRef;
 import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
 import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
 import com.pravoos.ai.shared.config.CitationCheckProperties;
@@ -16,13 +17,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +42,8 @@ class CitationCheckServiceTest {
     void setUp() {
         CitationExtractor extractor = new CitationExtractor(new LegalActRegistry());
         service = new CitationCheckService(extractor, arbitrCaseProvider, documentAccess,
-                aiResponseRepository, new CitationCheckProperties(100, 25));
+                aiResponseRepository, new CitationCheckProperties(100, 25),
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     }
 
     @Test
@@ -77,7 +82,24 @@ class CitationCheckServiceTest {
     }
 
     @Test
-    void verifiesStatuteGroundedInKnowledgeBase() {
+    void verifiesStatuteBackedByCurrentLegislation() {
+        when(documentAccess.currentLegislation(eq("61.2"), any()))
+                .thenReturn(Optional.of(new LegislationRef("Закон о банкротстве", "61.2", LocalDate.of(2024, 8, 8))));
+
+        CitationCheckResult result = service.check("Согласно ст. 61.2 Закона о банкротстве.", UUID.randomUUID());
+
+        assertThat(result.citations())
+                .filteredOn(c -> c.type() == CitationType.STATUTE)
+                .singleElement()
+                .satisfies(c -> {
+                    assertThat(c.status()).isEqualTo(CitationStatus.VERIFIED);
+                    assertThat(c.normalized()).contains("ред. от 08.08.2024");
+                });
+    }
+
+    @Test
+    void marksStatuteUnverifiedWhenOnlyMentionedButNotCurrentLegislation() {
+        when(documentAccess.currentLegislation(anyString(), any())).thenReturn(Optional.empty());
         when(documentAccess.knowledgeBaseMentions(anyString())).thenReturn(true);
 
         CitationCheckResult result = service.check("Согласно ст. 61.2 Закона о банкротстве.", UUID.randomUUID());
@@ -85,7 +107,7 @@ class CitationCheckServiceTest {
         assertThat(result.citations())
                 .filteredOn(c -> c.type() == CitationType.STATUTE)
                 .singleElement()
-                .satisfies(c -> assertThat(c.status()).isEqualTo(CitationStatus.VERIFIED));
+                .satisfies(c -> assertThat(c.status()).isEqualTo(CitationStatus.UNVERIFIED));
     }
 
     @Test

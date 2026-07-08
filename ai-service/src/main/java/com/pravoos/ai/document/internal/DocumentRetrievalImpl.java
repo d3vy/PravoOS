@@ -36,7 +36,14 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
 
     private List<RetrievedChunk> toRetrievedChunks(List<ChunkMatch> matches) {
         return matches.stream()
-                .map(match -> new RetrievedChunk(match.content(), match.documentTitle(), match.distance()))
+                .map(match -> new RetrievedChunk(
+                        match.content(),
+                        match.documentTitle(),
+                        match.distance(),
+                        match.legislation(),
+                        match.actCanonical(),
+                        match.articleNumber(),
+                        match.editionDate()))
                 .toList();
     }
 }

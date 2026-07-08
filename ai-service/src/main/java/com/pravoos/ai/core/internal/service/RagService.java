@@ -16,7 +16,7 @@ public class RagService {
 
     private static final Logger log = LoggerFactory.getLogger(RagService.class);
     private static final String CHUNK_SEPARATOR = "\n\n---\n\n";
-    private static final Pattern PLACEHOLDER = Pattern.compile("\\{(instruction|context)\\}");
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{(instruction|context|legislationNotice)\\}");
 
     private static final String CONTEXT_FENCE_OPEN = "<<<КОНТЕКСТ_НАЧАЛО>>>";
     private static final String CONTEXT_FENCE_CLOSE = "<<<КОНТЕКСТ_КОНЕЦ>>>";
@@ -41,6 +41,20 @@ public class RagService {
             по одному на строке, пронумерованных 1. 2. 3.
             """;
 
+    private static final String CITATION_INSTRUCTION = """
+            Каждое утверждение о норме права сопровождайте ссылкой строго в формате \
+            «ст. N <Акт>, ред. от ДД.ММ.ГГГГ», беря номер статьи, наименование акта и дату \
+            редакции ТОЛЬКО из блоков законодательства в контексте. Если в контексте нет нормы, \
+            подтверждающей вывод, — не выдумывайте статью и прямо укажите, что норма не найдена.
+            """;
+
+    private static final String NO_LEGISLATION_CAUTION = """
+            ВНИМАНИЕ: в контексте отсутствуют актуальные нормы законодательства. Если вопрос требует \
+            ссылки на норму права, начните ответ с предупреждения: «Ответ не основан на актуальной \
+            редакции нормы — требуется проверка по первоисточнику», и не приводите конкретных \
+            номеров статей и дат редакций.
+            """;
+
     private static final String SYSTEM_PROMPT_TEMPLATE = """
             Вы — юридический ИИ-ассистент платформы PravoOS. \
             Вы помогаете юристам, отвечая на их вопросы на основе предоставленных \
@@ -50,6 +64,8 @@ public class RagService {
             Будьте точны и опирайтесь на контекст. \
             Если ответ не содержится в предоставленном контексте — прямо скажите об этом.
 
+            """ + CITATION_INSTRUCTION + """
+            {legislationNotice}
             """ + INJECTION_GUARD_INSTRUCTION + """
 
             КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:
@@ -67,6 +83,8 @@ public class RagService {
             Опирайтесь только на предоставленный контекст. \
             Если данных в контексте недостаточно для вывода — прямо укажите, какой информации не хватает.
 
+            """ + CITATION_INSTRUCTION + """
+
             """ + INJECTION_GUARD_INSTRUCTION + """
 
             КОНТЕКСТ (ДОКУМЕНТЫ ДЕЛА И СУДЕБНАЯ ПРАКТИКА):
@@ -79,8 +97,10 @@ public class RagService {
         this.contextMaxChars = documentProperties.contextMaxChars();
     }
 
-    public String buildSystemPrompt(List<String> relevantChunks) {
-        return fill(SYSTEM_PROMPT_TEMPLATE, Map.of("context", joinContext(relevantChunks)));
+    public String buildSystemPrompt(List<String> relevantChunks, boolean legislationPresent) {
+        return fill(SYSTEM_PROMPT_TEMPLATE, Map.of(
+                "context", joinContext(relevantChunks),
+                "legislationNotice", legislationPresent ? "" : NO_LEGISLATION_CAUTION));
     }
 
     public String buildWorkflowPrompt(String instruction, List<String> relevantChunks) {

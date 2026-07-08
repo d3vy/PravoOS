@@ -2,6 +2,7 @@ package com.pravoos.ai.document.api;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface DocumentAccess {
@@ -15,4 +16,6 @@ public interface DocumentAccess {
     String extractText(UUID id);
 
     boolean knowledgeBaseMentions(String needle);
+
+    Optional<LegislationRef> currentLegislation(String articleNumber, String actCanonical);
 }

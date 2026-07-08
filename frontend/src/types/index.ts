@@ -127,6 +127,24 @@ export interface DocumentUploadResponse {
   status: 'PROCESSING'
 }
 
+export interface LegislationResponse {
+  id: string
+  title: string
+  actCanonical: string
+  articleNumber: string
+  editionDate: string
+  status: DocumentStatus
+  superseded: boolean
+}
+
+export interface LegislationUpload {
+  file: File
+  actCanonical: string
+  articleNumber: string
+  editionDate: string
+  title?: string
+}
+
 export interface LawyerResponse {
   id: string
   email: string

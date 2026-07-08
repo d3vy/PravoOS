@@ -3,6 +3,7 @@ package com.pravoos.ai.document.internal.controller;
 import com.pravoos.ai.document.api.DocumentContent;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
+import com.pravoos.ai.document.internal.dto.LegislationResponse;
 import com.pravoos.ai.document.internal.service.DocumentService;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.service.AccessAuditService;
@@ -11,12 +12,14 @@ import com.pravoos.ai.shared.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +48,25 @@ public class DocumentController {
     public ResponseEntity<List<DocumentResponse>> findAll(@RequestParam(defaultValue = "0") int page,
                                                           @RequestParam(defaultValue = "20") int size) {
         return PagedResponse.of(documentService.findAll(page, size));
+    }
+
+    @PostMapping("/legislation")
+    public ResponseEntity<DocumentUploadResponse> uploadLegislation(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("actCanonical") String actCanonical,
+            @RequestParam("articleNumber") String articleNumber,
+            @RequestParam("editionDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate editionDate,
+            @RequestParam(value = "title", required = false) String title,
+            Authentication authentication) {
+        UUID adminId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                documentService.uploadLegislation(file, actCanonical, articleNumber, editionDate, title, adminId));
+    }
+
+    @GetMapping("/legislation")
+    public ResponseEntity<List<LegislationResponse>> findLegislation(@RequestParam(defaultValue = "0") int page,
+                                                                     @RequestParam(defaultValue = "20") int size) {
+        return PagedResponse.of(documentService.findLegislation(page, size));
     }
 
     @GetMapping("/{id}/content")

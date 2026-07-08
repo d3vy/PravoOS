@@ -1,8 +1,10 @@
 package com.pravoos.ai.document.internal.model.entity;
 
+import com.pravoos.ai.shared.model.enums.DocumentKind;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -38,6 +40,22 @@ public class Document {
     @Column(name = "visible_to_client", nullable = false)
     private boolean visibleToClient = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "document_kind", nullable = false, length = 50)
+    private DocumentKind documentKind = DocumentKind.GENERAL;
+
+    @Column(name = "act_canonical", length = 300)
+    private String actCanonical;
+
+    @Column(name = "article_number", length = 50)
+    private String articleNumber;
+
+    @Column(name = "edition_date")
+    private LocalDate editionDate;
+
+    @Column(nullable = false)
+    private boolean superseded = false;
+
     @Column(nullable = false)
     private LocalDateTime uploadedAt;
 
@@ -50,6 +68,9 @@ public class Document {
         uploadedAt = LocalDateTime.now();
         if (status == null) {
             status = DocumentStatus.PROCESSING;
+        }
+        if (documentKind == null) {
+            documentKind = DocumentKind.GENERAL;
         }
     }
 
@@ -78,6 +99,21 @@ public class Document {
 
     public boolean isVisibleToClient() { return visibleToClient; }
     public void setVisibleToClient(boolean visibleToClient) { this.visibleToClient = visibleToClient; }
+
+    public DocumentKind getDocumentKind() { return documentKind; }
+    public void setDocumentKind(DocumentKind documentKind) { this.documentKind = documentKind; }
+
+    public String getActCanonical() { return actCanonical; }
+    public void setActCanonical(String actCanonical) { this.actCanonical = actCanonical; }
+
+    public String getArticleNumber() { return articleNumber; }
+    public void setArticleNumber(String articleNumber) { this.articleNumber = articleNumber; }
+
+    public LocalDate getEditionDate() { return editionDate; }
+    public void setEditionDate(LocalDate editionDate) { this.editionDate = editionDate; }
+
+    public boolean isSuperseded() { return superseded; }
+    public void setSuperseded(boolean superseded) { this.superseded = superseded; }
 
     public LocalDateTime getUploadedAt() { return uploadedAt; }
 

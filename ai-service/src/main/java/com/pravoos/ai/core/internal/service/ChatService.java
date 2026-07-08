@@ -41,6 +41,8 @@ import java.util.stream.Collectors;
 public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+    private static final java.time.format.DateTimeFormatter EDITION_DATE_FORMAT =
+            java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final int TITLE_MAX_LENGTH = 60;
     private static final long STREAM_TIMEOUT_MS = 180_000L;
     private static final String STREAM_ERROR_MESSAGE =
@@ -189,10 +191,11 @@ public class ChatService {
         List<RetrievedChunk> matches = documentRetrieval
                 .retrieveKnowledgeBase(request.message(), documentProperties.topKResults());
 
+        boolean legislationPresent = matches.stream().anyMatch(RetrievedChunk::legislation);
         List<String> relevantChunks = new ArrayList<>(matches.stream().map(RetrievedChunk::content).toList());
         List<String> sources = new ArrayList<>(matches.stream()
-                .map(RetrievedChunk::documentTitle)
-                .filter(title -> title != null && !title.isBlank())
+                .map(ChatService::sourceLabel)
+                .filter(label -> label != null && !label.isBlank())
                 .distinct()
                 .toList());
         relevantChunks.addAll(0, attachedChunks);
@@ -203,7 +206,26 @@ public class ChatService {
                 .filter(title -> !sources.contains(title))
                 .forEach(sources::add);
 
-        return new PreparedContext(ragService.buildSystemPrompt(relevantChunks), sources, historyForLlm);
+        return new PreparedContext(
+                ragService.buildSystemPrompt(relevantChunks, legislationPresent), sources, historyForLlm);
+    }
+
+    private static String sourceLabel(RetrievedChunk chunk) {
+        if (!chunk.legislation()) {
+            return chunk.documentTitle();
+        }
+        StringBuilder label = new StringBuilder();
+        if (chunk.articleNumber() != null && !chunk.articleNumber().isBlank()) {
+            label.append("ст. ").append(chunk.articleNumber()).append(' ');
+        }
+        if (chunk.actCanonical() != null && !chunk.actCanonical().isBlank()) {
+            label.append(chunk.actCanonical());
+        }
+        if (chunk.editionDate() != null) {
+            label.append(", ред. от ").append(EDITION_DATE_FORMAT.format(chunk.editionDate()));
+        }
+        String result = label.toString().strip();
+        return result.isBlank() ? chunk.documentTitle() : result;
     }
 
     private Conversation persistExchange(Conversation conversation, boolean isNewConversation,

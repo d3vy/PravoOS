@@ -1,6 +1,7 @@
 package com.pravoos.ai.document.internal.repository.jpa;
 
 import com.pravoos.ai.document.internal.model.entity.Document;
+import com.pravoos.ai.shared.model.enums.DocumentKind;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,11 +10,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     List<Document> findAllByOrderByUploadedAtDesc();
+
+    Optional<Document> findByDocumentKindAndActCanonicalAndArticleNumberAndSupersededFalse(
+            DocumentKind documentKind, String actCanonical, String articleNumber);
+
+    List<Document> findByDocumentKindAndArticleNumberAndSupersededFalse(
+            DocumentKind documentKind, String articleNumber);
+
+    Page<Document> findByDocumentKindAndSupersededFalseOrderByEditionDateDesc(
+            DocumentKind documentKind, Pageable pageable);
 
     List<Document> findByStatus(DocumentStatus status);
 

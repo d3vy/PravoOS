@@ -2,12 +2,14 @@ package com.pravoos.ai.document.internal;
 
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentRef;
+import com.pravoos.ai.document.api.LegislationRef;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.pipeline.DocumentParser;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
 import com.pravoos.ai.document.internal.service.FileCryptoService;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
+import com.pravoos.ai.shared.model.enums.DocumentKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -72,6 +75,30 @@ class DocumentAccessImpl implements DocumentAccess {
     @Override
     public boolean knowledgeBaseMentions(String needle) {
         return documentChunkRepository.existsInKnowledgeBaseByContent("%" + escapeLike(needle) + "%");
+    }
+
+    @Override
+    public Optional<LegislationRef> currentLegislation(String articleNumber, String actCanonical) {
+        if (articleNumber == null || articleNumber.isBlank()) {
+            return Optional.empty();
+        }
+        String article = articleNumber.trim();
+        if (actCanonical != null && !actCanonical.isBlank()) {
+            return documentRepository
+                    .findByDocumentKindAndActCanonicalAndArticleNumberAndSupersededFalse(
+                            DocumentKind.LEGISLATION, actCanonical.trim(), article)
+                    .map(this::toLegislationRef);
+        }
+        List<Document> matches = documentRepository
+                .findByDocumentKindAndArticleNumberAndSupersededFalse(DocumentKind.LEGISLATION, article);
+        return matches.size() == 1
+                ? Optional.of(toLegislationRef(matches.get(0)))
+                : Optional.empty();
+    }
+
+    private LegislationRef toLegislationRef(Document document) {
+        return new LegislationRef(
+                document.getActCanonical(), document.getArticleNumber(), document.getEditionDate());
     }
 
     private Document loadOrThrow(UUID id) {
