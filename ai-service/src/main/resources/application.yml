@@ -87,6 +87,11 @@ contract-review:
   max-input-chars: ${CONTRACT_REVIEW_MAX_INPUT_CHARS:40000}
   max-findings: ${CONTRACT_REVIEW_MAX_FINDINGS:30}
 
+document-comparison:
+  max-input-chars: ${DOCUMENT_COMPARISON_MAX_INPUT_CHARS:40000}
+  max-changes: ${DOCUMENT_COMPARISON_MAX_CHANGES:40}
+  change-max-chars: ${DOCUMENT_COMPARISON_CHANGE_MAX_CHARS:1500}
+
 citation-check:
   max-citations: ${CITATION_CHECK_MAX_CITATIONS:100}
   max-court-case-lookups: ${CITATION_CHECK_MAX_COURT_LOOKUPS:25}

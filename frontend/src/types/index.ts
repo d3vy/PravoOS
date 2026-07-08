@@ -494,6 +494,32 @@ export interface ContractReviewDto {
   createdAt: string
 }
 
+export type DiffChangeType = 'ADDED' | 'REMOVED' | 'MODIFIED'
+
+export interface DiffChange {
+  order: number
+  type: DiffChangeType
+  baseText: string
+  revisedText: string
+  riskLevel: ContractRiskLevel | null
+  comment: string | null
+}
+
+export interface DocumentComparisonDto {
+  id: string
+  caseId: string
+  baseDocumentId: string
+  revisedDocumentId: string
+  baseDocumentTitle: string
+  revisedDocumentTitle: string
+  summary: string
+  riskScore: number
+  changeCount: number
+  highRiskCount: number
+  changes: DiffChange[]
+  createdAt: string
+}
+
 export type CitationType = 'COURT_CASE' | 'STATUTE'
 export type CitationStatus = 'VERIFIED' | 'NOT_FOUND' | 'UNVERIFIED'
 
@@ -525,6 +551,10 @@ export interface AiStatsResponse {
   ratedResponses: number
   positiveRatings: number
   negativeRatings: number
+  guardChecks: number
+  guardRefusals: number
+  citationsChecked: number
+  citationsVerified: number
   workflows: WorkflowStat[]
 }
 

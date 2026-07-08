@@ -9,8 +9,10 @@ import { useAuthStore } from '../../store/authStore'
 import { templatesApi } from '../../api/templates'
 import { workflowsApi } from '../../api/workflows'
 import { contractReviewsApi } from '../../api/contractReviews'
+import { documentComparisonsApi } from '../../api/documentComparisons'
 import { citationsApi } from '../../api/citations'
-import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, CitationCheck, CitationStatus, ClientResponse, ContractReviewDto, ContractRiskLevel, DocumentResponse, DraftTypeInfo, Organization, OrganizationMember, WorkflowInfo } from '../../types'
+import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, ClientResponse, ContractReviewDto, ContractRiskLevel, DiffChange, DiffChangeType, DocumentComparisonDto, DocumentResponse, DraftTypeInfo, Organization, OrganizationMember, WorkflowInfo } from '../../types'
+import { CitationList, citationSummary } from '../../components/ui/CitationList'
 import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -78,6 +80,12 @@ export default function CaseDetailPage(): JSX.Element {
     enabled: caseId !== '',
   })
 
+  const { data: comparisons = [] } = useQuery<DocumentComparisonDto[]>({
+    queryKey: ['case-comparisons', caseId],
+    queryFn: () => documentComparisonsApi.listByCase(caseId),
+    enabled: caseId !== '',
+  })
+
   if (caseLoading) {
     return (
       <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
@@ -131,6 +139,8 @@ export default function CaseDetailPage(): JSX.Element {
         <WorkflowSection caseId={caseId} workflows={workflows} queryClient={queryClient} />
 
         <ContractReviewSection caseId={caseId} documents={documents} reviews={contractReviews} queryClient={queryClient} />
+
+        <ComparisonSection caseId={caseId} documents={documents} comparisons={comparisons} queryClient={queryClient} />
 
         <DraftSection caseId={caseId} draftTypes={draftTypes} drafts={drafts} queryClient={queryClient} />
 
@@ -904,6 +914,167 @@ function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Elem
   )
 }
 
+const DIFF_TYPE_META: Record<DiffChangeType, { label: string; tone: string }> = {
+  ADDED: { label: 'Добавлено', tone: 'text-emerald-600 dark:text-emerald-400' },
+  REMOVED: { label: 'Удалено', tone: 'text-red-600 dark:text-red-400' },
+  MODIFIED: { label: 'Изменено', tone: 'text-amber-600 dark:text-amber-400' },
+}
+
+function ComparisonSection({ caseId, documents, comparisons, queryClient }: SectionProps & { documents: DocumentResponse[]; comparisons: DocumentComparisonDto[] }): JSX.Element {
+  const [baseDocId, setBaseDocId] = useState('')
+  const [revisedDocId, setRevisedDocId] = useState('')
+  const readyDocuments = documents.filter((doc) => doc.status === 'READY')
+
+  const compareMutation = useMutation({
+    mutationFn: () => documentComparisonsApi.create(baseDocId, revisedDocId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['case-comparisons', caseId] })
+      setBaseDocId('')
+      setRevisedDocId('')
+    },
+  })
+
+  const canCompare = baseDocId !== '' && revisedDocId !== '' && baseDocId !== revisedDocId
+
+  return (
+    <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">Сравнение версий (редлайн)</h2>
+      <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
+        Выберите исходную и новую версию — AI подсветит изменения и оценит риск каждой правки.
+      </p>
+
+      {readyDocuments.length < 2 ? (
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          Загрузите минимум две версии документа (PDF, DOCX) и дождитесь обработки.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-light-secondary dark:text-dark-secondary mb-1">Исходная версия (БЫЛО)</label>
+              <select
+                value={baseDocId}
+                onChange={(e) => setBaseDocId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              >
+                <option value="">Выберите документ</option>
+                {readyDocuments.map((doc) => (
+                  <option key={doc.id} value={doc.id}>{doc.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-light-secondary dark:text-dark-secondary mb-1">Новая версия (СТАЛО)</label>
+              <select
+                value={revisedDocId}
+                onChange={(e) => setRevisedDocId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              >
+                <option value="">Выберите документ</option>
+                {readyDocuments.map((doc) => (
+                  <option key={doc.id} value={doc.id}>{doc.title}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {baseDocId !== '' && baseDocId === revisedDocId && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">Выберите две разные версии.</p>
+          )}
+          {compareMutation.isError && (
+            <p className="text-sm text-red-600 dark:text-red-400">Не удалось сравнить версии. Попробуйте снова.</p>
+          )}
+
+          <div>
+            <Button
+              variant="primary"
+              disabled={!canCompare}
+              loading={compareMutation.isPending}
+              onClick={() => compareMutation.mutate()}
+            >
+              Сравнить и оценить риски
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {comparisons.length > 0 && (
+        <div className="flex flex-col gap-4 mt-5">
+          {comparisons.map((comparison) => (
+            <ComparisonCard key={comparison.id} comparison={comparison} />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ComparisonCard({ comparison }: { comparison: DocumentComparisonDto }): JSX.Element {
+  return (
+    <div className="p-4 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-light-text dark:text-dark-text [overflow-wrap:anywhere]">
+            <span className="text-red-600 dark:text-red-400">{comparison.baseDocumentTitle}</span>
+            {' → '}
+            <span className="text-emerald-600 dark:text-emerald-400">{comparison.revisedDocumentTitle}</span>
+          </p>
+          <p className="text-xs text-light-secondary dark:text-dark-secondary">
+            {new Date(comparison.createdAt).toLocaleString('ru-RU')} · {comparison.changeCount} изм.
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <span className={`text-lg font-semibold ${riskScoreTone(comparison.riskScore)}`}>{comparison.riskScore}</span>
+          <span className="text-xs text-light-secondary dark:text-dark-secondary">/100</span>
+          {comparison.highRiskCount > 0 && (
+            <p className="text-xs text-red-600 dark:text-red-400">{comparison.highRiskCount} высоких</p>
+          )}
+        </div>
+      </div>
+
+      <p className="text-sm text-light-text dark:text-dark-text whitespace-pre-wrap mb-3">{comparison.summary}</p>
+
+      {comparison.changes.length === 0 ? (
+        <p className="text-xs text-light-secondary dark:text-dark-secondary">Различий не обнаружено.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {comparison.changes.map((change) => (
+            <DiffChangeRow key={change.order} change={change} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DiffChangeRow({ change }: { change: DiffChange }): JSX.Element {
+  const typeMeta = DIFF_TYPE_META[change.type]
+  const riskMeta = change.riskLevel ? RISK_LEVEL_META[change.riskLevel] : null
+  return (
+    <div className="p-3 rounded-lg border border-light-border dark:border-dark-border">
+      <div className="flex items-center gap-2 mb-2">
+        <span className={`text-xs font-semibold uppercase tracking-wide ${typeMeta.tone}`}>{typeMeta.label}</span>
+        {riskMeta && (
+          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${riskMeta.tone}`}>{riskMeta.label} риск</span>
+        )}
+      </div>
+      {change.baseText && (
+        <p className="text-sm mb-1 px-2 py-1 rounded bg-red-50 text-red-800 line-through decoration-red-400/60 dark:bg-red-500/10 dark:text-red-300 [overflow-wrap:anywhere] whitespace-pre-wrap">
+          {change.baseText}
+        </p>
+      )}
+      {change.revisedText && (
+        <p className="text-sm mb-1 px-2 py-1 rounded bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300 [overflow-wrap:anywhere] whitespace-pre-wrap">
+          {change.revisedText}
+        </p>
+      )}
+      {change.comment && (
+        <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">{change.comment}</p>
+      )}
+    </div>
+  )
+}
+
 function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps & { draftTypes: DraftTypeInfo[]; drafts: CaseDraftSummaryDto[] }): JSX.Element {
   const [selectedDraftType, setSelectedDraftType] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('')
@@ -1078,12 +1249,6 @@ function CopyButton({ text }: { text: string }): JSX.Element {
   )
 }
 
-const CITATION_STATUS_META: Record<CitationStatus, { label: string; tone: string }> = {
-  VERIFIED: { label: 'Подтверждено', tone: 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:bg-emerald-500/10' },
-  NOT_FOUND: { label: 'Не найдено', tone: 'border-red-300 text-red-700 bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:bg-red-500/10' },
-  UNVERIFIED: { label: 'Не проверено', tone: 'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:bg-amber-500/10' },
-}
-
 function CitationCheckPanel({ responseId }: { responseId: string }): JSX.Element {
   const checkMutation = useMutation({
     mutationFn: () => citationsApi.checkResponse(responseId),
@@ -1103,9 +1268,7 @@ function CitationCheckPanel({ responseId }: { responseId: string }): JSX.Element
         </Button>
         {result && (
           <span className="text-xs text-light-secondary dark:text-dark-secondary">
-            {result.total === 0
-              ? 'Ссылки не найдены'
-              : `Всего: ${result.total} · подтверждено: ${result.verified} · не найдено: ${result.notFound} · не проверено: ${result.unverified}`}
+            {citationSummary(result)}
           </span>
         )}
       </div>
@@ -1114,27 +1277,7 @@ function CitationCheckPanel({ responseId }: { responseId: string }): JSX.Element
         <p className="text-sm text-red-600 dark:text-red-400">Не удалось проверить ссылки. Попробуйте снова.</p>
       )}
 
-      {result && result.citations.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {result.citations.map((citation, i) => (
-            <CitationRow key={i} citation={citation} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function CitationRow({ citation }: { citation: CitationCheck }): JSX.Element {
-  const meta = CITATION_STATUS_META[citation.status]
-  const typeLabel = citation.type === 'COURT_CASE' ? 'Дело' : 'Норма'
-  return (
-    <div className="flex items-start gap-2 text-xs">
-      <span className={`shrink-0 px-1.5 py-0.5 rounded border font-medium ${meta.tone}`}>{meta.label}</span>
-      <div className="min-w-0">
-        <span className="font-medium text-light-text dark:text-dark-text">{typeLabel}: {citation.raw}</span>
-        <span className="block text-light-secondary dark:text-dark-secondary">{citation.detail}</span>
-      </div>
+      {result && <CitationList result={result} />}
     </div>
   )
 }
