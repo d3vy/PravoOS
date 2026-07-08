@@ -5,6 +5,8 @@ import com.pravoos.ai.core.internal.dto.AiStatsResponse;
 import com.pravoos.ai.core.internal.dto.WorkflowStat;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.search.Search;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +16,11 @@ import java.util.List;
 public class AdminStatsService {
 
     private final AiResponseRepository aiResponseRepository;
+    private final MeterRegistry meterRegistry;
 
-    public AdminStatsService(AiResponseRepository aiResponseRepository) {
+    public AdminStatsService(AiResponseRepository aiResponseRepository, MeterRegistry meterRegistry) {
         this.aiResponseRepository = aiResponseRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     @Transactional(readOnly = true)
@@ -26,12 +30,25 @@ public class AdminStatsService {
         long positive = aiResponseRepository.countPositive();
         long negative = aiResponseRepository.countNegative();
 
+        long guardPassed = counter("pravoos.guard", "result", "pass");
+        long guardRefusals = counter("pravoos.guard", "result", "block");
+        long citationsVerified = counter("pravoos.citation.checks", "status", "verified");
+        long citationsChecked = citationsVerified
+                + counter("pravoos.citation.checks", "status", "not_found")
+                + counter("pravoos.citation.checks", "status", "unverified");
+
         List<WorkflowStat> workflows = aiResponseRepository.aggregateByWorkflow()
                 .stream()
                 .map(this::toWorkflowStat)
                 .toList();
 
-        return new AiStatsResponse(total, rated, positive, negative, workflows);
+        return new AiStatsResponse(total, rated, positive, negative,
+                guardPassed + guardRefusals, guardRefusals, citationsChecked, citationsVerified, workflows);
+    }
+
+    private long counter(String name, String tagKey, String tagValue) {
+        var counter = Search.in(meterRegistry).name(name).tag(tagKey, tagValue).counter();
+        return counter == null ? 0L : (long) counter.count();
     }
 
     @Transactional(readOnly = true)

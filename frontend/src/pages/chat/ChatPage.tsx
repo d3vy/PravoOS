@@ -10,11 +10,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { chatApi, streamMessage } from '../../api/chat'
 import { documentsApi } from '../../api/documents'
+import { citationsApi } from '../../api/citations'
 import type { MessageResponse, ConversationResponse, DocumentResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import { Navbar } from '../../components/layout/Navbar'
 import { PravoIcon } from '../../components/ui/Logo'
 import { RatingButtons } from '../../components/ui/RatingButtons'
+import { CitationList, citationSummary } from '../../components/ui/CitationList'
 
 interface LocalMessage {
   id: string
@@ -24,6 +26,7 @@ interface LocalMessage {
   rating?: number | null
   followUps?: string[]
   isStreaming?: boolean
+  autoCheckCitations?: boolean
 }
 
 const LOCAL_ID_PREFIXES = ['user-', 'assistant-', 'loading-', 'error-']
@@ -112,8 +115,8 @@ export default function ChatPage(): JSX.Element {
   }, [attachPickerOpen])
 
   const rateMutation = useMutation({
-    mutationFn: ({ messageId, rating }: { messageId: string; rating: number }) =>
-      chatApi.rateMessage(messageId, { rating }),
+    mutationFn: ({ messageId, rating, comment }: { messageId: string; rating: number; comment?: string }) =>
+      chatApi.rateMessage(messageId, { rating, comment }),
     onMutate: ({ messageId, rating }) => {
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, rating } : m)))
     },
@@ -157,6 +160,7 @@ export default function ChatPage(): JSX.Element {
                     content: data.answer,
                     sources: data.sources,
                     followUps: data.followUps ?? [],
+                    autoCheckCitations: true,
                   }
                 : m
             )
@@ -349,7 +353,8 @@ export default function ChatPage(): JSX.Element {
                     <MessageBubble
                       key={message.id}
                       message={message}
-                      onRate={(rating) => rateMutation.mutate({ messageId: message.id, rating })}
+                      onRate={(rating, comment) =>
+                        rateMutation.mutate({ messageId: message.id, rating, comment })}
                     />
                   ))}
                 </AnimatePresence>
@@ -523,9 +528,16 @@ function CopyButton({ text }: { text: string }): JSX.Element {
   )
 }
 
-function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (rating: number) => void }): JSX.Element {
+function MessageBubble({
+  message,
+  onRate,
+}: {
+  message: LocalMessage
+  onRate: (rating: number, comment?: string) => void
+}): JSX.Element {
   const isUser = message.role === 'USER'
   const canRate = !isUser && !message.isStreaming && isPersistedId(message.id)
+  const showCitations = !isUser && !message.isStreaming && Boolean(message.content)
 
   return (
     <motion.div
@@ -577,14 +589,97 @@ function MessageBubble({ message, onRate }: { message: LocalMessage; onRate: (ra
           </div>
         )}
 
+        {showCitations && (
+          <ChatCitations text={message.content} auto={message.autoCheckCitations} />
+        )}
+
         {!isUser && !message.isStreaming && message.content && (
           <div className="flex items-center gap-3">
             <CopyButton text={message.content} />
-            {canRate && <RatingButtons rating={message.rating} onRate={onRate} />}
+            {canRate && <RatingButtons rating={message.rating} onRate={(rating) => onRate(rating)} />}
           </div>
         )}
+
+        {canRate && message.rating === -1 && <FeedbackBox onSubmit={(comment) => onRate(-1, comment)} />}
       </div>
     </motion.div>
+  )
+}
+
+function ChatCitations({ text, auto }: { text: string; auto?: boolean }): JSX.Element {
+  const checkMutation = useMutation({
+    mutationFn: () => citationsApi.checkText(text),
+  })
+  const { mutate } = checkMutation
+  const autoRanRef = useRef(false)
+
+  useEffect(() => {
+    if (auto && !autoRanRef.current) {
+      autoRanRef.current = true
+      mutate()
+    }
+  }, [auto, mutate])
+
+  const result = checkMutation.data
+
+  return (
+    <div className="w-full flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => checkMutation.mutate()}
+          disabled={checkMutation.isPending}
+          className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+        >
+          {checkMutation.isPending ? (
+            <Spinner size="sm" />
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 12l2 2 4-4" />
+              <circle cx="12" cy="12" r="9" />
+            </svg>
+          )}
+          Проверить ссылки
+        </button>
+        {result && (
+          <span className="text-xs text-light-secondary dark:text-dark-secondary">
+            {citationSummary(result)}
+          </span>
+        )}
+      </div>
+      {checkMutation.isError && (
+        <p className="text-xs text-red-600 dark:text-red-400">Не удалось проверить ссылки. Попробуйте снова.</p>
+      )}
+      {result && <CitationList result={result} />}
+    </div>
+  )
+}
+
+function FeedbackBox({ onSubmit }: { onSubmit: (comment: string) => void }): JSX.Element {
+  const [comment, setComment] = useState('')
+  const [sent, setSent] = useState(false)
+
+  if (sent) {
+    return <p className="text-xs text-light-secondary dark:text-dark-secondary">Спасибо, отзыв учтён.</p>
+  }
+
+  return (
+    <div className="w-full flex flex-col gap-1.5 max-w-md">
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Что не так с ответом? (необязательно)"
+        rows={2}
+        className="w-full resize-none rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg px-3 py-2 text-xs text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary focus:outline-none focus:ring-1 focus:ring-light-accent dark:focus:ring-dark-accent"
+      />
+      <button
+        type="button"
+        onClick={() => { onSubmit(comment.trim()); setSent(true) }}
+        className="self-start text-xs px-3 py-1.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
+      >
+        Отправить отзыв
+      </button>
+    </div>
   )
 }
 

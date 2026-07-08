@@ -7,5 +7,9 @@ public record AiStatsResponse(
         long ratedResponses,
         long positiveRatings,
         long negativeRatings,
+        long guardChecks,
+        long guardRefusals,
+        long citationsChecked,
+        long citationsVerified,
         List<WorkflowStat> workflows
 ) {}

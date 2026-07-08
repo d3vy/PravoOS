@@ -65,6 +65,30 @@ export default function AiStatsPage(): JSX.Element {
         <StatCard label="Бесполезных 👎" value={stats.negativeRatings} accent="negative" />
       </div>
 
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Доверие к ответам</h2>
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 mb-8">
+        <ShareCard
+          label="Проверенных ссылок"
+          numerator={stats.citationsVerified}
+          denominator={stats.citationsChecked}
+          hint={`${stats.citationsVerified} из ${stats.citationsChecked} проверок`}
+          accent="positive"
+        />
+        <ShareCard
+          label="Полезных оценок"
+          numerator={stats.positiveRatings}
+          denominator={stats.positiveRatings + stats.negativeRatings}
+          hint={`👍 ${stats.positiveRatings} · 👎 ${stats.negativeRatings}`}
+        />
+        <ShareCard
+          label="Отказов (не по теме)"
+          numerator={stats.guardRefusals}
+          denominator={stats.guardChecks}
+          hint={`${stats.guardRefusals} из ${stats.guardChecks} запросов`}
+          accent="negative"
+        />
+      </div>
+
       <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">По типам анализа</h2>
       {stats.workflows.length === 0 ? (
         <p className="text-sm text-light-secondary dark:text-dark-secondary mb-8">Пока нет данных.</p>
@@ -118,6 +142,31 @@ function ratingLabel(rating: number | null): string {
   if (rating === 1) return '👍'
   if (rating === -1) return '👎'
   return 'без оценки'
+}
+
+interface ShareCardProps {
+  label: string
+  numerator: number
+  denominator: number
+  hint: string
+  accent?: 'positive' | 'negative'
+}
+
+function ShareCard({ label, numerator, denominator, hint, accent }: ShareCardProps): JSX.Element {
+  const share = denominator > 0 ? Math.round((numerator / denominator) * 100) : null
+  const valueColor =
+    accent === 'positive'
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : accent === 'negative'
+        ? 'text-red-600 dark:text-red-400'
+        : 'text-light-text dark:text-dark-text'
+  return (
+    <div className="p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+      <p className={`text-2xl font-semibold ${valueColor}`}>{share === null ? '—' : `${share}%`}</p>
+      <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">{label}</p>
+      <p className="text-xs text-light-secondary dark:text-dark-secondary mt-2 opacity-70">{hint}</p>
+    </div>
+  )
 }
 
 interface StatCardProps {
