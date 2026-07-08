@@ -130,6 +130,17 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
                            @Param("pattern") String pattern,
                            Pageable pageable);
 
+    @Query("""
+            SELECT c FROM Case c
+            WHERE (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
+              AND (:caseId IS NULL OR c.id = :caseId)
+              AND (:clientId IS NULL OR c.clientId = :clientId)
+            """)
+    List<Case> findVisibleForCalendar(@Param("lawyerId") UUID lawyerId,
+                                      @Param("orgIds") Collection<UUID> orgIds,
+                                      @Param("caseId") UUID caseId,
+                                      @Param("clientId") UUID clientId);
+
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Case c SET c.lawyerId = :newOwnerId, c.orgId = null "
             + "WHERE c.lawyerId = :lawyerId AND c.orgId = :orgId")

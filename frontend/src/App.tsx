@@ -18,6 +18,7 @@ import PortalCasesPage from './pages/portal/PortalCasesPage'
 import PortalCaseDetailPage from './pages/portal/PortalCaseDetailPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
 import ChatPage from './pages/chat/ChatPage'
+import CalendarPage from './pages/calendar/CalendarPage'
 import CasesPage from './pages/cases/CasesPage'
 import CaseDetailPage from './pages/cases/CaseDetailPage'
 import ClientsPage from './pages/clients/ClientsPage'
@@ -91,6 +92,15 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute requiredRole="LAWYER">
             <ChatPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute requiredRole="LAWYER">
+            <CalendarPage />
           </ProtectedRoute>
         }
       />

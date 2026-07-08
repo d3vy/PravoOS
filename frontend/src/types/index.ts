@@ -298,6 +298,19 @@ export interface DashboardResponse {
   recentCases: DashboardRecentCase[]
 }
 
+export type CalendarEventType = 'DEADLINE' | 'HEARING' | 'TASK'
+
+export interface CalendarEvent {
+  id: string
+  type: CalendarEventType
+  typeName: string
+  caseId: string
+  caseTitle: string
+  title: string
+  detail: string | null
+  date: string
+}
+
 export interface SearchCaseHit {
   id: string
   title: string
