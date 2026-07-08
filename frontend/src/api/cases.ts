@@ -5,6 +5,7 @@ import type {
   CaseResponse,
   CaseDraftDto,
   CaseDraftSummaryDto,
+  CaseDraftVersionDto,
   CaseHearingEvent,
   CaseMessageResponse,
   CaseStatus,
@@ -15,7 +16,10 @@ import type {
   DocumentUploadResponse,
   DraftTypeInfo,
   GenerateDraftRequest,
+  RefineDraftRequest,
+  RefineDraftResponse,
   UpdateCaseRequest,
+  UpdateDraftRequest,
   UpdateCaseTaskRequest,
   WorkflowRunDto,
 } from '../types'
@@ -157,6 +161,33 @@ export const casesApi = {
 
   getDrafts: async (caseId: string): Promise<CaseDraftSummaryDto[]> => {
     const response = await apiClient.get<CaseDraftSummaryDto[]>(`/api/ai/cases/${caseId}/drafts`)
+    return response.data
+  },
+
+  getDraft: async (draftId: string): Promise<CaseDraftDto> => {
+    const response = await apiClient.get<CaseDraftDto>(`/api/ai/drafts/${draftId}`)
+    return response.data
+  },
+
+  updateDraft: async (draftId: string, data: UpdateDraftRequest): Promise<CaseDraftDto> => {
+    const response = await apiClient.put<CaseDraftDto>(`/api/ai/drafts/${draftId}`, data)
+    return response.data
+  },
+
+  getDraftVersions: async (draftId: string): Promise<CaseDraftVersionDto[]> => {
+    const response = await apiClient.get<CaseDraftVersionDto[]>(`/api/ai/drafts/${draftId}/versions`)
+    return response.data
+  },
+
+  restoreDraftVersion: async (draftId: string, versionId: string): Promise<CaseDraftDto> => {
+    const response = await apiClient.post<CaseDraftDto>(
+      `/api/ai/drafts/${draftId}/versions/${versionId}/restore`
+    )
+    return response.data
+  },
+
+  refineDraft: async (draftId: string, data: RefineDraftRequest): Promise<RefineDraftResponse> => {
+    const response = await apiClient.post<RefineDraftResponse>(`/api/ai/drafts/${draftId}/refine`, data)
     return response.data
   },
 

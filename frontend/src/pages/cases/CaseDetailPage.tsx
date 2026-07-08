@@ -1203,14 +1203,21 @@ function DraftSection({ caseId, draftTypes, drafts, queryClient }: SectionProps 
                 <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2 line-clamp-2">
                   {draft.title}
                 </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  loading={downloadingId === draft.id}
-                  onClick={() => void handleDownload(draft)}
-                >
-                  Скачать .docx
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Link to={`/cases/${caseId}/drafts/${draft.id}`}>
+                    <Button variant="primary" size="sm">
+                      Редактировать
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={downloadingId === draft.id}
+                    onClick={() => void handleDownload(draft)}
+                  >
+                    Скачать .docx
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

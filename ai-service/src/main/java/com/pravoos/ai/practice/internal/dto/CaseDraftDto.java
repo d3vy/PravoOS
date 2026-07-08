@@ -13,7 +13,8 @@ public record CaseDraftDto(
         String draftTypeName,
         String title,
         String content,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
     public static CaseDraftDto from(CaseDraft draft) {
         String draftTypeName = resolveDraftTypeName(draft.getDraftType());
@@ -24,7 +25,8 @@ public record CaseDraftDto(
                 draftTypeName,
                 draft.getTitle(),
                 draft.getContent(),
-                draft.getCreatedAt()
+                draft.getCreatedAt(),
+                draft.getUpdatedAt()
         );
     }
 

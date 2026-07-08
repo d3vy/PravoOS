@@ -32,9 +32,17 @@ public class CaseDraft {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column
+    private LocalDateTime updatedAt;
+
     @PrePersist
     void prePersist() {
         createdAt = LocalDateTime.now(ZoneOffset.UTC);
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public UUID getId() { return id; }
@@ -55,4 +63,6 @@ public class CaseDraft {
     public void setContent(String content) { this.content = content; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

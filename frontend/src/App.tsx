@@ -21,6 +21,7 @@ import ChatPage from './pages/chat/ChatPage'
 import CalendarPage from './pages/calendar/CalendarPage'
 import CasesPage from './pages/cases/CasesPage'
 import CaseDetailPage from './pages/cases/CaseDetailPage'
+import DraftEditorPage from './pages/cases/DraftEditorPage'
 import ClientsPage from './pages/clients/ClientsPage'
 import ClientDetailPage from './pages/clients/ClientDetailPage'
 import SearchPage from './pages/search/SearchPage'
@@ -120,6 +121,15 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute requiredRole="LAWYER">
             <CaseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/cases/:caseId/drafts/:draftId"
+        element={
+          <ProtectedRoute requiredRole="LAWYER">
+            <DraftEditorPage />
           </ProtectedRoute>
         }
       />

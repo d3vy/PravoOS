@@ -2,8 +2,12 @@ package com.pravoos.ai.practice.internal.controller;
 
 import com.pravoos.ai.practice.internal.dto.CaseDraftDto;
 import com.pravoos.ai.practice.internal.dto.CaseDraftSummaryDto;
+import com.pravoos.ai.practice.internal.dto.CaseDraftVersionDto;
 import com.pravoos.ai.practice.internal.dto.DraftTypeInfo;
 import com.pravoos.ai.practice.internal.dto.GenerateDraftRequest;
+import com.pravoos.ai.practice.internal.dto.RefineDraftRequest;
+import com.pravoos.ai.practice.internal.dto.RefineDraftResponse;
+import com.pravoos.ai.practice.internal.dto.UpdateDraftRequest;
 import com.pravoos.ai.practice.internal.model.entity.CaseDraft;
 import com.pravoos.ai.practice.internal.service.DocxExportService;
 import com.pravoos.ai.practice.internal.service.DraftService;
@@ -53,6 +57,54 @@ public class DraftController {
             Authentication authentication) {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.ok(draftService.findByCase(caseId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @GetMapping("/api/ai/drafts/{draftId}")
+    public ResponseEntity<CaseDraftDto> getDraft(
+            @PathVariable UUID draftId,
+            Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(draftService.getDraft(draftId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @PutMapping("/api/ai/drafts/{draftId}")
+    public ResponseEntity<CaseDraftDto> updateDraft(
+            @PathVariable UUID draftId,
+            @Valid @RequestBody UpdateDraftRequest request,
+            Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(draftService.updateContent(draftId, request, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @GetMapping("/api/ai/drafts/{draftId}/versions")
+    public ResponseEntity<List<CaseDraftVersionDto>> listVersions(
+            @PathVariable UUID draftId,
+            Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(draftService.listVersions(draftId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @PostMapping("/api/ai/drafts/{draftId}/versions/{versionId}/restore")
+    public ResponseEntity<CaseDraftDto> restoreVersion(
+            @PathVariable UUID draftId,
+            @PathVariable UUID versionId,
+            Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(draftService.restoreVersion(draftId, versionId, lawyerId,
+                SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @PostMapping("/api/ai/drafts/{draftId}/refine")
+    public ResponseEntity<RefineDraftResponse> refineDraft(
+            @PathVariable UUID draftId,
+            @Valid @RequestBody RefineDraftRequest request,
+            Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.ok(draftService.refine(draftId, request, lawyerId,
                 SecurityUtils.currentOrgIds(authentication)));
     }
 

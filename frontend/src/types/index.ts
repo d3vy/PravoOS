@@ -576,6 +576,29 @@ export interface CaseDraftDto {
   title: string
   content: string
   createdAt: string
+  updatedAt: string | null
+}
+
+export interface CaseDraftVersionDto {
+  id: string
+  versionNo: number
+  note: string | null
+  content: string
+  createdAt: string
+}
+
+export interface UpdateDraftRequest {
+  content: string
+  note?: string
+}
+
+export interface RefineDraftRequest {
+  instruction: string
+  selectedText?: string
+}
+
+export interface RefineDraftResponse {
+  revisedText: string
 }
 
 export interface CaseDraftSummaryDto {

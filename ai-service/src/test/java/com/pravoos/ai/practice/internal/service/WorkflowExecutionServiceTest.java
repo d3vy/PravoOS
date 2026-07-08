@@ -77,7 +77,7 @@ class WorkflowExecutionServiceTest {
         when(legalAiPort.runCaseWorkflow(eq(caseId), eq(lawyerId), any(), any(), any())).thenReturn(aiResponse("итог"));
         when(draftService.generate(eq(caseId), any(GenerateDraftRequest.class), eq(lawyerId), anyList()))
                 .thenReturn(new CaseDraftDto(UUID.randomUUID(), caseId, "STATEMENT", "Исковое заявление",
-                        "Заявление", "текст", LocalDateTime.now()));
+                        "Заявление", "текст", LocalDateTime.now(), null));
         when(caseTaskService.createFromChecklist(eq(caseId), any(), eq(lawyerId))).thenReturn(List.of());
         when(caseService.setDeadlineIfAbsent(eq(caseId), eq(DeadlineType.FILING_DEADLINE), any(), eq(lawyerId), anyList()))
                 .thenReturn(true);
