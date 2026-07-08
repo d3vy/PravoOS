@@ -8,6 +8,7 @@ import com.pravoos.ai.practice.internal.dto.*;
 import com.pravoos.ai.practice.internal.service.CaseExportService;
 import com.pravoos.ai.practice.internal.service.CaseService;
 import com.pravoos.ai.practice.internal.service.CaseTaskService;
+import com.pravoos.ai.practice.internal.service.WorkflowExecutionService;
 import com.pravoos.ai.practice.internal.service.WorkflowService;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.shared.util.PagedResponse;
@@ -29,17 +30,20 @@ public class CaseController {
 
     private final CaseService caseService;
     private final WorkflowService workflowService;
+    private final WorkflowExecutionService workflowExecutionService;
     private final AiResponseQuery aiResponseQuery;
     private final CaseExportService caseExportService;
     private final CaseTaskService caseTaskService;
 
     public CaseController(CaseService caseService,
                           WorkflowService workflowService,
+                          WorkflowExecutionService workflowExecutionService,
                           AiResponseQuery aiResponseQuery,
                           CaseExportService caseExportService,
                           CaseTaskService caseTaskService) {
         this.caseService = caseService;
         this.workflowService = workflowService;
+        this.workflowExecutionService = workflowExecutionService;
         this.aiResponseQuery = aiResponseQuery;
         this.caseExportService = caseExportService;
         this.caseTaskService = caseTaskService;
@@ -166,6 +170,31 @@ public class CaseController {
         UUID lawyerId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.ok(workflowService.run(caseId, workflowId, request, lawyerId,
                 SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @PostMapping("/{caseId}/workflow-runs")
+    public ResponseEntity<WorkflowRunDto> runWorkflowDefinition(
+            @PathVariable UUID caseId,
+            @Valid @RequestBody RunWorkflowDefinitionRequest request,
+            Authentication authentication) {
+        UUID lawyerId = SecurityUtils.currentUserId(authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).body(workflowExecutionService.run(
+                caseId, request.definitionId(), lawyerId, SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @GetMapping("/{caseId}/workflow-runs")
+    public ResponseEntity<List<WorkflowRunDto>> workflowRuns(@PathVariable UUID caseId,
+                                                             Authentication authentication) {
+        return ResponseEntity.ok(workflowExecutionService.listRuns(caseId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @GetMapping("/{caseId}/workflow-runs/{runId}")
+    public ResponseEntity<WorkflowRunDto> workflowRun(@PathVariable UUID caseId,
+                                                      @PathVariable UUID runId,
+                                                      Authentication authentication) {
+        return ResponseEntity.ok(workflowExecutionService.getRun(caseId, runId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 
     @GetMapping("/{caseId}/responses")

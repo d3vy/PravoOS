@@ -17,6 +17,7 @@ import type {
   GenerateDraftRequest,
   UpdateCaseRequest,
   UpdateCaseTaskRequest,
+  WorkflowRunDto,
 } from '../types'
 
 export const casesApi = {
@@ -128,6 +129,19 @@ export const casesApi = {
       `/api/ai/cases/${caseId}/workflows/${workflowId}/run`,
       { question: question ?? null }
     )
+    return response.data
+  },
+
+  runWorkflowDefinition: async (caseId: string, definitionId: string): Promise<WorkflowRunDto> => {
+    const response = await apiClient.post<WorkflowRunDto>(
+      `/api/ai/cases/${caseId}/workflow-runs`,
+      { definitionId }
+    )
+    return response.data
+  },
+
+  getWorkflowRuns: async (caseId: string): Promise<WorkflowRunDto[]> => {
+    const response = await apiClient.get<WorkflowRunDto[]>(`/api/ai/cases/${caseId}/workflow-runs`)
     return response.data
   },
 

@@ -19,6 +19,7 @@ const lawyerLinks: NavLinkItem[] = [
   { to: '/clients', label: 'Клиенты' },
   { to: '/team', label: 'Организация' },
   { to: '/templates', label: 'Шаблоны' },
+  { to: '/workflows', label: 'Процессы' },
   { to: '/chat', label: 'AI-чат' },
   { to: '/profile', label: 'Профиль' },
   { to: '/settings', label: 'Настройки' },

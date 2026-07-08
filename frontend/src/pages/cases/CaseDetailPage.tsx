@@ -21,6 +21,7 @@ import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 import { DateField } from '../../components/cases/DateField'
 import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
+import { WorkflowProcessSection } from '../../components/cases/WorkflowProcessSection'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 import type { CaseStatus } from '../../types'
@@ -137,6 +138,8 @@ export default function CaseDetailPage(): JSX.Element {
         <ArbitrSection caseItem={caseItem} queryClient={queryClient} />
 
         <WorkflowSection caseId={caseId} workflows={workflows} queryClient={queryClient} />
+
+        <WorkflowProcessSection caseId={caseId} />
 
         <ContractReviewSection caseId={caseId} documents={documents} reviews={contractReviews} queryClient={queryClient} />
 

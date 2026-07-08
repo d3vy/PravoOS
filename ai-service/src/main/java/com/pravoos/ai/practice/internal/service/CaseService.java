@@ -19,6 +19,7 @@ import com.pravoos.ai.shared.exception.CaseTransferNotAllowedException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import com.pravoos.ai.shared.exception.OrganizationAccessException;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.DeadlineType;
 import com.pravoos.ai.shared.util.LikePattern;
 import com.pravoos.ai.shared.util.PageRequests;
 import org.slf4j.Logger;
@@ -27,6 +28,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -249,6 +252,33 @@ public class CaseService {
             throw new CaseNotFoundException(caseId);
         }
         return caseEntity;
+    }
+
+    @Transactional
+    public boolean setDeadlineIfAbsent(UUID caseId, DeadlineType type, LocalDate date,
+                                       UUID lawyerId, List<UUID> orgIds) {
+        Case caseEntity = requireVisibleCase(caseId, lawyerId, orgIds);
+        boolean applied = switch (type) {
+            case FILING_DEADLINE -> {
+                if (caseEntity.getFilingDeadline() != null) yield false;
+                caseEntity.setFilingDeadline(date);
+                yield true;
+            }
+            case NEXT_HEARING -> {
+                if (caseEntity.getNextHearingDate() != null) yield false;
+                caseEntity.setNextHearingDate(date);
+                yield true;
+            }
+            case EXPIRY -> {
+                if (caseEntity.getExpiresAt() != null) yield false;
+                caseEntity.setExpiresAt(date);
+                yield true;
+            }
+        };
+        if (applied) {
+            log.info("Deadline {} set to {} on case {} by lawyer {}", type, date, caseId, lawyerId);
+        }
+        return applied;
     }
 
     private Client resolveOwnedClient(UUID clientId, UUID lawyerId) {

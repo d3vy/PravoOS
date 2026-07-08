@@ -25,6 +25,7 @@ import ClientsPage from './pages/clients/ClientsPage'
 import ClientDetailPage from './pages/clients/ClientDetailPage'
 import SearchPage from './pages/search/SearchPage'
 import TemplatesPage from './pages/templates/TemplatesPage'
+import WorkflowsPage from './pages/workflows/WorkflowsPage'
 import TeamPage from './pages/team/TeamPage'
 import InvitePage from './pages/team/InvitePage'
 import ApplicationsPage from './pages/admin/ApplicationsPage'
@@ -128,6 +129,15 @@ export default function App(): JSX.Element {
         element={
           <ProtectedRoute requiredRole="LAWYER">
             <TemplatesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/workflows"
+        element={
+          <ProtectedRoute requiredRole="LAWYER">
+            <WorkflowsPage />
           </ProtectedRoute>
         }
       />

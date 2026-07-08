@@ -86,7 +86,12 @@ public class CaseTaskService {
 
         AiResponseDto checklist = workflowService.run(
                 caseId, BankruptcyWorkflow.DOCUMENT_CHECKLIST.name(), null, lawyerId, orgIds);
-        List<String> extracted = ChecklistTableParser.extractMissingDocumentTasks(checklist.result());
+        return createFromChecklist(caseId, checklist.result(), lawyerId);
+    }
+
+    @Transactional
+    public List<CaseTaskResponse> createFromChecklist(UUID caseId, String checklistMarkdown, UUID lawyerId) {
+        List<String> extracted = ChecklistTableParser.extractMissingDocumentTasks(checklistMarkdown);
 
         if (extracted.isEmpty()) {
             log.warn("Checklist for case {} produced no actionable tasks (lawyer {})", caseId, lawyerId);

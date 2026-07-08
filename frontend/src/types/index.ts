@@ -636,3 +636,72 @@ export interface CaseMessageResponse {
   body: string
   createdAt: string
 }
+
+export type WorkflowStepType = 'AI_ANALYSIS' | 'GENERATE_DRAFT' | 'GENERATE_TASKS' | 'SET_DEADLINE'
+export type WorkflowCategory = 'BANKRUPTCY' | 'DEBT_COLLECTION' | 'REGISTRATION' | 'CUSTOM'
+export type WorkflowRunStatus = 'RUNNING' | 'COMPLETED' | 'FAILED'
+export type WorkflowStepStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED'
+
+export interface WorkflowStepConfig {
+  order: number
+  type: WorkflowStepType
+  title: string
+  instruction?: string | null
+  draftType?: string | null
+  deadlineType?: DeadlineType | null
+  deadlineOffsetDays?: number | null
+}
+
+export interface WorkflowDefinitionDto {
+  id: string
+  name: string
+  description: string | null
+  category: WorkflowCategory
+  categoryName: string
+  system: boolean
+  editable: boolean
+  steps: WorkflowStepConfig[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkflowStepInput {
+  type: WorkflowStepType
+  title: string
+  instruction?: string | null
+  draftType?: string | null
+  deadlineType?: DeadlineType | null
+  deadlineOffsetDays?: number | null
+}
+
+export interface SaveWorkflowDefinitionRequest {
+  name: string
+  description?: string | null
+  category: WorkflowCategory
+  steps: WorkflowStepInput[]
+}
+
+export interface WorkflowStepRun {
+  order: number
+  type: WorkflowStepType
+  title: string
+  status: WorkflowStepStatus
+  detail?: string | null
+  aiResponseId?: string | null
+  draftId?: string | null
+  error?: string | null
+}
+
+export interface WorkflowRunDto {
+  id: string
+  caseId: string
+  definitionId: string
+  definitionName: string
+  category: WorkflowCategory
+  categoryName: string
+  status: WorkflowRunStatus
+  statusName: string
+  steps: WorkflowStepRun[]
+  startedAt: string
+  finishedAt: string | null
+}
