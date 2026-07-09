@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
-import type { CaseAnalyticsResponse, CaseTimelineStats, CourtStat } from '../../types'
+import type { CaseAnalyticsResponse, CaseTimelineStats, OutcomeStat } from '../../types'
 import { Button } from '../ui/Button'
 import { Spinner } from '../ui/Spinner'
 
@@ -32,7 +32,8 @@ export function CaseAnalyticsSection({ caseId }: { caseId: string }): JSX.Elemen
     <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
       <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">Судебная аналитика</h2>
       <p className="text-xs text-light-secondary dark:text-dark-secondary mb-4">
-        Статистика по хронологии КАД.Арбитр и AI-справка: краткое содержание, анализ позиций и стратегия.
+        Статистика по хронологии КАД.Арбитр (суд, судья, стороны) и AI-справка: краткое содержание,
+        анализ позиций и стратегия.
       </p>
 
       {isLoading ? (
@@ -43,7 +44,15 @@ export function CaseAnalyticsSection({ caseId }: { caseId: string }): JSX.Elemen
         <div className="flex flex-col gap-5">
           <TimelineStatsView timeline={data.timeline} />
 
-          {data.courtStats.length > 0 && <CourtStatsView courtStats={data.courtStats} />}
+          {data.courtStats.length > 0 && (
+            <OutcomeStatsView title="Статистика по судам (все ваши дела)" stats={data.courtStats} />
+          )}
+          {data.judgeStats.length > 0 && (
+            <OutcomeStatsView title="Статистика по судье (все ваши дела)" stats={data.judgeStats} />
+          )}
+          {data.partyStats.length > 0 && (
+            <OutcomeStatsView title="Статистика по сторонам/оппонентам (все ваши дела)" stats={data.partyStats} />
+          )}
 
           {generateMutation.isError && (
             <p className="text-sm text-red-600 dark:text-red-400">Не удалось сформировать AI-справку. Попробуйте снова.</p>
@@ -110,6 +119,30 @@ function TimelineStatsView({ timeline }: { timeline: CaseTimelineStats }): JSX.E
         ))}
       </div>
 
+      {timeline.judge && (
+        <p className="mt-3 text-sm text-light-text dark:text-dark-text">
+          <span className="text-light-secondary dark:text-dark-secondary">Судья: </span>
+          {timeline.judge}
+        </p>
+      )}
+
+      {timeline.parties.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">Стороны по делу</p>
+          <div className="flex flex-wrap gap-1.5">
+            {timeline.parties.map((party) => (
+              <span
+                key={`${party.name}-${party.role ?? ''}`}
+                className="text-xs px-2 py-0.5 rounded-md border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary"
+              >
+                {party.name}
+                {party.role && <span className="opacity-70"> · {party.role}</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {timeline.eventTypes.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {timeline.eventTypes.map((event) => (
@@ -126,34 +159,34 @@ function TimelineStatsView({ timeline }: { timeline: CaseTimelineStats }): JSX.E
   )
 }
 
-function CourtStatsView({ courtStats }: { courtStats: CourtStat[] }): JSX.Element {
+function OutcomeStatsView({ title, stats }: { title: string; stats: OutcomeStat[] }): JSX.Element {
   return (
     <div>
       <h3 className="text-xs font-semibold text-light-secondary dark:text-dark-secondary uppercase tracking-wide mb-2">
-        Статистика по судам (все ваши дела)
+        {title}
       </h3>
       <div className="flex flex-col gap-2">
-        {courtStats.map((court) => (
+        {stats.map((stat) => (
           <div
-            key={court.courtName}
+            key={stat.name}
             className="flex items-center justify-between gap-3 p-3 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg"
           >
             <div className="min-w-0">
-              <p className="text-sm text-light-text dark:text-dark-text [overflow-wrap:anywhere]">{court.courtName}</p>
+              <p className="text-sm text-light-text dark:text-dark-text [overflow-wrap:anywhere]">{stat.name}</p>
               <p className="text-xs text-light-secondary dark:text-dark-secondary">
-                дел: {court.totalCases} · выиграно {court.wonCases} · проиграно {court.lostCases}
+                дел: {stat.totalCases} · выиграно {stat.wonCases} · проиграно {stat.lostCases}
               </p>
             </div>
-            {court.winRatePercent != null && (
+            {stat.winRatePercent != null && (
               <div className="text-right shrink-0">
                 <span
                   className={`text-lg font-semibold ${
-                    court.winRatePercent >= 50
+                    stat.winRatePercent >= 50
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-amber-600 dark:text-amber-400'
                   }`}
                 >
-                  {court.winRatePercent}%
+                  {stat.winRatePercent}%
                 </span>
                 <p className="text-xs text-light-secondary dark:text-dark-secondary">выигрышей</p>
               </div>

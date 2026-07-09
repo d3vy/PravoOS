@@ -106,10 +106,27 @@ billable) и `Invoice`; таймер/ручной ввод в `CaseDetailPage`; 
   метрики-плитки таймлайна, бейджи типов событий, карточки win-rate по судам, кнопка формирования/
   обновления AI-справки, вывод справки с датой. `api/cases.ts` (+2 метода), типы
   `CaseAnalyticsResponse/CaseTimelineStats/CourtStat/AiCaseAnalysisDto/EventTypeCount`.
-- Тесты: `CaseAnalyticsServiceTest` (3), всего 114 зелёных, `ModularityTests` целы (всё в practice/core,
+- Тесты: `CaseAnalyticsServiceTest` (4), всего 115 зелёных, `ModularityTests` целы (всё в practice/core,
   deps уже разрешены), `tsc --noEmit` чист, `npm run build` ок.
-- **Follow-up:** статистика по судье/оппоненту (в модели пока нет отдельных полей судьи/оппонента —
-  доступна агрегация по суду и исходу дела); асинхронная генерация справки по SSE.
+
+**✅ Дополнено (2026-07-09): статистика по судье и сторонам/оппонентам.**
+- Парсинг из КАД: `ArbitrApiResponse` расширен (`Sides[]{Name,Type}`, `Judge{Name}` в `CourtHearings`/
+  `CaseInstances`); `ApiArbitrCaseProvider` резолвит судью (приоритет — судья ближайшего заседания) и
+  стороны → `ArbitrCaseData.judgeName/parties`. `ArbitrSyncService` на каждом синке пишет `Case.arbitrJudge`
+  и перезаписывает `case_parties`.
+- Модель: V28 — колонка `cases.arbitr_judge` + таблица `case_parties{case_id,name,role}` (сущность `CaseParty`,
+  `CasePartyRepository`). Чистка сирот: `ArbitrSyncService` (replace), `CaseService.delete` + смена номера дела
+  (clear judge + delete parties), `LawyerDataCleanupService.purgeRelationalData` (`deleteByLawyerId`).
+- Статистика: обобщил проекцию `CourtStatView`→`OutcomeStatView`; добавил `judgeStatistics` (GROUP BY
+  `arbitr_judge`) и `partyStatistics` (JOIN `CaseParty`). Единый DTO `OutcomeStat`; ответ =
+  `courtStats/judgeStats/partyStats` + судья и стороны в `CaseTimelineStats`. Судья/стороны идут и в
+  AI-контекст (`CaseAnalyticsPrompt`).
+- Фронт: секция аналитики показывает судью, стороны и три блока win-rate (суд/судья/оппонент) через общий
+  `OutcomeStatsView`. Тесты: `CaseAnalyticsServiceTest` дополнен кейсом judge/party;
+  `LawyerDataCleanupServiceTest`/`CaseService*Test`/`CitationCheckServiceTest` обновлены под новые
+  конструкторы; всё зелёно, `tsc`/`build` чисты.
+- **Follow-up:** «оппонент» = все стороны дела (платформа не знает, какую сторону ведёт юрист, — маппинг
+  клиент↔сторона не хранится); асинхронная генерация справки по SSE.
 
 ### 6. ✅ Сравнение версий и редлайн документов
 **Возможность.** Spellbook «Compare to Market», Юрайт: Legal AI (распознавание и сравнение).

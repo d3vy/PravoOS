@@ -87,7 +87,44 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
                 caseDto.caseNumber(),
                 caseDto.caseId(),
                 resolveNextHearingDate(caseDto),
+                resolveJudgeName(caseDto),
+                resolveParties(caseDto),
                 events);
+    }
+
+    private String resolveJudgeName(ArbitrApiResponse.Case caseDto) {
+        String fromHearing = safe(caseDto.courtHearings()).stream()
+                .map(ArbitrApiResponse.CourtHearing::judge)
+                .map(this::judgeName)
+                .filter(name -> name != null && !name.isBlank())
+                .findFirst()
+                .orElse(null);
+        if (fromHearing != null) {
+            return fromHearing.trim();
+        }
+        return safe(caseDto.caseInstances()).stream()
+                .map(ArbitrApiResponse.CaseInstance::judge)
+                .map(this::judgeName)
+                .filter(name -> name != null && !name.isBlank())
+                .map(String::trim)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String judgeName(ArbitrApiResponse.Judge judge) {
+        return judge == null ? null : judge.name();
+    }
+
+    private List<ArbitrCaseData.ArbitrParty> resolveParties(ArbitrApiResponse.Case caseDto) {
+        List<ArbitrCaseData.ArbitrParty> parties = new ArrayList<>();
+        for (ArbitrApiResponse.Side side : safe(caseDto.sides())) {
+            if (side.name() == null || side.name().isBlank()) {
+                continue;
+            }
+            String role = side.type() == null || side.type().isBlank() ? null : side.type().trim();
+            parties.add(new ArbitrCaseData.ArbitrParty(side.name().trim(), role));
+        }
+        return parties;
     }
 
     private ArbitrCaseData.ArbitrEvent toEvent(ArbitrApiResponse.InstanceEvent event, String courtName) {

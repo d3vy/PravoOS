@@ -21,29 +21,62 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
         long getCount();
     }
 
-    interface CourtStatView {
-        String getCourtName();
+    interface OutcomeStatView {
+        String getName();
         long getTotalCases();
         long getWonCases();
         long getLostCases();
     }
 
     @Query("""
-            SELECT h.courtName AS courtName,
+            SELECT h.courtName AS name,
                    COUNT(DISTINCT c.id) AS totalCases,
                    COUNT(DISTINCT CASE WHEN c.status = :wonStatus THEN c.id END) AS wonCases,
                    COUNT(DISTINCT CASE WHEN c.status = :lostStatus THEN c.id END) AS lostCases
             FROM CaseHearingEvent h, Case c
             WHERE c.id = h.caseId
-              AND h.courtName IN :courtNames
+              AND h.courtName IN :names
               AND (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
             GROUP BY h.courtName
             """)
-    List<CourtStatView> courtStatistics(@Param("courtNames") Collection<String> courtNames,
-                                        @Param("lawyerId") UUID lawyerId,
-                                        @Param("orgIds") Collection<UUID> orgIds,
-                                        @Param("wonStatus") CaseStatus wonStatus,
-                                        @Param("lostStatus") CaseStatus lostStatus);
+    List<OutcomeStatView> courtStatistics(@Param("names") Collection<String> names,
+                                          @Param("lawyerId") UUID lawyerId,
+                                          @Param("orgIds") Collection<UUID> orgIds,
+                                          @Param("wonStatus") CaseStatus wonStatus,
+                                          @Param("lostStatus") CaseStatus lostStatus);
+
+    @Query("""
+            SELECT c.arbitrJudge AS name,
+                   COUNT(DISTINCT c.id) AS totalCases,
+                   COUNT(DISTINCT CASE WHEN c.status = :wonStatus THEN c.id END) AS wonCases,
+                   COUNT(DISTINCT CASE WHEN c.status = :lostStatus THEN c.id END) AS lostCases
+            FROM Case c
+            WHERE c.arbitrJudge IN :names
+              AND (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
+            GROUP BY c.arbitrJudge
+            """)
+    List<OutcomeStatView> judgeStatistics(@Param("names") Collection<String> names,
+                                          @Param("lawyerId") UUID lawyerId,
+                                          @Param("orgIds") Collection<UUID> orgIds,
+                                          @Param("wonStatus") CaseStatus wonStatus,
+                                          @Param("lostStatus") CaseStatus lostStatus);
+
+    @Query("""
+            SELECT p.name AS name,
+                   COUNT(DISTINCT c.id) AS totalCases,
+                   COUNT(DISTINCT CASE WHEN c.status = :wonStatus THEN c.id END) AS wonCases,
+                   COUNT(DISTINCT CASE WHEN c.status = :lostStatus THEN c.id END) AS lostCases
+            FROM CaseParty p, Case c
+            WHERE c.id = p.caseId
+              AND p.name IN :names
+              AND (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
+            GROUP BY p.name
+            """)
+    List<OutcomeStatView> partyStatistics(@Param("names") Collection<String> names,
+                                          @Param("lawyerId") UUID lawyerId,
+                                          @Param("orgIds") Collection<UUID> orgIds,
+                                          @Param("wonStatus") CaseStatus wonStatus,
+                                          @Param("lostStatus") CaseStatus lostStatus);
 
     @Query("SELECT c.status AS status, COUNT(c) AS count FROM Case c "
             + "WHERE c.lawyerId = :lawyerId GROUP BY c.status")

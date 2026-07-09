@@ -50,6 +50,9 @@ public class Case {
     @Column(name = "arbitr_case_guid", length = 40)
     private String arbitrCaseGuid;
 
+    @Column(name = "arbitr_judge", length = 300)
+    private String arbitrJudge;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -92,6 +95,9 @@ public class Case {
 
     public String getArbitrCaseGuid() { return arbitrCaseGuid; }
     public void setArbitrCaseGuid(String arbitrCaseGuid) { this.arbitrCaseGuid = arbitrCaseGuid; }
+
+    public String getArbitrJudge() { return arbitrJudge; }
+    public void setArbitrJudge(String arbitrJudge) { this.arbitrJudge = arbitrJudge; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

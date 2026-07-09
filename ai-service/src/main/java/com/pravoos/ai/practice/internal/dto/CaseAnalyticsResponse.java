@@ -4,6 +4,8 @@ import java.util.List;
 
 public record CaseAnalyticsResponse(
         CaseTimelineStats timeline,
-        List<CourtStat> courtStats,
+        List<OutcomeStat> courtStats,
+        List<OutcomeStat> judgeStats,
+        List<OutcomeStat> partyStats,
         AiCaseAnalysisDto aiAnalysis
 ) {}

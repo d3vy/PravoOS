@@ -11,6 +11,7 @@ import com.pravoos.ai.practice.internal.dto.UpdateCaseRequest;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
@@ -45,6 +46,7 @@ public class CaseService {
     private final DocumentCommand documentCommand;
     private final DocumentQuery documentQuery;
     private final CaseHearingEventRepository hearingEventRepository;
+    private final CasePartyRepository casePartyRepository;
     private final ArbitrSyncService arbitrSyncService;
     private final UserServiceClient userServiceClient;
 
@@ -53,6 +55,7 @@ public class CaseService {
                        DocumentCommand documentCommand,
                        DocumentQuery documentQuery,
                        CaseHearingEventRepository hearingEventRepository,
+                       CasePartyRepository casePartyRepository,
                        ArbitrSyncService arbitrSyncService,
                        UserServiceClient userServiceClient) {
         this.caseRepository = caseRepository;
@@ -60,6 +63,7 @@ public class CaseService {
         this.documentCommand = documentCommand;
         this.documentQuery = documentQuery;
         this.hearingEventRepository = hearingEventRepository;
+        this.casePartyRepository = casePartyRepository;
         this.arbitrSyncService = arbitrSyncService;
         this.userServiceClient = userServiceClient;
     }
@@ -125,6 +129,8 @@ public class CaseService {
         String normalized = normalizeArbitrNumber(requestedNumber);
         if (!Objects.equals(normalized, caseEntity.getArbitrCaseNumber())) {
             caseEntity.setArbitrCaseGuid(null);
+            caseEntity.setArbitrJudge(null);
+            casePartyRepository.deleteByCaseId(caseEntity.getId());
         }
         caseEntity.setArbitrCaseNumber(normalized);
     }
@@ -207,6 +213,7 @@ public class CaseService {
     public void delete(UUID caseId, UUID lawyerId) {
         Case caseEntity = requireOwnedCase(caseId, lawyerId);
         documentCommand.deleteByCase(caseId);
+        casePartyRepository.deleteByCaseId(caseId);
         caseRepository.delete(caseEntity);
         log.info("Case deleted: {} by lawyer {}", caseId, lawyerId);
     }

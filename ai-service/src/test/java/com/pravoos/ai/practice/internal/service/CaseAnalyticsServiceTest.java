@@ -3,12 +3,14 @@ package com.pravoos.ai.practice.internal.service;
 import com.pravoos.ai.core.api.LegalAiAnswer;
 import com.pravoos.ai.core.api.LegalAiPort;
 import com.pravoos.ai.practice.internal.dto.CaseAnalyticsResponse;
-import com.pravoos.ai.practice.internal.dto.CourtStat;
+import com.pravoos.ai.practice.internal.dto.OutcomeStat;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseAnalysis;
 import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
+import com.pravoos.ai.practice.internal.model.entity.CaseParty;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseAnalysisRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +38,7 @@ class CaseAnalyticsServiceTest {
     @Mock private CaseService caseService;
     @Mock private CaseRepository caseRepository;
     @Mock private CaseHearingEventRepository hearingEventRepository;
+    @Mock private CasePartyRepository casePartyRepository;
     @Mock private CaseAnalysisRepository caseAnalysisRepository;
     @Mock private LegalAiPort legalAiPort;
 
@@ -47,17 +50,22 @@ class CaseAnalyticsServiceTest {
     @BeforeEach
     void setUp() {
         service = new CaseAnalyticsService(caseService, caseRepository,
-                hearingEventRepository, caseAnalysisRepository, legalAiPort);
+                hearingEventRepository, casePartyRepository, caseAnalysisRepository, legalAiPort);
         lenient().when(caseService.requireVisibleCase(eq(caseId), eq(lawyerId), anyList()))
-                .thenReturn(caseWithHearing(LocalDate.of(2026, 8, 1)));
+                .thenReturn(caseEntity(null));
+        lenient().when(casePartyRepository.findByCaseId(caseId)).thenReturn(List.of());
+        lenient().when(caseAnalysisRepository.findByCaseId(caseId)).thenReturn(Optional.empty());
+        lenient().when(caseRepository.courtStatistics(anyList(), eq(lawyerId), anyList(),
+                eq(CaseStatus.CLOSED_WON), eq(CaseStatus.CLOSED_LOST))).thenReturn(List.of());
     }
 
-    private Case caseWithHearing(LocalDate nextHearing) {
+    private Case caseEntity(String judge) {
         Case caseEntity = new Case();
         caseEntity.setLawyerId(lawyerId);
         caseEntity.setTitle("Взыскание задолженности");
         caseEntity.setStatus(CaseStatus.IN_PROGRESS);
-        caseEntity.setNextHearingDate(nextHearing);
+        caseEntity.setNextHearingDate(LocalDate.of(2026, 8, 1));
+        caseEntity.setArbitrJudge(judge);
         return caseEntity;
     }
 
@@ -72,10 +80,6 @@ class CaseAnalyticsServiceTest {
                         event(LocalDate.of(2026, 6, 10), "Заседание", "АС города Москвы"),
                         event(LocalDate.of(2026, 5, 1), "Заседание", "АС города Москвы"),
                         event(LocalDate.of(2026, 4, 1), "Определение", "АС города Москвы")));
-        when(caseRepository.courtStatistics(anyList(), eq(lawyerId), anyList(),
-                eq(CaseStatus.CLOSED_WON), eq(CaseStatus.CLOSED_LOST)))
-                .thenReturn(List.of());
-        when(caseAnalysisRepository.findByCaseId(caseId)).thenReturn(Optional.empty());
 
         CaseAnalyticsResponse response = service.getAnalytics(caseId, lawyerId, List.of());
 
@@ -96,25 +100,45 @@ class CaseAnalyticsServiceTest {
                 .thenReturn(List.of(event(LocalDate.of(2026, 6, 10), "Заседание", "АС города Москвы")));
         when(caseRepository.courtStatistics(anyList(), eq(lawyerId), anyList(),
                 eq(CaseStatus.CLOSED_WON), eq(CaseStatus.CLOSED_LOST)))
-                .thenReturn(List.of(courtView("АС города Москвы", 5, 3, 1)));
-        when(caseAnalysisRepository.findByCaseId(caseId)).thenReturn(Optional.empty());
+                .thenReturn(List.of(view("АС города Москвы", 5, 3, 1)));
 
         CaseAnalyticsResponse response = service.getAnalytics(caseId, lawyerId, List.of());
 
         assertThat(response.courtStats()).hasSize(1);
-        CourtStat stat = response.courtStats().get(0);
+        OutcomeStat stat = response.courtStats().get(0);
         assertThat(stat.totalCases()).isEqualTo(5);
         assertThat(stat.winRatePercent()).isEqualTo(75);
+    }
+
+    @Test
+    void judgeAndPartyStatsComputedWhenPresent() {
+        when(caseService.requireVisibleCase(eq(caseId), eq(lawyerId), anyList()))
+                .thenReturn(caseEntity("Иванов И.И."));
+        when(hearingEventRepository.findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId))
+                .thenReturn(List.of());
+        when(casePartyRepository.findByCaseId(caseId))
+                .thenReturn(List.of(new CaseParty(caseId, "ООО Ромашка", "Ответчик")));
+        when(caseRepository.judgeStatistics(eq(List.of("Иванов И.И.")), eq(lawyerId), anyList(),
+                eq(CaseStatus.CLOSED_WON), eq(CaseStatus.CLOSED_LOST)))
+                .thenReturn(List.of(view("Иванов И.И.", 4, 2, 2)));
+        when(caseRepository.partyStatistics(eq(List.of("ООО Ромашка")), eq(lawyerId), anyList(),
+                eq(CaseStatus.CLOSED_WON), eq(CaseStatus.CLOSED_LOST)))
+                .thenReturn(List.of(view("ООО Ромашка", 3, 3, 0)));
+
+        CaseAnalyticsResponse response = service.getAnalytics(caseId, lawyerId, List.of());
+
+        assertThat(response.timeline().judge()).isEqualTo("Иванов И.И.");
+        assertThat(response.timeline().parties()).extracting(p -> p.name()).containsExactly("ООО Ромашка");
+        assertThat(response.judgeStats()).singleElement()
+                .satisfies(stat -> assertThat(stat.winRatePercent()).isEqualTo(50));
+        assertThat(response.partyStats()).singleElement()
+                .satisfies(stat -> assertThat(stat.winRatePercent()).isEqualTo(100));
     }
 
     @Test
     void generateSavesAnalysisAndReturnsAiContent() {
         when(hearingEventRepository.findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId))
                 .thenReturn(List.of(event(LocalDate.of(2026, 6, 10), "Заседание", "АС города Москвы")));
-        when(caseRepository.courtStatistics(anyList(), eq(lawyerId), anyList(),
-                eq(CaseStatus.CLOSED_WON), eq(CaseStatus.CLOSED_LOST)))
-                .thenReturn(List.of());
-        when(caseAnalysisRepository.findByCaseId(caseId)).thenReturn(Optional.empty());
         when(caseAnalysisRepository.save(any(CaseAnalysis.class))).thenAnswer(inv -> inv.getArgument(0));
         when(legalAiPort.analyzeCase(eq(caseId), any(), any(), any(), eq(lawyerId)))
                 .thenReturn(new LegalAiAnswer("аналитическая справка", 42));
@@ -127,9 +151,9 @@ class CaseAnalyticsServiceTest {
         assertThat(response.aiAnalysis().content()).isEqualTo("аналитическая справка");
     }
 
-    private CaseRepository.CourtStatView courtView(String court, long total, long won, long lost) {
-        return new CaseRepository.CourtStatView() {
-            @Override public String getCourtName() { return court; }
+    private CaseRepository.OutcomeStatView view(String name, long total, long won, long lost) {
+        return new CaseRepository.OutcomeStatView() {
+            @Override public String getName() { return name; }
             @Override public long getTotalCases() { return total; }
             @Override public long getWonCases() { return won; }
             @Override public long getLostCases() { return lost; }

@@ -5,6 +5,7 @@ import com.pravoos.ai.document.api.DocumentQuery;
 import com.pravoos.ai.practice.internal.dto.CaseResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
@@ -32,12 +33,13 @@ class CaseServiceOwnershipTest {
     @Mock private DocumentCommand documentCommand;
     @Mock private DocumentQuery documentQuery;
     @Mock private CaseHearingEventRepository hearingEventRepository;
+    @Mock private CasePartyRepository casePartyRepository;
     @Mock private ArbitrSyncService arbitrSyncService;
     @Mock private UserServiceClient userServiceClient;
 
     private CaseService caseService() {
         return new CaseService(caseRepository, clientRepository, documentCommand, documentQuery,
-                hearingEventRepository, arbitrSyncService, userServiceClient);
+                hearingEventRepository, casePartyRepository, arbitrSyncService, userServiceClient);
     }
 
     @Test

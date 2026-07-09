@@ -50,7 +50,7 @@ class CitationCheckServiceTest {
     void verifiesCourtCaseFoundInArbitr() {
         when(arbitrCaseProvider.isEnabled()).thenReturn(true);
         when(arbitrCaseProvider.fetchCase("А40-12345/2024"))
-                .thenReturn(Optional.of(new ArbitrCaseData("А40-12345/2024", "guid", null, List.of())));
+                .thenReturn(Optional.of(new ArbitrCaseData("А40-12345/2024", "guid", null, null, List.of(), List.of())));
 
         CitationCheckResult result = service.check("Дело А40-12345/2024.", UUID.randomUUID());
 

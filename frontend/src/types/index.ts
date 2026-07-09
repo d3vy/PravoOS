@@ -186,6 +186,11 @@ export interface EventTypeCount {
   count: number
 }
 
+export interface CaseParty {
+  name: string
+  role: string | null
+}
+
 export interface CaseTimelineStats {
   hearingCount: number
   firstEventDate: string | null
@@ -196,10 +201,12 @@ export interface CaseTimelineStats {
   eventTypes: EventTypeCount[]
   nextHearingDate: string | null
   daysToNextHearing: number | null
+  judge: string | null
+  parties: CaseParty[]
 }
 
-export interface CourtStat {
-  courtName: string
+export interface OutcomeStat {
+  name: string
   totalCases: number
   wonCases: number
   lostCases: number
@@ -213,7 +220,9 @@ export interface AiCaseAnalysisDto {
 
 export interface CaseAnalyticsResponse {
   timeline: CaseTimelineStats
-  courtStats: CourtStat[]
+  courtStats: OutcomeStat[]
+  judgeStats: OutcomeStat[]
+  partyStats: OutcomeStat[]
   aiAnalysis: AiCaseAnalysisDto | null
 }
 

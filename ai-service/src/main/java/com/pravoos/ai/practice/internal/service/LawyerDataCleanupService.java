@@ -23,6 +23,7 @@ public class LawyerDataCleanupService {
     private static final int RETRY_BATCH_SIZE = 50;
 
     private final CaseRepository caseRepository;
+    private final CasePartyRepository casePartyRepository;
     private final CaseTaskRepository caseTaskRepository;
     private final CaseDraftRepository caseDraftRepository;
     private final ClientRepository clientRepository;
@@ -33,6 +34,7 @@ public class LawyerDataCleanupService {
     private final LawyerDataCleanupService self;
 
     public LawyerDataCleanupService(CaseRepository caseRepository,
+                                    CasePartyRepository casePartyRepository,
                                     CaseTaskRepository caseTaskRepository,
                                     CaseDraftRepository caseDraftRepository,
                                     ClientRepository clientRepository,
@@ -42,6 +44,7 @@ public class LawyerDataCleanupService {
                                     PendingLawyerPurgeRepository pendingLawyerPurgeRepository,
                                     @Lazy LawyerDataCleanupService self) {
         this.caseRepository = caseRepository;
+        this.casePartyRepository = casePartyRepository;
         this.caseTaskRepository = caseTaskRepository;
         this.caseDraftRepository = caseDraftRepository;
         this.clientRepository = clientRepository;
@@ -116,11 +119,12 @@ public class LawyerDataCleanupService {
     public void purgeRelationalData(UUID lawyerId) {
         int tasks = caseTaskRepository.deleteByLawyerId(lawyerId);
         int drafts = caseDraftRepository.deleteByLawyerId(lawyerId);
+        int parties = casePartyRepository.deleteByLawyerId(lawyerId);
         int cases = caseRepository.deleteByLawyerId(lawyerId);
         int contacts = clientContactRepository.deleteByLawyerId(lawyerId);
         int clients = clientRepository.deleteByLawyerId(lawyerId);
         int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
-        log.info("Deleted {} tasks, {} drafts, {} cases, {} contacts, {} clients and {} templates for lawyer {}",
-                tasks, drafts, cases, contacts, clients, templates, lawyerId);
+        log.info("Deleted {} tasks, {} drafts, {} parties, {} cases, {} contacts, {} clients and {} templates for lawyer {}",
+                tasks, drafts, parties, cases, contacts, clients, templates, lawyerId);
     }
 }

@@ -2,7 +2,9 @@ package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
+import com.pravoos.ai.practice.internal.model.entity.CaseParty;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
 import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
@@ -29,17 +31,20 @@ public class ArbitrSyncService {
     private final ArbitrCaseProvider arbitrCaseProvider;
     private final CaseRepository caseRepository;
     private final CaseHearingEventRepository hearingEventRepository;
+    private final CasePartyRepository casePartyRepository;
     private final OutboxEventService outboxEventService;
     private final ArbitrSyncService self;
 
     public ArbitrSyncService(ArbitrCaseProvider arbitrCaseProvider,
                              CaseRepository caseRepository,
                              CaseHearingEventRepository hearingEventRepository,
+                             CasePartyRepository casePartyRepository,
                              OutboxEventService outboxEventService,
                              @Lazy ArbitrSyncService self) {
         this.arbitrCaseProvider = arbitrCaseProvider;
         this.caseRepository = caseRepository;
         this.hearingEventRepository = hearingEventRepository;
+        this.casePartyRepository = casePartyRepository;
         this.outboxEventService = outboxEventService;
         this.self = self;
     }
@@ -71,9 +76,27 @@ public class ArbitrSyncService {
             caseEntity.setArbitrCaseGuid(data.caseGuid());
         }
         applyHearingDate(caseEntity, data.nextHearingDate());
+        applyJudge(caseEntity, data.judgeName());
+        replaceParties(caseId, data);
 
-        log.info("КАД.Арбитр sync: дело {} ({}) — новых событий {}, ближайшее заседание {}",
-                caseId, caseEntity.getArbitrCaseNumber(), newEvents, data.nextHearingDate());
+        log.info("КАД.Арбитр sync: дело {} ({}) — новых событий {}, ближайшее заседание {}, судья {}",
+                caseId, caseEntity.getArbitrCaseNumber(), newEvents, data.nextHearingDate(), data.judgeName());
+    }
+
+    private void applyJudge(Case caseEntity, String judgeName) {
+        if (judgeName != null && !judgeName.isBlank()) {
+            caseEntity.setArbitrJudge(judgeName.trim());
+        }
+    }
+
+    private void replaceParties(UUID caseId, ArbitrCaseData data) {
+        if (data.parties() == null || data.parties().isEmpty()) {
+            return;
+        }
+        casePartyRepository.deleteByCaseId(caseId);
+        for (ArbitrCaseData.ArbitrParty party : data.parties()) {
+            casePartyRepository.save(new CaseParty(caseId, party.name(), party.role()));
+        }
     }
 
     private int persistNewEvents(UUID caseId, ArbitrCaseData data) {

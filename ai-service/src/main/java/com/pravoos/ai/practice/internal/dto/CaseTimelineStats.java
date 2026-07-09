@@ -12,5 +12,7 @@ public record CaseTimelineStats(
         List<String> courts,
         List<EventTypeCount> eventTypes,
         LocalDate nextHearingDate,
-        Integer daysToNextHearing
+        Integer daysToNextHearing,
+        String judge,
+        List<CasePartyDto> parties
 ) {}

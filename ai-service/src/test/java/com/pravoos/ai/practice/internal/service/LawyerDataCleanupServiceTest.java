@@ -17,6 +17,7 @@ import static org.mockito.Mockito.*;
 class LawyerDataCleanupServiceTest {
 
     @Mock private CaseRepository caseRepository;
+    @Mock private CasePartyRepository casePartyRepository;
     @Mock private CaseTaskRepository caseTaskRepository;
     @Mock private CaseDraftRepository caseDraftRepository;
     @Mock private ClientRepository clientRepository;
@@ -26,8 +27,8 @@ class LawyerDataCleanupServiceTest {
     @Mock private PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
 
     private LawyerDataCleanupService service(LawyerDataCleanupService self) {
-        return new LawyerDataCleanupService(caseRepository, caseTaskRepository, caseDraftRepository,
-                clientRepository, clientContactRepository, documentTemplateRepository,
+        return new LawyerDataCleanupService(caseRepository, casePartyRepository, caseTaskRepository,
+                caseDraftRepository, clientRepository, clientContactRepository, documentTemplateRepository,
                 aiDataCleanup, pendingLawyerPurgeRepository, self);
     }
 
@@ -39,11 +40,12 @@ class LawyerDataCleanupServiceTest {
 
         verify(caseTaskRepository).deleteByLawyerId(lawyerId);
         verify(caseDraftRepository).deleteByLawyerId(lawyerId);
+        verify(casePartyRepository).deleteByLawyerId(lawyerId);
         verify(caseRepository).deleteByLawyerId(lawyerId);
         verify(clientContactRepository).deleteByLawyerId(lawyerId);
         verify(clientRepository).deleteByLawyerId(lawyerId);
         verify(documentTemplateRepository).deleteByLawyerId(lawyerId);
-        verifyNoMoreInteractions(caseTaskRepository, caseDraftRepository, caseRepository,
+        verifyNoMoreInteractions(caseTaskRepository, caseDraftRepository, casePartyRepository, caseRepository,
                 clientContactRepository, clientRepository, documentTemplateRepository);
     }
 

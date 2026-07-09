@@ -4,14 +4,17 @@ import com.pravoos.ai.core.api.LegalAiAnswer;
 import com.pravoos.ai.core.api.LegalAiPort;
 import com.pravoos.ai.practice.internal.dto.AiCaseAnalysisDto;
 import com.pravoos.ai.practice.internal.dto.CaseAnalyticsResponse;
+import com.pravoos.ai.practice.internal.dto.CasePartyDto;
 import com.pravoos.ai.practice.internal.dto.CaseTimelineStats;
-import com.pravoos.ai.practice.internal.dto.CourtStat;
 import com.pravoos.ai.practice.internal.dto.EventTypeCount;
+import com.pravoos.ai.practice.internal.dto.OutcomeStat;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseAnalysis;
 import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
+import com.pravoos.ai.practice.internal.model.entity.CaseParty;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseAnalysisRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import org.slf4j.Logger;
@@ -29,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
 
 @Service
 public class CaseAnalyticsService {
@@ -43,17 +47,20 @@ public class CaseAnalyticsService {
     private final CaseService caseService;
     private final CaseRepository caseRepository;
     private final CaseHearingEventRepository hearingEventRepository;
+    private final CasePartyRepository casePartyRepository;
     private final CaseAnalysisRepository caseAnalysisRepository;
     private final LegalAiPort legalAiPort;
 
     public CaseAnalyticsService(CaseService caseService,
                                 CaseRepository caseRepository,
                                 CaseHearingEventRepository hearingEventRepository,
+                                CasePartyRepository casePartyRepository,
                                 CaseAnalysisRepository caseAnalysisRepository,
                                 LegalAiPort legalAiPort) {
         this.caseService = caseService;
         this.caseRepository = caseRepository;
         this.hearingEventRepository = hearingEventRepository;
+        this.casePartyRepository = casePartyRepository;
         this.caseAnalysisRepository = caseAnalysisRepository;
         this.legalAiPort = legalAiPort;
     }
@@ -61,16 +68,9 @@ public class CaseAnalyticsService {
     @Transactional(readOnly = true)
     public CaseAnalyticsResponse getAnalytics(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
         Case caseEntity = caseService.requireVisibleCase(caseId, lawyerId, orgIds);
-        List<CaseHearingEvent> events = hearingEventRepository
-                .findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId);
-
-        CaseTimelineStats timeline = buildTimeline(caseEntity, events);
-        List<CourtStat> courtStats = buildCourtStats(timeline.courts(), lawyerId, orgIds);
-        AiCaseAnalysisDto aiAnalysis = caseAnalysisRepository.findByCaseId(caseId)
+        return assemble(caseId, caseEntity, lawyerId, orgIds, caseAnalysisRepository.findByCaseId(caseId)
                 .map(AiCaseAnalysisDto::from)
-                .orElse(null);
-
-        return new CaseAnalyticsResponse(timeline, courtStats, aiAnalysis);
+                .orElse(null));
     }
 
     @Transactional
@@ -80,14 +80,17 @@ public class CaseAnalyticsService {
 
         List<CaseHearingEvent> events = hearingEventRepository
                 .findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId);
-        CaseTimelineStats timeline = buildTimeline(caseEntity, events);
-        List<CourtStat> courtStats = buildCourtStats(timeline.courts(), lawyerId, orgIds);
+        List<CaseParty> parties = casePartyRepository.findByCaseId(caseId);
+        CaseTimelineStats timeline = buildTimeline(caseEntity, events, parties);
+        List<OutcomeStat> courtStats = buildCourtStats(timeline.courts(), lawyerId, orgIds);
+        List<OutcomeStat> judgeStats = buildJudgeStats(caseEntity.getArbitrJudge(), lawyerId, orgIds);
+        List<OutcomeStat> partyStats = buildPartyStats(parties, lawyerId, orgIds);
 
         LegalAiAnswer answer = legalAiPort.analyzeCase(
                 caseId,
-                buildCaseContext(caseEntity),
+                buildCaseContext(caseEntity, parties),
                 buildTimelineText(events),
-                buildStatisticsText(timeline, courtStats),
+                buildStatisticsText(timeline, courtStats, judgeStats, partyStats),
                 lawyerId);
 
         CaseAnalysis analysis = caseAnalysisRepository.findByCaseId(caseId)
@@ -101,10 +104,26 @@ public class CaseAnalyticsService {
 
         log.info("Case analytics generated for case {} by lawyer {} ({} tokens)",
                 caseId, lawyerId, answer.totalTokens());
-        return new CaseAnalyticsResponse(timeline, courtStats, AiCaseAnalysisDto.from(saved));
+        return new CaseAnalyticsResponse(timeline, courtStats, judgeStats, partyStats,
+                AiCaseAnalysisDto.from(saved));
     }
 
-    private CaseTimelineStats buildTimeline(Case caseEntity, List<CaseHearingEvent> events) {
+    private CaseAnalyticsResponse assemble(UUID caseId, Case caseEntity, UUID lawyerId, List<UUID> orgIds,
+                                           AiCaseAnalysisDto aiAnalysis) {
+        List<CaseHearingEvent> events = hearingEventRepository
+                .findByCaseIdOrderByEventDateDescCreatedAtDesc(caseId);
+        List<CaseParty> parties = casePartyRepository.findByCaseId(caseId);
+        CaseTimelineStats timeline = buildTimeline(caseEntity, events, parties);
+        return new CaseAnalyticsResponse(
+                timeline,
+                buildCourtStats(timeline.courts(), lawyerId, orgIds),
+                buildJudgeStats(caseEntity.getArbitrJudge(), lawyerId, orgIds),
+                buildPartyStats(parties, lawyerId, orgIds),
+                aiAnalysis);
+    }
+
+    private CaseTimelineStats buildTimeline(Case caseEntity, List<CaseHearingEvent> events,
+                                            List<CaseParty> parties) {
         List<LocalDate> eventDates = events.stream()
                 .map(CaseHearingEvent::getEventDate)
                 .filter(Objects::nonNull)
@@ -126,15 +145,15 @@ public class CaseAnalyticsService {
                 .distinct()
                 .toList();
 
-        List<EventTypeCount> eventTypes = buildEventTypeCounts(events);
-
         LocalDate nextHearingDate = caseEntity.getNextHearingDate();
         Integer daysToNextHearing = nextHearingDate == null
                 ? null
                 : (int) ChronoUnit.DAYS.between(LocalDate.now(), nextHearingDate);
 
         return new CaseTimelineStats(events.size(), firstEventDate, lastEventDate, spanDays,
-                averageIntervalDays, courts, eventTypes, nextHearingDate, daysToNextHearing);
+                averageIntervalDays, courts, buildEventTypeCounts(events), nextHearingDate,
+                daysToNextHearing, caseEntity.getArbitrJudge(),
+                parties.stream().map(CasePartyDto::from).toList());
     }
 
     private List<EventTypeCount> buildEventTypeCounts(List<CaseHearingEvent> events) {
@@ -152,31 +171,67 @@ public class CaseAnalyticsService {
                 .toList();
     }
 
-    private List<CourtStat> buildCourtStats(List<String> courts, UUID lawyerId, List<UUID> orgIds) {
-        if (courts.isEmpty()) {
+    private List<OutcomeStat> buildCourtStats(List<String> courts, UUID lawyerId, List<UUID> orgIds) {
+        return toStats(courts, (names) -> caseRepository.courtStatistics(
+                names, lawyerId, orgIdsOrSentinel(orgIds), CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST));
+    }
+
+    private List<OutcomeStat> buildJudgeStats(String judge, UUID lawyerId, List<UUID> orgIds) {
+        if (judge == null || judge.isBlank()) {
             return List.of();
         }
-        return caseRepository.courtStatistics(courts, lawyerId, orgIdsOrSentinel(orgIds),
-                        CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST)
-                .stream()
+        return toStats(List.of(judge.trim()), (names) -> caseRepository.judgeStatistics(
+                names, lawyerId, orgIdsOrSentinel(orgIds), CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST));
+    }
+
+    private List<OutcomeStat> buildPartyStats(List<CaseParty> parties, UUID lawyerId, List<UUID> orgIds) {
+        List<String> names = parties.stream()
+                .map(CaseParty::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+        return toStats(names, (values) -> caseRepository.partyStatistics(
+                values, lawyerId, orgIdsOrSentinel(orgIds), CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST));
+    }
+
+    private List<OutcomeStat> toStats(List<String> names,
+                                      Function<Collection<String>, List<CaseRepository.OutcomeStatView>> query) {
+        if (names.isEmpty()) {
+            return List.of();
+        }
+        return query.apply(names).stream()
                 .map(view -> {
                     long decided = view.getWonCases() + view.getLostCases();
                     Integer winRate = decided == 0
                             ? null
                             : (int) Math.round(view.getWonCases() * 100.0 / decided);
-                    return new CourtStat(view.getCourtName(), view.getTotalCases(),
+                    return new OutcomeStat(view.getName(), view.getTotalCases(),
                             view.getWonCases(), view.getLostCases(), winRate);
                 })
-                .sorted(Comparator.comparingLong(CourtStat::totalCases).reversed())
+                .sorted(Comparator.comparingLong(OutcomeStat::totalCases).reversed())
                 .toList();
     }
 
-    private String buildCaseContext(Case caseEntity) {
+    private String buildCaseContext(Case caseEntity, List<CaseParty> parties) {
         StringBuilder builder = new StringBuilder();
         builder.append("Название: ").append(caseEntity.getTitle()).append('\n');
         builder.append("Статус: ").append(caseEntity.getStatus().getDisplayName()).append('\n');
         if (caseEntity.getArbitrCaseNumber() != null) {
             builder.append("Номер в КАД.Арбитр: ").append(caseEntity.getArbitrCaseNumber()).append('\n');
+        }
+        if (caseEntity.getArbitrJudge() != null) {
+            builder.append("Судья: ").append(caseEntity.getArbitrJudge()).append('\n');
+        }
+        if (!parties.isEmpty()) {
+            builder.append("Стороны: ");
+            builder.append(parties.stream()
+                    .map(party -> party.getRole() == null
+                            ? party.getName()
+                            : party.getName() + " (" + party.getRole() + ")")
+                    .reduce((first, second) -> first + "; " + second)
+                    .orElse(""));
+            builder.append('\n');
         }
         if (caseEntity.getNextHearingDate() != null) {
             builder.append("Ближайшее заседание: ")
@@ -207,7 +262,8 @@ public class CaseAnalyticsService {
         return builder.toString().strip();
     }
 
-    private String buildStatisticsText(CaseTimelineStats timeline, List<CourtStat> courtStats) {
+    private String buildStatisticsText(CaseTimelineStats timeline, List<OutcomeStat> courtStats,
+                                       List<OutcomeStat> judgeStats, List<OutcomeStat> partyStats) {
         StringBuilder builder = new StringBuilder();
         builder.append("Всего событий: ").append(timeline.hearingCount()).append('\n');
         if (timeline.firstEventDate() != null) {
@@ -224,17 +280,23 @@ public class CaseAnalyticsService {
             builder.append("До ближайшего заседания: ")
                     .append(timeline.daysToNextHearing()).append(" дн.\n");
         }
-        for (CourtStat court : courtStats) {
-            builder.append("Суд «").append(court.courtName()).append("»: дел у юриста ")
-                    .append(court.totalCases());
-            if (court.winRatePercent() != null) {
-                builder.append(", доля выигранных ").append(court.winRatePercent()).append('%')
-                        .append(" (выиграно ").append(court.wonCases())
-                        .append(", проиграно ").append(court.lostCases()).append(')');
+        appendOutcomeStats(builder, "Суд", courtStats);
+        appendOutcomeStats(builder, "Судья", judgeStats);
+        appendOutcomeStats(builder, "Сторона", partyStats);
+        return builder.toString().strip();
+    }
+
+    private void appendOutcomeStats(StringBuilder builder, String label, List<OutcomeStat> stats) {
+        for (OutcomeStat stat : stats) {
+            builder.append(label).append(" «").append(stat.name()).append("»: дел у юриста ")
+                    .append(stat.totalCases());
+            if (stat.winRatePercent() != null) {
+                builder.append(", доля выигранных ").append(stat.winRatePercent()).append('%')
+                        .append(" (выиграно ").append(stat.wonCases())
+                        .append(", проиграно ").append(stat.lostCases()).append(')');
             }
             builder.append('\n');
         }
-        return builder.toString().strip();
     }
 
     private String truncate(String text) {

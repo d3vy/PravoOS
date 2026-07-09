@@ -19,18 +19,31 @@ public record ArbitrApiResponse(
             @JsonProperty("CaseNumber") String caseNumber,
             @JsonProperty("State") String state,
             @JsonProperty("Finished") Boolean finished,
+            @JsonProperty("Sides") List<Side> sides,
             @JsonProperty("CaseInstances") List<CaseInstance> caseInstances,
             @JsonProperty("CourtHearings") List<CourtHearing> courtHearings
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Side(
+            @JsonProperty("Name") String name,
+            @JsonProperty("Type") String type
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record CaseInstance(
             @JsonProperty("Court") Court court,
+            @JsonProperty("Judge") Judge judge,
             @JsonProperty("InstanceEvents") List<InstanceEvent> instanceEvents
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Court(
+            @JsonProperty("Name") String name
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Judge(
             @JsonProperty("Name") String name
     ) {}
 
@@ -45,6 +58,7 @@ public record ArbitrApiResponse(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record CourtHearing(
-            @JsonProperty("Start") String start
+            @JsonProperty("Start") String start,
+            @JsonProperty("Judge") Judge judge
     ) {}
 }

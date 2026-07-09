@@ -7,6 +7,8 @@ public record ArbitrCaseData(
         String caseNumber,
         String caseGuid,
         LocalDate nextHearingDate,
+        String judgeName,
+        List<ArbitrParty> parties,
         List<ArbitrEvent> events
 ) {
     public record ArbitrEvent(
@@ -15,5 +17,10 @@ public record ArbitrCaseData(
             String type,
             String description,
             String courtName
+    ) {}
+
+    public record ArbitrParty(
+            String name,
+            String role
     ) {}
 }
