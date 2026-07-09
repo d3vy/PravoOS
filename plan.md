@@ -81,13 +81,35 @@ billable) и `Invoice`; таймер/ручной ввод в `CaseDetailPage`; 
 в PDF (переиспользовать `CasePdfWriter`).
 **Приоритет / оценка:** 🟡 / L
 
-### 5. 🟡 Судебная аналитика поверх kad.arbitr
+### 5. ✅ Судебная аналитика поверх kad.arbitr
 **Возможность.** Casebook: краткое содержание дела, анализ аргументов сторон, стратегия, статистика.
 У нас `ArbitrSyncService`/`ArbitrPollingService` уже тянут данные дел — база для аналитики есть.
 **Что делать.** По номеру дела: AI-саммари истории, статистика по судье/суду/оппоненту (доля
 удовлетворённых исков, средние сроки), подсказки по стратегии. Новый эндпоинт в `practice`
 + виджет в `CaseDetailPage`. Использовать существующий `LegalAiPort`.
 **Приоритет / оценка:** 🟡 / L
+
+**✅ Сделано (2026-07-09).**
+- Бэкенд (practice-модуль): `CaseAnalyticsService`. Детерминированная статистика из `CaseHearingEvent`
+  (КАД): по текущему делу — число событий, период (первое→последнее), средний интервал между событиями,
+  распределение по типам событий, дни до заседания; кросс-дело — win-rate по судам через
+  `CaseRepository.courtStatistics` (JOIN `CaseHearingEvent`↔`Case` по видимым делам, `COUNT DISTINCT CASE`
+  на `CLOSED_WON`/`CLOSED_LOST` → доля удовлетворённых исков). AI-справка через `LegalAiPort.analyzeCase`
+  (новый метод): переиспользует RAG (`retrieveForCase`) + новый `CaseAnalyticsPrompt` (анти-инъекция:
+  карточка дела и хронология КАД фенсятся как ДАННЫЕ) → 3 раздела (краткое содержание / анализ позиций /
+  стратегия). Квота `LlmQuotaService`. Персист: `CaseAnalysis` (V27 `case_analyses`, уникальный по `case_id`,
+  upsert — одна актуальная справка на дело).
+- Эндпоинты (под уже существующим matcher `/api/ai/cases/**`=LAWYER): `GET /api/ai/cases/{id}/analytics`
+  (статистика всегда свежая + сохранённая AI-справка), `POST /api/ai/cases/{id}/analytics/generate`
+  (генерация + upsert). Доступ — `CaseService.requireVisibleCase`.
+- Фронт: секция «Судебная аналитика» (`CaseAnalyticsSection`) на `CaseDetailPage` после блока КАД:
+  метрики-плитки таймлайна, бейджи типов событий, карточки win-rate по судам, кнопка формирования/
+  обновления AI-справки, вывод справки с датой. `api/cases.ts` (+2 метода), типы
+  `CaseAnalyticsResponse/CaseTimelineStats/CourtStat/AiCaseAnalysisDto/EventTypeCount`.
+- Тесты: `CaseAnalyticsServiceTest` (3), всего 114 зелёных, `ModularityTests` целы (всё в practice/core,
+  deps уже разрешены), `tsc --noEmit` чист, `npm run build` ок.
+- **Follow-up:** статистика по судье/оппоненту (в модели пока нет отдельных полей судьи/оппонента —
+  доступна агрегация по суду и исходу дела); асинхронная генерация справки по SSE.
 
 ### 6. ✅ Сравнение версий и редлайн документов
 **Возможность.** Spellbook «Compare to Market», Юрайт: Legal AI (распознавание и сравнение).

@@ -22,6 +22,7 @@ import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 import { DateField } from '../../components/cases/DateField'
 import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
 import { WorkflowProcessSection } from '../../components/cases/WorkflowProcessSection'
+import { CaseAnalyticsSection } from '../../components/cases/CaseAnalyticsSection'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 import type { CaseStatus } from '../../types'
@@ -136,6 +137,8 @@ export default function CaseDetailPage(): JSX.Element {
         </div>
 
         <ArbitrSection caseItem={caseItem} queryClient={queryClient} />
+
+        <CaseAnalyticsSection caseId={caseId} />
 
         <WorkflowSection caseId={caseId} workflows={workflows} queryClient={queryClient} />
 

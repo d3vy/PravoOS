@@ -181,6 +181,42 @@ export interface CaseHearingEvent {
   courtName: string | null
 }
 
+export interface EventTypeCount {
+  type: string
+  count: number
+}
+
+export interface CaseTimelineStats {
+  hearingCount: number
+  firstEventDate: string | null
+  lastEventDate: string | null
+  spanDays: number | null
+  averageIntervalDays: number | null
+  courts: string[]
+  eventTypes: EventTypeCount[]
+  nextHearingDate: string | null
+  daysToNextHearing: number | null
+}
+
+export interface CourtStat {
+  courtName: string
+  totalCases: number
+  wonCases: number
+  lostCases: number
+  winRatePercent: number | null
+}
+
+export interface AiCaseAnalysisDto {
+  content: string
+  generatedAt: string
+}
+
+export interface CaseAnalyticsResponse {
+  timeline: CaseTimelineStats
+  courtStats: CourtStat[]
+  aiAnalysis: AiCaseAnalysisDto | null
+}
+
 export interface CreateCaseRequest {
   title: string
   description?: string

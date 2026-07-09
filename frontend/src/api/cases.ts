@@ -2,6 +2,7 @@ import apiClient from './client'
 import { DEFAULT_PAGE_SIZE, readTotal, type Page } from './pagination'
 import type {
   AiResponseDto,
+  CaseAnalyticsResponse,
   CaseResponse,
   CaseDraftDto,
   CaseDraftSummaryDto,
@@ -120,6 +121,16 @@ export const casesApi = {
 
   syncArbitr: async (caseId: string): Promise<CaseHearingEvent[]> => {
     const response = await apiClient.post<CaseHearingEvent[]>(`/api/ai/cases/${caseId}/arbitr/sync`)
+    return response.data
+  },
+
+  getAnalytics: async (caseId: string): Promise<CaseAnalyticsResponse> => {
+    const response = await apiClient.get<CaseAnalyticsResponse>(`/api/ai/cases/${caseId}/analytics`)
+    return response.data
+  },
+
+  generateAnalytics: async (caseId: string): Promise<CaseAnalyticsResponse> => {
+    const response = await apiClient.post<CaseAnalyticsResponse>(`/api/ai/cases/${caseId}/analytics/generate`)
     return response.data
   },
 

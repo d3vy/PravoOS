@@ -21,6 +21,30 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
         long getCount();
     }
 
+    interface CourtStatView {
+        String getCourtName();
+        long getTotalCases();
+        long getWonCases();
+        long getLostCases();
+    }
+
+    @Query("""
+            SELECT h.courtName AS courtName,
+                   COUNT(DISTINCT c.id) AS totalCases,
+                   COUNT(DISTINCT CASE WHEN c.status = :wonStatus THEN c.id END) AS wonCases,
+                   COUNT(DISTINCT CASE WHEN c.status = :lostStatus THEN c.id END) AS lostCases
+            FROM CaseHearingEvent h, Case c
+            WHERE c.id = h.caseId
+              AND h.courtName IN :courtNames
+              AND (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
+            GROUP BY h.courtName
+            """)
+    List<CourtStatView> courtStatistics(@Param("courtNames") Collection<String> courtNames,
+                                        @Param("lawyerId") UUID lawyerId,
+                                        @Param("orgIds") Collection<UUID> orgIds,
+                                        @Param("wonStatus") CaseStatus wonStatus,
+                                        @Param("lostStatus") CaseStatus lostStatus);
+
     @Query("SELECT c.status AS status, COUNT(c) AS count FROM Case c "
             + "WHERE c.lawyerId = :lawyerId GROUP BY c.status")
     List<StatusCountView> countGroupedByStatus(@Param("lawyerId") UUID lawyerId);

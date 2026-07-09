@@ -12,5 +12,8 @@ public interface LegalAiPort {
 
     LegalAiAnswer refineDraft(UUID caseId, String instruction, String currentText, UUID lawyerId);
 
+    LegalAiAnswer analyzeCase(UUID caseId, String caseContext, String hearingTimeline,
+                              String statistics, UUID lawyerId);
+
     AiResponseDto runCaseWorkflow(UUID caseId, UUID lawyerId, String workflowId, String query, String instruction);
 }

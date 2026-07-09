@@ -5,6 +5,7 @@ import com.pravoos.ai.core.api.AiResponseQuery;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.practice.internal.dto.*;
+import com.pravoos.ai.practice.internal.service.CaseAnalyticsService;
 import com.pravoos.ai.practice.internal.service.CaseExportService;
 import com.pravoos.ai.practice.internal.service.CaseService;
 import com.pravoos.ai.practice.internal.service.CaseTaskService;
@@ -34,19 +35,22 @@ public class CaseController {
     private final AiResponseQuery aiResponseQuery;
     private final CaseExportService caseExportService;
     private final CaseTaskService caseTaskService;
+    private final CaseAnalyticsService caseAnalyticsService;
 
     public CaseController(CaseService caseService,
                           WorkflowService workflowService,
                           WorkflowExecutionService workflowExecutionService,
                           AiResponseQuery aiResponseQuery,
                           CaseExportService caseExportService,
-                          CaseTaskService caseTaskService) {
+                          CaseTaskService caseTaskService,
+                          CaseAnalyticsService caseAnalyticsService) {
         this.caseService = caseService;
         this.workflowService = workflowService;
         this.workflowExecutionService = workflowExecutionService;
         this.aiResponseQuery = aiResponseQuery;
         this.caseExportService = caseExportService;
         this.caseTaskService = caseTaskService;
+        this.caseAnalyticsService = caseAnalyticsService;
     }
 
     @PostMapping
@@ -194,6 +198,20 @@ public class CaseController {
                                                       @PathVariable UUID runId,
                                                       Authentication authentication) {
         return ResponseEntity.ok(workflowExecutionService.getRun(caseId, runId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @GetMapping("/{caseId}/analytics")
+    public ResponseEntity<CaseAnalyticsResponse> analytics(@PathVariable UUID caseId,
+                                                           Authentication authentication) {
+        return ResponseEntity.ok(caseAnalyticsService.getAnalytics(caseId,
+                SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
+    }
+
+    @PostMapping("/{caseId}/analytics/generate")
+    public ResponseEntity<CaseAnalyticsResponse> generateAnalytics(@PathVariable UUID caseId,
+                                                                   Authentication authentication) {
+        return ResponseEntity.ok(caseAnalyticsService.generateAnalysis(caseId,
                 SecurityUtils.currentUserId(authentication), SecurityUtils.currentOrgIds(authentication)));
     }
 

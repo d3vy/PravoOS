@@ -6,6 +6,7 @@ import com.pravoos.ai.core.api.LegalAiPort;
 import com.pravoos.ai.core.api.SourceReference;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.core.internal.service.CaseAnalyticsPrompt;
 import com.pravoos.ai.core.internal.service.DraftRefinePrompt;
 import com.pravoos.ai.core.internal.service.FollowUpParser;
 import com.pravoos.ai.core.internal.service.RagService;
@@ -28,6 +29,7 @@ public class LegalAiPortImpl implements LegalAiPort {
     private final DocumentRetrieval documentRetrieval;
     private final RagService ragService;
     private final DraftRefinePrompt draftRefinePrompt;
+    private final CaseAnalyticsPrompt caseAnalyticsPrompt;
     private final LlmClient llmClient;
     private final LlmQuotaService llmQuotaService;
     private final DocumentProperties documentProperties;
@@ -36,6 +38,7 @@ public class LegalAiPortImpl implements LegalAiPort {
     public LegalAiPortImpl(DocumentRetrieval documentRetrieval,
                            RagService ragService,
                            DraftRefinePrompt draftRefinePrompt,
+                           CaseAnalyticsPrompt caseAnalyticsPrompt,
                            LlmClient llmClient,
                            LlmQuotaService llmQuotaService,
                            DocumentProperties documentProperties,
@@ -43,6 +46,7 @@ public class LegalAiPortImpl implements LegalAiPort {
         this.documentRetrieval = documentRetrieval;
         this.ragService = ragService;
         this.draftRefinePrompt = draftRefinePrompt;
+        this.caseAnalyticsPrompt = caseAnalyticsPrompt;
         this.llmClient = llmClient;
         this.llmQuotaService = llmQuotaService;
         this.documentProperties = documentProperties;
@@ -78,6 +82,23 @@ public class LegalAiPortImpl implements LegalAiPort {
         String systemPrompt = draftRefinePrompt.build(instruction, currentText, chunks);
         LlmResult completion = llmClient.complete(
                 systemPrompt, List.of(), "Верни только переработанный текст фрагмента без пояснений.");
+        llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
+        return new LegalAiAnswer(completion.content(), completion.usage().totalTokens());
+    }
+
+    @Override
+    public LegalAiAnswer analyzeCase(UUID caseId, String caseContext, String hearingTimeline,
+                                     String statistics, UUID lawyerId) {
+        List<RetrievedChunk> matches = documentRetrieval
+                .retrieveForCase(caseContext, documentProperties.topKResults(), caseId);
+        List<String> chunks = matches.stream().map(RetrievedChunk::content).toList();
+        String documentContext = caseAnalyticsPrompt.buildContextFromChunks(chunks);
+        String enrichedContext = documentContext.isBlank()
+                ? caseContext
+                : caseContext + "\n\nВыдержки из документов дела:\n" + documentContext;
+        String systemPrompt = caseAnalyticsPrompt.build(enrichedContext, statistics, hearingTimeline);
+        LlmResult completion = llmClient.complete(
+                systemPrompt, List.of(), "Подготовь аналитическую справку по делу по заданной структуре.");
         llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
         return new LegalAiAnswer(completion.content(), completion.usage().totalTokens());
     }
