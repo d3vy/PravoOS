@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.config;
+package com.pravoos.llm.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

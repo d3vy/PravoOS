@@ -138,6 +138,41 @@ services:
     volumes:
       - ./logs/user-service:/app/logs/user-service
 
+  llm-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: llm-service
+    container_name: pravoos-llm-service
+    ports:
+      - "8084:8084"
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx200m"
+      # Secret isolation: blank out secrets this service never reads (overrides env_file).
+      DB_PASSWORD: ""
+      REDIS_PASSWORD: ""
+      JWT_PRIVATE_KEY: ""
+      ARBITR_API_KEY: ""
+      MONGO_USERNAME: ""
+      MONGO_PASSWORD: ""
+      RESEND_API_KEY: ""
+      ADMIN_PASSWORD: ""
+      ADMIN_PASSWORD_2: ""
+      TELEGRAM_BOT_TOKEN: ""
+      BACKUP_ENCRYPTION_KEY: ""
+      FILE_ENCRYPTION_KEY: ""
+      GRAFANA_ADMIN_PASSWORD: ""
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8084/actuator/health/readiness || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 8
+      start_period: 60s
+    volumes:
+      - ./logs/llm-service:/app/logs/llm-service
+
   ai-service:
     build:
       context: .
@@ -162,7 +197,9 @@ services:
       CLAMAV_HOST: clamav
       CLAMAV_PORT: "3310"
       USER_SERVICE_BASE_URL: http://user-service:8081
+      LLM_SERVICE_BASE_URL: http://llm-service:8084
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
+      OPENAI_API_KEY: ""
       RESEND_API_KEY: ""
       ADMIN_PASSWORD: ""
       ADMIN_PASSWORD_2: ""
@@ -180,6 +217,8 @@ services:
         condition: service_healthy
       clamav:
         condition: service_started
+      llm-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health/readiness || exit 1"]
       interval: 30s

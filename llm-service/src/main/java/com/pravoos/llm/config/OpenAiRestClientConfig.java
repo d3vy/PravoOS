@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.config;
+package com.pravoos.llm.config;
 
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
@@ -17,11 +17,10 @@ import org.springframework.web.client.RestClient;
 import java.time.Duration;
 
 @Configuration
-public class RestClientConfig {
+public class OpenAiRestClientConfig {
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(120);
-    private static final Duration GUARD_READ_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration CONNECTION_TIME_TO_LIVE = Duration.ofMinutes(5);
     private static final int MAX_TOTAL_CONNECTIONS = 50;
     private static final int MAX_CONNECTIONS_PER_ROUTE = 50;
@@ -41,34 +40,18 @@ public class RestClientConfig {
     @Bean
     public RestClient openAiRestClient(OpenAiProperties properties,
                                        PoolingHttpClientConnectionManager openAiConnectionManager) {
-        return buildClient(properties, openAiConnectionManager, READ_TIMEOUT);
-    }
-
-    @Bean
-    public RestClient openAiGuardRestClient(OpenAiProperties properties,
-                                            PoolingHttpClientConnectionManager openAiConnectionManager) {
-        return buildClient(properties, openAiConnectionManager, GUARD_READ_TIMEOUT);
-    }
-
-    private RestClient buildClient(OpenAiProperties properties,
-                                   PoolingHttpClientConnectionManager connectionManager,
-                                   Duration readTimeout) {
-        return RestClient.builder()
-                .baseUrl(properties.baseUrl())
-                .requestFactory(requestFactory(connectionManager, readTimeout))
-                .defaultHeader("Authorization", "Bearer " + properties.apiKey())
-                .build();
-    }
-
-    private ClientHttpRequestFactory requestFactory(PoolingHttpClientConnectionManager connectionManager,
-                                                    Duration readTimeout) {
         CloseableHttpClient httpClient = HttpClients.custom()
-                .setConnectionManager(connectionManager)
+                .setConnectionManager(openAiConnectionManager)
                 .setConnectionManagerShared(true)
                 .setDefaultRequestConfig(RequestConfig.custom()
-                        .setResponseTimeout(Timeout.of(readTimeout))
+                        .setResponseTimeout(Timeout.of(READ_TIMEOUT))
                         .build())
                 .build();
-        return new HttpComponentsClientHttpRequestFactory(httpClient);
+        ClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+        return RestClient.builder()
+                .baseUrl(properties.baseUrl())
+                .requestFactory(requestFactory)
+                .defaultHeader("Authorization", "Bearer " + properties.apiKey())
+                .build();
     }
 }

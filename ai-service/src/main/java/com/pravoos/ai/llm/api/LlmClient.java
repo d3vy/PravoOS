@@ -7,6 +7,8 @@ public interface LlmClient {
 
     LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage);
 
+    LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage, LlmOptions options);
+
     LlmUsage streamComplete(String systemPrompt, List<LlmMessage> history, String userMessage,
                             Consumer<String> tokenConsumer);
 

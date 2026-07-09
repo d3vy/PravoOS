@@ -1,6 +1,6 @@
-package com.pravoos.ai.llm.internal;
+package com.pravoos.llm.openai;
 
-import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.llm.domain.LlmUsage;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;

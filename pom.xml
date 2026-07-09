@@ -22,6 +22,7 @@
         <module>pravoos-common-web</module>
         <module>api-gateway</module>
         <module>user-service</module>
+        <module>llm-service</module>
         <module>ai-service</module>
         <module>notification-service</module>
     </modules>

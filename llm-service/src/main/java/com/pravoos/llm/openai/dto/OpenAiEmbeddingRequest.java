@@ -1,4 +1,4 @@
-package com.pravoos.ai.llm.internal.dto;
+package com.pravoos.llm.openai.dto;
 
 import java.util.List;
 

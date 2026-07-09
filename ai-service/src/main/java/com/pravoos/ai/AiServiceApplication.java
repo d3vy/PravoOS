@@ -12,7 +12,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-@EnableConfigurationProperties({OpenAiProperties.class, DocumentProperties.class, JwtProperties.class,
+@EnableConfigurationProperties({LlmServiceProperties.class, DocumentProperties.class, JwtProperties.class,
         ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class,
         ContractReviewProperties.class, DocumentComparisonProperties.class,
         CitationCheckProperties.class, UserServiceProperties.class, DraftEditingProperties.class})

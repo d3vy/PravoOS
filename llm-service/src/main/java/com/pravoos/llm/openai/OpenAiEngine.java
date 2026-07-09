@@ -1,15 +1,19 @@
-package com.pravoos.ai.llm.internal;
+package com.pravoos.llm.openai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pravoos.ai.llm.api.*;
-import com.pravoos.ai.llm.internal.dto.OpenAiChatRequest;
-import com.pravoos.ai.llm.internal.dto.OpenAiChatResponse;
-import com.pravoos.ai.llm.internal.dto.OpenAiChatStreamRequest;
-import com.pravoos.ai.llm.internal.dto.OpenAiEmbeddingRequest;
-import com.pravoos.ai.llm.internal.dto.OpenAiEmbeddingResponse;
-import com.pravoos.ai.llm.internal.dto.OpenAiStreamChunk;
-import com.pravoos.ai.shared.config.OpenAiProperties;
-import com.pravoos.ai.shared.exception.LlmException;
+import com.pravoos.llm.config.OpenAiProperties;
+import com.pravoos.llm.domain.EmbeddingResult;
+import com.pravoos.llm.domain.LlmMessage;
+import com.pravoos.llm.domain.LlmOptions;
+import com.pravoos.llm.domain.LlmResult;
+import com.pravoos.llm.domain.LlmUsage;
+import com.pravoos.llm.exception.LlmException;
+import com.pravoos.llm.openai.dto.OpenAiChatRequest;
+import com.pravoos.llm.openai.dto.OpenAiChatResponse;
+import com.pravoos.llm.openai.dto.OpenAiChatStreamRequest;
+import com.pravoos.llm.openai.dto.OpenAiEmbeddingRequest;
+import com.pravoos.llm.openai.dto.OpenAiEmbeddingResponse;
+import com.pravoos.llm.openai.dto.OpenAiStreamChunk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,12 +37,13 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @Component
-public class OpenAiLlmClient implements LlmClient {
+public class OpenAiEngine {
 
-    private static final Logger log = LoggerFactory.getLogger(OpenAiLlmClient.class);
+    private static final Logger log = LoggerFactory.getLogger(OpenAiEngine.class);
     private static final int MAX_ATTEMPTS = 3;
     private static final long BASE_BACKOFF_MS = 500L;
     private static final long MAX_BACKOFF_MS = 8000L;
+    private static final double DEFAULT_TEMPERATURE = 0.1;
     private static final Set<Integer> RETRYABLE_STATUSES = Set.of(429, 500, 502, 503, 504);
     private static final String STREAM_DONE_MARKER = "[DONE]";
 
@@ -49,12 +54,12 @@ public class OpenAiLlmClient implements LlmClient {
     private final Semaphore inFlightLimit;
     private final long acquireTimeoutMs;
 
-    public OpenAiLlmClient(RestClient openAiRestClient,
-                           OpenAiProperties properties,
-                           LlmMetrics llmMetrics,
-                           ObjectMapper objectMapper,
-                           @Value("${llm.openai.max-concurrent-requests:20}") int maxConcurrentRequests,
-                           @Value("${llm.openai.acquire-timeout-ms:2000}") long acquireTimeoutMs) {
+    public OpenAiEngine(RestClient openAiRestClient,
+                        OpenAiProperties properties,
+                        LlmMetrics llmMetrics,
+                        ObjectMapper objectMapper,
+                        @Value("${llm.openai.max-concurrent-requests:20}") int maxConcurrentRequests,
+                        @Value("${llm.openai.acquire-timeout-ms:2000}") long acquireTimeoutMs) {
         this.restClient = openAiRestClient;
         this.properties = properties;
         this.llmMetrics = llmMetrics;
@@ -63,14 +68,14 @@ public class OpenAiLlmClient implements LlmClient {
         this.acquireTimeoutMs = acquireTimeoutMs;
     }
 
-    @Override
-    public LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage) {
+    public LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage, LlmOptions options) {
+        LlmOptions resolved = LlmOptions.orDefault(options);
         List<LlmMessage> messages = buildMessages(systemPrompt, history, userMessage);
         OpenAiChatRequest request = new OpenAiChatRequest(
-                properties.model(),
+                resolveModel(resolved),
                 messages,
-                properties.maxTokens(),
-                0.1
+                resolveMaxTokens(resolved),
+                resolveTemperature(resolved)
         );
 
         OpenAiChatResponse response = executeWithRetry("chat completion", () -> restClient.post()
@@ -84,16 +89,16 @@ public class OpenAiLlmClient implements LlmClient {
         }
         LlmUsage usage = response.toLlmUsage();
         llmMetrics.recordCompletion(usage);
-        log.debug("LLM completion successful, model: {}, tokens: {}", properties.model(), usage.totalTokens());
+        log.debug("LLM completion successful, model: {}, tokens: {}", request.model(), usage.totalTokens());
         return new LlmResult(response.firstContent(), usage);
     }
 
-    @Override
     public LlmUsage streamComplete(String systemPrompt, List<LlmMessage> history, String userMessage,
-                                   Consumer<String> tokenConsumer) {
+                                   LlmOptions options, Consumer<String> tokenConsumer) {
+        LlmOptions resolved = LlmOptions.orDefault(options);
         List<LlmMessage> messages = buildMessages(systemPrompt, history, userMessage);
         OpenAiChatStreamRequest request = OpenAiChatStreamRequest.withUsage(
-                properties.model(), messages, properties.maxTokens(), 0.1);
+                resolveModel(resolved), messages, resolveMaxTokens(resolved), resolveTemperature(resolved));
 
         acquireSlot("chat stream");
         try {
@@ -111,10 +116,10 @@ public class OpenAiLlmClient implements LlmClient {
                         return consumeStream(clientResponse.getBody(), tokenConsumer);
                     });
 
-            LlmUsage resolved = usage == null ? LlmUsage.EMPTY : usage;
-            llmMetrics.recordCompletion(resolved);
-            log.debug("LLM stream completed, model: {}, tokens: {}", properties.model(), resolved.totalTokens());
-            return resolved;
+            LlmUsage resolvedUsage = usage == null ? LlmUsage.EMPTY : usage;
+            llmMetrics.recordCompletion(resolvedUsage);
+            log.debug("LLM stream completed, model: {}, tokens: {}", request.model(), resolvedUsage.totalTokens());
+            return resolvedUsage;
         } finally {
             inFlightLimit.release();
         }
@@ -156,12 +161,10 @@ public class OpenAiLlmClient implements LlmClient {
         }
     }
 
-    @Override
     public float[] embed(String text) {
         return embedBatch(List.of(text)).embeddings().get(0);
     }
 
-    @Override
     public EmbeddingResult embedBatch(List<String> texts) {
         if (texts == null || texts.isEmpty()) {
             return new EmbeddingResult(List.of(), 0L);
@@ -181,6 +184,18 @@ public class OpenAiLlmClient implements LlmClient {
             throw new LlmException("Incomplete embedding response from API");
         }
         return new EmbeddingResult(response.allEmbeddings(), response.totalTokens());
+    }
+
+    private String resolveModel(LlmOptions options) {
+        return options.isGuardProfile() ? properties.guardModel() : properties.model();
+    }
+
+    private int resolveMaxTokens(LlmOptions options) {
+        return options.maxTokens() == null ? properties.maxTokens() : options.maxTokens();
+    }
+
+    private double resolveTemperature(LlmOptions options) {
+        return options.temperature() == null ? DEFAULT_TEMPERATURE : options.temperature();
     }
 
     private <T> T executeWithRetry(String operation, Supplier<T> call) {
@@ -248,7 +263,9 @@ public class OpenAiLlmClient implements LlmClient {
     private List<LlmMessage> buildMessages(String systemPrompt, List<LlmMessage> history, String userMessage) {
         List<LlmMessage> messages = new ArrayList<>();
         messages.add(new LlmMessage("system", systemPrompt));
-        messages.addAll(history);
+        if (history != null) {
+            messages.addAll(history);
+        }
         messages.add(new LlmMessage("user", userMessage));
         return messages;
     }

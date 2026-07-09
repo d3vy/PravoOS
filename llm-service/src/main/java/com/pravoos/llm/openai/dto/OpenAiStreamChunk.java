@@ -1,6 +1,6 @@
-package com.pravoos.ai.llm.internal.dto;
+package com.pravoos.llm.openai.dto;
 
-import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.llm.domain.LlmUsage;
 
 import java.util.List;
 

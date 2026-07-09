@@ -26,6 +26,15 @@ services:
       SPRINGDOC_API_DOCS_ENABLED: "false"
       SPRINGDOC_SWAGGER_UI_ENABLED: "false"
 
+  llm-service:
+    restart: unless-stopped
+    ports: !reset []
+    environment:
+      SPRINGDOC_API_DOCS_ENABLED: "false"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "false"
+    healthcheck:
+      start_period: 120s
+
   ai-service:
     restart: unless-stopped
     ports: !reset []

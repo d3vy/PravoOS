@@ -65,14 +65,10 @@ jwt:
   public-key: ${JWT_PUBLIC_KEY}
 
 llm:
-  openai:
-    api-key: ${OPENAI_API_KEY}
-    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    model: ${OPENAI_MODEL:gpt-4o-mini}
-    guard-model: ${OPENAI_GUARD_MODEL:gpt-4o-mini}
-    embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+  service:
+    base-url: ${LLM_SERVICE_BASE_URL:http://localhost:8084}
+    internal-secret: ${INTERNAL_SERVICE_SECRET}
     embedding-dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:1536}
-    max-tokens: ${OPENAI_MAX_TOKENS:4096}
   quota:
     daily-requests: ${LLM_DAILY_QUOTA:200}
     daily-tokens: ${LLM_DAILY_TOKEN_BUDGET:0}

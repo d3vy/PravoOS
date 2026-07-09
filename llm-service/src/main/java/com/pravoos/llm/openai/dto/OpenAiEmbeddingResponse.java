@@ -1,4 +1,4 @@
-package com.pravoos.ai.llm.internal.dto;
+package com.pravoos.llm.openai.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

@@ -3,7 +3,7 @@ package com.pravoos.ai.document.internal.service;
 import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
 import com.pravoos.ai.llm.api.EmbeddingResult;
 import com.pravoos.ai.llm.api.LlmClient;
-import com.pravoos.ai.shared.config.OpenAiProperties;
+import com.pravoos.ai.shared.config.LlmServiceProperties;
 import com.pravoos.ai.shared.exception.LlmException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ public class EmbeddingService {
     private final LlmClient llmClient;
     private final int expectedDimensions;
 
-    public EmbeddingService(LlmClient llmClient, OpenAiProperties properties) {
+    public EmbeddingService(LlmClient llmClient, LlmServiceProperties properties) {
         this.llmClient = llmClient;
         this.expectedDimensions = properties.embeddingDimensions();
         if (expectedDimensions != DocumentChunk.EMBEDDING_DIMENSIONS) {

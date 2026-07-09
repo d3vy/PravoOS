@@ -1,19 +1,18 @@
 package com.pravoos.ai.core.internal.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.pravoos.ai.llm.api.LlmMessage;
-import com.pravoos.ai.shared.config.OpenAiProperties;
+import com.pravoos.ai.llm.api.LlmClient;
+import com.pravoos.ai.llm.api.LlmOptions;
+import com.pravoos.ai.llm.api.LlmResult;
+import com.pravoos.ai.shared.exception.LlmException;
 import com.pravoos.ai.shared.exception.NonLegalQueryException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 import java.time.Duration;
 import java.util.List;
@@ -27,6 +26,8 @@ public class LegalDomainGuard {
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
     private static final Duration CACHE_TTL = Duration.ofHours(1);
     private static final long CACHE_MAX_SIZE = 10_000L;
+    private static final int GUARD_MAX_TOKENS = 3;
+    private static final double GUARD_TEMPERATURE = 0.0;
 
     private static final String CLASSIFIER_SYSTEM_PROMPT = """
             Ты — классификатор запросов для юридической платформы.
@@ -37,8 +38,7 @@ public class LegalDomainGuard {
             Отвечай строго одним словом: YES или NO.
             """;
 
-    private final RestClient restClient;
-    private final OpenAiProperties properties;
+    private final LlmClient llmClient;
     private final boolean failOpen;
     private final Cache<String, Boolean> verdictCache;
     private final Counter passCounter;
@@ -46,12 +46,10 @@ public class LegalDomainGuard {
     private final Counter failOpenCounter;
     private final Counter cacheHitCounter;
 
-    public LegalDomainGuard(@Qualifier("openAiGuardRestClient") RestClient openAiGuardRestClient,
-                            OpenAiProperties properties,
-                            @org.springframework.beans.factory.annotation.Value("${llm.guard.fail-open:true}") boolean failOpen,
+    public LegalDomainGuard(LlmClient llmClient,
+                            @Value("${llm.guard.fail-open:true}") boolean failOpen,
                             MeterRegistry registry) {
-        this.restClient = openAiGuardRestClient;
-        this.properties = properties;
+        this.llmClient = llmClient;
         this.failOpen = failOpen;
         this.verdictCache = Caffeine.newBuilder()
                 .maximumSize(CACHE_MAX_SIZE)
@@ -74,31 +72,17 @@ public class LegalDomainGuard {
     }
 
     private boolean classify(String userMessage) {
-        GuardChatRequest request = new GuardChatRequest(
-                properties.guardModel(),
-                List.of(
-                        new LlmMessage("system", CLASSIFIER_SYSTEM_PROMPT),
-                        new LlmMessage("user", userMessage)
-                ),
-                3,
-                0.0
-        );
-
         String verdict;
         try {
-            GuardChatResponse response = restClient.post()
-                    .uri("/chat/completions")
-                    .body(request)
-                    .retrieve()
-                    .body(GuardChatResponse.class);
-
-            if (response == null) {
+            LlmResult result = llmClient.complete(CLASSIFIER_SYSTEM_PROMPT, List.of(), userMessage,
+                    LlmOptions.guard(GUARD_MAX_TOKENS, GUARD_TEMPERATURE));
+            if (result == null || result.content() == null) {
                 log.warn("Guard classifier returned empty response, fail-open={}", failOpen);
                 failOpenCounter.increment();
                 return failOpen;
             }
-            verdict = response.firstContent().trim().toUpperCase();
-        } catch (RestClientException e) {
+            verdict = result.content().trim().toUpperCase();
+        } catch (LlmException e) {
             log.warn("Guard classifier unavailable, fail-open={}: {}", failOpen, e.getMessage());
             failOpenCounter.increment();
             return failOpen;
@@ -130,23 +114,5 @@ public class LegalDomainGuard {
                 .description("Legal-domain guard classifier outcomes")
                 .tag("result", result)
                 .register(registry);
-    }
-
-    record GuardChatRequest(
-            String model,
-            List<LlmMessage> messages,
-            @JsonProperty("max_tokens") int maxTokens,
-            double temperature
-    ) {}
-
-    record GuardChatResponse(List<Choice> choices) {
-        record Choice(LlmMessage message) {}
-
-        String firstContent() {
-            if (choices == null || choices.isEmpty()) return "";
-            Choice first = choices.get(0);
-            if (first == null || first.message() == null || first.message().content() == null) return "";
-            return first.message().content();
-        }
     }
 }

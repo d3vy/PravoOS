@@ -5,6 +5,7 @@ COPY pravoos-common/pom.xml pravoos-common/pom.xml
 COPY pravoos-common-web/pom.xml pravoos-common-web/pom.xml
 COPY api-gateway/pom.xml api-gateway/pom.xml
 COPY user-service/pom.xml user-service/pom.xml
+COPY llm-service/pom.xml llm-service/pom.xml
 COPY ai-service/pom.xml ai-service/pom.xml
 COPY notification-service/pom.xml notification-service/pom.xml
 RUN mvn -B -ntp -q dependency:go-offline || true
@@ -12,6 +13,7 @@ COPY pravoos-common/src pravoos-common/src
 COPY pravoos-common-web/src pravoos-common-web/src
 COPY api-gateway/src api-gateway/src
 COPY user-service/src user-service/src
+COPY llm-service/src llm-service/src
 COPY ai-service/src ai-service/src
 COPY notification-service/src notification-service/src
 RUN mvn -B -ntp -q clean package -DskipTests
@@ -24,6 +26,18 @@ USER spring
 COPY --from=build /build/user-service/target/user-service-*.jar app.jar
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD wget -qO- http://localhost:8081/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+FROM eclipse-temurin:21-jre-alpine AS llm-service
+RUN apk add --no-cache wget
+WORKDIR /app
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/logs/llm-service \
+    && chown -R spring:spring /app
+USER spring
+COPY --from=build --chown=spring:spring /build/llm-service/target/llm-service-*.jar app.jar
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -qO- http://localhost:8084/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
 FROM eclipse-temurin:21-jre-alpine AS ai-service

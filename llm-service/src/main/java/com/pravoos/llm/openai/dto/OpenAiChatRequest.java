@@ -1,7 +1,7 @@
-package com.pravoos.ai.llm.internal.dto;
+package com.pravoos.llm.openai.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.pravoos.ai.llm.api.LlmMessage;
+import com.pravoos.llm.domain.LlmMessage;
 
 import java.util.List;
 
