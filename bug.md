@@ -57,9 +57,9 @@
 
 ## 🟡 Мелкие / стилевые
 
-### 11. `WorkflowExecutionService.run` без транзакции → застрявшие RUNNING ⚪ (отложено)
+### 11. `WorkflowExecutionService.run` без транзакции → застрявшие RUNNING ✅
 `WorkflowExecutionService.java:56-97`. Краш между save(RUNNING) и финальным save → run навсегда RUNNING. Плюс частичные сайд-эффекты при падении шага.
-**Решение:** осознанно отложено — нужен отдельный scheduled-sweep «зависших» RUNNING. Per-step падения уже ловятся в `run()` и помечают FAILED; риск только при краше JVM между save. Заводим отдельной задачей.
+**Решение:** scheduled-sweep `failStuckRuns()` (`@Scheduled` fixedDelay 5 мин + `@SchedulerLock` для мультиинстанса): RUNNING со `started_at` старше `workflow.stuck-sweep.threshold-minutes` (дефолт 15) переводятся в FAILED. Порог безопасен — живой `run()` синхронный и укладывается в таймауты LLM. Частичный индекс `idx_workflow_runs_running_started` (V29) под запрос. Per-step падения по-прежнему ловятся в `run()` и помечают FAILED.
 
 ### 12. `parseIsoDate` глотает `Exception` ✅
 `ApiArbitrCaseProvider.java:159-163` — `catch (Exception)`.

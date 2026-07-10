@@ -28,6 +28,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,7 +48,7 @@ class WorkflowExecutionServiceTest {
 
     private WorkflowExecutionService service() {
         return new WorkflowExecutionService(definitionService, runRepository, caseService,
-                draftService, caseTaskService, legalAiPort);
+                draftService, caseTaskService, legalAiPort, 15L);
     }
 
     private void stubRepositoryEcho() {
@@ -124,5 +126,30 @@ class WorkflowExecutionServiceTest {
         assertThat(run.steps().get(1).status()).isEqualTo(WorkflowStepStatus.FAILED);
         assertThat(run.steps().get(1).error()).contains("LLM недоступен");
         assertThat(run.steps().get(2).status()).isEqualTo(WorkflowStepStatus.PENDING);
+    }
+
+    @Test
+    void failStuckRunsMarksStaleRunningAsFailed() {
+        WorkflowRun stuck = new WorkflowRun();
+        stuck.setStatus(WorkflowRunStatus.RUNNING);
+        stuck.setStartedAt(LocalDateTime.now().minusHours(1));
+        when(runRepository.findByStatusAndStartedAtBefore(eq(WorkflowRunStatus.RUNNING), any()))
+                .thenReturn(List.of(stuck));
+
+        service().failStuckRuns();
+
+        assertThat(stuck.getStatus()).isEqualTo(WorkflowRunStatus.FAILED);
+        assertThat(stuck.getFinishedAt()).isNotNull();
+        verify(runRepository).saveAll(List.of(stuck));
+    }
+
+    @Test
+    void failStuckRunsDoesNothingWhenNoneStuck() {
+        when(runRepository.findByStatusAndStartedAtBefore(eq(WorkflowRunStatus.RUNNING), any()))
+                .thenReturn(List.of());
+
+        service().failStuckRuns();
+
+        verify(runRepository, never()).saveAll(anyList());
     }
 }

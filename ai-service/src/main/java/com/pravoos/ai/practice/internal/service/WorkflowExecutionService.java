@@ -13,8 +13,11 @@ import com.pravoos.ai.practice.internal.model.entity.WorkflowRun;
 import com.pravoos.ai.practice.internal.repository.jpa.WorkflowRunRepository;
 import com.pravoos.ai.shared.exception.WorkflowNotFoundException;
 import com.pravoos.ai.shared.model.enums.WorkflowRunStatus;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,19 +41,22 @@ public class WorkflowExecutionService {
     private final DraftService draftService;
     private final CaseTaskService caseTaskService;
     private final LegalAiPort legalAiPort;
+    private final long stuckThresholdMinutes;
 
     public WorkflowExecutionService(WorkflowDefinitionService definitionService,
                                     WorkflowRunRepository runRepository,
                                     CaseService caseService,
                                     DraftService draftService,
                                     CaseTaskService caseTaskService,
-                                    LegalAiPort legalAiPort) {
+                                    LegalAiPort legalAiPort,
+                                    @Value("${workflow.stuck-sweep.threshold-minutes:15}") long stuckThresholdMinutes) {
         this.definitionService = definitionService;
         this.runRepository = runRepository;
         this.caseService = caseService;
         this.draftService = draftService;
         this.caseTaskService = caseTaskService;
         this.legalAiPort = legalAiPort;
+        this.stuckThresholdMinutes = stuckThresholdMinutes;
     }
 
     public WorkflowRunDto run(UUID caseId, UUID definitionId, UUID lawyerId, List<UUID> orgIds) {
@@ -94,6 +100,26 @@ public class WorkflowExecutionService {
         WorkflowRun finished = runRepository.save(saved);
         log.info("Workflow run {} finished with status {}", finished.getId(), finished.getStatus());
         return WorkflowRunDto.from(finished);
+    }
+
+    @Scheduled(fixedDelayString = "${workflow.stuck-sweep.interval-ms:300000}")
+    @SchedulerLock(name = "WorkflowExecutionService_failStuckRuns",
+            lockAtLeastFor = "PT10S", lockAtMostFor = "PT5M")
+    @Transactional
+    public void failStuckRuns() {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        List<WorkflowRun> stuck = runRepository.findByStatusAndStartedAtBefore(
+                WorkflowRunStatus.RUNNING, now.minusMinutes(stuckThresholdMinutes));
+        if (stuck.isEmpty()) {
+            return;
+        }
+        for (WorkflowRun run : stuck) {
+            run.setStatus(WorkflowRunStatus.FAILED);
+            run.setFinishedAt(now);
+            log.warn("Workflow run {} stuck in RUNNING since {}, marked FAILED by sweep",
+                    run.getId(), run.getStartedAt());
+        }
+        runRepository.saveAll(stuck);
     }
 
     @Transactional(readOnly = true)
