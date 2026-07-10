@@ -32,22 +32,29 @@ public class RemoteLlmClient implements LlmClient {
     private static final Logger log = LoggerFactory.getLogger(RemoteLlmClient.class);
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(180);
+    private static final Duration GUARD_READ_TIMEOUT = Duration.ofSeconds(12);
     private static final String SECRET_HEADER = "X-Internal-Secret";
 
     private final RestClient restClient;
+    private final RestClient guardRestClient;
     private final String internalSecret;
     private final ObjectMapper objectMapper;
 
     public RemoteLlmClient(LlmServiceProperties properties, ObjectMapper objectMapper) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
-        requestFactory.setReadTimeout(READ_TIMEOUT);
-        this.restClient = RestClient.builder()
-                .baseUrl(properties.baseUrl())
-                .requestFactory(requestFactory)
-                .build();
+        this.restClient = buildClient(properties.baseUrl(), READ_TIMEOUT);
+        this.guardRestClient = buildClient(properties.baseUrl(), GUARD_READ_TIMEOUT);
         this.internalSecret = properties.internalSecret();
         this.objectMapper = objectMapper;
+    }
+
+    private static RestClient buildClient(String baseUrl, Duration readTimeout) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+        requestFactory.setReadTimeout(readTimeout);
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
+                .build();
     }
 
     @Override
@@ -58,7 +65,7 @@ public class RemoteLlmClient implements LlmClient {
     @Override
     public LlmResult complete(String systemPrompt, List<LlmMessage> history, String userMessage, LlmOptions options) {
         try {
-            LlmResult result = restClient.post()
+            LlmResult result = clientFor(options).post()
                     .uri("/internal/llm/complete")
                     .header(SECRET_HEADER, internalSecret)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -182,6 +189,12 @@ public class RemoteLlmClient implements LlmClient {
             log.error("llm-service batch embedding failed: {}", e.getMessage());
             throw new LlmException("llm-service batch embedding failed: " + e.getMessage());
         }
+    }
+
+    private RestClient clientFor(LlmOptions options) {
+        return options != null && LlmOptions.GUARD_PROFILE.equals(options.modelProfile())
+                ? guardRestClient
+                : restClient;
     }
 
     private record CompleteRequest(String systemPrompt, List<LlmMessage> history, String userMessage,

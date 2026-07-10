@@ -20,6 +20,7 @@ import com.pravoos.ai.shared.exception.DraftNotFoundException;
 import com.pravoos.ai.shared.model.enums.DraftType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,17 +38,20 @@ public class DraftService {
     private final CaseDraftRepository caseDraftRepository;
     private final CaseDraftVersionRepository caseDraftVersionRepository;
     private final DraftEditingProperties properties;
+    private final DraftService self;
 
     public DraftService(CaseService caseService,
                         LegalAiPort legalAiPort,
                         CaseDraftRepository caseDraftRepository,
                         CaseDraftVersionRepository caseDraftVersionRepository,
-                        DraftEditingProperties properties) {
+                        DraftEditingProperties properties,
+                        @Lazy DraftService self) {
         this.caseService = caseService;
         this.legalAiPort = legalAiPort;
         this.caseDraftRepository = caseDraftRepository;
         this.caseDraftVersionRepository = caseDraftVersionRepository;
         this.properties = properties;
+        this.self = self;
     }
 
     public List<DraftTypeInfo> listDraftTypes() {
@@ -56,23 +60,32 @@ public class DraftService {
                 .toList();
     }
 
-    @Transactional
     public CaseDraftDto generate(UUID caseId, GenerateDraftRequest request, UUID lawyerId, List<UUID> orgIds) {
-        legalAiPort.assertWithinQuota(lawyerId);
-        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         DraftType draftType = DraftType.fromId(request.draftType());
+        self.assertGeneratable(caseId, lawyerId, orgIds);
         log.info("Generating draft {} for case {} by lawyer {}", draftType.name(), caseId, lawyerId);
 
         LegalAiAnswer answer = legalAiPort.answerForCase(
                 caseId, draftType.instruction(), "Выполни задачу.", lawyerId);
         log.info("LLM draft tokens for lawyer {}: total={}", lawyerId, answer.totalTokens());
 
+        return self.persistGeneratedDraft(caseId, lawyerId, draftType, answer.content());
+    }
+
+    @Transactional(readOnly = true)
+    public void assertGeneratable(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        legalAiPort.assertWithinQuota(lawyerId);
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
+    }
+
+    @Transactional
+    public CaseDraftDto persistGeneratedDraft(UUID caseId, UUID lawyerId, DraftType draftType, String content) {
         CaseDraft draft = new CaseDraft();
         draft.setCaseId(caseId);
         draft.setLawyerId(lawyerId);
         draft.setDraftType(draftType.name());
         draft.setTitle(draftType.displayName());
-        draft.setContent(answer.content());
+        draft.setContent(content);
 
         CaseDraft saved = caseDraftRepository.save(draft);
         snapshotVersion(saved, lawyerId, "Исходная генерация");

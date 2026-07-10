@@ -49,8 +49,10 @@ class CaseAnalyticsServiceTest {
 
     @BeforeEach
     void setUp() {
+        CaseAnalyticsService self = new CaseAnalyticsService(caseService, caseRepository,
+                hearingEventRepository, casePartyRepository, caseAnalysisRepository, legalAiPort, null);
         service = new CaseAnalyticsService(caseService, caseRepository,
-                hearingEventRepository, casePartyRepository, caseAnalysisRepository, legalAiPort);
+                hearingEventRepository, casePartyRepository, caseAnalysisRepository, legalAiPort, self);
         lenient().when(caseService.requireVisibleCase(eq(caseId), eq(lawyerId), anyList()))
                 .thenReturn(caseEntity(null));
         lenient().when(casePartyRepository.findByCaseId(caseId)).thenReturn(List.of());

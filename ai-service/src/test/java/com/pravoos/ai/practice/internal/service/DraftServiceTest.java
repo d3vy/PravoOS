@@ -49,8 +49,11 @@ class DraftServiceTest {
 
     @BeforeEach
     void setUp() {
+        DraftEditingProperties properties = new DraftEditingProperties(1000, 500);
+        DraftService self = new DraftService(caseService, legalAiPort, caseDraftRepository,
+                caseDraftVersionRepository, properties, null);
         service = new DraftService(caseService, legalAiPort, caseDraftRepository,
-                caseDraftVersionRepository, new DraftEditingProperties(1000, 500));
+                caseDraftVersionRepository, properties, self);
         lenient().when(caseDraftRepository.save(any(CaseDraft.class))).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(caseDraftVersionRepository.maxVersionNo(any())).thenReturn(0);
     }

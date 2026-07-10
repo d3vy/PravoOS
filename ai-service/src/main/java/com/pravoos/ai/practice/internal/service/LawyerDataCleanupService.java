@@ -24,8 +24,11 @@ public class LawyerDataCleanupService {
 
     private final CaseRepository caseRepository;
     private final CasePartyRepository casePartyRepository;
+    private final CaseAnalysisRepository caseAnalysisRepository;
     private final CaseTaskRepository caseTaskRepository;
     private final CaseDraftRepository caseDraftRepository;
+    private final WorkflowRunRepository workflowRunRepository;
+    private final WorkflowDefinitionRepository workflowDefinitionRepository;
     private final ClientRepository clientRepository;
     private final ClientContactRepository clientContactRepository;
     private final DocumentTemplateRepository documentTemplateRepository;
@@ -35,8 +38,11 @@ public class LawyerDataCleanupService {
 
     public LawyerDataCleanupService(CaseRepository caseRepository,
                                     CasePartyRepository casePartyRepository,
+                                    CaseAnalysisRepository caseAnalysisRepository,
                                     CaseTaskRepository caseTaskRepository,
                                     CaseDraftRepository caseDraftRepository,
+                                    WorkflowRunRepository workflowRunRepository,
+                                    WorkflowDefinitionRepository workflowDefinitionRepository,
                                     ClientRepository clientRepository,
                                     ClientContactRepository clientContactRepository,
                                     DocumentTemplateRepository documentTemplateRepository,
@@ -45,8 +51,11 @@ public class LawyerDataCleanupService {
                                     @Lazy LawyerDataCleanupService self) {
         this.caseRepository = caseRepository;
         this.casePartyRepository = casePartyRepository;
+        this.caseAnalysisRepository = caseAnalysisRepository;
         this.caseTaskRepository = caseTaskRepository;
         this.caseDraftRepository = caseDraftRepository;
+        this.workflowRunRepository = workflowRunRepository;
+        this.workflowDefinitionRepository = workflowDefinitionRepository;
         this.clientRepository = clientRepository;
         this.clientContactRepository = clientContactRepository;
         this.documentTemplateRepository = documentTemplateRepository;
@@ -117,14 +126,19 @@ public class LawyerDataCleanupService {
 
     @Transactional
     public void purgeRelationalData(UUID lawyerId) {
+        int workflowRuns = workflowRunRepository.deleteByLawyerCases(lawyerId);
+        int analyses = caseAnalysisRepository.deleteByLawyerCases(lawyerId);
         int tasks = caseTaskRepository.deleteByLawyerId(lawyerId);
         int drafts = caseDraftRepository.deleteByLawyerId(lawyerId);
         int parties = casePartyRepository.deleteByLawyerId(lawyerId);
         int cases = caseRepository.deleteByLawyerId(lawyerId);
+        int workflowDefinitions = workflowDefinitionRepository.deleteByCreatedByLawyer(lawyerId);
         int contacts = clientContactRepository.deleteByLawyerId(lawyerId);
         int clients = clientRepository.deleteByLawyerId(lawyerId);
         int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
-        log.info("Deleted {} tasks, {} drafts, {} parties, {} cases, {} contacts, {} clients and {} templates for lawyer {}",
-                tasks, drafts, parties, cases, contacts, clients, templates, lawyerId);
+        log.info("Deleted {} workflow runs, {} analyses, {} tasks, {} drafts, {} parties, {} cases, "
+                        + "{} workflow definitions, {} contacts, {} clients and {} templates for lawyer {}",
+                workflowRuns, analyses, tasks, drafts, parties, cases, workflowDefinitions,
+                contacts, clients, templates, lawyerId);
     }
 }

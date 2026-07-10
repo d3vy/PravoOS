@@ -20,7 +20,7 @@ import java.time.Duration;
 public class OpenAiRestClientConfig {
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(120);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(175);
     private static final Duration CONNECTION_TIME_TO_LIVE = Duration.ofMinutes(5);
     private static final int MAX_TOTAL_CONNECTIONS = 50;
     private static final int MAX_CONNECTIONS_PER_ROUTE = 50;

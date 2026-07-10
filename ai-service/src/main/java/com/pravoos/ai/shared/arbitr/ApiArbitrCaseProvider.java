@@ -14,6 +14,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -158,7 +159,8 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
         }
         try {
             return LocalDate.parse(value.trim());
-        } catch (Exception e) {
+        } catch (DateTimeParseException e) {
+            log.debug("КАД.Арбитр: не удалось разобрать дату '{}'", value);
             return null;
         }
     }

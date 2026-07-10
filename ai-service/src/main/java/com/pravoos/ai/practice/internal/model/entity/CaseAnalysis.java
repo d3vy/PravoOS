@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.model.entity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -45,7 +46,7 @@ public class CaseAnalysis {
     @PrePersist
     @PreUpdate
     void touch() {
-        generatedAt = LocalDateTime.now();
+        generatedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public void update(UUID lawyerId, String content, int hearingCount, long totalTokens) {

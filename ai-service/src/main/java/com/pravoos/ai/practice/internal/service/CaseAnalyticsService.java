@@ -19,10 +19,13 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
@@ -50,19 +53,22 @@ public class CaseAnalyticsService {
     private final CasePartyRepository casePartyRepository;
     private final CaseAnalysisRepository caseAnalysisRepository;
     private final LegalAiPort legalAiPort;
+    private final CaseAnalyticsService self;
 
     public CaseAnalyticsService(CaseService caseService,
                                 CaseRepository caseRepository,
                                 CaseHearingEventRepository hearingEventRepository,
                                 CasePartyRepository casePartyRepository,
                                 CaseAnalysisRepository caseAnalysisRepository,
-                                LegalAiPort legalAiPort) {
+                                LegalAiPort legalAiPort,
+                                @Lazy CaseAnalyticsService self) {
         this.caseService = caseService;
         this.caseRepository = caseRepository;
         this.hearingEventRepository = hearingEventRepository;
         this.casePartyRepository = casePartyRepository;
         this.caseAnalysisRepository = caseAnalysisRepository;
         this.legalAiPort = legalAiPort;
+        this.self = self;
     }
 
     @Transactional(readOnly = true)
@@ -73,8 +79,27 @@ public class CaseAnalyticsService {
                 .orElse(null));
     }
 
-    @Transactional
     public CaseAnalyticsResponse generateAnalysis(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        AnalysisInputs inputs = self.prepareAnalysis(caseId, lawyerId, orgIds);
+
+        LegalAiAnswer answer = legalAiPort.analyzeCase(
+                caseId, inputs.caseContext(), inputs.timelineText(), inputs.statisticsText(), lawyerId);
+
+        CaseAnalysis saved;
+        try {
+            saved = self.persistAnalysis(caseId, lawyerId, answer, inputs.timeline().hearingCount());
+        } catch (DataIntegrityViolationException concurrentInsert) {
+            saved = self.persistAnalysis(caseId, lawyerId, answer, inputs.timeline().hearingCount());
+        }
+
+        log.info("Case analytics generated for case {} by lawyer {} ({} tokens)",
+                caseId, lawyerId, answer.totalTokens());
+        return new CaseAnalyticsResponse(inputs.timeline(), inputs.courtStats(), inputs.judgeStats(),
+                inputs.partyStats(), AiCaseAnalysisDto.from(saved));
+    }
+
+    @Transactional(readOnly = true)
+    public AnalysisInputs prepareAnalysis(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
         Case caseEntity = caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         legalAiPort.assertWithinQuota(lawyerId);
 
@@ -86,27 +111,26 @@ public class CaseAnalyticsService {
         List<OutcomeStat> judgeStats = buildJudgeStats(caseEntity.getArbitrJudge(), lawyerId, orgIds);
         List<OutcomeStat> partyStats = buildPartyStats(parties, lawyerId, orgIds);
 
-        LegalAiAnswer answer = legalAiPort.analyzeCase(
-                caseId,
+        return new AnalysisInputs(timeline, courtStats, judgeStats, partyStats,
                 buildCaseContext(caseEntity, parties),
                 buildTimelineText(events),
-                buildStatisticsText(timeline, courtStats, judgeStats, partyStats),
-                lawyerId);
+                buildStatisticsText(timeline, courtStats, judgeStats, partyStats));
+    }
 
-        CaseAnalysis analysis = caseAnalysisRepository.findByCaseId(caseId)
+    @Transactional
+    public CaseAnalysis persistAnalysis(UUID caseId, UUID lawyerId, LegalAiAnswer answer, int hearingCount) {
+        return caseAnalysisRepository.findByCaseId(caseId)
                 .map(existing -> {
-                    existing.update(lawyerId, answer.content(), timeline.hearingCount(), answer.totalTokens());
+                    existing.update(lawyerId, answer.content(), hearingCount, answer.totalTokens());
                     return existing;
                 })
-                .orElseGet(() -> new CaseAnalysis(
-                        caseId, lawyerId, answer.content(), timeline.hearingCount(), answer.totalTokens()));
-        CaseAnalysis saved = caseAnalysisRepository.save(analysis);
-
-        log.info("Case analytics generated for case {} by lawyer {} ({} tokens)",
-                caseId, lawyerId, answer.totalTokens());
-        return new CaseAnalyticsResponse(timeline, courtStats, judgeStats, partyStats,
-                AiCaseAnalysisDto.from(saved));
+                .orElseGet(() -> caseAnalysisRepository.save(new CaseAnalysis(
+                        caseId, lawyerId, answer.content(), hearingCount, answer.totalTokens())));
     }
+
+    public record AnalysisInputs(CaseTimelineStats timeline, List<OutcomeStat> courtStats,
+                                 List<OutcomeStat> judgeStats, List<OutcomeStat> partyStats,
+                                 String caseContext, String timelineText, String statisticsText) {}
 
     private CaseAnalyticsResponse assemble(UUID caseId, Case caseEntity, UUID lawyerId, List<UUID> orgIds,
                                            AiCaseAnalysisDto aiAnalysis) {
@@ -148,7 +172,7 @@ public class CaseAnalyticsService {
         LocalDate nextHearingDate = caseEntity.getNextHearingDate();
         Integer daysToNextHearing = nextHearingDate == null
                 ? null
-                : (int) ChronoUnit.DAYS.between(LocalDate.now(), nextHearingDate);
+                : (int) ChronoUnit.DAYS.between(LocalDate.now(ZoneOffset.UTC), nextHearingDate);
 
         return new CaseTimelineStats(events.size(), firstEventDate, lastEventDate, spanDays,
                 averageIntervalDays, courts, buildEventTypeCounts(events), nextHearingDate,

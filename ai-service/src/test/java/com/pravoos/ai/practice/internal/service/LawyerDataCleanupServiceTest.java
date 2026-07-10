@@ -18,8 +18,11 @@ class LawyerDataCleanupServiceTest {
 
     @Mock private CaseRepository caseRepository;
     @Mock private CasePartyRepository casePartyRepository;
+    @Mock private CaseAnalysisRepository caseAnalysisRepository;
     @Mock private CaseTaskRepository caseTaskRepository;
     @Mock private CaseDraftRepository caseDraftRepository;
+    @Mock private WorkflowRunRepository workflowRunRepository;
+    @Mock private WorkflowDefinitionRepository workflowDefinitionRepository;
     @Mock private ClientRepository clientRepository;
     @Mock private ClientContactRepository clientContactRepository;
     @Mock private DocumentTemplateRepository documentTemplateRepository;
@@ -27,8 +30,9 @@ class LawyerDataCleanupServiceTest {
     @Mock private PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
 
     private LawyerDataCleanupService service(LawyerDataCleanupService self) {
-        return new LawyerDataCleanupService(caseRepository, casePartyRepository, caseTaskRepository,
-                caseDraftRepository, clientRepository, clientContactRepository, documentTemplateRepository,
+        return new LawyerDataCleanupService(caseRepository, casePartyRepository, caseAnalysisRepository,
+                caseTaskRepository, caseDraftRepository, workflowRunRepository, workflowDefinitionRepository,
+                clientRepository, clientContactRepository, documentTemplateRepository,
                 aiDataCleanup, pendingLawyerPurgeRepository, self);
     }
 
@@ -38,14 +42,18 @@ class LawyerDataCleanupServiceTest {
 
         service(null).purgeRelationalData(lawyerId);
 
+        verify(workflowRunRepository).deleteByLawyerCases(lawyerId);
+        verify(caseAnalysisRepository).deleteByLawyerCases(lawyerId);
         verify(caseTaskRepository).deleteByLawyerId(lawyerId);
         verify(caseDraftRepository).deleteByLawyerId(lawyerId);
         verify(casePartyRepository).deleteByLawyerId(lawyerId);
         verify(caseRepository).deleteByLawyerId(lawyerId);
+        verify(workflowDefinitionRepository).deleteByCreatedByLawyer(lawyerId);
         verify(clientContactRepository).deleteByLawyerId(lawyerId);
         verify(clientRepository).deleteByLawyerId(lawyerId);
         verify(documentTemplateRepository).deleteByLawyerId(lawyerId);
-        verifyNoMoreInteractions(caseTaskRepository, caseDraftRepository, casePartyRepository, caseRepository,
+        verifyNoMoreInteractions(workflowRunRepository, caseAnalysisRepository, caseTaskRepository,
+                caseDraftRepository, casePartyRepository, caseRepository, workflowDefinitionRepository,
                 clientContactRepository, clientRepository, documentTemplateRepository);
     }
 

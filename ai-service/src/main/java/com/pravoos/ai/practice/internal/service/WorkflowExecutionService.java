@@ -119,6 +119,7 @@ public class WorkflowExecutionService {
         WorkflowStepRun step = WorkflowStepRun.pending(config);
         return switch (config.type()) {
             case AI_ANALYSIS -> {
+                legalAiPort.assertWithinQuota(lawyerId);
                 AiResponseDto response = legalAiPort.runCaseWorkflow(
                         caseId, lawyerId, workflowId(config), config.title(), config.instruction());
                 yield step.completed(truncate(response.result()), response.id(), null);
@@ -129,6 +130,7 @@ public class WorkflowExecutionService {
                 yield step.completed("Черновик создан: " + draft.title(), null, draft.id());
             }
             case GENERATE_TASKS -> {
+                legalAiPort.assertWithinQuota(lawyerId);
                 AiResponseDto checklist = legalAiPort.runCaseWorkflow(
                         caseId, lawyerId, workflowId(config), config.title(), config.instruction());
                 List<CaseTaskResponse> tasks = caseTaskService.createFromChecklist(
