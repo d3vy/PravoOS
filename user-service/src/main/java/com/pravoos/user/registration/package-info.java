@@ -5,5 +5,6 @@
                 "identity :: model",
                 "identity :: enums",
                 "identity :: repository",
-                "collaboration :: api"})
+                "collaboration :: api",
+                "billing :: api"})
 package com.pravoos.user.registration;

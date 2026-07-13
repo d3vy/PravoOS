@@ -2,6 +2,7 @@ package com.pravoos.ai.shared.security;
 
 import com.pravoos.common.security.JwtVerifier;
 import com.pravoos.common.web.OrgContext;
+import com.pravoos.common.web.PlanLimits;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -45,7 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
                 authentication.setDetails(new OrgContext(
-                        extractUuidList(claims, "orgs"), extractUuidList(claims, "clients")));
+                        extractUuidList(claims, "orgs"),
+                        extractUuidList(claims, "clients"),
+                        extractPlanLimits(claims)));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
@@ -66,6 +70,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         return Collections.unmodifiableList(ids);
+    }
+
+    private PlanLimits extractPlanLimits(Claims claims) {
+        Object raw = claims.get("plan");
+        if (!(raw instanceof Map<?, ?> plan)) {
+            return null;
+        }
+        Object code = plan.get("code");
+        if (code == null) {
+            return null;
+        }
+        return new PlanLimits(
+                String.valueOf(code),
+                toNumber(plan.get("dailyRequests")).intValue(),
+                toNumber(plan.get("dailyTokens")).longValue());
+    }
+
+    private Number toNumber(Object value) {
+        return value instanceof Number number ? number : 0L;
     }
 
     private boolean isRevoked(Claims claims) {

@@ -3,6 +3,7 @@ package com.pravoos.common.web;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class SecurityUtils {
@@ -33,5 +34,12 @@ public final class SecurityUtils {
             return orgContext.clientIds();
         }
         return List.of();
+    }
+
+    public static Optional<PlanLimits> currentPlanLimits(Authentication authentication) {
+        if (authentication != null && authentication.getDetails() instanceof OrgContext orgContext) {
+            return Optional.ofNullable(orgContext.planLimits());
+        }
+        return Optional.empty();
     }
 }

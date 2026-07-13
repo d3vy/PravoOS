@@ -1,5 +1,7 @@
 package com.pravoos.user.identity.internal.service;
 
+import com.pravoos.user.billing.api.PlanClaim;
+import com.pravoos.user.billing.api.PlanClaimProvider;
 import com.pravoos.user.identity.api.OrgMembershipProvider;
 import com.pravoos.user.identity.api.PortalAccessProvider;
 import com.pravoos.user.identity.internal.dto.LoginRequest;
@@ -46,6 +48,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final OrgMembershipProvider orgMembershipProvider;
     private final PortalAccessProvider portalAccessProvider;
+    private final PlanClaimProvider planClaimProvider;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -62,6 +65,7 @@ public class AuthService {
     public AuthService(UserRepository userRepository,
                        OrgMembershipProvider orgMembershipProvider,
                        PortalAccessProvider portalAccessProvider,
+                       PlanClaimProvider planClaimProvider,
                        JwtTokenProvider jwtTokenProvider,
                        PasswordEncoder passwordEncoder,
                        RefreshTokenService refreshTokenService,
@@ -74,6 +78,7 @@ public class AuthService {
         this.userRepository = userRepository;
         this.orgMembershipProvider = orgMembershipProvider;
         this.portalAccessProvider = portalAccessProvider;
+        this.planClaimProvider = planClaimProvider;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
@@ -195,8 +200,11 @@ public class AuthService {
         List<UUID> clientIds = user.getRole() == UserRole.CLIENT
                 ? portalAccessProvider.acceptedClientIdsForUser(user.getId())
                 : List.of();
+        PlanClaim plan = user.getRole() == UserRole.CLIENT
+                ? null
+                : planClaimProvider.effectivePlanFor(user.getId()).orElse(null);
         String accessToken = jwtTokenProvider.generateToken(
-                user.getId(), user.getEmail(), user.getRole(), orgIds, clientIds);
+                user.getId(), user.getEmail(), user.getRole(), orgIds, clientIds, plan);
         String refreshToken = refreshTokenService.issue(user.getId(), ipAddress, userAgent);
         return new TokenResponse(accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
     }

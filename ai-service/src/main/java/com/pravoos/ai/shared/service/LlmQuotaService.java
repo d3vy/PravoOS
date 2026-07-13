@@ -1,9 +1,10 @@
 package com.pravoos.ai.shared.service;
 
 import com.pravoos.ai.shared.exception.LlmQuotaExceededException;
+import com.pravoos.ai.shared.security.PlanLimitsProvider;
+import com.pravoos.common.web.PlanLimits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -21,35 +22,32 @@ public class LlmQuotaService {
     private static final Duration WINDOW = Duration.ofDays(1);
 
     private final StringRedisTemplate redisTemplate;
-    private final int dailyRequestLimit;
-    private final long dailyTokenLimit;
+    private final PlanLimitsProvider planLimitsProvider;
 
-    public LlmQuotaService(StringRedisTemplate redisTemplate,
-                           @Value("${llm.quota.daily-requests:200}") int dailyRequestLimit,
-                           @Value("${llm.quota.daily-tokens:0}") long dailyTokenLimit) {
+    public LlmQuotaService(StringRedisTemplate redisTemplate, PlanLimitsProvider planLimitsProvider) {
         this.redisTemplate = redisTemplate;
-        this.dailyRequestLimit = dailyRequestLimit;
-        this.dailyTokenLimit = dailyTokenLimit;
+        this.planLimitsProvider = planLimitsProvider;
     }
 
     public void assertWithinQuota(UUID lawyerId) {
-        if (dailyRequestLimit <= 0 && dailyTokenLimit <= 0) {
+        PlanLimits limits = planLimitsProvider.currentLimits();
+        if (limits.quotaDisabled()) {
             return;
         }
         try {
-            if (dailyRequestLimit > 0) {
+            if (limits.dailyRequests() > 0) {
                 long requests = readCounter(requestKey(lawyerId));
-                if (requests >= dailyRequestLimit) {
-                    log.warn("LLM daily request quota exceeded for lawyer {} ({}/{})",
-                            lawyerId, requests, dailyRequestLimit);
+                if (requests >= limits.dailyRequests()) {
+                    log.warn("LLM daily request quota exceeded for lawyer {} on plan {} ({}/{})",
+                            lawyerId, limits.code(), requests, limits.dailyRequests());
                     throw new LlmQuotaExceededException();
                 }
             }
-            if (dailyTokenLimit > 0) {
+            if (limits.dailyTokens() > 0) {
                 long tokens = readCounter(tokenKey(lawyerId));
-                if (tokens >= dailyTokenLimit) {
-                    log.warn("LLM daily token budget exceeded for lawyer {} ({}/{})",
-                            lawyerId, tokens, dailyTokenLimit);
+                if (tokens >= limits.dailyTokens()) {
+                    log.warn("LLM daily token budget exceeded for lawyer {} on plan {} ({}/{})",
+                            lawyerId, limits.code(), tokens, limits.dailyTokens());
                     throw new LlmQuotaExceededException();
                 }
             }
@@ -59,7 +57,7 @@ public class LlmQuotaService {
     }
 
     public void recordUsage(UUID lawyerId, long totalTokens) {
-        if (dailyRequestLimit <= 0 && dailyTokenLimit <= 0) {
+        if (planLimitsProvider.currentLimits().quotaDisabled()) {
             return;
         }
         try {
@@ -73,7 +71,7 @@ public class LlmQuotaService {
     }
 
     public void recordTokenUsage(UUID lawyerId, long totalTokens) {
-        if (dailyTokenLimit <= 0 || totalTokens <= 0) {
+        if (totalTokens <= 0 || planLimitsProvider.currentLimits().dailyTokens() <= 0) {
             return;
         }
         try {

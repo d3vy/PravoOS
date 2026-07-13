@@ -1,5 +1,6 @@
 package com.pravoos.user.service;
 
+import com.pravoos.user.billing.api.PlanClaimProvider;
 import com.pravoos.user.identity.api.OrgMembershipProvider;
 import com.pravoos.user.identity.api.PortalAccessProvider;
 import com.pravoos.user.identity.internal.dto.LoginRequest;
@@ -46,6 +47,7 @@ class AuthServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private OrgMembershipProvider orgMembershipProvider;
     @Mock private PortalAccessProvider portalAccessProvider;
+    @Mock private PlanClaimProvider planClaimProvider;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private RefreshTokenService refreshTokenService;
@@ -62,7 +64,7 @@ class AuthServiceTest {
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
         authService = new AuthService(userRepository, orgMembershipProvider, portalAccessProvider,
-                jwtTokenProvider, passwordEncoder,
+                planClaimProvider, jwtTokenProvider, passwordEncoder,
                 refreshTokenService, loginAttemptService, mfaService, mfaChallengeService,
                 eventPublisher, outboxEventService, meterRegistry);
     }
@@ -75,7 +77,7 @@ class AuthServiceTest {
         when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
         when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
         when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
-        when(jwtTokenProvider.generateToken(eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList())).thenReturn("access");
+        when(jwtTokenProvider.generateToken(eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any())).thenReturn("access");
         when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
 
         LoginResult result = authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
@@ -166,7 +168,7 @@ class AuthServiceTest {
         when(mfaService.verifyLoginCode(user.getId(), "123456")).thenReturn(true);
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
         when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
-        when(jwtTokenProvider.generateToken(eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList())).thenReturn("access");
+        when(jwtTokenProvider.generateToken(eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any())).thenReturn("access");
         when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
 
         TokenResponse response = authService.completeMfaLogin("challenge-token", "123456", IP, UA);

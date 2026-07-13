@@ -5,6 +5,7 @@ import com.pravoos.user.identity.model.entity.LawyerProfile;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
+import com.pravoos.user.billing.api.SubscriptionProvisioner;
 import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.registration.internal.dto.ApplicationResponse;
 import com.pravoos.user.registration.internal.dto.ApplicationSubmissionResponse;
@@ -50,6 +51,7 @@ public class ApplicationService {
     private final EmailVerificationService emailVerificationService;
     private final OutboxEventService outboxEventService;
     private final TokenHasher tokenHasher;
+    private final SubscriptionProvisioner subscriptionProvisioner;
     private final Counter applicationSubmittedCounter;
     private final Counter applicationApprovedCounter;
     private final Counter applicationRejectedCounter;
@@ -61,6 +63,7 @@ public class ApplicationService {
                                EmailVerificationService emailVerificationService,
                                OutboxEventService outboxEventService,
                                TokenHasher tokenHasher,
+                               SubscriptionProvisioner subscriptionProvisioner,
                                MeterRegistry meterRegistry) {
         this.applicationRepository = applicationRepository;
         this.userRepository = userRepository;
@@ -69,6 +72,7 @@ public class ApplicationService {
         this.emailVerificationService = emailVerificationService;
         this.outboxEventService = outboxEventService;
         this.tokenHasher = tokenHasher;
+        this.subscriptionProvisioner = subscriptionProvisioner;
         this.applicationSubmittedCounter = Counter.builder("pravoos.application").tag("action", "submitted").register(meterRegistry);
         this.applicationApprovedCounter = Counter.builder("pravoos.application").tag("action", "approved").register(meterRegistry);
         this.applicationRejectedCounter = Counter.builder("pravoos.application").tag("action", "rejected").register(meterRegistry);
@@ -196,6 +200,7 @@ public class ApplicationService {
 
         User user = buildUserFromApplication(application);
         userRepository.save(user);
+        subscriptionProvisioner.startTrial(user.getId());
 
         markReviewed(application, ApplicationStatus.APPROVED, adminId);
         eventPublisher.publishEvent(new ApplicationApprovedSpringEvent(application.getEmail(), application.getFullName()));

@@ -1,6 +1,7 @@
 package com.pravoos.user.identity.internal.security;
 
 import com.pravoos.common.security.RsaKeyLoader;
+import com.pravoos.user.billing.api.PlanClaim;
 import com.pravoos.user.identity.internal.config.JwtProperties;
 import com.pravoos.user.identity.model.enums.UserRole;
 import io.jsonwebtoken.Jwts;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -22,7 +24,8 @@ public class JwtTokenProvider {
         this.accessExpirationMs = jwtProperties.accessExpirationMs();
     }
 
-    public String generateToken(UUID userId, String email, UserRole role, List<UUID> orgIds, List<UUID> clientIds) {
+    public String generateToken(UUID userId, String email, UserRole role, List<UUID> orgIds, List<UUID> clientIds,
+                               PlanClaim plan) {
         var builder = Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
@@ -32,6 +35,12 @@ public class JwtTokenProvider {
         }
         if (clientIds != null && !clientIds.isEmpty()) {
             builder.claim("clients", clientIds.stream().map(UUID::toString).toList());
+        }
+        if (plan != null) {
+            builder.claim("plan", Map.of(
+                    "code", plan.code(),
+                    "dailyRequests", plan.dailyRequests(),
+                    "dailyTokens", plan.dailyTokens()));
         }
         return builder
                 .issuedAt(new Date())

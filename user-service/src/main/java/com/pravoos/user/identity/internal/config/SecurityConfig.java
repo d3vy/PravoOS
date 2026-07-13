@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/internal/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/user/billing/**").hasAnyRole("LAWYER", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new InternalSecretFilter(internalSecretVerifier),

@@ -3,7 +3,7 @@ package com.pravoos.common.web;
 import java.util.List;
 import java.util.UUID;
 
-public record OrgContext(List<UUID> orgIds, List<UUID> clientIds) {
+public record OrgContext(List<UUID> orgIds, List<UUID> clientIds, PlanLimits planLimits) {
 
     public OrgContext {
         orgIds = orgIds == null ? List.of() : List.copyOf(orgIds);
@@ -11,6 +11,10 @@ public record OrgContext(List<UUID> orgIds, List<UUID> clientIds) {
     }
 
     public OrgContext(List<UUID> orgIds) {
-        this(orgIds, List.of());
+        this(orgIds, List.of(), null);
+    }
+
+    public OrgContext(List<UUID> orgIds, List<UUID> clientIds) {
+        this(orgIds, clientIds, null);
     }
 }
