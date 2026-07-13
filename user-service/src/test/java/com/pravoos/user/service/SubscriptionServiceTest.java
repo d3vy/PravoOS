@@ -34,6 +34,7 @@ class SubscriptionServiceTest {
 
     private static final String TRIAL_PLAN_CODE = "SOLO";
     private static final int TRIAL_DAYS = 14;
+    private static final int GRACE_DAYS = 5;
 
     @Mock
     private SubscriptionRepository subscriptionRepository;
@@ -48,7 +49,8 @@ class SubscriptionServiceTest {
 
     @BeforeEach
     void setup() {
-        subscriptionService = new SubscriptionService(subscriptionRepository, planRepository, TRIAL_PLAN_CODE, TRIAL_DAYS);
+        subscriptionService = new SubscriptionService(
+                subscriptionRepository, planRepository, TRIAL_PLAN_CODE, TRIAL_DAYS, GRACE_DAYS);
         userId = UUID.randomUUID();
         trialPlan = buildPlan(TRIAL_PLAN_CODE, "Solo", 200, 200000L, 1);
         defaultPlan = buildPlan("FREE", "Free", 20, 20000L, 1);
@@ -137,9 +139,20 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void effectivePlanFallsBackToDefaultPlanWhenSubscriptionNotEntitled() {
-        when(subscriptionRepository.findByUserId(userId))
-                .thenReturn(Optional.of(subscriptionOn(trialPlan, SubscriptionStatus.PAST_DUE)));
+    void pastDueKeepsPlanWhileInsideGracePeriod() {
+        Subscription pastDue = subscriptionOn(trialPlan, SubscriptionStatus.PAST_DUE);
+        pastDue.setCurrentPeriodEnd(LocalDateTime.now(ZoneOffset.UTC).minusDays(GRACE_DAYS - 1));
+        when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.of(pastDue));
+        when(planRepository.findById(trialPlan.getId())).thenReturn(Optional.of(trialPlan));
+
+        assertThat(subscriptionService.effectivePlanFor(userId).orElseThrow().code()).isEqualTo(TRIAL_PLAN_CODE);
+    }
+
+    @Test
+    void pastDueFallsBackToDefaultPlanAfterGracePeriod() {
+        Subscription pastDue = subscriptionOn(trialPlan, SubscriptionStatus.PAST_DUE);
+        pastDue.setCurrentPeriodEnd(LocalDateTime.now(ZoneOffset.UTC).minusDays(GRACE_DAYS + 1));
+        when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.of(pastDue));
         when(planRepository.findByIsDefaultTrue()).thenReturn(Optional.of(defaultPlan));
 
         PlanClaim claim = subscriptionService.effectivePlanFor(userId).orElseThrow();
@@ -147,6 +160,15 @@ class SubscriptionServiceTest {
         assertThat(claim.code()).isEqualTo("FREE");
         assertThat(claim.dailyRequests()).isEqualTo(20);
         verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void canceledSubscriptionFallsBackToDefaultPlan() {
+        when(subscriptionRepository.findByUserId(userId))
+                .thenReturn(Optional.of(subscriptionOn(trialPlan, SubscriptionStatus.CANCELED)));
+        when(planRepository.findByIsDefaultTrue()).thenReturn(Optional.of(defaultPlan));
+
+        assertThat(subscriptionService.effectivePlanFor(userId).orElseThrow().code()).isEqualTo("FREE");
     }
 
     @Test

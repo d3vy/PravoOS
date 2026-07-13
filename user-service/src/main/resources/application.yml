@@ -74,6 +74,7 @@ app:
   billing:
     trial-plan-code: ${BILLING_TRIAL_PLAN_CODE:SOLO}
     trial-days: ${BILLING_TRIAL_DAYS:14}
+    grace-days: ${BILLING_GRACE_DAYS:5}
     yookassa:
       shop-id: ${YOOKASSA_SHOP_ID:}
       secret-key: ${YOOKASSA_SECRET_KEY:}

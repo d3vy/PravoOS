@@ -36,15 +36,18 @@ public class SubscriptionService {
     private final PlanRepository planRepository;
     private final String trialPlanCode;
     private final int trialDays;
+    private final int graceDays;
 
     public SubscriptionService(SubscriptionRepository subscriptionRepository,
                                PlanRepository planRepository,
                                @Value("${app.billing.trial-plan-code:SOLO}") String trialPlanCode,
-                               @Value("${app.billing.trial-days:14}") int trialDays) {
+                               @Value("${app.billing.trial-days:14}") int trialDays,
+                               @Value("${app.billing.grace-days:5}") int graceDays) {
         this.subscriptionRepository = subscriptionRepository;
         this.planRepository = planRepository;
         this.trialPlanCode = trialPlanCode;
         this.trialDays = trialDays;
+        this.graceDays = graceDays;
     }
 
     @Transactional
@@ -70,11 +73,21 @@ public class SubscriptionService {
 
     @Transactional(readOnly = true)
     public Optional<PlanClaim> effectivePlanFor(UUID userId) {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         return subscriptionRepository.findByUserId(userId)
-                .filter(subscription -> ENTITLED_STATUSES.contains(subscription.getStatus()))
+                .filter(subscription -> entitled(subscription, now))
                 .flatMap(subscription -> planRepository.findById(subscription.getPlanId()))
                 .or(planRepository::findByIsDefaultTrue)
                 .map(plan -> new PlanClaim(plan.getCode(), plan.getDailyRequests(), plan.getDailyTokens()));
+    }
+
+    private boolean entitled(Subscription subscription, LocalDateTime now) {
+        LocalDateTime periodEnd = subscription.getCurrentPeriodEnd();
+        return switch (subscription.getStatus()) {
+            case ACTIVE, TRIALING -> periodEnd == null || now.isBefore(periodEnd.plusDays(graceDays));
+            case PAST_DUE -> periodEnd != null && now.isBefore(periodEnd.plusDays(graceDays));
+            case CANCELED -> false;
+        };
     }
 
     @Transactional
