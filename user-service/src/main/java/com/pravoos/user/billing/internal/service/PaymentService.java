@@ -3,6 +3,7 @@ package com.pravoos.user.billing.internal.service;
 import com.pravoos.user.billing.internal.client.YooKassaClient;
 import com.pravoos.user.billing.internal.client.YooKassaPayment;
 import com.pravoos.user.billing.internal.dto.CheckoutResponse;
+import com.pravoos.user.billing.internal.dto.PaymentResponse;
 import com.pravoos.user.billing.internal.model.entity.Payment;
 import com.pravoos.user.billing.internal.model.entity.Plan;
 import com.pravoos.user.billing.internal.model.enums.PaymentStatus;
@@ -13,8 +14,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PaymentService {
@@ -67,5 +72,24 @@ public class PaymentService {
 
     public void handleNotification(String providerPaymentId) {
         paymentApplier.apply(yooKassaClient.getPayment(providerPaymentId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> history(UUID userId) {
+        List<Payment> payments = paymentRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        Map<UUID, String> planCodes = planRepository.findAllById(
+                        payments.stream().map(Payment::getPlanId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(Plan::getId, Plan::getCode));
+
+        return payments.stream()
+                .map(payment -> new PaymentResponse(
+                        payment.getId(),
+                        planCodes.get(payment.getPlanId()),
+                        payment.getAmountKopecks(),
+                        payment.getStatus(),
+                        payment.getConfirmationUrl(),
+                        payment.getPaidAt(),
+                        payment.getCreatedAt()))
+                .toList();
     }
 }

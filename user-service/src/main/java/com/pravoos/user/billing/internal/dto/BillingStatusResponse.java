@@ -10,6 +10,7 @@ public record BillingStatusResponse(
         SubscriptionStatus status,
         LocalDateTime trialEnd,
         LocalDateTime currentPeriodEnd,
+        boolean cancelAtPeriodEnd,
         int dailyRequests,
         long dailyTokens,
         int seats) {

@@ -17,6 +17,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -154,6 +156,46 @@ class SubscriptionServiceTest {
 
         assertThat(subscriptionService.effectivePlanFor(userId).orElseThrow().code()).isEqualTo("FREE");
         verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelKeepsAccessUntilPeriodEnd() {
+        Subscription existing = subscriptionOn(trialPlan, SubscriptionStatus.ACTIVE);
+        existing.setCurrentPeriodEnd(LocalDateTime.now(ZoneOffset.UTC).plusDays(10));
+        when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
+        when(planRepository.findById(trialPlan.getId())).thenReturn(Optional.of(trialPlan));
+
+        BillingStatusResponse response = subscriptionService.cancel(userId);
+
+        assertThat(existing.isCancelAtPeriodEnd()).isTrue();
+        assertThat(existing.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(response.cancelAtPeriodEnd()).isTrue();
+        verify(subscriptionRepository).save(existing);
+    }
+
+    @Test
+    void cancelFailsWithoutActiveSubscription() {
+        when(subscriptionRepository.findByUserId(userId))
+                .thenReturn(Optional.of(subscriptionOn(trialPlan, SubscriptionStatus.CANCELED)));
+
+        assertThatThrownBy(() -> subscriptionService.cancel(userId))
+                .isInstanceOf(PravoosException.class);
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    void activateOnPlanExtendsPeriodAndClearsPendingCancellation() {
+        Subscription existing = subscriptionOn(trialPlan, SubscriptionStatus.ACTIVE);
+        LocalDateTime periodEnd = LocalDateTime.now(ZoneOffset.UTC).plusDays(5);
+        existing.setCurrentPeriodEnd(periodEnd);
+        existing.setCancelAtPeriodEnd(true);
+        when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
+
+        subscriptionService.activateOnPlan(userId, trialPlan.getId(), 30);
+
+        assertThat(existing.isCancelAtPeriodEnd()).isFalse();
+        assertThat(existing.getCurrentPeriodEnd()).isEqualTo(periodEnd.plusDays(30));
+        assertThat(existing.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
     }
 
     private Subscription subscriptionOn(Plan plan, SubscriptionStatus status) {

@@ -2,6 +2,7 @@ package com.pravoos.user.billing.internal.service;
 
 import com.pravoos.user.billing.api.PlanClaim;
 import com.pravoos.user.billing.internal.dto.BillingStatusResponse;
+import com.pravoos.user.billing.internal.dto.PlanResponse;
 import com.pravoos.user.billing.internal.model.entity.Plan;
 import com.pravoos.user.billing.internal.model.entity.Subscription;
 import com.pravoos.user.billing.internal.model.enums.SubscriptionStatus;
@@ -17,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -92,10 +95,46 @@ public class SubscriptionService {
         subscription.setPlanId(planId);
         subscription.setStatus(SubscriptionStatus.ACTIVE);
         subscription.setCurrentPeriodEnd(periodStart.plusDays(periodDays));
+        subscription.setCancelAtPeriodEnd(false);
         subscriptionRepository.save(subscription);
 
         log.info("Subscription activated for user {} on plan {} until {}",
                 userId, planId, subscription.getCurrentPeriodEnd());
+    }
+
+    @Transactional
+    public BillingStatusResponse cancel(UUID userId) {
+        Subscription subscription = subscriptionRepository.findByUserId(userId)
+                .orElseThrow(() -> new PravoosException("Подписка не найдена",
+                        HttpStatus.NOT_FOUND, "SUBSCRIPTION_NOT_FOUND"));
+        if (!ENTITLED_STATUSES.contains(subscription.getStatus())) {
+            throw new PravoosException("Активной подписки нет",
+                    HttpStatus.CONFLICT, "SUBSCRIPTION_NOT_ACTIVE");
+        }
+
+        subscription.setCancelAtPeriodEnd(true);
+        subscriptionRepository.save(subscription);
+        log.info("Subscription cancellation scheduled for user {} at {}",
+                userId, subscription.getCurrentPeriodEnd());
+
+        Plan plan = planRepository.findById(subscription.getPlanId())
+                .orElseThrow(() -> planNotFound(subscription.getPlanId().toString()));
+        return toResponse(subscription, plan);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlanResponse> listPlans() {
+        return planRepository.findAll().stream()
+                .sorted(Comparator.comparingLong(Plan::getPriceKopecks))
+                .map(plan -> new PlanResponse(
+                        plan.getCode(),
+                        plan.getName(),
+                        plan.getPriceKopecks(),
+                        plan.getDailyRequests(),
+                        plan.getDailyTokens(),
+                        plan.getSeats(),
+                        plan.isDefault()))
+                .toList();
     }
 
     @Transactional
@@ -124,6 +163,7 @@ public class SubscriptionService {
                 subscription.getStatus(),
                 subscription.getTrialEnd(),
                 subscription.getCurrentPeriodEnd(),
+                subscription.isCancelAtPeriodEnd(),
                 plan.getDailyRequests(),
                 plan.getDailyTokens(),
                 plan.getSeats());

@@ -30,6 +30,9 @@ public class Subscription {
     @Column(name = "current_period_end")
     private LocalDateTime currentPeriodEnd;
 
+    @Column(name = "cancel_at_period_end", nullable = false)
+    private boolean cancelAtPeriodEnd;
+
     @Version
     private long version;
 
@@ -67,6 +70,9 @@ public class Subscription {
 
     public LocalDateTime getCurrentPeriodEnd() { return currentPeriodEnd; }
     public void setCurrentPeriodEnd(LocalDateTime currentPeriodEnd) { this.currentPeriodEnd = currentPeriodEnd; }
+
+    public boolean isCancelAtPeriodEnd() { return cancelAtPeriodEnd; }
+    public void setCancelAtPeriodEnd(boolean cancelAtPeriodEnd) { this.cancelAtPeriodEnd = cancelAtPeriodEnd; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
 

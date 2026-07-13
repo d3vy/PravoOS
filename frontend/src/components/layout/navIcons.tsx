@@ -133,3 +133,12 @@ export function CollapseIcon({ collapsed }: { collapsed: boolean }): JSX.Element
     </Icon>
   )
 }
+
+export function BillingIcon(): JSX.Element {
+  return (
+    <Icon>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20" />
+    </Icon>
+  )
+}

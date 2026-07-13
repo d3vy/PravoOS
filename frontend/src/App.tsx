@@ -34,6 +34,7 @@ import ApplicationsPage from './pages/admin/ApplicationsPage'
 import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
 import UsersPage from './pages/admin/UsersPage'
+import BillingPage from './pages/billing/BillingPage'
 import ProfilePage from './pages/profile/ProfilePage'
 import SettingsPage from './pages/settings/SettingsPage'
 
@@ -101,6 +102,7 @@ export default function App(): JSX.Element {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/invite" element={<InvitePage />} />
+        <Route path="/billing" element={<BillingPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

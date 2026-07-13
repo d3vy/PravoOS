@@ -773,3 +773,44 @@ export interface WorkflowRunDto {
   startedAt: string
   finishedAt: string | null
 }
+
+export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
+
+export type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'CANCELED'
+
+export interface BillingStatus {
+  planCode: string
+  planName: string
+  status: SubscriptionStatus
+  trialEnd: string | null
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd: boolean
+  dailyRequests: number
+  dailyTokens: number
+  seats: number
+}
+
+export interface BillingPlan {
+  code: string
+  name: string
+  priceKopecks: number
+  dailyRequests: number
+  dailyTokens: number
+  seats: number
+  isDefault: boolean
+}
+
+export interface PaymentRecord {
+  id: string
+  planCode: string | null
+  amountKopecks: number
+  status: PaymentStatus
+  confirmationUrl: string | null
+  paidAt: string | null
+  createdAt: string
+}
+
+export interface CheckoutResponse {
+  paymentId: string
+  confirmationUrl: string | null
+}

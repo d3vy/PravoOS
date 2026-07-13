@@ -1,5 +1,6 @@
 import type { NavTabItem } from '../ui/NavTabs'
 import {
+  BillingIcon,
   CalendarIcon,
   CasesIcon,
   ChatIcon,
@@ -42,6 +43,7 @@ export const lawyerNavSections: LawyerNavSection[] = [
     title: 'Аккаунт',
     items: [
       { to: '/profile', label: 'Профиль', icon: <ProfileIcon /> },
+      { to: '/billing', label: 'Подписка', icon: <BillingIcon /> },
       { to: '/settings', label: 'Настройки', icon: <SettingsIcon /> },
     ],
   },
