@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { clientsApi } from '../../api/clients'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { ClientResponse } from '../../types'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
@@ -36,8 +35,7 @@ export default function ClientsPage(): JSX.Element {
   })
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

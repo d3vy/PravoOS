@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '../../api/clients'
 import type { ClientDetailResponse } from '../../types'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { ClientForm } from '../../components/clients/ClientForm'
@@ -48,8 +47,7 @@ export default function ClientDetailPage(): JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-        <Navbar />
+      <div className="bg-light-bg dark:bg-dark-bg">
         <div className="flex justify-center py-24">
           <Spinner size="lg" />
         </div>
@@ -59,8 +57,7 @@ export default function ClientDetailPage(): JSX.Element {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-        <Navbar />
+      <div className="bg-light-bg dark:bg-dark-bg">
         <div className="page-container py-16 text-center">
           <p className="text-light-secondary dark:text-dark-secondary mb-4">Клиент не найден</p>
           <Link to="/clients" className="text-light-accent dark:text-dark-accent text-sm">
@@ -74,8 +71,7 @@ export default function ClientDetailPage(): JSX.Element {
   const { client, cases } = data
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-4xl">
         <Link
           to="/clients"

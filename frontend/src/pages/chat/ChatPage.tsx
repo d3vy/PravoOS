@@ -13,7 +13,6 @@ import { documentsApi } from '../../api/documents'
 import { citationsApi } from '../../api/citations'
 import type { MessageResponse, ConversationResponse, DocumentResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
-import { Navbar } from '../../components/layout/Navbar'
 import { PravoIcon } from '../../components/ui/Logo'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 import { CitationList, citationSummary } from '../../components/ui/CitationList'
@@ -225,8 +224,7 @@ export default function ChatPage(): JSX.Element {
   })()
 
   return (
-    <div className="h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
-      <Navbar />
+    <div className="h-[calc(100vh-64px)] bg-light-bg dark:bg-dark-bg flex flex-col">
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         {!sidebarOpen && (

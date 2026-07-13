@@ -1,33 +1,16 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
+import { NavTabs } from '../ui/NavTabs'
+import type { NavTabItem } from '../ui/NavTabs'
 import { Navbar } from './Navbar'
 
-interface NavItem {
-  path: string
-  label: string
-}
-
-const navItems: NavItem[] = [
-  { path: '/admin/applications', label: 'Заявки' },
-  { path: '/admin/users', label: 'Юристы' },
-  { path: '/admin/documents', label: 'Документы' },
-  { path: '/admin/ai-stats', label: 'AI-метрики' },
+const navItems: NavTabItem[] = [
+  { to: '/admin/applications', label: 'Заявки', end: true },
+  { to: '/admin/users', label: 'Юристы', end: true },
+  { to: '/admin/documents', label: 'Документы', end: true },
+  { to: '/admin/ai-stats', label: 'AI-метрики', end: true },
 ]
 
 const GRAFANA_URL = '/grafana/'
-
-const desktopLinkClass = ({ isActive }: { isActive: boolean }): string =>
-  `px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-    isActive
-      ? 'bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent'
-      : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
-  }`
-
-const mobileLinkClass = ({ isActive }: { isActive: boolean }): string =>
-  `shrink-0 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-    isActive
-      ? 'bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent'
-      : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
-  }`
 
 export function AdminLayout(): JSX.Element {
   return (
@@ -36,11 +19,7 @@ export function AdminLayout(): JSX.Element {
 
       {/* Mobile section nav */}
       <nav className="md:hidden flex gap-1 overflow-x-auto scrollbar-thin px-4 py-3 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
-        {navItems.map((item) => (
-          <NavLink key={item.path} to={item.path} end className={mobileLinkClass}>
-            {item.label}
-          </NavLink>
-        ))}
+        <NavTabs items={navItems} indicatorId="admin-mobile-tab-indicator" />
         <a
           href={GRAFANA_URL}
           target="_blank"
@@ -56,11 +35,7 @@ export function AdminLayout(): JSX.Element {
         <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
           <nav className="p-4 flex flex-col gap-1 pt-6 flex-1">
             <p className="eyebrow px-3 mb-3">Управление</p>
-            {navItems.map((item) => (
-              <NavLink key={item.path} to={item.path} end className={desktopLinkClass}>
-                {item.label}
-              </NavLink>
-            ))}
+            <NavTabs items={navItems} indicatorId="admin-sidebar-tab-indicator" orientation="vertical" />
             <a
               href={GRAFANA_URL}
               target="_blank"

@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import type { CaseDraftDto, CaseDraftVersionDto } from '../../types'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 
@@ -113,8 +112,7 @@ export default function DraftEditorPage(): JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-        <Navbar />
+      <div className="bg-light-bg dark:bg-dark-bg">
         <div className="flex justify-center py-24">
           <Spinner size="lg" />
         </div>
@@ -124,8 +122,7 @@ export default function DraftEditorPage(): JSX.Element {
 
   if (!draft) {
     return (
-      <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-        <Navbar />
+      <div className="bg-light-bg dark:bg-dark-bg">
         <div className="page-container py-16 text-center">
           <p className="text-light-secondary dark:text-dark-secondary mb-4">Черновик не найден</p>
           <Link to={`/cases/${caseId}`} className="text-light-accent dark:text-dark-accent text-sm">
@@ -139,8 +136,7 @@ export default function DraftEditorPage(): JSX.Element {
   const hasSelection = selection != null && selection.end > selection.start
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-6xl">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>

@@ -13,7 +13,6 @@ import { documentComparisonsApi } from '../../api/documentComparisons'
 import { citationsApi } from '../../api/citations'
 import type { AiResponseDto, CaseDraftSummaryDto, CaseHearingEvent, CaseResponse, ClientResponse, ContractReviewDto, ContractRiskLevel, DiffChange, DiffChangeType, DocumentComparisonDto, DocumentResponse, DraftTypeInfo, Organization, OrganizationMember, WorkflowInfo } from '../../types'
 import { CitationList, citationSummary } from '../../components/ui/CitationList'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
@@ -90,8 +89,7 @@ export default function CaseDetailPage(): JSX.Element {
 
   if (caseLoading) {
     return (
-      <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-        <Navbar />
+      <div className="bg-light-bg dark:bg-dark-bg">
         <div className="flex justify-center py-24">
           <Spinner size="lg" />
         </div>
@@ -101,8 +99,7 @@ export default function CaseDetailPage(): JSX.Element {
 
   if (!caseItem) {
     return (
-      <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-        <Navbar />
+      <div className="bg-light-bg dark:bg-dark-bg">
         <div className="page-container py-16 text-center">
           <p className="text-light-secondary dark:text-dark-secondary mb-4">Дело не найдено</p>
           <Link to="/cases" className="text-light-accent dark:text-dark-accent text-sm">
@@ -114,8 +111,7 @@ export default function CaseDetailPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-4xl">
         <Link to="/cases" className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent mb-4 inline-block">
           ← Ко всем делам

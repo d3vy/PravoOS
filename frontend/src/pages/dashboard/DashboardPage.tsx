@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '../../api/dashboard'
-import { Navbar } from '../../components/layout/Navbar'
 import { Spinner } from '../../components/ui/Spinner'
 import { Badge, CaseStatusBadge, CASE_STATUS_CONFIG, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import type { CaseStatus, DashboardDeadline, DashboardResponse } from '../../types'
@@ -32,8 +31,7 @@ export default function DashboardPage(): JSX.Element {
   })
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8">
         <div className="mb-8">
           <p className="eyebrow mb-1">Рабочий стол</p>

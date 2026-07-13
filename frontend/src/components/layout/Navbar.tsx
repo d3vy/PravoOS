@@ -4,26 +4,11 @@ import { useAuthStore } from '../../store/authStore'
 import { authApi } from '../../api/auth'
 import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
+import { NavTabs } from '../ui/NavTabs'
 import { ThemeToggle } from '../ui/ThemeToggle'
+import { lawyerNavSections } from './lawyerNav'
 
-interface NavLinkItem {
-  to: string
-  label: string
-}
-
-const lawyerLinks: NavLinkItem[] = [
-  { to: '/dashboard', label: 'Дашборд' },
-  { to: '/search', label: 'Поиск' },
-  { to: '/cases', label: 'Дела' },
-  { to: '/calendar', label: 'Календарь' },
-  { to: '/clients', label: 'Клиенты' },
-  { to: '/team', label: 'Организация' },
-  { to: '/templates', label: 'Шаблоны' },
-  { to: '/workflows', label: 'Процессы' },
-  { to: '/chat', label: 'AI-чат' },
-  { to: '/profile', label: 'Профиль' },
-  { to: '/settings', label: 'Настройки' },
-]
+const LAWYER_MOBILE_NAV_INDICATOR_ID = 'lawyer-mobile-nav-indicator'
 
 export function Navbar(): JSX.Element {
   const { clearAuth, isAuthenticated, effectiveRole } = useAuthStore()
@@ -73,22 +58,14 @@ export function Navbar(): JSX.Element {
 
             {authenticated ? (
               <>
-                {role === 'LAWYER' &&
-                  lawyerLinks.map((link) => (
-                    <Link key={link.to} to={link.to} className="hidden sm:block">
-                      <Button variant="ghost" size="sm">
-                        {link.label}
-                      </Button>
-                    </Link>
-                  ))}
                 {role === 'ADMIN' && (
-                  <Link to={dashboardPath} className="hidden sm:block">
+                  <Link to={dashboardPath} className="hidden md:block">
                     <Button variant="ghost" size="sm">
                       Рабочий стол
                     </Button>
                   </Link>
                 )}
-                <div className="hidden sm:block">
+                <div className="hidden md:block">
                   <Button variant="secondary" size="sm" onClick={() => void handleLogout()}>
                     Выйти
                   </Button>
@@ -98,7 +75,7 @@ export function Navbar(): JSX.Element {
                   aria-label="Меню"
                   aria-expanded={mobileMenuOpen}
                   onClick={() => setMobileMenuOpen((open) => !open)}
-                  className="sm:hidden flex items-center justify-center w-10 h-10 rounded-lg text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+                  className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
                 >
                   <HamburgerIcon open={mobileMenuOpen} />
                 </button>
@@ -122,18 +99,19 @@ export function Navbar(): JSX.Element {
       </div>
 
       {authenticated && mobileMenuOpen && (
-        <div className="sm:hidden border-t border-light-border dark:border-dark-border bg-light-bg/95 dark:bg-dark-bg/95 backdrop-blur-md">
+        <div className="md:hidden border-t border-light-border dark:border-dark-border bg-light-bg/95 dark:bg-dark-bg/95 backdrop-blur-md">
           <div className="page-container py-3 flex flex-col gap-1">
             {role === 'LAWYER' &&
-              lawyerLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
-                >
-                  {link.label}
-                </Link>
+              lawyerNavSections.map((section) => (
+                <div key={section.title} className="mb-2">
+                  <p className="eyebrow px-4 mb-1">{section.title}</p>
+                  <NavTabs
+                    items={section.items}
+                    indicatorId={LAWYER_MOBILE_NAV_INDICATOR_ID}
+                    orientation="vertical"
+                    onNavigate={() => setMobileMenuOpen(false)}
+                  />
+                </div>
               ))}
             {role === 'ADMIN' && (
               <Link

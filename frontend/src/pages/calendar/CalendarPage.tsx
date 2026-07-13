@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import { calendarApi } from '../../api/calendar'
 import { clientsApi } from '../../api/clients'
 import { casesApi } from '../../api/cases'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import type { CalendarEvent, CalendarEventType } from '../../types'
@@ -119,8 +118,7 @@ export default function CalendarPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -203,7 +201,16 @@ export default function CalendarPage(): JSX.Element {
         )}
 
         {!isLoading && !isError && (
-          <div className="card-elevated overflow-hidden">
+          <AgendaList
+            days={grid.filter((day) => view === 'week' || day.getMonth() === currentMonth)}
+            eventsByDate={eventsByDate}
+            todayIso={todayIso}
+            onOpen={openEvent}
+          />
+        )}
+
+        {!isLoading && !isError && (
+          <div className="hidden sm:block card-elevated overflow-hidden">
             <div className="grid grid-cols-7 border-b border-light-border dark:border-dark-border">
               {WEEKDAYS.map((day) => (
                 <div
@@ -241,6 +248,71 @@ export default function CalendarPage(): JSX.Element {
 
 function toDisplay(date: Date): string {
   return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}`
+}
+
+function toAgendaHeading(date: Date): string {
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })
+}
+
+function AgendaList({
+  days,
+  eventsByDate,
+  todayIso,
+  onOpen,
+}: {
+  days: Date[]
+  eventsByDate: Map<string, CalendarEvent[]>
+  todayIso: string
+  onOpen: (event: CalendarEvent) => void
+}): JSX.Element {
+  const daysWithEvents = days.filter((day) => (eventsByDate.get(toIso(day)) ?? []).length > 0)
+
+  if (daysWithEvents.length === 0) {
+    return (
+      <div className="sm:hidden card-elevated p-6 text-sm text-light-secondary dark:text-dark-secondary">
+        В этом периоде событий нет.
+      </div>
+    )
+  }
+
+  return (
+    <div className="sm:hidden flex flex-col gap-3">
+      {daysWithEvents.map((day) => {
+        const iso = toIso(day)
+        const isToday = iso === todayIso
+        return (
+          <div key={iso} className="card-elevated p-4">
+            <p
+              className={`text-sm font-medium mb-3 ${
+                isToday
+                  ? 'text-light-accent dark:text-dark-accent'
+                  : 'text-light-text dark:text-dark-text'
+              }`}
+            >
+              {toAgendaHeading(day)}
+              {isToday && ' · сегодня'}
+            </p>
+            <div className="flex flex-col gap-2">
+              {(eventsByDate.get(iso) ?? []).map((event) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => onOpen(event)}
+                  className={`w-full text-left px-3 py-2 rounded-lg ${EVENT_STYLE[event.type]}`}
+                >
+                  <span className="block text-sm font-medium">{event.title}</span>
+                  <span className="block text-xs opacity-80 truncate">
+                    {event.caseTitle}
+                    {event.detail ? ` · ${event.detail}` : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 function ViewButton({

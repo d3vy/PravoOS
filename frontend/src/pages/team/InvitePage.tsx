@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { organizationsApi } from '../../api/organizations'
 import { refreshSession } from '../../api/client'
 import type { Organization } from '../../types'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 
 export default function InvitePage(): JSX.Element {
@@ -24,8 +23,7 @@ export default function InvitePage(): JSX.Element {
   })
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-16 max-w-md">
         <div className="p-8 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-center">
           {joined ? (

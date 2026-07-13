@@ -8,7 +8,6 @@ import { clientsApi } from '../../api/clients'
 import { organizationsApi } from '../../api/organizations'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { CaseResponse, CaseStatus, ClientResponse, Organization } from '../../types'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
@@ -118,8 +117,7 @@ export default function CasesPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>

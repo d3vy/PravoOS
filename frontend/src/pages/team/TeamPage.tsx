@@ -4,7 +4,6 @@ import { organizationsApi } from '../../api/organizations'
 import { refreshSession } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import type { OrgInvite, OrgRole, Organization, OrganizationMember } from '../../types'
-import { Navbar } from '../../components/layout/Navbar'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
@@ -106,8 +105,7 @@ export default function TeamPage(): JSX.Element {
   })
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-4xl">
         <div className="mb-6">
           <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Организации</h1>

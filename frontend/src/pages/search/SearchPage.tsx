@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { searchApi } from '../../api/search'
 import type { GlobalSearchResponse } from '../../types'
-import { Navbar } from '../../components/layout/Navbar'
 import { Spinner } from '../../components/ui/Spinner'
 import { CaseStatusBadge } from '../../components/ui/Badge'
 
@@ -35,8 +34,7 @@ export default function SearchPage(): JSX.Element {
   const totalHits = data ? data.cases.length + data.conversations.length + data.documents.length : 0
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
-      <Navbar />
+    <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-3xl">
         <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Поиск</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">

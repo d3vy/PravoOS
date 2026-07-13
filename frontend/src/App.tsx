@@ -4,6 +4,7 @@ import { useAuthBootstrap } from './hooks/useAuthBootstrap'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { FullScreenLoader } from './components/ui/FullScreenLoader'
 import { AdminLayout } from './components/layout/AdminLayout'
+import { LawyerLayout } from './components/layout/LawyerLayout'
 import type { UserRole } from './types'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -81,139 +82,28 @@ export default function App(): JSX.Element {
       />
 
       <Route
-        path="/dashboard"
         element={
           <ProtectedRoute requiredRole="LAWYER">
-            <DashboardPage />
+            <LawyerLayout />
           </ProtectedRoute>
         }
-      />
-
-      <Route
-        path="/chat"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <ChatPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/calendar"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <CalendarPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/cases"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <CasesPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/cases/:caseId"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <CaseDetailPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/cases/:caseId/drafts/:draftId"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <DraftEditorPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/templates"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <TemplatesPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/workflows"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <WorkflowsPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/clients"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <ClientsPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/clients/:clientId"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <ClientDetailPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/search"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <SearchPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/team"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <TeamPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/invite"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <InvitePage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <ProfilePage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <SettingsPage />
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/cases" element={<CasesPage />} />
+        <Route path="/cases/:caseId" element={<CaseDetailPage />} />
+        <Route path="/cases/:caseId/drafts/:draftId" element={<DraftEditorPage />} />
+        <Route path="/templates" element={<TemplatesPage />} />
+        <Route path="/workflows" element={<WorkflowsPage />} />
+        <Route path="/clients" element={<ClientsPage />} />
+        <Route path="/clients/:clientId" element={<ClientDetailPage />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/team" element={<TeamPage />} />
+        <Route path="/invite" element={<InvitePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
 
       <Route
         path="/admin"
