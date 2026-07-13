@@ -705,6 +705,16 @@ export interface CaseMessageResponse {
   createdAt: string
 }
 
+export interface CaseThreadResponse {
+  caseId: string
+  caseTitle: string
+  clientName: string | null
+  lastMessagePreview: string
+  lastAuthorRole: MessageAuthorRole
+  lastMessageAt: string
+  unreadCount: number
+}
+
 export type WorkflowStepType = 'AI_ANALYSIS' | 'GENERATE_DRAFT' | 'GENERATE_TASKS' | 'SET_DEADLINE'
 export type WorkflowCategory = 'BANKRUPTCY' | 'DEBT_COLLECTION' | 'REGISTRATION' | 'CUSTOM'
 export type WorkflowRunStatus = 'RUNNING' | 'COMPLETED' | 'FAILED'

@@ -35,6 +35,16 @@ export function ChatIcon(): JSX.Element {
   )
 }
 
+export function MessagesIcon(): JSX.Element {
+  return (
+    <Icon>
+      <path d="M4 4h16v12H7l-3 3V4z" />
+      <line x1="8" y1="9" x2="16" y2="9" />
+      <line x1="8" y1="12.5" x2="13" y2="12.5" />
+    </Icon>
+  )
+}
+
 export function SearchIcon(): JSX.Element {
   return (
     <Icon>

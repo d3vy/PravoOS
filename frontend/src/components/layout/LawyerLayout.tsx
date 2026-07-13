@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { casesApi } from '../../api/cases'
+import type { CaseThreadResponse } from '../../types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { NavTabs } from '../ui/NavTabs'
 import { LAWYER_NAV_INDICATOR_ID, lawyerNavSections } from './lawyerNav'
@@ -23,6 +26,20 @@ export function LawyerLayout(): JSX.Element {
 
   const collapsed = !isWideScreen || collapsedByUser
 
+  const { data: threads = [] } = useQuery<CaseThreadResponse[]>({
+    queryKey: ['messageThreads'],
+    queryFn: casesApi.listThreads,
+    refetchInterval: 60000,
+  })
+  const unreadCount = threads.reduce((sum, thread) => sum + thread.unreadCount, 0)
+
+  const navSections = lawyerNavSections.map((section) => ({
+    ...section,
+    items: section.items.map((item) =>
+      item.to === '/messages' ? { ...item, badge: unreadCount } : item
+    ),
+  }))
+
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
       <Navbar />
@@ -34,7 +51,7 @@ export function LawyerLayout(): JSX.Element {
           }`}
         >
           <nav className="flex-1 p-3 pt-6 flex flex-col gap-6">
-            {lawyerNavSections.map((section) => (
+            {navSections.map((section) => (
               <div key={section.title}>
                 {!collapsed && <p className="eyebrow px-3 mb-2">{section.title}</p>}
                 <NavTabs

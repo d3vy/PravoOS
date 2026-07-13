@@ -1,9 +1,12 @@
 package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.practice.internal.dto.CaseMessageResponse;
+import com.pravoos.ai.practice.internal.dto.CaseThreadResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseMessage;
+import com.pravoos.ai.practice.internal.model.entity.CaseThreadRead;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseMessageRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CaseThreadReadRepository;
 import com.pravoos.ai.shared.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
 import com.pravoos.ai.shared.service.OutboxEventService;
@@ -12,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,15 +27,18 @@ public class CaseMessageService {
     private static final int PREVIEW_MAX_LENGTH = 140;
 
     private final CaseMessageRepository caseMessageRepository;
+    private final CaseThreadReadRepository caseThreadReadRepository;
     private final CaseService caseService;
     private final PortalCaseService portalCaseService;
     private final OutboxEventService outboxEventService;
 
     public CaseMessageService(CaseMessageRepository caseMessageRepository,
+                              CaseThreadReadRepository caseThreadReadRepository,
                               CaseService caseService,
                               PortalCaseService portalCaseService,
                               OutboxEventService outboxEventService) {
         this.caseMessageRepository = caseMessageRepository;
+        this.caseThreadReadRepository = caseThreadReadRepository;
         this.caseService = caseService;
         this.portalCaseService = portalCaseService;
         this.outboxEventService = outboxEventService;
@@ -41,6 +48,23 @@ public class CaseMessageService {
     public List<CaseMessageResponse> findLawyerThread(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
         caseService.requireVisibleCase(caseId, lawyerId, orgIds);
         return toResponses(caseId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CaseThreadResponse> findLawyerThreads(UUID lawyerId) {
+        return caseMessageRepository.findLawyerThreads(lawyerId).stream()
+                .map(CaseThreadResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public void markThreadRead(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+        caseService.requireVisibleCase(caseId, lawyerId, orgIds);
+        CaseThreadRead.Id id = new CaseThreadRead.Id(caseId, lawyerId);
+        CaseThreadRead read = caseThreadReadRepository.findById(id)
+                .orElseGet(() -> new CaseThreadRead(caseId, lawyerId, LocalDateTime.now()));
+        read.setLastReadAt(LocalDateTime.now());
+        caseThreadReadRepository.save(read);
     }
 
     @Transactional

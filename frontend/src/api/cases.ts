@@ -10,6 +10,7 @@ import type {
   CaseHearingEvent,
   CaseMessageResponse,
   CaseStatus,
+  CaseThreadResponse,
   CaseTaskResponse,
   CreateCaseRequest,
   CreateCaseTaskRequest,
@@ -112,6 +113,15 @@ export const casesApi = {
   sendMessage: async (caseId: string, body: string): Promise<CaseMessageResponse> => {
     const response = await apiClient.post<CaseMessageResponse>(`/api/ai/cases/${caseId}/messages`, { body })
     return response.data
+  },
+
+  listThreads: async (): Promise<CaseThreadResponse[]> => {
+    const response = await apiClient.get<CaseThreadResponse[]>('/api/ai/messages/threads')
+    return response.data
+  },
+
+  markMessagesRead: async (caseId: string): Promise<void> => {
+    await apiClient.post(`/api/ai/cases/${caseId}/messages/read`)
   },
 
   getHearings: async (caseId: string): Promise<CaseHearingEvent[]> => {

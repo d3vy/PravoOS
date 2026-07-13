@@ -4,6 +4,7 @@ import com.pravoos.ai.practice.internal.dto.CaseMessageResponse;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseMessage;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseMessageRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CaseThreadReadRepository;
 import com.pravoos.ai.shared.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
 import com.pravoos.ai.shared.service.OutboxEventService;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.*;
 class CaseMessageServiceTest {
 
     @Mock private CaseMessageRepository caseMessageRepository;
+    @Mock private CaseThreadReadRepository caseThreadReadRepository;
     @Mock private CaseService caseService;
     @Mock private PortalCaseService portalCaseService;
     @Mock private OutboxEventService outboxEventService;
@@ -40,7 +42,7 @@ class CaseMessageServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new CaseMessageService(caseMessageRepository, caseService,
+        service = new CaseMessageService(caseMessageRepository, caseThreadReadRepository, caseService,
                 portalCaseService, outboxEventService);
         lenient().when(caseMessageRepository.save(any(CaseMessage.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));

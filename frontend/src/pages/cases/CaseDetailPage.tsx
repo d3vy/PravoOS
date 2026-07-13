@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
@@ -37,7 +37,15 @@ const POLLING_INTERVAL_MS = 5000
 
 export default function CaseDetailPage(): JSX.Element {
   const { caseId = '' } = useParams()
+  const { hash } = useLocation()
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (caseId === '') return
+    void casesApi.markMessagesRead(caseId).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['messageThreads'] })
+    })
+  }, [caseId, queryClient])
 
   const { data: caseItem, isLoading: caseLoading } = useQuery<CaseResponse>({
     queryKey: ['case', caseId],
@@ -87,6 +95,11 @@ export default function CaseDetailPage(): JSX.Element {
     enabled: caseId !== '',
   })
 
+  useEffect(() => {
+    if (caseLoading || hash !== '#messages') return
+    document.getElementById('messages')?.scrollIntoView({ behavior: 'smooth' })
+  }, [caseLoading, hash])
+
   if (caseLoading) {
     return (
       <div className="bg-light-bg dark:bg-dark-bg">
@@ -123,7 +136,7 @@ export default function CaseDetailPage(): JSX.Element {
 
         <CaseTasksSection caseId={caseId} />
 
-        <div className="mb-10">
+        <div id="messages" className="mb-10 scroll-mt-20">
           <CaseMessageThread
             queryKey={['case', caseId, 'messages']}
             viewerRole="LAWYER"

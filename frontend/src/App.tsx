@@ -23,6 +23,7 @@ import CalendarPage from './pages/calendar/CalendarPage'
 import CasesPage from './pages/cases/CasesPage'
 import CaseDetailPage from './pages/cases/CaseDetailPage'
 import DraftEditorPage from './pages/cases/DraftEditorPage'
+import MessagesPage from './pages/messages/MessagesPage'
 import ClientsPage from './pages/clients/ClientsPage'
 import ClientDetailPage from './pages/clients/ClientDetailPage'
 import SearchPage from './pages/search/SearchPage'
@@ -95,6 +96,7 @@ export default function App(): JSX.Element {
         <Route path="/cases" element={<CasesPage />} />
         <Route path="/cases/:caseId" element={<CaseDetailPage />} />
         <Route path="/cases/:caseId/drafts/:draftId" element={<DraftEditorPage />} />
+        <Route path="/messages" element={<MessagesPage />} />
         <Route path="/templates" element={<TemplatesPage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/clients" element={<ClientsPage />} />

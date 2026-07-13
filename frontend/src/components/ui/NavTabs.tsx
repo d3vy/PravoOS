@@ -7,6 +7,7 @@ export interface NavTabItem {
   label: string
   icon?: ReactNode
   end?: boolean
+  badge?: number
 }
 
 type NavTabsOrientation = 'horizontal' | 'vertical'
@@ -75,9 +76,17 @@ export function NavTabs({
               {item.icon && (
                 <span className="relative z-10 shrink-0" aria-hidden="true">
                   {item.icon}
+                  {iconsOnly && item.badge !== undefined && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-light-accent dark:bg-dark-accent" />
+                  )}
                 </span>
               )}
               {!iconsOnly && <span className="relative z-10">{item.label}</span>}
+              {!iconsOnly && item.badge !== undefined && item.badge > 0 && (
+                <span className="relative z-10 ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-xs font-semibold flex items-center justify-center">
+                  {item.badge}
+                </span>
+              )}
             </>
           )}
         </NavLink>

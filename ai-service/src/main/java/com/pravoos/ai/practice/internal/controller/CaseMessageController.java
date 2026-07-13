@@ -31,6 +31,14 @@ public class CaseMessageController {
                 SecurityUtils.currentOrgIds(authentication)));
     }
 
+    @PostMapping("/read")
+    public ResponseEntity<Void> markRead(@PathVariable UUID caseId, Authentication authentication) {
+        caseMessageService.markThreadRead(caseId,
+                SecurityUtils.currentUserId(authentication),
+                SecurityUtils.currentOrgIds(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping
     public ResponseEntity<CaseMessageResponse> send(@PathVariable UUID caseId,
                                                     @Valid @RequestBody SendMessageRequest request,
