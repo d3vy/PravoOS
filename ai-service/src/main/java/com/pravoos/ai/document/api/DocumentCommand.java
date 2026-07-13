@@ -8,6 +8,8 @@ public interface DocumentCommand {
 
     DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy, UUID caseId);
 
+    DocumentUploadResponse uploadChatAttachment(MultipartFile file, String title, UUID lawyerId);
+
     DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy, UUID caseId,
                                   boolean visibleToClient);
 

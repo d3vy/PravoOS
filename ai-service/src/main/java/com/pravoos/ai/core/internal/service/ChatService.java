@@ -299,20 +299,17 @@ public class ChatService {
 
         Set<UUID> caseIds = documents.stream()
                 .map(DocumentRef::caseId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        if (caseIds.contains(null)) {
-            UUID offending = documents.stream()
-                    .filter(document -> document.caseId() == null)
-                    .map(DocumentRef::id)
-                    .findFirst()
-                    .orElseThrow();
-            log.warn("Lawyer {} attempted to attach non-case document {}", lawyerId, offending);
-            throw new DocumentNotFoundException(offending);
-        }
+        Set<UUID> ownedCaseIds = caseIds.isEmpty()
+                ? Set.of()
+                : caseAccessProvider.retainCasesOwnedBy(caseIds, lawyerId);
 
-        Set<UUID> ownedCaseIds = caseAccessProvider.retainCasesOwnedBy(caseIds, lawyerId);
         for (DocumentRef document : documents) {
-            if (!ownedCaseIds.contains(document.caseId())) {
+            boolean owned = document.caseId() == null
+                    ? lawyerId.equals(document.uploadedBy())
+                    : ownedCaseIds.contains(document.caseId());
+            if (!owned) {
                 log.warn("Lawyer {} attempted to attach document {} owned by another user", lawyerId, document.id());
                 throw new DocumentNotFoundException(document.id());
             }

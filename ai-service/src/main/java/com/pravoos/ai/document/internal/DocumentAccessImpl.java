@@ -2,11 +2,13 @@ package com.pravoos.ai.document.internal;
 
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentRef;
+import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.LegislationRef;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.pipeline.DocumentParser;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
+import com.pravoos.ai.document.internal.service.DocumentService;
 import com.pravoos.ai.document.internal.service.FileCryptoService;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.model.enums.DocumentKind;
@@ -32,15 +34,18 @@ class DocumentAccessImpl implements DocumentAccess {
     private final DocumentChunkRepository documentChunkRepository;
     private final FileCryptoService fileCryptoService;
     private final DocumentParser documentParser;
+    private final DocumentService documentService;
 
     DocumentAccessImpl(DocumentRepository documentRepository,
                        DocumentChunkRepository documentChunkRepository,
                        FileCryptoService fileCryptoService,
-                       DocumentParser documentParser) {
+                       DocumentParser documentParser,
+                       DocumentService documentService) {
         this.documentRepository = documentRepository;
         this.documentChunkRepository = documentChunkRepository;
         this.fileCryptoService = fileCryptoService;
         this.documentParser = documentParser;
+        this.documentService = documentService;
     }
 
     @Override
@@ -48,6 +53,11 @@ class DocumentAccessImpl implements DocumentAccess {
         return documentRepository.findAllById(ids).stream()
                 .map(this::toRef)
                 .toList();
+    }
+
+    @Override
+    public List<DocumentResponse> findChatAttachments(UUID lawyerId) {
+        return documentService.findChatAttachments(lawyerId);
     }
 
     @Override
@@ -107,7 +117,8 @@ class DocumentAccessImpl implements DocumentAccess {
     }
 
     private DocumentRef toRef(Document document) {
-        return new DocumentRef(document.getId(), document.getCaseId(), document.getTitle());
+        return new DocumentRef(
+                document.getId(), document.getCaseId(), document.getUploadedBy(), document.getTitle());
     }
 
     private String escapeLike(String value) {

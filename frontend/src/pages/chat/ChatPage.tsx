@@ -3,13 +3,13 @@ import {
   useRef,
   useEffect,
   useCallback,
+  type ChangeEvent,
   type KeyboardEvent,
 } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { chatApi, streamMessage } from '../../api/chat'
-import { documentsApi } from '../../api/documents'
 import { citationsApi } from '../../api/citations'
 import type { MessageResponse, ConversationResponse, DocumentResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
@@ -52,9 +52,11 @@ export default function ChatPage(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [attachedDocIds, setAttachedDocIds] = useState<string[]>([])
   const [attachPickerOpen, setAttachPickerOpen] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const attachPickerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const skipNextHistorySyncRef = useRef(false)
   const queryClient = useQueryClient()
 
@@ -69,10 +71,26 @@ export default function ChatPage(): JSX.Element {
     queryFn: () => chatApi.getConversations(searchQuery || undefined),
   })
 
-  const { data: allDocuments = [] } = useQuery<DocumentResponse[]>({
-    queryKey: ['documents'],
-    queryFn: documentsApi.getAll,
-    select: (docs) => docs.filter((d) => d.status === 'READY'),
+  const { data: attachments = [] } = useQuery<DocumentResponse[]>({
+    queryKey: ['chat', 'attachments'],
+    queryFn: chatApi.getAttachments,
+    refetchInterval: (query) =>
+      (query.state.data ?? []).some((doc) => doc.status === 'PROCESSING') ? 2000 : false,
+  })
+
+  const attachedDocs = attachedDocIds
+    .map((id) => attachments.find((doc) => doc.id === id))
+    .filter((doc): doc is DocumentResponse => doc !== undefined)
+  const hasIndexingAttachment = attachedDocs.some((doc) => doc.status === 'PROCESSING')
+
+  const uploadMutation = useMutation({
+    mutationFn: chatApi.uploadAttachment,
+    onSuccess: (uploaded) => {
+      setUploadError(null)
+      setAttachedDocIds((prev) => (prev.includes(uploaded.id) ? prev : [...prev, uploaded.id]))
+      queryClient.invalidateQueries({ queryKey: ['chat', 'attachments'] })
+    },
+    onError: () => setUploadError('Не удалось загрузить файл. Попробуйте другой формат или размер.'),
   })
 
   const { data: historyMessages, isLoading: messagesLoading } = useQuery<MessageResponse[]>({
@@ -123,7 +141,7 @@ export default function ChatPage(): JSX.Element {
 
   const handleSend = useCallback((text?: string): void => {
     const message = (text ?? inputValue).trim()
-    if (!message || isSending) return
+    if (!message || isSending || hasIndexingAttachment) return
 
     setInputValue('')
     setIsSending(true)
@@ -180,7 +198,7 @@ export default function ChatPage(): JSX.Element {
         },
       }
     )
-  }, [inputValue, isSending, activeConversationId, attachedDocIds, queryClient])
+  }, [inputValue, isSending, hasIndexingAttachment, activeConversationId, attachedDocIds, queryClient])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -212,6 +230,14 @@ export default function ChatPage(): JSX.Element {
     setAttachedDocIds((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
     )
+  }
+
+  const handleFileSelected = (event: ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setAttachPickerOpen(false)
+    uploadMutation.mutate(file)
   }
 
   const lastAssistantFollowUps = (() => {
@@ -388,73 +414,107 @@ export default function ChatPage(): JSX.Element {
           <div className="border-t border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-4">
             <div className="max-w-3xl mx-auto">
               {/* Attached docs chips */}
-              {attachedDocIds.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {attachedDocIds.map((id) => {
-                    const doc = allDocuments.find((d) => d.id === id)
-                    return (
-                      <span
-                        key={id}
-                        className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent border border-light-accent/20 dark:border-dark-accent/20"
+              {(attachedDocs.length > 0 || uploadMutation.isPending || uploadError) && (
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                  {attachedDocs.map((doc) => (
+                    <span
+                      key={doc.id}
+                      className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border ${
+                        doc.status === 'FAILED'
+                          ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                          : 'bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent border-light-accent/20 dark:border-dark-accent/20'
+                      }`}
+                    >
+                      {doc.status === 'PROCESSING' && <Spinner size="sm" />}
+                      {doc.title}
+                      {doc.status === 'PROCESSING' && <span className="opacity-70">индексируется…</span>}
+                      {doc.status === 'FAILED' && <span className="opacity-70">не удалось обработать</span>}
+                      <button
+                        onClick={() => toggleDoc(doc.id)}
+                        className="hover:opacity-70 ml-0.5"
+                        aria-label="Убрать документ"
                       >
-                        {doc?.title ?? id.slice(0, 8)}
-                        <button
-                          onClick={() => toggleDoc(id)}
-                          className="hover:opacity-70 ml-0.5"
-                          aria-label="Убрать документ"
-                        >
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </span>
-                    )
-                  })}
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                  {uploadMutation.isPending && (
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                      <Spinner size="sm" />
+                      Загрузка файла…
+                    </span>
+                  )}
+                  {uploadError && (
+                    <span className="text-xs text-red-600 dark:text-red-400">{uploadError}</span>
+                  )}
                 </div>
               )}
 
               <div className="flex gap-3 items-end rounded-xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg focus-within:border-light-accent dark:focus-within:border-dark-accent focus-within:ring-1 focus-within:ring-light-accent dark:focus-within:ring-dark-accent transition-all px-4 py-3">
                 {/* Attach button */}
                 <div className="relative shrink-0" ref={attachPickerRef}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,.rtf,.odt"
+                    onChange={handleFileSelected}
+                    className="hidden"
+                  />
                   <button
                     type="button"
                     onClick={() => setAttachPickerOpen((v) => !v)}
-                    disabled={isSending || allDocuments.length === 0}
-                    title="Прикрепить документ из базы знаний"
+                    disabled={isSending || uploadMutation.isPending}
+                    title="Прикрепить файл"
                     className="w-7 h-7 rounded-md flex items-center justify-center text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent hover:bg-light-surface dark:hover:bg-dark-surface transition-colors disabled:opacity-30"
-                    aria-label="Прикрепить документ"
+                    aria-label="Прикрепить файл"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                     </svg>
                   </button>
 
-                  {attachPickerOpen && allDocuments.length > 0 && (
-                    <div className="absolute bottom-full left-0 mb-2 w-72 max-h-60 overflow-y-auto rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg z-10">
-                      <p className="text-xs font-medium text-light-secondary dark:text-dark-secondary px-3 pt-3 pb-2">
-                        Документы из базы знаний
-                      </p>
-                      {allDocuments.map((doc) => (
-                        <button
-                          key={doc.id}
-                          onClick={() => { toggleDoc(doc.id); setAttachPickerOpen(false) }}
-                          className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                            attachedDocIds.includes(doc.id)
-                              ? 'text-light-accent dark:text-dark-accent bg-light-accent/5 dark:bg-dark-accent/10'
-                              : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
-                          }`}
-                        >
-                          <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-7 shrink-0">
-                            {doc.fileName.split('.').pop()}
-                          </span>
-                          <span className="min-w-0 truncate">{doc.title}</span>
-                          {attachedDocIds.includes(doc.id) && (
-                            <svg className="ml-auto shrink-0 w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
-                        </button>
-                      ))}
+                  {attachPickerOpen && (
+                    <div className="absolute bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg z-10">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full text-left px-3 py-2.5 text-sm flex items-center gap-2 text-light-accent dark:text-dark-accent hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
+                      >
+                        <svg className="shrink-0 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Загрузить файл с компьютера
+                      </button>
+
+                      {attachments.length > 0 && (
+                        <>
+                          <p className="text-xs font-medium text-light-secondary dark:text-dark-secondary px-3 pt-3 pb-2 border-t border-light-border dark:border-dark-border">
+                            Загруженные ранее
+                          </p>
+                          {attachments.map((doc) => (
+                            <button
+                              key={doc.id}
+                              onClick={() => { toggleDoc(doc.id); setAttachPickerOpen(false) }}
+                              className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                                attachedDocIds.includes(doc.id)
+                                  ? 'text-light-accent dark:text-dark-accent bg-light-accent/5 dark:bg-dark-accent/10'
+                                  : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
+                              }`}
+                            >
+                              <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-7 shrink-0">
+                                {doc.fileName.split('.').pop()}
+                              </span>
+                              <span className="min-w-0 truncate">{doc.title}</span>
+                              {attachedDocIds.includes(doc.id) && (
+                                <svg className="ml-auto shrink-0 w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </button>
+                          ))}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -473,7 +533,8 @@ export default function ChatPage(): JSX.Element {
                 />
                 <button
                   onClick={() => handleSend()}
-                  disabled={!inputValue.trim() || isSending}
+                  disabled={!inputValue.trim() || isSending || hasIndexingAttachment}
+                  title={hasIndexingAttachment ? 'Дождитесь окончания индексации файла' : undefined}
                   className="shrink-0 w-9 h-9 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg flex items-center justify-center hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   aria-label="Отправить"
                 >

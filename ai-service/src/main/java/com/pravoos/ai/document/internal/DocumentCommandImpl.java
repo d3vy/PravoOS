@@ -25,6 +25,11 @@ public class DocumentCommandImpl implements DocumentCommand {
     }
 
     @Override
+    public DocumentUploadResponse uploadChatAttachment(MultipartFile file, String title, UUID lawyerId) {
+        return documentService.uploadChatAttachment(file, title, lawyerId);
+    }
+
+    @Override
     public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy, UUID caseId,
                                          boolean visibleToClient) {
         return documentService.upload(file, title, uploadedBy, caseId, visibleToClient);

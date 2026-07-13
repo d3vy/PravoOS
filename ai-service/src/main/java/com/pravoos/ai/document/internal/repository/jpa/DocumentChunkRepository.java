@@ -1,15 +1,16 @@
 package com.pravoos.ai.document.internal.repository.jpa;
 
-import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
 
 public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UUID> {
 
@@ -33,7 +34,8 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UU
             SELECT EXISTS (
                 SELECT 1 FROM document_chunks dc
                 JOIN documents d ON d.id = dc.document_id
-                WHERE d.case_id IS NULL AND dc.content LIKE :pattern ESCAPE '\\'
+                WHERE d.case_id IS NULL AND d.document_kind <> 'CHAT_ATTACHMENT'
+                  AND dc.content LIKE :pattern ESCAPE '\\'
             )
             """, nativeQuery = true)
     boolean existsInKnowledgeBaseByContent(@Param("pattern") String pattern);

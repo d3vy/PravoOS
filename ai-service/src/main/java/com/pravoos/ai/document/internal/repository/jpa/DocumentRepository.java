@@ -30,7 +30,11 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     List<Document> findByCaseIdIsNullOrderByUploadedAtDesc();
 
-    Page<Document> findByCaseIdIsNullOrderByUploadedAtDesc(Pageable pageable);
+    Page<Document> findByCaseIdIsNullAndDocumentKindNotOrderByUploadedAtDesc(
+            DocumentKind documentKind, Pageable pageable);
+
+    List<Document> findByUploadedByAndDocumentKindOrderByUploadedAtDesc(
+            UUID uploadedBy, DocumentKind documentKind);
 
     List<Document> findByCaseIdOrderByUploadedAtDesc(UUID caseId);
 

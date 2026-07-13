@@ -9,6 +9,8 @@ public interface DocumentAccess {
 
     List<DocumentRef> findByIds(Collection<UUID> ids);
 
+    List<DocumentResponse> findChatAttachments(UUID lawyerId);
+
     List<String> chunkContentsForDocuments(Collection<UUID> ids);
 
     DocumentRef findForReview(UUID id);

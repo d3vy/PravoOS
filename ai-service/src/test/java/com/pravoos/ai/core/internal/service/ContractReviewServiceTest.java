@@ -91,7 +91,7 @@ class ContractReviewServiceTest {
     void rejectsNonCaseDocument() {
         UUID documentId = UUID.randomUUID();
         when(documentAccess.findForReview(documentId))
-                .thenReturn(new DocumentRef(documentId, null, "Без дела"));
+                .thenReturn(new DocumentRef(documentId, null, UUID.randomUUID(), "Без дела"));
 
         assertThatThrownBy(() -> service.review(documentId, UUID.randomUUID(), List.of()))
                 .isInstanceOf(DocumentNotFoundException.class);
@@ -110,6 +110,6 @@ class ContractReviewServiceTest {
     }
 
     private DocumentRef caseDocument() {
-        return new DocumentRef(UUID.randomUUID(), UUID.randomUUID(), "Договор поставки");
+        return new DocumentRef(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "Договор поставки");
     }
 }

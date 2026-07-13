@@ -1,7 +1,15 @@
 import apiClient, { refreshSession } from './client'
 import { MAX_PAGE_SIZE } from './pagination'
 import { useAuthStore } from '../store/authStore'
-import type { ChatRequest, ChatResponse, ConversationResponse, MessageResponse, RateRequest } from '../types'
+import type {
+  ChatRequest,
+  ChatResponse,
+  ConversationResponse,
+  DocumentResponse,
+  DocumentUploadResponse,
+  MessageResponse,
+  RateRequest,
+} from '../types'
 
 const baseURL = import.meta.env.VITE_API_URL || ''
 const GENERIC_STREAM_ERROR = 'Произошла ошибка при обработке запроса. Попробуйте ещё раз.'
@@ -117,6 +125,20 @@ export const chatApi = {
 
   rateMessage: async (messageId: string, data: RateRequest): Promise<MessageResponse> => {
     const response = await apiClient.post<MessageResponse>(`/api/ai/messages/${messageId}/rate`, data)
+    return response.data
+  },
+
+  getAttachments: async (): Promise<DocumentResponse[]> => {
+    const response = await apiClient.get<DocumentResponse[]>('/api/ai/chat/attachments')
+    return response.data
+  },
+
+  uploadAttachment: async (file: File): Promise<DocumentUploadResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post<DocumentUploadResponse>('/api/ai/chat/attachments', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return response.data
   },
 }

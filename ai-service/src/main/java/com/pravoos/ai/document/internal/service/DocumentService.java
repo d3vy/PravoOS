@@ -114,6 +114,28 @@ public class DocumentService {
     }
 
     @Transactional
+    public DocumentUploadResponse uploadChatAttachment(MultipartFile file, String title, UUID lawyerId) {
+        if (file == null || file.isEmpty()) {
+            log.warn("Chat attachment upload rejected: empty file from {}", lawyerId);
+            throw new DocumentProcessingException("Uploaded file is empty");
+        }
+        uploadRateLimiter.assertWithinLimit(lawyerId);
+
+        String originalName = file.getOriginalFilename();
+        String fileType = extractFileType(originalName);
+        byte[] content = validateAndScan(file, lawyerId, originalName, fileType);
+
+        Document document = new Document();
+        document.setTitle(resolveTitle(title, originalName));
+        document.setUploadedBy(lawyerId);
+        document.setCaseId(null);
+        document.setVisibleToClient(false);
+        document.setDocumentKind(DocumentKind.CHAT_ATTACHMENT);
+
+        return persistAndEmbed(content, originalName, fileType, document);
+    }
+
+    @Transactional
     public DocumentUploadResponse uploadLegislation(MultipartFile file, String actCanonical, String articleNumber,
                                                     LocalDate editionDate, String title, UUID uploadedBy) {
         if (file == null || file.isEmpty()) {
@@ -246,8 +268,19 @@ public class DocumentService {
 
     @Transactional(readOnly = true)
     public Page<DocumentResponse> findAll(int page, int size) {
-        return documentRepository.findByCaseIdIsNullOrderByUploadedAtDesc(PageRequests.of(page, size))
+        return documentRepository
+                .findByCaseIdIsNullAndDocumentKindNotOrderByUploadedAtDesc(
+                        DocumentKind.CHAT_ATTACHMENT, PageRequests.of(page, size))
                 .map(this::toDocumentResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentResponse> findChatAttachments(UUID lawyerId) {
+        return documentRepository
+                .findByUploadedByAndDocumentKindOrderByUploadedAtDesc(lawyerId, DocumentKind.CHAT_ATTACHMENT)
+                .stream()
+                .map(this::toDocumentResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)

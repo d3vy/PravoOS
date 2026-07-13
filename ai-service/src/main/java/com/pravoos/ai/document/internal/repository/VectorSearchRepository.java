@@ -44,6 +44,7 @@ public class VectorSearchRepository {
                 "FROM document_chunks dc " +
                 "JOIN documents d ON d.id = dc.document_id " +
                 "WHERE dc.embedding IS NOT NULL AND d.case_id IS NULL AND d.superseded = FALSE " +
+                "AND d.document_kind <> 'CHAT_ATTACHMENT' " +
                 "AND (dc.embedding <=> CAST(:vec AS vector)) <= :maxDistance " +
                 "ORDER BY " + LEGISLATION_RANK + " " +
                 "LIMIT :k",
@@ -57,6 +58,7 @@ public class VectorSearchRepository {
                 "FROM document_chunks dc " +
                 "JOIN documents d ON d.id = dc.document_id " +
                 "WHERE dc.embedding IS NOT NULL AND d.superseded = FALSE " +
+                "AND d.document_kind <> 'CHAT_ATTACHMENT' " +
                 "AND (d.case_id = CAST(:caseId AS uuid) OR d.case_id IS NULL) " +
                 "AND (dc.embedding <=> CAST(:vec AS vector)) <= :maxDistance " +
                 "ORDER BY " + LEGISLATION_RANK + " " +
