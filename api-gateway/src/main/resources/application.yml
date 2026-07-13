@@ -20,6 +20,16 @@ spring:
                 redis-rate-limiter.replenishRate: ${AUTH_RATE_REPLENISH:5}
                 redis-rate-limiter.burstCapacity: ${AUTH_RATE_BURST:10}
                 key-resolver: "#{@ipKeyResolver}"
+        - id: user-service-billing-webhook
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/billing/webhook
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${WEBHOOK_RATE_REPLENISH:5}
+                redis-rate-limiter.burstCapacity: ${WEBHOOK_RATE_BURST:20}
+                key-resolver: "#{@ipKeyResolver}"
         - id: user-service-admin
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:

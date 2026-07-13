@@ -75,6 +75,30 @@ public class SubscriptionService {
     }
 
     @Transactional
+    public void activateOnPlan(UUID userId, UUID planId, int periodDays) {
+        Subscription subscription = subscriptionRepository.findByUserId(userId)
+                .orElseGet(() -> {
+                    Subscription created = new Subscription();
+                    created.setUserId(userId);
+                    return created;
+                });
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        LocalDateTime periodStart = subscription.getCurrentPeriodEnd() != null
+                && subscription.getCurrentPeriodEnd().isAfter(now)
+                && planId.equals(subscription.getPlanId())
+                ? subscription.getCurrentPeriodEnd()
+                : now;
+
+        subscription.setPlanId(planId);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setCurrentPeriodEnd(periodStart.plusDays(periodDays));
+        subscriptionRepository.save(subscription);
+
+        log.info("Subscription activated for user {} on plan {} until {}",
+                userId, planId, subscription.getCurrentPeriodEnd());
+    }
+
+    @Transactional
     public BillingStatusResponse getStatus(UUID userId) {
         Subscription subscription = subscriptionRepository.findByUserId(userId)
                 .orElseGet(() -> createDefaultSubscription(userId));

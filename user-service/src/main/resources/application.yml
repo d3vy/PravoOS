@@ -71,6 +71,15 @@ app:
     hibp-enabled: ${PASSWORD_HIBP_ENABLED:true}
     hibp-timeout: ${PASSWORD_HIBP_TIMEOUT:PT3S}
     hibp-fail-open: ${PASSWORD_HIBP_FAIL_OPEN:true}
+  billing:
+    trial-plan-code: ${BILLING_TRIAL_PLAN_CODE:SOLO}
+    trial-days: ${BILLING_TRIAL_DAYS:14}
+    yookassa:
+      shop-id: ${YOOKASSA_SHOP_ID:}
+      secret-key: ${YOOKASSA_SECRET_KEY:}
+      return-url: ${YOOKASSA_RETURN_URL:http://localhost:5173/billing}
+      period-days: ${BILLING_PERIOD_DAYS:30}
+      webhook-allowed-ips: ${YOOKASSA_WEBHOOK_IPS:185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32}
   mfa:
     issuer: ${MFA_ISSUER:PravoOS}
     admin-required: ${MFA_ADMIN_REQUIRED:true}
