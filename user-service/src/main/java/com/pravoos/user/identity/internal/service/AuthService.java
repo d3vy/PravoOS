@@ -185,10 +185,11 @@ public class AuthService {
                 eventPublisher.publishEvent(new NewLoginEvent(
                         user.getEmail(), ipAddress, userAgent, occurredAt));
             }
-            if (user.isLoginAlertTelegram()) {
+            if (user.isLoginAlertTelegram() || user.isLoginAlertPush()) {
                 outboxEventService.enqueue(NEW_LOGIN_TOPIC, user.getId().toString(),
                         new NewLoginKafkaPayload(user.getId(), ipAddress, userAgent,
-                                occurredAt.format(LOGIN_TIME_FORMATTER)));
+                                occurredAt.format(LOGIN_TIME_FORMATTER),
+                                user.isLoginAlertTelegram(), user.isLoginAlertPush()));
             }
             log.info("New-device login detected for {}", EmailMasker.mask(user.getEmail()));
         }

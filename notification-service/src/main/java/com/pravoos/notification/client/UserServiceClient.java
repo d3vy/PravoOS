@@ -3,6 +3,7 @@ package com.pravoos.notification.client;
 import com.pravoos.notification.config.UserServiceProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -11,6 +12,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -113,6 +115,26 @@ public class UserServiceClient {
                 .body(CaseMessageNotificationResult.class);
         log.info("Case message notification dispatched for case {}", request.caseId());
         return result == null ? CaseMessageNotificationResult.none() : result;
+    }
+
+    public List<PushSubscriptionResponse> listPushSubscriptions(UUID userId) {
+        List<PushSubscriptionResponse> subscriptions = restClient.get()
+                .uri("/internal/push/subscriptions/{userId}", userId)
+                .header("X-Internal-Secret", internalSecret)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+        return subscriptions == null ? List.of() : subscriptions;
+    }
+
+    public void prunePushSubscription(String endpoint) {
+        restClient.post()
+                .uri("/internal/push/subscriptions/prune")
+                .header("X-Internal-Secret", internalSecret)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new PrunePushSubscriptionRequest(endpoint))
+                .retrieve()
+                .toBodilessEntity();
+        log.info("Expired push subscription pruned in user-service");
     }
 
     public Optional<Long> resolveTelegramChatId(UUID lawyerId) {

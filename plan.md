@@ -132,14 +132,24 @@ Trade-off: пока юзеров мало — терпимо, но первая 
 
 ---
 
-## 9. Мобильный доступ (PWA) + push — УДЕРЖАНИЕ
-Есть: React 18 SPA, уведомления только Telegram. Нет: PWA, in-app и web-push.
-- Installable PWA (манифест + service worker на Vite) + Web Push для дедлайнов/заседаний параллельно Telegram.
+## 9. Мобильный доступ (PWA) + push — УДЕРЖАНИЕ. ✅ СДЕЛАНО
+Было: React 18 SPA, уведомления только Telegram/email. Стало: installable PWA + Web Push как полноценный третий канал уведомлений.
+
+**Хранение подписок — новый Modulith-модуль `push` в user-service** (`allowedDependencies = {shared, identity :: model/enums/repository}`), рядом с `billing`/`collaboration`. V22: `push_subscriptions` (`endpoint` UNIQUE, ключи `p256dh`/`auth`, `user_agent`, FK на `users` с ON DELETE CASCADE) + колонки `users.login_alert_push` / `users.case_message_push` (дефолт TRUE) — push встроен в существующую матрицу prefs, а не отдельной сущностью. `PushSubscriptionService`: upsert по `endpoint` (перерегистрация того же устройства не плодит строк, endpoint переезжает на нового владельца при смене аккаунта в браузере), лимит 10 устройств на юзера с вытеснением самых старых, `prune(endpoint)` для протухших. Публично: `GET /api/user/push/config` (VAPID public-key + флаг `configured`), `POST /api/user/push/subscriptions`, `POST /api/user/push/subscriptions/remove`. Внутренне (`X-Internal-Secret`): `GET /internal/push/subscriptions/{userId}`, `POST /internal/push/subscriptions/prune`.
+
+**Доставка — notification-service** (владелец каналов, как и для Telegram). Библиотека `nl.martijndwars:web-push` (VAPID + RFC 8291, BouncyCastle-провайдер). Гейтинг по ключам: пусто → `NoopWebPushSender` (подписки принимаются, отправки нет — тот же паттерн, что Noop-провайдер арбитража). Приватный VAPID-ключ забланкован в остальных сервисах compose.
+- **Рефактор фан-аута:** консьюмеры больше не дергают Telegram напрямую — появился `NotificationDispatcher` (оркестрация каналов), `TelegramNotificationService` сведён к чистому Telegram (`sendDeadline`/`sendHearingUpdate`/`sendCaseMessage`/`sendNewLogin` → boolean «доставлено»), email-фолбэк вынесен в `DeadlineEmailFallbackService`, тексты push собирает `PushMessageFactory`. Добавить 4-й канал = один бин, консьюмеры не трогаем.
+- **Выбор канала:** дедлайн/заседание → push всем устройствам юриста + Telegram; email-фолбэк только если не сработали ОБА (раньше — если нет Telegram). Сообщения по делу → prefs получателя приходят из `CaseMessageNotificationResult` (расширен `recipientUserId` + `pushEnabled`), ссылка в push разная для юриста (`/cases/:id`) и клиента портала (`/portal/cases/:id`). Новый вход → флаги `telegramEnabled`/`pushEnabled` едут прямо в `NewLoginKafkaPayload` (событие теперь публикуется, если включён любой из каналов).
+- **Протухшие подписки:** 404/410 от push-сервиса → `PushNotificationService` зовёт prune в user-service, БД не копит мусор. Дедуп повторной доставки — по `tag` в самом уведомлении (браузер схлопывает).
+
+**Фронт:** `vite-plugin-pwa` (`injectManifest`), свой `src/sw.ts` (precache app-shell, network-first для GET `/api/`, SWR для картинок, обработчики `push` и `notificationclick` с фокусом уже открытой вкладки), манифест + иконки 192/512/maskable/badge, `/sw.js` и манифест отдаются с `no-cache` в nginx. Слой PWA изолирован: `src/pwa/` (`registerServiceWorker`, `pushClient`, `vapid`), хук `usePushNotifications` (состояния `unsupported`/`not-configured`/`blocked`/`subscribed`), карточка «Push на этом устройстве» + канал «Push в браузере» в настройках уведомлений.
+
+Тесты: `PushSubscriptionServiceTest` (7), `NotificationDispatcherTest` (7), `PushNotificationServiceTest` (6), `PushMessageFactoryTest` (5), `vapid.test.ts` (4) + обновлены `AuthServiceTest`/`UserServiceTest`/`TelegramNotificationServiceTest`/`NewLoginConsumerTest`.
 
 ```bash
-cd frontend && npm i -D vite-plugin-pwa   # манифест+SW; далее Web Push к дедлайнам
+npx web-push generate-vapid-keys        # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY в .env
 ```
-Trade-off: PWA закрывает 80% мобильного за 20% усилий, нативный app не нужен сразу.
+Осталось на будущее: in-app центр уведомлений (сейчас есть раздел «Сообщения»), push по счетам/оплате биллинга.
 
 ---
 

@@ -79,13 +79,15 @@ class UserServiceTest {
                 .thenReturn(Optional.of(profile(user, 555L)));
 
         NotificationSettingsResponse response = service.updateNotificationSettings(
-                userId, new UpdateNotificationSettingsRequest(false, true, false, true));
+                userId, new UpdateNotificationSettingsRequest(false, true, false, true, false, true));
 
         assertThat(user.isLoginAlertEmail()).isFalse();
         assertThat(user.isLoginAlertTelegram()).isTrue();
-        assertThat(user.isCaseMessageEmail()).isFalse();
-        assertThat(user.isCaseMessageTelegram()).isTrue();
-        assertThat(response.caseMessageTelegram()).isTrue();
+        assertThat(user.isLoginAlertPush()).isFalse();
+        assertThat(user.isCaseMessageEmail()).isTrue();
+        assertThat(user.isCaseMessageTelegram()).isFalse();
+        assertThat(user.isCaseMessagePush()).isTrue();
+        assertThat(response.caseMessagePush()).isTrue();
     }
 
     @Test
@@ -94,7 +96,7 @@ class UserServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.updateNotificationSettings(
-                userId, new UpdateNotificationSettingsRequest(true, true, true, true)))
+                userId, new UpdateNotificationSettingsRequest(true, true, true, true, true, true)))
                 .isInstanceOf(ProfileNotFoundException.class);
     }
 

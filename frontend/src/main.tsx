@@ -5,9 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { installGlobalErrorReporting } from './lib/errorReporter'
+import { registerServiceWorker } from './pwa/registerServiceWorker'
 import './index.css'
 
 installGlobalErrorReporting()
+registerServiceWorker()
 
 const queryClient = new QueryClient({
   defaultOptions: {

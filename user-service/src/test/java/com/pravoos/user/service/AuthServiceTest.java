@@ -22,6 +22,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -94,6 +95,7 @@ class AuthServiceTest {
     @Test
     void login_publishesNewLoginEvent_forUnknownDevice() {
         User user = activeUser();
+        user.setLoginAlertPush(false);
         when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
         when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -112,6 +114,7 @@ class AuthServiceTest {
         User user = activeUser();
         user.setLoginAlertEmail(false);
         user.setLoginAlertTelegram(true);
+        user.setLoginAlertPush(false);
         when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
         when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -127,9 +130,31 @@ class AuthServiceTest {
     }
 
     @Test
+    void login_enqueuesPushOutbox_whenOnlyPushAlertEnabled_forUnknownDevice() {
+        User user = activeUser();
+        user.setLoginAlertEmail(false);
+        user.setLoginAlertTelegram(false);
+        user.setLoginAlertPush(true);
+        when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+        when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
+        when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
+        when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(false);
+        when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+
+        authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
+
+        ArgumentCaptor<NewLoginKafkaPayload> captor = ArgumentCaptor.forClass(NewLoginKafkaPayload.class);
+        verify(outboxEventService).enqueue(eq("user.new_login"), eq(user.getId().toString()), captor.capture());
+        assertThat(captor.getValue().pushEnabled()).isTrue();
+        assertThat(captor.getValue().telegramEnabled()).isFalse();
+    }
+
+    @Test
     void login_doesNotNotify_forKnownDevice_evenWhenAlertsEnabled() {
         User user = activeUser();
         user.setLoginAlertTelegram(true);
+        user.setLoginAlertPush(true);
         when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
         when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);

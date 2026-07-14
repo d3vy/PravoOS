@@ -1,10 +1,6 @@
 package com.pravoos.notification.service;
 
 import com.pravoos.notification.bot.PravoOsAdminBot;
-import com.pravoos.notification.client.CaseMessageNotificationRequest;
-import com.pravoos.notification.client.CaseMessageNotificationResult;
-import com.pravoos.notification.client.DeadlineEmailRequest;
-import com.pravoos.notification.client.UserServiceClient;
 import com.pravoos.notification.config.TelegramBotProperties;
 import com.pravoos.notification.event.*;
 import com.pravoos.notification.exception.NotificationDeliveryException;
@@ -26,16 +22,13 @@ public class TelegramNotificationService {
 
     private final PravoOsAdminBot bot;
     private final TelegramBotProperties botProperties;
-    private final UserServiceClient userServiceClient;
     private final TelegramChatIdResolver telegramChatIdResolver;
 
     public TelegramNotificationService(PravoOsAdminBot bot,
                                        TelegramBotProperties botProperties,
-                                       UserServiceClient userServiceClient,
                                        TelegramChatIdResolver telegramChatIdResolver) {
         this.bot = bot;
         this.botProperties = botProperties;
-        this.userServiceClient = userServiceClient;
         this.telegramChatIdResolver = telegramChatIdResolver;
     }
 
@@ -52,65 +45,48 @@ public class TelegramNotificationService {
         }
     }
 
-    public void notifyDeadline(CaseDeadlineKafkaPayload payload) {
+    public boolean sendDeadline(CaseDeadlineKafkaPayload payload) {
         Optional<Long> chatId = telegramChatIdResolver.resolve(payload.lawyerId());
         if (chatId.isEmpty()) {
-            log.info("Lawyer {} has no linked Telegram, falling back to email for case {}",
+            log.info("Lawyer {} has no linked Telegram for deadline of case {}",
                     payload.lawyerId(), payload.caseId());
-            sendDeadlineEmailFallback(payload);
-            return;
+            return false;
         }
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId.get().toString());
-        message.setText(formatDeadlineMessage(payload));
-        message.setParseMode("HTML");
-        send(message, payload.caseId().toString());
+        send(buildMessage(chatId.get(), formatDeadlineMessage(payload)), payload.caseId().toString());
+        return true;
     }
 
-    public void notifyHearingUpdated(CaseHearingUpdatedKafkaPayload payload) {
+    public boolean sendHearingUpdate(CaseHearingUpdatedKafkaPayload payload) {
         Optional<Long> chatId = telegramChatIdResolver.resolve(payload.lawyerId());
         if (chatId.isEmpty()) {
             log.info("Lawyer {} has no linked Telegram, skipping hearing update for case {}",
                     payload.lawyerId(), payload.caseId());
-            return;
+            return false;
         }
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId.get().toString());
-        message.setText(formatHearingMessage(payload));
-        message.setParseMode("HTML");
-        send(message, payload.caseId().toString());
+        send(buildMessage(chatId.get(), formatHearingMessage(payload)), payload.caseId().toString());
+        return true;
     }
 
-    public void notifyCaseMessage(CaseMessageCreatedKafkaPayload payload) {
-        CaseMessageNotificationResult result = userServiceClient.dispatchCaseMessage(
-                new CaseMessageNotificationRequest(
-                        payload.caseId(),
-                        payload.caseTitle(),
-                        payload.authorRole(),
-                        payload.recipientLawyerId(),
-                        payload.recipientClientId(),
-                        payload.preview()));
-        if (result.telegramChatId() == null) {
-            return;
-        }
-        SendMessage message = new SendMessage();
-        message.setChatId(result.telegramChatId().toString());
-        message.setText(formatCaseMessage(payload));
-        message.setParseMode("HTML");
-        send(message, payload.caseId().toString());
+    public void sendCaseMessage(CaseMessageCreatedKafkaPayload payload, long chatId) {
+        send(buildMessage(chatId, formatCaseMessage(payload)), payload.caseId().toString());
     }
 
-    public void notifyNewLogin(NewLoginKafkaPayload payload) {
+    public boolean sendNewLogin(NewLoginKafkaPayload payload) {
         Optional<Long> chatId = telegramChatIdResolver.resolve(payload.userId());
         if (chatId.isEmpty()) {
             log.info("User {} has no linked Telegram, skipping new-login alert", payload.userId());
-            return;
+            return false;
         }
+        send(buildMessage(chatId.get(), formatNewLoginMessage(payload)), payload.userId().toString());
+        return true;
+    }
+
+    private SendMessage buildMessage(long chatId, String text) {
         SendMessage message = new SendMessage();
-        message.setChatId(chatId.get().toString());
-        message.setText(formatNewLoginMessage(payload));
+        message.setChatId(Long.toString(chatId));
+        message.setText(text);
         message.setParseMode("HTML");
-        send(message, payload.userId().toString());
+        return message;
     }
 
     private String formatNewLoginMessage(NewLoginKafkaPayload payload) {
@@ -143,21 +119,6 @@ public class TelegramNotificationService {
                 escapeHtml(payload.arbitrCaseNumber()),
                 escapeHtml(previous),
                 escapeHtml(payload.newHearingDate()));
-    }
-
-    private void sendDeadlineEmailFallback(CaseDeadlineKafkaPayload payload) {
-        try {
-            userServiceClient.sendDeadlineEmail(new DeadlineEmailRequest(
-                    payload.lawyerId(),
-                    payload.caseId(),
-                    payload.caseTitle(),
-                    payload.deadlineTypeName(),
-                    payload.deadlineDate(),
-                    payload.daysLeft()));
-        } catch (Exception e) {
-            throw new NotificationDeliveryException(
-                    "Failed to request deadline email for case " + payload.caseId(), e);
-        }
     }
 
     private String formatDeadlineMessage(CaseDeadlineKafkaPayload payload) {

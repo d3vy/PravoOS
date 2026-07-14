@@ -1,7 +1,6 @@
 package com.pravoos.notification.service;
 
 import com.pravoos.notification.bot.PravoOsAdminBot;
-import com.pravoos.notification.client.UserServiceClient;
 import com.pravoos.notification.config.TelegramBotProperties;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +23,6 @@ import static org.mockito.Mockito.*;
 class TelegramNotificationServiceTest {
 
     @Mock private PravoOsAdminBot bot;
-    @Mock private UserServiceClient userServiceClient;
     @Mock private TelegramChatIdResolver telegramChatIdResolver;
 
     private TelegramNotificationService service;
@@ -32,16 +30,17 @@ class TelegramNotificationServiceTest {
     @BeforeEach
     void setUp() {
         TelegramBotProperties properties = new TelegramBotProperties("token", "bot", List.of("1"));
-        service = new TelegramNotificationService(bot, properties, userServiceClient, telegramChatIdResolver);
+        service = new TelegramNotificationService(bot, properties, telegramChatIdResolver);
     }
 
     @Test
-    void notifyNewLogin_sendsMessageToResolvedChat() throws Exception {
+    void sendNewLogin_sendsMessageToResolvedChat() throws Exception {
         UUID userId = UUID.randomUUID();
         when(telegramChatIdResolver.resolve(userId)).thenReturn(Optional.of(987654L));
 
-        service.notifyNewLogin(new NewLoginKafkaPayload(userId, "203.0.113.9", "JUnit-UA", "2026-07-03 10:15"));
+        boolean delivered = service.sendNewLogin(payload(userId));
 
+        assertThat(delivered).isTrue();
         ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
         verify(bot).execute(captor.capture());
         SendMessage sent = captor.getValue();
@@ -52,12 +51,17 @@ class TelegramNotificationServiceTest {
     }
 
     @Test
-    void notifyNewLogin_skips_whenTelegramNotLinked() throws Exception {
+    void sendNewLogin_skips_whenTelegramNotLinked() throws Exception {
         UUID userId = UUID.randomUUID();
         when(telegramChatIdResolver.resolve(userId)).thenReturn(Optional.empty());
 
-        service.notifyNewLogin(new NewLoginKafkaPayload(userId, "203.0.113.9", "JUnit-UA", "2026-07-03 10:15"));
+        boolean delivered = service.sendNewLogin(payload(userId));
 
+        assertThat(delivered).isFalse();
         verify(bot, never()).execute(any(SendMessage.class));
+    }
+
+    private NewLoginKafkaPayload payload(UUID userId) {
+        return new NewLoginKafkaPayload(userId, "203.0.113.9", "JUnit-UA", "2026-07-03 10:15", true, true);
     }
 }

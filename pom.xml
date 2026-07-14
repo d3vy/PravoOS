@@ -39,6 +39,8 @@
         <springdoc.version>2.6.0</springdoc.version>
         <shedlock.version>5.16.0</shedlock.version>
         <spring-modulith.version>1.2.13</spring-modulith.version>
+        <web-push.version>5.1.1</web-push.version>
+        <bouncycastle.version>1.78.1</bouncycastle.version>
     </properties>
 
     <dependencyManagement>

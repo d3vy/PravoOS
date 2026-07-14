@@ -2,7 +2,7 @@ package com.pravoos.notification.consumer;
 
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.service.ProcessedEventGuard;
-import com.pravoos.notification.service.TelegramNotificationService;
+import com.pravoos.notification.service.NotificationDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -15,12 +15,12 @@ public class CaseDeadlineConsumer {
     private static final Logger log = LoggerFactory.getLogger(CaseDeadlineConsumer.class);
     private static final String EVENT_TYPE = "case.deadline.approaching";
 
-    private final TelegramNotificationService telegramNotificationService;
+    private final NotificationDispatcher notificationDispatcher;
     private final ProcessedEventGuard processedEventGuard;
 
-    public CaseDeadlineConsumer(TelegramNotificationService telegramNotificationService,
+    public CaseDeadlineConsumer(NotificationDispatcher notificationDispatcher,
                                 ProcessedEventGuard processedEventGuard) {
-        this.telegramNotificationService = telegramNotificationService;
+        this.notificationDispatcher = notificationDispatcher;
         this.processedEventGuard = processedEventGuard;
     }
 
@@ -36,7 +36,7 @@ public class CaseDeadlineConsumer {
             }
             log.info("Received case.deadline.approaching: case={} type={} daysLeft={}",
                     payload.caseId(), payload.deadlineTypeName(), payload.daysLeft());
-            telegramNotificationService.notifyDeadline(payload);
+            notificationDispatcher.dispatchDeadline(payload);
             processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
         } finally {
             MDC.remove("requestId");

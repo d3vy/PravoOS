@@ -6,5 +6,7 @@ public record NewLoginKafkaPayload(
         UUID userId,
         String ipAddress,
         String userAgent,
-        String occurredAt
+        String occurredAt,
+        boolean telegramEnabled,
+        boolean pushEnabled
 ) {}

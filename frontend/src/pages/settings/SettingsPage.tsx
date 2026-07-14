@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { usersApi } from '../../api/users'
 import type { NotificationSettingsResponse, TelegramLinkResponse } from '../../types'
+import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 
@@ -73,23 +74,27 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
   const currentRequest = {
     loginAlertEmail: settings.loginAlertEmail,
     loginAlertTelegram: settings.loginAlertTelegram,
+    loginAlertPush: settings.loginAlertPush,
     caseMessageEmail: settings.caseMessageEmail,
     caseMessageTelegram: settings.caseMessageTelegram,
+    caseMessagePush: settings.caseMessagePush,
   }
 
-  const toggleLoginChannel = (channel: 'email' | 'telegram'): void => {
+  const toggleLoginChannel = (channel: NotificationChannel): void => {
     updateMutation.mutate({
       ...currentRequest,
       loginAlertEmail: channel === 'email' ? !settings.loginAlertEmail : settings.loginAlertEmail,
       loginAlertTelegram: channel === 'telegram' ? !settings.loginAlertTelegram : settings.loginAlertTelegram,
+      loginAlertPush: channel === 'push' ? !settings.loginAlertPush : settings.loginAlertPush,
     })
   }
 
-  const toggleCaseMessageChannel = (channel: 'email' | 'telegram'): void => {
+  const toggleCaseMessageChannel = (channel: NotificationChannel): void => {
     updateMutation.mutate({
       ...currentRequest,
       caseMessageEmail: channel === 'email' ? !settings.caseMessageEmail : settings.caseMessageEmail,
       caseMessageTelegram: channel === 'telegram' ? !settings.caseMessageTelegram : settings.caseMessageTelegram,
+      caseMessagePush: channel === 'push' ? !settings.caseMessagePush : settings.caseMessagePush,
     })
   }
 
@@ -98,6 +103,8 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
 
   return (
     <div className="flex flex-col gap-6">
+      <PushDeviceCard pushSelected={settings.loginAlertPush || settings.caseMessagePush} />
+
       <div>
         <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Вход в аккаунт</h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
@@ -109,6 +116,7 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
         options={[
           { key: 'email', label: 'На почту', checked: settings.loginAlertEmail },
           { key: 'telegram', label: 'В Telegram', checked: settings.loginAlertTelegram },
+          { key: 'push', label: 'Push в браузере', checked: settings.loginAlertPush },
         ]}
         onToggle={toggleLoginChannel}
         disabled={updateMutation.isPending}
@@ -125,6 +133,7 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
         options={[
           { key: 'email', label: 'На почту', checked: settings.caseMessageEmail },
           { key: 'telegram', label: 'В Telegram', checked: settings.caseMessageTelegram },
+          { key: 'push', label: 'Push в браузере', checked: settings.caseMessagePush },
         ]}
         onToggle={toggleCaseMessageChannel}
         disabled={updateMutation.isPending}
@@ -153,10 +162,57 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
   )
 }
 
+type NotificationChannel = 'email' | 'telegram' | 'push'
+
 interface ChannelOption {
-  key: 'email' | 'telegram'
+  key: NotificationChannel
   label: string
   checked: boolean
+}
+
+function PushDeviceCard({ pushSelected }: { pushSelected: boolean }): JSX.Element | null {
+  const { state, isBusy, error, enable, disable } = usePushNotifications()
+
+  if (state === 'unsupported' || state === 'not-configured' || state === 'loading') {
+    return null
+  }
+
+  return (
+    <div className="rounded-lg border border-light-border dark:border-dark-border p-4 flex flex-col gap-3">
+      <div>
+        <h2 className="text-base font-semibold text-light-text dark:text-dark-text">Push на этом устройстве</h2>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+          {state === 'subscribed'
+            ? 'Уведомления приходят в браузер, даже когда вкладка PravoOS закрыта.'
+            : 'Разрешите уведомления, чтобы получать дедлайны и сообщения без открытой вкладки.'}
+        </p>
+      </div>
+
+      {state === 'blocked' ? (
+        <p className="text-sm text-amber-600 dark:text-amber-400">
+          Уведомления заблокированы в настройках браузера для этого сайта — разрешите их и обновите страницу.
+        </p>
+      ) : (
+        <Button
+          variant={state === 'subscribed' ? 'secondary' : 'primary'}
+          size="sm"
+          className="self-start"
+          disabled={isBusy}
+          onClick={() => void (state === 'subscribed' ? disable() : enable())}
+        >
+          {state === 'subscribed' ? 'Отключить на устройстве' : 'Включить push'}
+        </Button>
+      )}
+
+      {state !== 'subscribed' && pushSelected && state !== 'blocked' && (
+        <p className="text-sm text-amber-600 dark:text-amber-400">
+          Канал «Push в браузере» выбран, но это устройство не подписано — уведомления сюда не дойдут.
+        </p>
+      )}
+
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  )
 }
 
 function ChannelSelect({
@@ -165,7 +221,7 @@ function ChannelSelect({
   disabled,
 }: {
   options: ChannelOption[]
-  onToggle: (key: 'email' | 'telegram') => void
+  onToggle: (key: NotificationChannel) => void
   disabled: boolean
 }): JSX.Element {
   const [open, setOpen] = useState(false)

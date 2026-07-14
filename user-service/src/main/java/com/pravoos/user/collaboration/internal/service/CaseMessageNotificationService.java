@@ -52,11 +52,11 @@ public class CaseMessageNotificationService {
         if (recipient.isCaseMessageEmail()) {
             sendEmail(recipient, request, caseLink);
         }
-        if (recipient.isCaseMessageTelegram()) {
-            return new CaseMessageNotificationResult(
-                    telegramLinkService.resolveChatId(recipient.getId()).orElse(null));
-        }
-        return CaseMessageNotificationResult.none();
+        Long telegramChatId = recipient.isCaseMessageTelegram()
+                ? telegramLinkService.resolveChatId(recipient.getId()).orElse(null)
+                : null;
+        return new CaseMessageNotificationResult(
+                recipient.getId(), telegramChatId, recipient.isCaseMessagePush());
     }
 
     private User resolveRecipient(CaseMessageNotificationRequest request) {

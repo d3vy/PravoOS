@@ -2,7 +2,7 @@ package com.pravoos.notification.consumer;
 
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.notification.service.ProcessedEventGuard;
-import com.pravoos.notification.service.TelegramNotificationService;
+import com.pravoos.notification.service.NotificationDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -15,12 +15,12 @@ public class CaseHearingConsumer {
     private static final Logger log = LoggerFactory.getLogger(CaseHearingConsumer.class);
     private static final String EVENT_TYPE = "case.hearing.updated";
 
-    private final TelegramNotificationService telegramNotificationService;
+    private final NotificationDispatcher notificationDispatcher;
     private final ProcessedEventGuard processedEventGuard;
 
-    public CaseHearingConsumer(TelegramNotificationService telegramNotificationService,
+    public CaseHearingConsumer(NotificationDispatcher notificationDispatcher,
                                ProcessedEventGuard processedEventGuard) {
-        this.telegramNotificationService = telegramNotificationService;
+        this.notificationDispatcher = notificationDispatcher;
         this.processedEventGuard = processedEventGuard;
     }
 
@@ -36,7 +36,7 @@ public class CaseHearingConsumer {
             }
             log.info("Received case.hearing.updated: case={} {} -> {}",
                     payload.caseId(), payload.previousHearingDate(), payload.newHearingDate());
-            telegramNotificationService.notifyHearingUpdated(payload);
+            notificationDispatcher.dispatchHearingUpdate(payload);
             processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
         } finally {
             MDC.remove("requestId");

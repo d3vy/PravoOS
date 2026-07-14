@@ -2,7 +2,7 @@ package com.pravoos.notification.consumer;
 
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import com.pravoos.notification.service.ProcessedEventGuard;
-import com.pravoos.notification.service.TelegramNotificationService;
+import com.pravoos.notification.service.NotificationDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -15,12 +15,12 @@ public class NewLoginConsumer {
     private static final Logger log = LoggerFactory.getLogger(NewLoginConsumer.class);
     private static final String EVENT_TYPE = "user.new_login";
 
-    private final TelegramNotificationService telegramNotificationService;
+    private final NotificationDispatcher notificationDispatcher;
     private final ProcessedEventGuard processedEventGuard;
 
-    public NewLoginConsumer(TelegramNotificationService telegramNotificationService,
+    public NewLoginConsumer(NotificationDispatcher notificationDispatcher,
                             ProcessedEventGuard processedEventGuard) {
-        this.telegramNotificationService = telegramNotificationService;
+        this.notificationDispatcher = notificationDispatcher;
         this.processedEventGuard = processedEventGuard;
     }
 
@@ -35,7 +35,7 @@ public class NewLoginConsumer {
                 return;
             }
             log.info("Received user.new_login: user={}", payload.userId());
-            telegramNotificationService.notifyNewLogin(payload);
+            notificationDispatcher.dispatchNewLogin(payload);
             processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
         } finally {
             MDC.remove("requestId");

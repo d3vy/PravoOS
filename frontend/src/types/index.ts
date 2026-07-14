@@ -683,16 +683,32 @@ export interface UpdateProfileRequest {
 export interface NotificationSettingsResponse {
   loginAlertEmail: boolean
   loginAlertTelegram: boolean
+  loginAlertPush: boolean
   caseMessageEmail: boolean
   caseMessageTelegram: boolean
+  caseMessagePush: boolean
   telegramLinked: boolean
 }
 
 export interface UpdateNotificationSettingsRequest {
   loginAlertEmail: boolean
   loginAlertTelegram: boolean
+  loginAlertPush: boolean
   caseMessageEmail: boolean
   caseMessageTelegram: boolean
+  caseMessagePush: boolean
+}
+
+export interface PushConfigResponse {
+  configured: boolean
+  publicKey: string | null
+}
+
+export interface PushSubscriptionRequest {
+  endpoint: string
+  p256dh: string
+  auth: string
+  userAgent?: string
 }
 
 export type MessageAuthorRole = 'LAWYER' | 'CLIENT'

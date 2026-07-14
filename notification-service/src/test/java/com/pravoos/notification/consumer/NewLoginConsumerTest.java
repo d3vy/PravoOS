@@ -1,8 +1,8 @@
 package com.pravoos.notification.consumer;
 
 import com.pravoos.notification.event.NewLoginKafkaPayload;
+import com.pravoos.notification.service.NotificationDispatcher;
 import com.pravoos.notification.service.ProcessedEventGuard;
-import com.pravoos.notification.service.TelegramNotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,14 +20,14 @@ class NewLoginConsumerTest {
 
     private static final String EVENT_TYPE = "user.new_login";
 
-    @Mock private TelegramNotificationService telegramNotificationService;
+    @Mock private NotificationDispatcher notificationDispatcher;
     @Mock private ProcessedEventGuard processedEventGuard;
 
     private NewLoginConsumer consumer;
 
     @BeforeEach
     void setUp() {
-        consumer = new NewLoginConsumer(telegramNotificationService, processedEventGuard);
+        consumer = new NewLoginConsumer(notificationDispatcher, processedEventGuard);
     }
 
     @Test
@@ -37,7 +37,7 @@ class NewLoginConsumerTest {
 
         consumer.onNewLogin(payload);
 
-        verify(telegramNotificationService).notifyNewLogin(payload);
+        verify(notificationDispatcher).dispatchNewLogin(payload);
         verify(processedEventGuard).markProcessed(eq(EVENT_TYPE), anyString());
     }
 
@@ -48,11 +48,11 @@ class NewLoginConsumerTest {
 
         consumer.onNewLogin(payload);
 
-        verify(telegramNotificationService, never()).notifyNewLogin(payload);
+        verify(notificationDispatcher, never()).dispatchNewLogin(payload);
         verify(processedEventGuard, never()).markProcessed(anyString(), anyString());
     }
 
     private NewLoginKafkaPayload payload() {
-        return new NewLoginKafkaPayload(UUID.randomUUID(), "203.0.113.9", "JUnit-UA", "2026-07-03 10:15");
+        return new NewLoginKafkaPayload(UUID.randomUUID(), "203.0.113.9", "JUnit-UA", "2026-07-03 10:15", true, true);
     }
 }

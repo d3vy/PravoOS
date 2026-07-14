@@ -44,6 +44,12 @@ public class User {
     @Column(name = "case_message_telegram", nullable = false)
     private boolean caseMessageTelegram = false;
 
+    @Column(name = "login_alert_push", nullable = false)
+    private boolean loginAlertPush = true;
+
+    @Column(name = "case_message_push", nullable = false)
+    private boolean caseMessagePush = true;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private LawyerProfile lawyerProfile;
 
@@ -81,6 +87,12 @@ public class User {
 
     public boolean isCaseMessageTelegram() { return caseMessageTelegram; }
     public void setCaseMessageTelegram(boolean caseMessageTelegram) { this.caseMessageTelegram = caseMessageTelegram; }
+
+    public boolean isLoginAlertPush() { return loginAlertPush; }
+    public void setLoginAlertPush(boolean loginAlertPush) { this.loginAlertPush = loginAlertPush; }
+
+    public boolean isCaseMessagePush() { return caseMessagePush; }
+    public void setCaseMessagePush(boolean caseMessagePush) { this.caseMessagePush = caseMessagePush; }
 
     public LawyerProfile getLawyerProfile() { return lawyerProfile; }
     public void setLawyerProfile(LawyerProfile lawyerProfile) { this.lawyerProfile = lawyerProfile; }

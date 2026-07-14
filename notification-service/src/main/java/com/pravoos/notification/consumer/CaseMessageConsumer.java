@@ -2,7 +2,7 @@ package com.pravoos.notification.consumer;
 
 import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.notification.service.ProcessedEventGuard;
-import com.pravoos.notification.service.TelegramNotificationService;
+import com.pravoos.notification.service.NotificationDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -15,12 +15,12 @@ public class CaseMessageConsumer {
     private static final Logger log = LoggerFactory.getLogger(CaseMessageConsumer.class);
     private static final String EVENT_TYPE = "case.message.created";
 
-    private final TelegramNotificationService telegramNotificationService;
+    private final NotificationDispatcher notificationDispatcher;
     private final ProcessedEventGuard processedEventGuard;
 
-    public CaseMessageConsumer(TelegramNotificationService telegramNotificationService,
+    public CaseMessageConsumer(NotificationDispatcher notificationDispatcher,
                                ProcessedEventGuard processedEventGuard) {
-        this.telegramNotificationService = telegramNotificationService;
+        this.notificationDispatcher = notificationDispatcher;
         this.processedEventGuard = processedEventGuard;
     }
 
@@ -36,7 +36,7 @@ public class CaseMessageConsumer {
             }
             log.info("Received case.message.created: case={} message={} author={}",
                     payload.caseId(), payload.messageId(), payload.authorRole());
-            telegramNotificationService.notifyCaseMessage(payload);
+            notificationDispatcher.dispatchCaseMessage(payload);
             processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
         } finally {
             MDC.remove("requestId");

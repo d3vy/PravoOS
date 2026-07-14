@@ -54,8 +54,10 @@ public class UserService {
                 .orElseThrow(ProfileNotFoundException::new);
         user.setLoginAlertEmail(request.loginAlertEmail());
         user.setLoginAlertTelegram(request.loginAlertTelegram());
+        user.setLoginAlertPush(request.loginAlertPush());
         user.setCaseMessageEmail(request.caseMessageEmail());
         user.setCaseMessageTelegram(request.caseMessageTelegram());
+        user.setCaseMessagePush(request.caseMessagePush());
         return toSettingsResponse(user);
     }
 
@@ -66,8 +68,10 @@ public class UserService {
         return new NotificationSettingsResponse(
                 user.isLoginAlertEmail(),
                 user.isLoginAlertTelegram(),
+                user.isLoginAlertPush(),
                 user.isCaseMessageEmail(),
                 user.isCaseMessageTelegram(),
+                user.isCaseMessagePush(),
                 telegramLinked
         );
     }

@@ -26,6 +26,13 @@ user-service:
   base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
   internal-secret: ${INTERNAL_SERVICE_SECRET}
 
+app:
+  push:
+    vapid:
+      public-key: ${VAPID_PUBLIC_KEY:}
+      private-key: ${VAPID_PRIVATE_KEY:}
+      subject: ${VAPID_SUBJECT:mailto:support@pravoos.ru}
+
 management:
   endpoints:
     web:
