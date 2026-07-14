@@ -1,6 +1,8 @@
 spring:
   application:
     name: notification-service
+  config:
+    import: "classpath:config/pravoos-observability.yml"
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:

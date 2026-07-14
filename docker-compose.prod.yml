@@ -80,6 +80,14 @@ services:
     restart: unless-stopped
     ports: !reset []
 
+  loki:
+    restart: unless-stopped
+    ports: !reset []
+
+  alloy:
+    restart: unless-stopped
+    ports: !reset []
+
   frontend:
     restart: unless-stopped
     ports:

@@ -1,6 +1,8 @@
 spring:
   application:
     name: api-gateway
+  config:
+    import: "classpath:config/pravoos-observability.yml"
   data:
     redis:
       host: ${REDIS_HOST:localhost}

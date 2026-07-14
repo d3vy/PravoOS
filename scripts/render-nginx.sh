@@ -36,15 +36,18 @@ if [[ "$CF_ORIGIN_PULL" != "on" && "$CF_ORIGIN_PULL" != "off" ]]; then
   exit 1
 fi
 
+# Sentry/GlitchTip ingest ходит с браузера — иначе CSP connect-src 'self' его заблокирует.
+CSP_CONNECT_EXTRA="${SENTRY_INGEST_ORIGIN:-}"
+
 mkdir -p docker/nginx/generated
-export SERVER_DOMAIN SERVER_IP CF_ORIGIN_PULL
+export SERVER_DOMAIN SERVER_IP CF_ORIGIN_PULL CSP_CONNECT_EXTRA
 
 if [[ "$MODE" == "init" ]]; then
-  envsubst '${SERVER_DOMAIN} ${SERVER_IP}' \
+  envsubst '${SERVER_DOMAIN} ${SERVER_IP} ${CSP_CONNECT_EXTRA}' \
     < docker/nginx/app.init.conf.template \
     > docker/nginx/generated/default.conf
 else
-  envsubst '${SERVER_DOMAIN} ${SERVER_IP} ${CF_ORIGIN_PULL}' \
+  envsubst '${SERVER_DOMAIN} ${SERVER_IP} ${CF_ORIGIN_PULL} ${CSP_CONNECT_EXTRA}' \
     < docker/nginx/app.prod.conf.template \
     > docker/nginx/generated/default.conf
 fi

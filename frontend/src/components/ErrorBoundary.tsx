@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
-import { reportError } from '../lib/errorReporter'
+import { reportError } from '../lib/observability'
 
 interface ErrorBoundaryProps {
   children: ReactNode

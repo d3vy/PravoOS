@@ -4,11 +4,11 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { installGlobalErrorReporting } from './lib/errorReporter'
+import { installErrorReporting } from './lib/observability'
 import { registerServiceWorker } from './pwa/registerServiceWorker'
 import './index.css'
 
-installGlobalErrorReporting()
+installErrorReporting()
 registerServiceWorker()
 
 const queryClient = new QueryClient({

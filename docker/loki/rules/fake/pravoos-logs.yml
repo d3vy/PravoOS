@@ -1,0 +1,33 @@
+groups:
+  - name: pravoos-logs
+    interval: 1m
+    rules:
+      - alert: HighErrorLogRate
+        expr: sum by (app) (rate({level="ERROR"}[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.app }}"
+        annotations:
+          summary: "Много ERROR-логов в {{ $labels.app }}"
+          description: "> 0.2 ERROR-записей в секунду последние 5 минут. Логи: Grafana → Explore → Loki."
+
+      - alert: ErrorLogBurst
+        expr: sum by (app) (count_over_time({level="ERROR"}[1m])) > 30
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.app }}"
+        annotations:
+          summary: "Всплеск ошибок в {{ $labels.app }}"
+          description: "Более 30 ERROR-записей за минуту — вероятен отказ зависимости или крэш-луп."
+
+      - alert: ServiceLogsSilent
+        expr: sum by (app) (count_over_time({app=~"api-gateway|user-service|ai-service|llm-service|notification-service"}[10m])) == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: "{{ $labels.app }}"
+        annotations:
+          summary: "Нет логов от {{ $labels.app }} 10 минут"
+          description: "Сервис молчит: остановлен контейнер, зависший процесс или сломан сбор логов (Alloy)."

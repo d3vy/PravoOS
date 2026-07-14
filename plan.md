@@ -95,15 +95,18 @@ Trade-off: ручной деплой на 1 VPS = релиз это риск д�
 
 ---
 
-## 7. Централизованные логи + Sentry — НАБЛЮДАЕМОСТЬ
-Есть: Prometheus/Grafana/Tempo, сквозной `X-Request-Id`/MDC. Нет: агрегации логов (`errorReporter.ts` = no-op) и трекинга ошибок.
-- Loki (минимальная добавка к стеку Grafana) + Sentry/GlitchTip (фронт+бэк). Корреляция по `requestId` заработает из коробки.
+## 7. Централизованные логи + Sentry — НАБЛЮДАЕМОСТЬ · ✅ СДЕЛАНО
+Было: Prometheus/Grafana/Tempo, сквозной `X-Request-Id`/MDC; логи — только `docker logs`, `errorReporter.ts` = no-op.
 
-```bash
-ls docker/tempo/                 # рядом положить docker/loki/loki.yaml, добавить сервис в compose
-grep -rn "VITE_ERROR_REPORT_URL\|errorReporter" frontend/src   # включить реальный sink
-```
-Trade-off: сейчас прод-баг = grep по контейнерам вслепую. Резко снижает MTTR.
+- **Общий Maven-модуль `pravoos-observability`** (зависимость всех 5 сервисов; в Dockerfile добавлены `COPY` pom+src): единый logback-фрагмент `logback/pravoos-base.xml` (профиль `docker` → JSON в stdout через `logstash-logback-encoder`, иначе — человекочитаемый формат + файлы) — `logback-spring.xml` каждого сервиса сжался до 4 property + include. Плюс автоконфигурация Sentry (`ObservabilityAutoConfiguration`): `PiiScrubber` (email/JWT/Bearer/телефон), `SentryEventEnricher` (теги `service`/`requestId`/`traceId`, чистка cookies и чувствительных заголовков), `ServerErrorOnlyPolicy` (4xx не репортим — иначе Sentry завалит ожидаемыми 403/422). Общий `config/pravoos-observability.yml` подключается одной строкой `spring.config.import` — конфиг Sentry не дублируется по сервисам.
+- **Фильтр 4xx** опирается на `HttpStatusCarrier` (новый интерфейс в `pravoos-common`), который реализует `PravoosException` в ai/user/llm.
+- **Loki (3.4.2) + Grafana Alloy (v1.7.5)** в compose: Alloy читает docker-логи (discovery по compose-лейблам), парсит JSON только у 5 наших сервисов (`stage.match`), кладёт лейблы `app`/`level` + structured metadata `requestId`/`traceId`/`logger`/`thread`. Retention 14 дн. Loki-ruler → тот же alertmanager → Telegram: `HighErrorLogRate`, `ErrorLogBurst`, `ServiceLogsSilent` (сервис молчит 10 мин).
+- **Корреляция:** датасорс Loki с derived field `traceId` → Tempo, Tempo `tracesToLogsV2` → Loki. Дашборд «PravoOS — Логи».
+- **Фронт:** `src/lib/observability/` вместо `errorReporter.ts` — `ErrorSink`-абстракция (`sentrySink` на `@sentry/react`, `beaconSink` = старый `VITE_ERROR_REPORT_URL`), `ReportThrottle` (кап 25/сессию + дедуп 10с), `scrubPii`. Появился vitest (8 тестов).
+- **Гейтинг:** пустые `SENTRY_DSN`/`VITE_SENTRY_DSN` → SDK no-op (тот же паттерн, что `ARBITR_API_KEY`). `SENTRY_INGEST_ORIGIN` подставляется в CSP `connect-src` (`render-nginx.sh`), иначе браузер режет отправку.
+- Тесты: `PiiScrubberTest` (6), `SentryEventEnricherTest` (4), `ServerErrorOnlyPolicyTest` (4), фронт — `scrub.test.ts` (5), `throttle.test.ts` (3).
+
+Trade-off: было — прод-баг = grep по контейнерам вслепую. Стало — поиск по `requestId` через все сервисы + алерт в Telegram до жалобы юриста.
 
 ---
 

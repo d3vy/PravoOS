@@ -1,8 +1,9 @@
 package com.pravoos.ai.shared.exception;
 
+import com.pravoos.common.exception.HttpStatusCarrier;
 import org.springframework.http.HttpStatus;
 
-public class PravoosException extends RuntimeException {
+public class PravoosException extends RuntimeException implements HttpStatusCarrier {
 
     private final HttpStatus status;
     private final String code;
@@ -23,5 +24,10 @@ public class PravoosException extends RuntimeException {
 
     public String getCode() {
         return code;
+    }
+
+    @Override
+    public int httpStatusCode() {
+        return status.value();
     }
 }

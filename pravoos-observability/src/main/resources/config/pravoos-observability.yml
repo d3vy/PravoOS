@@ -1,0 +1,17 @@
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:local}
+  release: ${SENTRY_RELEASE:}
+  send-default-pii: false
+  attach-stacktrace: true
+  max-request-body-size: none
+  traces-sample-rate: 0.0
+  logging:
+    enabled: true
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
+
+pravoos:
+  observability:
+    sentry:
+      report-client-errors: false

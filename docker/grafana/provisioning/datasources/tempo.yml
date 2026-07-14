@@ -12,5 +12,14 @@ datasources:
         datasourceUid: prometheus
         spanStartTimeShift: -5m
         spanEndTimeShift: 5m
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        filterByTraceID: true
+        filterBySpanID: false
+        tags:
+          - key: service.name
+            value: app
       nodeGraph:
         enabled: true

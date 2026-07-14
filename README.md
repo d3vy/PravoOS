@@ -41,7 +41,7 @@ B2B-платформа для юристов и юрфирм. Вход — за�
 | **Парсинг** | Apache PDFBox 3.x, Apache POI 5.x |
 | **Уведомления** | Telegram Bot (telegrambots 6.9), Resend (email) |
 | **Frontend** | React 18, TypeScript, Vite, Tailwind 3, Zustand, React Query |
-| **Observability** | Prometheus, Grafana, Tempo (OTel distributed tracing) |
+| **Observability** | Prometheus, Grafana, Tempo (OTel-трейсы), **Loki + Alloy** (централизованные логи), **Sentry/GlitchTip** (ошибки фронта и бэка) |
 | **Безопасность** | ClamAV (антивирус), AES-256-GCM (шифрование файлов at-rest) |
 | **Инфра** | Docker Compose, Nginx, Let's Encrypt, Cloudflare |
 
@@ -180,9 +180,24 @@ openssl rand -base64 32   # FILE_ENCRYPTION_KEY
 **Приложения:** api-gateway · user-service · ai-service · notification-service · frontend (nginx)
 **Данные:** postgres (pgvector) · mongodb · redis · kafka
 **Безопасность:** clamav
-**Observability:** prometheus · grafana · tempo · alertmanager
+**Observability:** prometheus · grafana · tempo · loki · alloy · alertmanager
 
 Compose соблюдает `depends_on: condition: service_healthy` — `up -d --wait` дожидается готовности зависимостей.
+
+### Наблюдаемость
+
+Три сигнала связаны между собой через `traceId`/`requestId` (сквозной `X-Request-Id` + MDC):
+
+| Сигнал | Куда | Как смотреть |
+|--------|------|--------------|
+| Метрики | Prometheus → Grafana | дашборд «PravoOS — Overview», алерты `docker/prometheus/alerts.yml` |
+| Трейсы | OTLP → Tempo | из лога — ссылка «Открыть трейс» по `traceId` |
+| Логи | stdout (JSON) → Alloy → Loki | дашборд «PravoOS — Логи», Explore → Loki; из трейса — переход в логи |
+| Ошибки | Sentry / GlitchTip | бэкенд: ERROR-логи и необработанные исключения; фронт: `ErrorBoundary` + `window.onerror` |
+
+- **Логи.** В профиле `docker` сервисы пишут JSON (`logstash-logback-encoder`) в stdout; `alloy` читает docker-логи и грузит в `loki` (лейблы `app`/`level`, structured metadata `requestId`/`traceId`/`logger`). Retention — 14 дней. Loki-ruler шлёт алерты по всплеску ошибок в тот же alertmanager → Telegram. Вне docker (локальный запуск) формат остаётся человекочитаемым + файлы в `logs/`.
+- **Ошибки.** Общий модуль `pravoos-observability` (зависимость всех сервисов) поднимает Sentry: PII вычищается (`PiiScrubber`: email/JWT/Bearer/телефон), 4xx не репортятся (`ServerErrorOnlyPolicy`), в событие проставляются теги `service`/`requestId`/`traceId`. Пустой `SENTRY_DSN` → SDK no-op, ничего не отправляется. DSN совместим с self-hosted GlitchTip.
+- **Фронт.** `src/lib/observability` — сборщики (`sentrySink`, `beaconSink`), троттлинг и очистка PII; включается через `VITE_SENTRY_DSN` (пусто → выключено). Хост ingest'а нужно указать в `SENTRY_INGEST_ORIGIN` — он попадает в CSP `connect-src`.
 
 ### Продакшн
 
@@ -222,6 +237,7 @@ PravoOS/
 ├── pom.xml                    # parent POM (com.pravoos:pravoos-parent)
 ├── pravoos-common/            # JwtVerifier, утилиты, guard'ы
 ├── pravoos-common-web/        # RequestIdFilter, SecurityUtils, OrgContext
+├── pravoos-observability/     # JSON-логи (общий logback) + Sentry (PII-скраб, фильтр 4xx)
 ├── api-gateway/               # Spring Cloud Gateway            :8080
 ├── user-service/              # auth, заявки, орги, 2FA         :8081
 ├── ai-service/                # RAG, дела, клиенты, документы   :8082

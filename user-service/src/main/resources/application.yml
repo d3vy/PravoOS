@@ -1,6 +1,8 @@
 spring:
   application:
     name: user-service
+  config:
+    import: "classpath:config/pravoos-observability.yml"
   task:
     scheduling:
       pool:

@@ -1,0 +1,85 @@
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "15s"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "app"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.containers.output
+  labels        = {job = "docker"}
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.pravoos.receiver]
+}
+
+loki.process "pravoos" {
+  stage.match {
+    selector = "{app=~\"api-gateway|user-service|ai-service|llm-service|notification-service\"}"
+
+    stage.json {
+      expressions = {
+        level     = "level",
+        logger    = "logger",
+        thread    = "thread",
+        requestId = "requestId",
+        traceId   = "traceId",
+        spanId    = "spanId",
+        ts        = "ts",
+        message   = "message",
+      }
+    }
+
+    stage.timestamp {
+      source = "ts"
+      format = "RFC3339Nano"
+    }
+
+    stage.labels {
+      values = {
+        level = "level",
+      }
+    }
+
+    stage.structured_metadata {
+      values = {
+        logger    = "logger",
+        thread    = "thread",
+        requestId = "requestId",
+        traceId   = "traceId",
+        spanId    = "spanId",
+      }
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
