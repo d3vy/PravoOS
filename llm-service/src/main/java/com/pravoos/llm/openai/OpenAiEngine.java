@@ -187,7 +187,13 @@ public class OpenAiEngine {
     }
 
     private String resolveModel(LlmOptions options) {
-        return options.isGuardProfile() ? properties.guardModel() : properties.model();
+        if (options.isGuardProfile()) {
+            return properties.guardModel();
+        }
+        if (options.isRerankProfile()) {
+            return properties.rerankModel();
+        }
+        return properties.model();
     }
 
     private int resolveMaxTokens(LlmOptions options) {

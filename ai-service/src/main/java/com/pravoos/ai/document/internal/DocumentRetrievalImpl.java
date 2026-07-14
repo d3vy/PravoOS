@@ -2,9 +2,9 @@ package com.pravoos.ai.document.internal;
 
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.RetrievedChunk;
-import com.pravoos.ai.document.internal.repository.ChunkMatch;
-import com.pravoos.ai.document.internal.repository.VectorSearchRepository;
-import com.pravoos.ai.document.internal.service.EmbeddingService;
+import com.pravoos.ai.document.internal.search.ChunkCandidate;
+import com.pravoos.ai.document.internal.search.ChunkSearchScope;
+import com.pravoos.ai.document.internal.search.HybridSearchService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,37 +13,32 @@ import java.util.UUID;
 @Service
 class DocumentRetrievalImpl implements DocumentRetrieval {
 
-    private final EmbeddingService embeddingService;
-    private final VectorSearchRepository vectorSearchRepository;
+    private final HybridSearchService hybridSearchService;
 
-    DocumentRetrievalImpl(EmbeddingService embeddingService,
-                          VectorSearchRepository vectorSearchRepository) {
-        this.embeddingService = embeddingService;
-        this.vectorSearchRepository = vectorSearchRepository;
+    DocumentRetrievalImpl(HybridSearchService hybridSearchService) {
+        this.hybridSearchService = hybridSearchService;
     }
 
     @Override
     public List<RetrievedChunk> retrieveKnowledgeBase(String query, int topK) {
-        float[] embedding = embeddingService.embed(query);
-        return toRetrievedChunks(vectorSearchRepository.findTopKInKnowledgeBase(embedding, topK));
+        return toRetrievedChunks(hybridSearchService.search(query, topK, ChunkSearchScope.knowledgeBase()));
     }
 
     @Override
     public List<RetrievedChunk> retrieveForCase(String query, int topK, UUID caseId) {
-        float[] embedding = embeddingService.embed(query);
-        return toRetrievedChunks(vectorSearchRepository.findTopKForCase(embedding, topK, caseId));
+        return toRetrievedChunks(hybridSearchService.search(query, topK, ChunkSearchScope.forCase(caseId)));
     }
 
-    private List<RetrievedChunk> toRetrievedChunks(List<ChunkMatch> matches) {
-        return matches.stream()
-                .map(match -> new RetrievedChunk(
-                        match.content(),
-                        match.documentTitle(),
-                        match.distance(),
-                        match.legislation(),
-                        match.actCanonical(),
-                        match.articleNumber(),
-                        match.editionDate()))
+    private List<RetrievedChunk> toRetrievedChunks(List<ChunkCandidate> candidates) {
+        return candidates.stream()
+                .map(candidate -> new RetrievedChunk(
+                        candidate.content(),
+                        candidate.documentTitle(),
+                        candidate.score(),
+                        candidate.legislation(),
+                        candidate.actCanonical(),
+                        candidate.articleNumber(),
+                        candidate.editionDate()))
                 .toList();
     }
 }

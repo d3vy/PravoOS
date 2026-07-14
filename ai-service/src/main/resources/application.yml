@@ -102,11 +102,25 @@ document:
   chunk-overlap: 50
   top-k-results: 5
   context-max-chars: ${RAG_CONTEXT_MAX_CHARS:24000}
-  max-distance: ${RAG_MAX_DISTANCE:0.85}
   max-per-case: ${DOCUMENT_MAX_PER_CASE:200}
   max-per-lawyer: ${DOCUMENT_MAX_PER_LAWYER:2000}
   max-total-bytes-per-lawyer: ${DOCUMENT_MAX_TOTAL_BYTES_PER_LAWYER:5368709120}
   upload-rate-per-minute: ${DOCUMENT_UPLOAD_RATE_PER_MINUTE:20}
+  search:
+    lexical-enabled: ${RAG_LEXICAL_ENABLED:true}
+    max-distance: ${RAG_MAX_DISTANCE:0.85}
+    candidate-multiplier: ${RAG_CANDIDATE_MULTIPLIER:6}
+    max-candidates: ${RAG_MAX_CANDIDATES:60}
+    rrf-k: ${RAG_RRF_K:60}
+    vector-weight: ${RAG_VECTOR_WEIGHT:1.0}
+    lexical-weight: ${RAG_LEXICAL_WEIGHT:0.7}
+    legislation-boost: ${RAG_LEGISLATION_BOOST:0.005}
+    rerank:
+      enabled: ${RAG_RERANK_ENABLED:true}
+      top-n: ${RAG_RERANK_TOP_N:20}
+      max-chars-per-candidate: ${RAG_RERANK_MAX_CHARS:700}
+      max-tokens: ${RAG_RERANK_MAX_TOKENS:400}
+      fail-open: ${RAG_RERANK_FAIL_OPEN:true}
   crypto:
     key: ${FILE_ENCRYPTION_KEY:}
   malware-scan:

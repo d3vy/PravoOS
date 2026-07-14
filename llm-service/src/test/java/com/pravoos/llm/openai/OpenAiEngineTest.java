@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -39,7 +40,7 @@ class OpenAiEngineTest {
         server = MockRestServiceServer.bindTo(builder).build();
         RestClient restClient = builder.build();
         OpenAiProperties properties = new OpenAiProperties(
-                "test-key", BASE_URL, "gpt-model", "gpt-guard", "embed-model", 1536, 2048);
+                "test-key", BASE_URL, "gpt-model", "gpt-guard", "gpt-rerank", "embed-model", 1536, 2048);
         LlmMetrics metrics = new LlmMetrics(new SimpleMeterRegistry());
         engine = new OpenAiEngine(restClient, properties, metrics, new ObjectMapper(), 5, 2000L);
     }
@@ -57,6 +58,23 @@ class OpenAiEngineTest {
 
         assertThat(result.content()).isEqualTo("Ответ");
         assertThat(result.usage().totalTokens()).isEqualTo(15);
+        server.verify();
+    }
+
+    @Test
+    void completeUsesRerankModelForRerankProfile() {
+        server.expect(requestTo(CHAT_URL))
+                .andExpect(MockRestRequestMatchers.jsonPath("$.model").value("gpt-rerank"))
+                .andRespond(withSuccess(
+                        "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"[{\\\"id\\\":1,"
+                                + "\\\"score\\\":9}]\"}}],\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1,"
+                                + "\"total_tokens\":2}}",
+                        MediaType.APPLICATION_JSON));
+
+        LlmResult result = engine.complete(
+                "system", List.of(), "фрагменты", new LlmOptions(LlmOptions.RERANK_PROFILE, 400, 0.0));
+
+        assertThat(result.content()).contains("score");
         server.verify();
     }
 

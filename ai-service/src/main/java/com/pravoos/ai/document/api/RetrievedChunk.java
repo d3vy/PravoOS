@@ -5,7 +5,7 @@ import java.time.LocalDate;
 public record RetrievedChunk(
         String content,
         String documentTitle,
-        double distance,
+        double score,
         boolean legislation,
         String actCanonical,
         String articleNumber,

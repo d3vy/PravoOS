@@ -65,15 +65,17 @@ Trade-off: сложная интеграция (криптопровайдеры
 
 ---
 
-## 6. Гибридный поиск (BM25 + вектор) + reranker — КАЧЕСТВО RAG
-Есть: pgvector cosine top-K, `max-distance`, legislation-boost, pg_trgm по файлам. Нет: гибрида и реранкинга — чистый вектор мажет по номерам статей.
-- Postgres FTS (`tsvector`) ∪ vector → слить через RRF → reranker дешёвой моделью через `llm-service`.
+## 6. Гибридный поиск (BM25 + вектор) + reranker — КАЧЕСТВО RAG · ✅ СДЕЛАНО
+Было: pgvector cosine top-K, `max-distance`, legislation-boost в SQL. Стало: **вектор ∪ FTS → RRF → LLM-реранкер**, весь пайплайн — новый пакет `document/internal/search` (модуль `document`, границы Modulith не менялись).
 
-```bash
-git checkout -b feat/hybrid-search
-grep -rn "VectorSearchRepository\|vector_cosine_ops\|CAST(:vec AS vector)" ai-service/src/main/java
-# добавить tsvector-колонку + GIN-индекс миграцией V25/V26, править native-запрос в VectorSearchRepository
-```
+- **V31:** `document_chunks.content_tsv tsvector GENERATED ALWAYS AS (to_tsvector('russian'::regconfig, content)) STORED` + GIN. Генерируемая колонка = не нужен ни триггер, ни бэкфилл (ALTER пересчитывает существующие строки).
+- **Два источника, один фильтр:** `VectorChunkSearchRepository` (cosine ≤ `max-distance`, score = 1 − distance) и `LexicalChunkSearchRepository` (`websearch_to_tsquery('russian', :q)` + `ts_rank_cd`; websearch — не падает на произвольном вводе юриста). Общие предикаты видимости (superseded / CHAT_ATTACHMENT / scope) — в `ChunkSearchSql`, чтобы источники не разъезжались. Разделение «база знаний vs дело» переехало из двух методов-близнецов в **`ChunkSearchScope`** (`knowledgeBase()` / `forCase(id)`), SQL один.
+- **Слияние — `ReciprocalRankFusion`** (чистая функция, без Spring): `score = Σ weight / (k + rank)`. Ранги, а не сырые скоры — cosine-distance и ts_rank несравнимы по шкале. Чанк, найденный обоими источниками, поднимается наверх. **Legislation-boost переехал из SQL в фьюжн** (`document.search.legislation-boost` = 0.005 в RRF-шкале, где 1-е место ≈ 0.016): near-ties выигрывает НПА, явно более релевантный фрагмент — не перебивается.
+- **Реранкер:** `Reranker` (порт) → `LlmReranker` (дешёвая модель через `llm-service`, профиль **`rerank`** — новый `OPENAI_RERANK_MODEL` рядом с `guard`; оценка 0–10 на фрагмент, ответ = JSON-массив) или `PassThroughReranker` (порядок RRF), выбор — в `RerankerConfig` по `document.search.rerank.enabled`. Парсинг ответа вынесен в `RerankScoreParser` (терпит markdown-фенсы и болтовню вокруг JSON). **fail-open по умолчанию:** модель упала/вернула мусор → отдаём порядок RRF, а не 503; неоценённые кандидаты сохраняют позицию фьюжна.
+- **Деградация:** FTS-запрос упал → `HybridSearchService` логирует WARN и продолжает на одном векторе (поиск не должен падать целиком из-за одного источника). `RetrievedChunk.distance` → `score` (выше = лучше; distance после фьюжна не имеет смысла, потребители его не читали).
+- Конфиг: `document.search.*` (все `RAG_*` env в `.env.example`). Тесты: `ReciprocalRankFusionTest` (8), `HybridSearchServiceTest` (7), `LlmRerankerTest` (7), `RerankScoreParserTest` (5), `OpenAiEngineTest` (+1 на профиль rerank). Миграция и оба native-запроса прогнаны на живом pg16.
+- ⚠️ Ручной прогон на реальном корпусе (сравнить выдачу до/после на 10–20 юридических запросах) — на тебе; конфиг вынесен в env, чтобы крутить веса без пересборки.
+
 Trade-off: главный дифференциатор legal-AI — точность ответа со ссылками. У тебя уже есть citation-check и guard.
 
 ---

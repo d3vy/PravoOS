@@ -15,7 +15,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({LlmServiceProperties.class, DocumentProperties.class, JwtProperties.class,
         ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class,
         ContractReviewProperties.class, DocumentComparisonProperties.class,
-        CitationCheckProperties.class, UserServiceProperties.class, DraftEditingProperties.class})
+        CitationCheckProperties.class, UserServiceProperties.class, DraftEditingProperties.class,
+        HybridSearchProperties.class})
 @EnableJpaRepositories(basePackages = {"com.pravoos.ai.shared.repository.jpa",
         "com.pravoos.ai.core.internal.repository.jpa", "com.pravoos.ai.document.internal.repository.jpa",
         "com.pravoos.ai.practice.internal.repository.jpa"})
