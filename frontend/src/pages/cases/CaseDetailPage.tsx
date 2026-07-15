@@ -22,6 +22,7 @@ import { DateField } from '../../components/cases/DateField'
 import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
 import { WorkflowProcessSection } from '../../components/cases/WorkflowProcessSection'
 import { CaseAnalyticsSection } from '../../components/cases/CaseAnalyticsSection'
+import { CaseSignatureSection } from '../../components/cases/CaseSignatureSection'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { RatingButtons } from '../../components/ui/RatingButtons'
 import type { CaseStatus } from '../../types'
@@ -156,6 +157,8 @@ export default function CaseDetailPage(): JSX.Element {
         <ContractReviewSection caseId={caseId} documents={documents} reviews={contractReviews} queryClient={queryClient} />
 
         <ComparisonSection caseId={caseId} documents={documents} comparisons={comparisons} queryClient={queryClient} />
+
+        <CaseSignatureSection caseId={caseId} documents={documents} />
 
         <DraftSection caseId={caseId} draftTypes={draftTypes} drafts={drafts} queryClient={queryClient} />
 

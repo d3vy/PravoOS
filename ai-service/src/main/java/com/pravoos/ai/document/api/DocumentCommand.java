@@ -18,4 +18,6 @@ public interface DocumentCommand {
     DocumentResponse setClientVisibility(UUID documentId, UUID caseId, boolean visibleToClient);
 
     DocumentContent loadClientContent(UUID documentId, UUID caseId);
+
+    String contentSha256(UUID documentId, UUID caseId);
 }

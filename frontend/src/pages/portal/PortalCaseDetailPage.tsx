@@ -5,6 +5,7 @@ import { PortalLayout } from '../../components/layout/PortalLayout'
 import { CaseStatusBadge } from '../../components/ui/Badge'
 import { Spinner } from '../../components/ui/Spinner'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
+import { PortalSignatureSection } from '../../components/portal/PortalSignatureSection'
 import { portalApi } from '../../api/portal'
 import type { DocumentResponse, PortalCaseDetailResponse } from '../../types'
 
@@ -231,6 +232,8 @@ export default function PortalCaseDetailPage(): JSX.Element {
           </section>
 
           <PortalDocumentsSection caseId={caseData.id} />
+
+          <PortalSignatureSection caseId={caseData.id} />
 
           <CaseMessageThread
             queryKey={['portal', 'cases', caseData.id, 'messages']}

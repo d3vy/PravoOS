@@ -116,6 +116,7 @@ services:
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
       ARBITR_API_KEY: ""
+      DIADOC_API_KEY: ""
       MONGO_USERNAME: ""
       MONGO_PASSWORD: ""
       TELEGRAM_BOT_TOKEN: ""
@@ -156,6 +157,7 @@ services:
       REDIS_PASSWORD: ""
       JWT_PRIVATE_KEY: ""
       ARBITR_API_KEY: ""
+      DIADOC_API_KEY: ""
       MONGO_USERNAME: ""
       MONGO_PASSWORD: ""
       RESEND_API_KEY: ""
@@ -255,6 +257,7 @@ services:
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
       ARBITR_API_KEY: ""
+      DIADOC_API_KEY: ""
       MONGO_USERNAME: ""
       MONGO_PASSWORD: ""
       RESEND_API_KEY: ""
@@ -299,6 +302,7 @@ services:
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
       ARBITR_API_KEY: ""
+      DIADOC_API_KEY: ""
       MONGO_USERNAME: ""
       MONGO_PASSWORD: ""
       RESEND_API_KEY: ""

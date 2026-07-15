@@ -12,6 +12,7 @@ import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
@@ -47,6 +48,7 @@ public class CaseService {
     private final DocumentQuery documentQuery;
     private final CaseHearingEventRepository hearingEventRepository;
     private final CasePartyRepository casePartyRepository;
+    private final SignatureRequestRepository signatureRequestRepository;
     private final ArbitrSyncService arbitrSyncService;
     private final UserServiceClient userServiceClient;
 
@@ -56,6 +58,7 @@ public class CaseService {
                        DocumentQuery documentQuery,
                        CaseHearingEventRepository hearingEventRepository,
                        CasePartyRepository casePartyRepository,
+                       SignatureRequestRepository signatureRequestRepository,
                        ArbitrSyncService arbitrSyncService,
                        UserServiceClient userServiceClient) {
         this.caseRepository = caseRepository;
@@ -64,6 +67,7 @@ public class CaseService {
         this.documentQuery = documentQuery;
         this.hearingEventRepository = hearingEventRepository;
         this.casePartyRepository = casePartyRepository;
+        this.signatureRequestRepository = signatureRequestRepository;
         this.arbitrSyncService = arbitrSyncService;
         this.userServiceClient = userServiceClient;
     }
@@ -212,6 +216,7 @@ public class CaseService {
     @Transactional
     public void delete(UUID caseId, UUID lawyerId) {
         Case caseEntity = requireOwnedCase(caseId, lawyerId);
+        signatureRequestRepository.deleteByCaseId(caseId);
         documentCommand.deleteByCase(caseId);
         casePartyRepository.deleteByCaseId(caseId);
         caseRepository.delete(caseEntity);

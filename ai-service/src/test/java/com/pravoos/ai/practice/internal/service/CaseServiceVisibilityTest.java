@@ -7,6 +7,7 @@ import com.pravoos.ai.practice.internal.dto.CreateCaseRequest;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
@@ -35,12 +36,13 @@ class CaseServiceVisibilityTest {
     @Mock private DocumentQuery documentQuery;
     @Mock private CaseHearingEventRepository hearingEventRepository;
     @Mock private CasePartyRepository casePartyRepository;
+    @Mock private SignatureRequestRepository signatureRequestRepository;
     @Mock private ArbitrSyncService arbitrSyncService;
     @Mock private UserServiceClient userServiceClient;
 
     private CaseService caseService() {
         return new CaseService(caseRepository, clientRepository, documentCommand, documentQuery,
-                hearingEventRepository, casePartyRepository, arbitrSyncService, userServiceClient);
+                hearingEventRepository, casePartyRepository, signatureRequestRepository, arbitrSyncService, userServiceClient);
     }
 
     @Test

@@ -5,6 +5,7 @@ import type {
   DocumentUploadResponse,
   PortalCaseDetailResponse,
   PortalCaseResponse,
+  SignatureRequestResponse,
 } from '../types'
 
 export const portalApi = {
@@ -57,6 +58,30 @@ export const portalApi = {
 
   sendCaseMessage: async (caseId: string, body: string): Promise<CaseMessageResponse> => {
     const response = await apiClient.post<CaseMessageResponse>(`/api/ai/portal/cases/${caseId}/messages`, { body })
+    return response.data
+  },
+
+  listCaseSignatures: async (caseId: string): Promise<SignatureRequestResponse[]> => {
+    const response = await apiClient.get<SignatureRequestResponse[]>(`/api/ai/portal/cases/${caseId}/signatures`)
+    return response.data
+  },
+
+  signDocument: async (
+    signatureId: string,
+    signerName: string
+  ): Promise<SignatureRequestResponse> => {
+    const response = await apiClient.post<SignatureRequestResponse>(
+      `/api/ai/portal/signatures/${signatureId}/sign`,
+      { signerName, consent: true }
+    )
+    return response.data
+  },
+
+  declineSignature: async (signatureId: string, reason: string): Promise<SignatureRequestResponse> => {
+    const response = await apiClient.post<SignatureRequestResponse>(
+      `/api/ai/portal/signatures/${signatureId}/decline`,
+      { reason }
+    )
     return response.data
   },
 }

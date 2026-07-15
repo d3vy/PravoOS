@@ -17,6 +17,7 @@ import com.pravoos.ai.shared.exception.StorageQuotaExceededException;
 import com.pravoos.ai.shared.model.enums.DocumentKind;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import com.pravoos.ai.shared.util.PageRequests;
+import com.pravoos.ai.shared.util.Sha256;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
@@ -301,6 +302,22 @@ public class DocumentService {
 
     @Transactional(readOnly = true)
     public DocumentContent loadClientContent(UUID documentId, UUID caseId) {
+        Document document = requireClientVisibleDocument(documentId, caseId);
+        return buildContent(document);
+    }
+
+    @Transactional(readOnly = true)
+    public String contentSha256(UUID documentId, UUID caseId) {
+        Document document = requireClientVisibleDocument(documentId, caseId);
+        Path path = Paths.get(document.getFilePath());
+        if (!Files.isReadable(path)) {
+            log.warn("Document {} has missing file on disk: {}", document.getId(), path);
+            throw new DocumentNotFoundException(document.getId());
+        }
+        return Sha256.hex(fileCryptoService.decryptFile(path));
+    }
+
+    private Document requireClientVisibleDocument(UUID documentId, UUID caseId) {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
         if (!caseId.equals(document.getCaseId()) || !document.isVisibleToClient()) {
@@ -308,7 +325,7 @@ public class DocumentService {
                     documentId, document.getCaseId(), document.isVisibleToClient(), caseId);
             throw new DocumentNotFoundException(documentId);
         }
-        return buildContent(document);
+        return document;
     }
 
     @Transactional

@@ -26,6 +26,7 @@ class LawyerDataCleanupServiceTest {
     @Mock private ClientRepository clientRepository;
     @Mock private ClientContactRepository clientContactRepository;
     @Mock private DocumentTemplateRepository documentTemplateRepository;
+    @Mock private SignatureRequestRepository signatureRequestRepository;
     @Mock private AiDataCleanup aiDataCleanup;
     @Mock private PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
 
@@ -33,7 +34,7 @@ class LawyerDataCleanupServiceTest {
         return new LawyerDataCleanupService(caseRepository, casePartyRepository, caseAnalysisRepository,
                 caseTaskRepository, caseDraftRepository, workflowRunRepository, workflowDefinitionRepository,
                 clientRepository, clientContactRepository, documentTemplateRepository,
-                aiDataCleanup, pendingLawyerPurgeRepository, self);
+                signatureRequestRepository, aiDataCleanup, pendingLawyerPurgeRepository, self);
     }
 
     @Test
@@ -52,6 +53,7 @@ class LawyerDataCleanupServiceTest {
         verify(clientContactRepository).deleteByLawyerId(lawyerId);
         verify(clientRepository).deleteByLawyerId(lawyerId);
         verify(documentTemplateRepository).deleteByLawyerId(lawyerId);
+        verify(signatureRequestRepository).deleteByRequestedBy(lawyerId);
         verifyNoMoreInteractions(workflowRunRepository, caseAnalysisRepository, caseTaskRepository,
                 caseDraftRepository, casePartyRepository, caseRepository, workflowDefinitionRepository,
                 clientContactRepository, clientRepository, documentTemplateRepository);

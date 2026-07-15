@@ -840,3 +840,23 @@ export interface CheckoutResponse {
   paymentId: string
   confirmationUrl: string | null
 }
+
+export type SignatureStatus = 'PENDING' | 'SIGNED' | 'DECLINED' | 'CANCELED' | 'EXPIRED'
+
+export type SignatureProviderType = 'SIMPLE' | 'DIADOC'
+
+export interface SignatureRequestResponse {
+  id: string
+  documentId: string
+  caseId: string
+  provider: SignatureProviderType
+  status: SignatureStatus
+  documentHash: string
+  message: string | null
+  signerName: string | null
+  signerIp: string | null
+  signedAt: string | null
+  declineReason: string | null
+  expiresAt: string | null
+  createdAt: string
+}

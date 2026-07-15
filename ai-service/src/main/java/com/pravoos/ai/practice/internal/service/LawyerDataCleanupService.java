@@ -32,6 +32,7 @@ public class LawyerDataCleanupService {
     private final ClientRepository clientRepository;
     private final ClientContactRepository clientContactRepository;
     private final DocumentTemplateRepository documentTemplateRepository;
+    private final SignatureRequestRepository signatureRequestRepository;
     private final AiDataCleanup aiDataCleanup;
     private final PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
     private final LawyerDataCleanupService self;
@@ -46,6 +47,7 @@ public class LawyerDataCleanupService {
                                     ClientRepository clientRepository,
                                     ClientContactRepository clientContactRepository,
                                     DocumentTemplateRepository documentTemplateRepository,
+                                    SignatureRequestRepository signatureRequestRepository,
                                     AiDataCleanup aiDataCleanup,
                                     PendingLawyerPurgeRepository pendingLawyerPurgeRepository,
                                     @Lazy LawyerDataCleanupService self) {
@@ -59,6 +61,7 @@ public class LawyerDataCleanupService {
         this.clientRepository = clientRepository;
         this.clientContactRepository = clientContactRepository;
         this.documentTemplateRepository = documentTemplateRepository;
+        this.signatureRequestRepository = signatureRequestRepository;
         this.aiDataCleanup = aiDataCleanup;
         this.pendingLawyerPurgeRepository = pendingLawyerPurgeRepository;
         this.self = self;
@@ -136,9 +139,11 @@ public class LawyerDataCleanupService {
         int contacts = clientContactRepository.deleteByLawyerId(lawyerId);
         int clients = clientRepository.deleteByLawyerId(lawyerId);
         int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
+        int signatures = signatureRequestRepository.deleteByRequestedBy(lawyerId);
         log.info("Deleted {} workflow runs, {} analyses, {} tasks, {} drafts, {} parties, {} cases, "
-                        + "{} workflow definitions, {} contacts, {} clients and {} templates for lawyer {}",
+                        + "{} workflow definitions, {} contacts, {} clients, {} templates and {} signature requests "
+                        + "for lawyer {}",
                 workflowRuns, analyses, tasks, drafts, parties, cases, workflowDefinitions,
-                contacts, clients, templates, lawyerId);
+                contacts, clients, templates, signatures, lawyerId);
     }
 }
