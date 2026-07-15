@@ -37,16 +37,18 @@ Trade-off: без этого продукт бесплатный. Наивысш
 
 ---
 
-## 4. Учёт времени и биллинг часов (time tracking → счета) — KILLER-ФИЧА ЮРФИРМ
-Есть: CRM клиентов, дела, `case_tasks`, DOCX/PDF-экспорт (DejaVuSans). Нет: таймеров, ставок, счетов.
-- `time_entries` (case/client/lawyer/duration/rate/billable), таймер в UI карточки дела, генерация счёта через существующий экспорт.
-- Модуль: `practice` (ai-service) — рядом с делами, границы Modulith уже разрешены.
+## 4. Учёт времени и биллинг часов (time tracking → счета) — KILLER-ФИЧА ЮРФИРМ · ✅ СДЕЛАНО
+Было: CRM клиентов, дела, `case_tasks`, DOCX/PDF-экспорт (DejaVuSans). Стало: учёт времени (ручные записи + серверный таймер) → счёт за услуги с PDF-выгрузкой. Всё в модуле `practice` (ai-service), границы Modulith не менялись (`shared` + `core::api` + `document::api`).
 
-```bash
-git checkout -b feat/time-tracking
-ls ai-service/src/main/resources/db/migration/    # след. после V24 → V25__time_entries.sql
-mvn verify -pl ai-service -am -B                   # ModularityTests не даст обойти границы
-```
+- **V33 `time_tracking`:** `time_entries` (case/client/lawyer/description/activity_date/minutes/hourly_rate NUMERIC(12,2)/billable/running/started_at/invoice_id), `invoices` (`@Version`, UNIQUE `(lawyer_id, number)`, subtotal/total NUMERIC(14,2)), `invoice_lines` (снапшот описания/минут/ставки/суммы). FK: time_entries→cases `ON DELETE CASCADE`, time_entries→invoices `ON DELETE SET NULL`, invoice_lines→invoices `CASCADE`. Partial-UNIQUE `uq_time_entries_running_lawyer WHERE running` держит **ровно один активный таймер на юриста** (проверено на живом pg16 — вторая вставка падает). Partial-index на несписанные billable-часы.
+- **Деньги — чистая функция `BillingAmounts`:** `lineAmount = rate * minutes / 60`, HALF_UP до копеек. Сумма записи считается на лету (в `time_entries` не хранится); в `invoice_lines` — снапшот на момент выставления.
+- **Учёт времени — `TimeEntryService`:** ручная запись + таймер (`startTimer`/`stopTimer`: минуты = round(elapsed), гонка ловится и unique-индексом, и pre-check → `TimerAlreadyRunningException` 409). Запись, попавшая в счёт (`invoice_id != null`), или запущенный таймер — неизменяемы (`TimeEntryLockedException` 409). `CaseTimeSummary` даёт по делу: всего/billable/несписанные минуты и суммы (running исключены).
+- **Счета — `InvoiceService`:** `create` собирает несписанные billable-часы клиента (опц. фильтр по делу или явный список `timeEntryIds` с фильтрацией чужих/списанных), строит строки, ставит `invoice_id` на записи (списание). Нумерация `СЧ-{год}-{NNNN}` per-lawyer (`InvoiceNumberGenerator`, count+pad; при коллизии unique — retry с `bump`). Статусы `DRAFT→ISSUED→PAID`/`CANCELED` (`InvoiceStatus.canTransitionTo`); **отмена/удаление черновика возвращают часы** (`releaseByInvoiceId`) — их можно перевыставить. `InvoicePdfWriter` рендерит счёт таблицей (DejaVuSans, ru-формат денег), выгрузка `GET /api/ai/invoices/{id}/export`.
+- **Безопасность:** `/api/ai/invoices/**` и `/api/ai/time/**` → `hasRole("LAWYER")` в `SecurityConfig` (иначе CLIENT прошёл бы в `anyRequest().authenticated()`); case-scoped `/api/ai/cases/**` уже под LAWYER. Все операции идут через `requireVisibleCase`/`requireOwnedClient`/`findByIdAndLawyerId`. Очистка при удалении юриста расширена (`LawyerDataCleanupService`: time_entries + invoices до cases/clients).
+- **Фронт:** `CaseTimeSection` в карточке дела (живой таймер mm:ss, ручная запись в часах, список с суммами/бейджем «в счёте», кнопка «Выставить счёт» по делу), раздел «Счета» (`/invoices` + пункт навигации): список, карточка счёта с таблицей строк, сменой статуса и «Скачать PDF». API `time.ts`/`invoices.ts`, `utils/billing.ts` (формат денег/длительности).
+- Тесты: `BillingAmountsTest` (5), `TimeEntryServiceTest` (7), `InvoiceServiceTest` (8), `InvoiceNumberGeneratorTest` (3), обновлён `LawyerDataCleanupServiceTest`. Весь ai-service: 197 тестов зелёные, ModularityTests зелёные, фронт `tsc && vite build` чистый.
+- ⚠️ Реквизиты исполнителя (юрист/фирма) в PDF пока не выводятся — в счёте только плательщик + строки; НДС/налог не считаем (total = subtotal). Добавить реквизиты фирмы можно позже (отдельная сущность настроек биллинга).
+
 Trade-off: причина №1 для B2B-юрфирм платить (ядро Clio). Модель дело→клиент→юрист готова — это надстройка.
 
 ---

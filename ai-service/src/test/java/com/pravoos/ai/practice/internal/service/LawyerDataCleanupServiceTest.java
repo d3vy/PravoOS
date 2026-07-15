@@ -27,6 +27,8 @@ class LawyerDataCleanupServiceTest {
     @Mock private ClientContactRepository clientContactRepository;
     @Mock private DocumentTemplateRepository documentTemplateRepository;
     @Mock private SignatureRequestRepository signatureRequestRepository;
+    @Mock private TimeEntryRepository timeEntryRepository;
+    @Mock private InvoiceRepository invoiceRepository;
     @Mock private AiDataCleanup aiDataCleanup;
     @Mock private PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
 
@@ -34,7 +36,8 @@ class LawyerDataCleanupServiceTest {
         return new LawyerDataCleanupService(caseRepository, casePartyRepository, caseAnalysisRepository,
                 caseTaskRepository, caseDraftRepository, workflowRunRepository, workflowDefinitionRepository,
                 clientRepository, clientContactRepository, documentTemplateRepository,
-                signatureRequestRepository, aiDataCleanup, pendingLawyerPurgeRepository, self);
+                signatureRequestRepository, timeEntryRepository, invoiceRepository, aiDataCleanup,
+                pendingLawyerPurgeRepository, self);
     }
 
     @Test
@@ -43,6 +46,8 @@ class LawyerDataCleanupServiceTest {
 
         service(null).purgeRelationalData(lawyerId);
 
+        verify(timeEntryRepository).deleteByLawyerId(lawyerId);
+        verify(invoiceRepository).deleteByLawyerId(lawyerId);
         verify(workflowRunRepository).deleteByLawyerCases(lawyerId);
         verify(caseAnalysisRepository).deleteByLawyerCases(lawyerId);
         verify(caseTaskRepository).deleteByLawyerId(lawyerId);
@@ -54,9 +59,10 @@ class LawyerDataCleanupServiceTest {
         verify(clientRepository).deleteByLawyerId(lawyerId);
         verify(documentTemplateRepository).deleteByLawyerId(lawyerId);
         verify(signatureRequestRepository).deleteByRequestedBy(lawyerId);
-        verifyNoMoreInteractions(workflowRunRepository, caseAnalysisRepository, caseTaskRepository,
-                caseDraftRepository, casePartyRepository, caseRepository, workflowDefinitionRepository,
-                clientContactRepository, clientRepository, documentTemplateRepository);
+        verifyNoMoreInteractions(timeEntryRepository, invoiceRepository, workflowRunRepository,
+                caseAnalysisRepository, caseTaskRepository, caseDraftRepository, casePartyRepository,
+                caseRepository, workflowDefinitionRepository, clientContactRepository, clientRepository,
+                documentTemplateRepository);
     }
 
     @Test

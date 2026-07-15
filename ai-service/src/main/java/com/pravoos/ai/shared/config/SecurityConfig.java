@@ -58,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/messages/**").hasRole("LAWYER")
                         .requestMatchers(HttpMethod.GET, "/api/ai/conversations/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/chat/**").hasRole("LAWYER")
+                        .requestMatchers("/api/ai/invoices/**").hasRole("LAWYER")
+                        .requestMatchers("/api/ai/time/**").hasRole("LAWYER")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtVerifier, accessTokenDenylist),

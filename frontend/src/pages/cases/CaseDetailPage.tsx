@@ -20,6 +20,7 @@ import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 import { DateField } from '../../components/cases/DateField'
 import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
+import { CaseTimeSection } from '../../components/cases/CaseTimeSection'
 import { WorkflowProcessSection } from '../../components/cases/WorkflowProcessSection'
 import { CaseAnalyticsSection } from '../../components/cases/CaseAnalyticsSection'
 import { CaseSignatureSection } from '../../components/cases/CaseSignatureSection'
@@ -136,6 +137,8 @@ export default function CaseDetailPage(): JSX.Element {
         <DocumentsSection caseId={caseId} documents={documents} queryClient={queryClient} />
 
         <CaseTasksSection caseId={caseId} />
+
+        <CaseTimeSection caseId={caseId} clientId={caseItem.clientId} />
 
         <div id="messages" className="mb-10 scroll-mt-20">
           <CaseMessageThread

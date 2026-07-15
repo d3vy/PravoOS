@@ -6,6 +6,7 @@ import {
   ChatIcon,
   ClientsIcon,
   DashboardIcon,
+  InvoiceIcon,
   MessagesIcon,
   ProfileIcon,
   SearchIcon,
@@ -31,6 +32,7 @@ export const lawyerNavSections: LawyerNavSection[] = [
       { to: '/messages', label: 'Сообщения', icon: <MessagesIcon /> },
       { to: '/calendar', label: 'Календарь', icon: <CalendarIcon /> },
       { to: '/clients', label: 'Клиенты', icon: <ClientsIcon /> },
+      { to: '/invoices', label: 'Счета', icon: <InvoiceIcon /> },
     ],
   },
   {

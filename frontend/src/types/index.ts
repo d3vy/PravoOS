@@ -310,6 +310,95 @@ export interface UpdateCaseTaskRequest {
   done: boolean
 }
 
+export interface TimeEntryResponse {
+  id: string
+  caseId: string
+  description: string
+  activityDate: string
+  minutes: number
+  hourlyRate: number
+  amount: number
+  billable: boolean
+  running: boolean
+  startedAt: string | null
+  invoiced: boolean
+  createdAt: string
+}
+
+export interface CaseTimeSummary {
+  entries: TimeEntryResponse[]
+  totalMinutes: number
+  billableMinutes: number
+  uninvoicedBillableMinutes: number
+  billableAmount: number
+  uninvoicedBillableAmount: number
+}
+
+export interface CreateTimeEntryRequest {
+  description: string
+  activityDate: string
+  minutes: number
+  hourlyRate: number
+  billable: boolean
+}
+
+export type UpdateTimeEntryRequest = CreateTimeEntryRequest
+
+export interface StartTimerRequest {
+  description: string
+  hourlyRate: number
+  billable: boolean
+}
+
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELED'
+
+export interface InvoiceLineResponse {
+  id: string
+  description: string
+  minutes: number
+  hourlyRate: number
+  amount: number
+}
+
+export interface InvoiceResponse {
+  id: string
+  clientId: string
+  clientName: string | null
+  number: string
+  status: InvoiceStatus
+  statusLabel: string
+  issueDate: string
+  dueDate: string | null
+  currency: string
+  subtotal: number
+  total: number
+  notes: string | null
+  lines: InvoiceLineResponse[]
+  createdAt: string
+}
+
+export interface InvoiceSummary {
+  id: string
+  clientId: string
+  clientName: string | null
+  number: string
+  status: InvoiceStatus
+  statusLabel: string
+  issueDate: string
+  dueDate: string | null
+  currency: string
+  total: number
+  createdAt: string
+}
+
+export interface CreateInvoiceRequest {
+  clientId: string
+  caseId?: string | null
+  timeEntryIds?: string[] | null
+  dueDate?: string | null
+  notes?: string | null
+}
+
 export type DeadlineType = 'FILING_DEADLINE' | 'NEXT_HEARING' | 'EXPIRY'
 
 export interface DashboardStatusCount {

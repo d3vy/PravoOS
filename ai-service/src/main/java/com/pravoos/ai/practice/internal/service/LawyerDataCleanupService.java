@@ -33,6 +33,8 @@ public class LawyerDataCleanupService {
     private final ClientContactRepository clientContactRepository;
     private final DocumentTemplateRepository documentTemplateRepository;
     private final SignatureRequestRepository signatureRequestRepository;
+    private final TimeEntryRepository timeEntryRepository;
+    private final InvoiceRepository invoiceRepository;
     private final AiDataCleanup aiDataCleanup;
     private final PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
     private final LawyerDataCleanupService self;
@@ -48,6 +50,8 @@ public class LawyerDataCleanupService {
                                     ClientContactRepository clientContactRepository,
                                     DocumentTemplateRepository documentTemplateRepository,
                                     SignatureRequestRepository signatureRequestRepository,
+                                    TimeEntryRepository timeEntryRepository,
+                                    InvoiceRepository invoiceRepository,
                                     AiDataCleanup aiDataCleanup,
                                     PendingLawyerPurgeRepository pendingLawyerPurgeRepository,
                                     @Lazy LawyerDataCleanupService self) {
@@ -62,6 +66,8 @@ public class LawyerDataCleanupService {
         this.clientContactRepository = clientContactRepository;
         this.documentTemplateRepository = documentTemplateRepository;
         this.signatureRequestRepository = signatureRequestRepository;
+        this.timeEntryRepository = timeEntryRepository;
+        this.invoiceRepository = invoiceRepository;
         this.aiDataCleanup = aiDataCleanup;
         this.pendingLawyerPurgeRepository = pendingLawyerPurgeRepository;
         this.self = self;
@@ -129,6 +135,8 @@ public class LawyerDataCleanupService {
 
     @Transactional
     public void purgeRelationalData(UUID lawyerId) {
+        int timeEntries = timeEntryRepository.deleteByLawyerId(lawyerId);
+        int invoices = invoiceRepository.deleteByLawyerId(lawyerId);
         int workflowRuns = workflowRunRepository.deleteByLawyerCases(lawyerId);
         int analyses = caseAnalysisRepository.deleteByLawyerCases(lawyerId);
         int tasks = caseTaskRepository.deleteByLawyerId(lawyerId);
@@ -140,10 +148,10 @@ public class LawyerDataCleanupService {
         int clients = clientRepository.deleteByLawyerId(lawyerId);
         int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
         int signatures = signatureRequestRepository.deleteByRequestedBy(lawyerId);
-        log.info("Deleted {} workflow runs, {} analyses, {} tasks, {} drafts, {} parties, {} cases, "
-                        + "{} workflow definitions, {} contacts, {} clients, {} templates and {} signature requests "
-                        + "for lawyer {}",
-                workflowRuns, analyses, tasks, drafts, parties, cases, workflowDefinitions,
+        log.info("Deleted {} time entries, {} invoices, {} workflow runs, {} analyses, {} tasks, {} drafts, "
+                        + "{} parties, {} cases, {} workflow definitions, {} contacts, {} clients, {} templates "
+                        + "and {} signature requests for lawyer {}",
+                timeEntries, invoices, workflowRuns, analyses, tasks, drafts, parties, cases, workflowDefinitions,
                 contacts, clients, templates, signatures, lawyerId);
     }
 }

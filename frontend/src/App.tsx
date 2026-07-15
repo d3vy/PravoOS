@@ -36,6 +36,8 @@ import DocumentsPage from './pages/admin/DocumentsPage'
 import AiStatsPage from './pages/admin/AiStatsPage'
 import UsersPage from './pages/admin/UsersPage'
 import BillingPage from './pages/billing/BillingPage'
+import InvoicesPage from './pages/invoices/InvoicesPage'
+import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage'
 import ProfilePage from './pages/profile/ProfilePage'
 import SettingsPage from './pages/settings/SettingsPage'
 
@@ -101,6 +103,8 @@ export default function App(): JSX.Element {
         <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:clientId" element={<ClientDetailPage />} />
+        <Route path="/invoices" element={<InvoicesPage />} />
+        <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/invite" element={<InvitePage />} />
