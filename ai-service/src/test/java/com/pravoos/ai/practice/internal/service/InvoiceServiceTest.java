@@ -62,8 +62,7 @@ class InvoiceServiceTest {
         when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
         TimeEntry first = entry(60, new BigDecimal("3000"));
         TimeEntry second = entry(30, new BigDecimal("4000"));
-        when(timeEntryRepository
-                .findByClientIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalseOrderByActivityDateAsc(clientId))
+        when(timeEntryRepository.lockBillableForClient(clientId))
                 .thenReturn(List.of(first, second));
 
         CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, null,
@@ -80,8 +79,7 @@ class InvoiceServiceTest {
     @Test
     void create_throwsWhenNoBillableTime() {
         when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
-        when(timeEntryRepository
-                .findByClientIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalseOrderByActivityDateAsc(clientId))
+        when(timeEntryRepository.lockBillableForClient(clientId))
                 .thenReturn(List.of());
 
         CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, null, null, null);
@@ -91,7 +89,7 @@ class InvoiceServiceTest {
     }
 
     @Test
-    void create_withExplicitIdsFiltersInvalidEntries() {
+    void create_withExplicitIdsBillsOnlyLockedEntries() {
         when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
         TimeEntry valid = entry(60, new BigDecimal("2000"));
         TimeEntry foreignClient = entry(60, new BigDecimal("2000"));
@@ -99,7 +97,7 @@ class InvoiceServiceTest {
         TimeEntry alreadyInvoiced = entry(60, new BigDecimal("2000"));
         alreadyInvoiced.setInvoiceId(UUID.randomUUID());
         List<UUID> ids = List.of(valid.getId(), foreignClient.getId(), alreadyInvoiced.getId());
-        when(timeEntryRepository.findAllById(ids)).thenReturn(List.of(valid, foreignClient, alreadyInvoiced));
+        when(timeEntryRepository.lockBillableByIds(ids, lawyerId, clientId)).thenReturn(List.of(valid));
 
         CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, ids, null, null);
         InvoiceResponse response = service.create(request, lawyerId);

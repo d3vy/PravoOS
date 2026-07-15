@@ -162,18 +162,11 @@ public class InvoiceService {
     private List<TimeEntry> resolveBillableEntries(CreateInvoiceRequest request, UUID lawyerId) {
         UUID clientId = request.clientId();
         if (request.timeEntryIds() != null && !request.timeEntryIds().isEmpty()) {
-            return timeEntryRepository.findAllById(request.timeEntryIds()).stream()
-                    .filter(entry -> lawyerId.equals(entry.getLawyerId()))
-                    .filter(entry -> clientId.equals(entry.getClientId()))
-                    .filter(TimeEntry::isBillable)
-                    .filter(entry -> !entry.isInvoiced())
-                    .filter(entry -> !entry.isRunning())
-                    .toList();
+            return timeEntryRepository.lockBillableByIds(request.timeEntryIds(), lawyerId, clientId);
         }
         return request.caseId() == null
-                ? timeEntryRepository
-                        .findByClientIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalseOrderByActivityDateAsc(clientId)
-                : timeEntryRepository.findBillableForClientAndCase(clientId, request.caseId());
+                ? timeEntryRepository.lockBillableForClient(clientId)
+                : timeEntryRepository.lockBillableForClientAndCase(clientId, request.caseId());
     }
 
     private Invoice persistWithUniqueNumber(Invoice invoice, UUID lawyerId) {
