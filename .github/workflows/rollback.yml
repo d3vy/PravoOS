@@ -1,0 +1,45 @@
+name: Rollback
+
+# Break-glass manual rollback. Redeploys the previous known-good image tag
+# recorded on the target host (or an explicit tag you provide).
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        required: true
+        options:
+          - staging
+          - production
+      tag:
+        description: Image tag to roll back to (blank = previous recorded)
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Rollback ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve registry
+        id: meta
+        run: echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pravoos" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/ssh-deploy
+        with:
+          host: ${{ inputs.environment == 'production' && secrets.PRODUCTION_HOST || secrets.STAGING_HOST }}
+          user: ${{ secrets.DEPLOY_SSH_USER }}
+          ssh_private_key: ${{ secrets.DEPLOY_SSH_KEY }}
+          deploy_path: ${{ vars.DEPLOY_PATH }}
+          git_sha: ${{ github.sha }}
+          image_registry: ${{ steps.meta.outputs.registry }}
+          registry_username: ${{ github.actor }}
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          remote_command: ./scripts/cicd/rollback-remote.sh
+          target_tag: ${{ inputs.tag }}

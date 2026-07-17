@@ -1,0 +1,49 @@
+name: _verify
+
+# Reusable correctness gate shared by ci.yml (PRs) and release.yml (main).
+# Keeps the "what makes a build green" definition in exactly one place.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend — mvn verify (unit + IT + Modulith gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+      - name: mvn verify
+        run: mvn -B -ntp verify
+
+  frontend:
+    name: Frontend — lint, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  scripts:
+    name: CICD scripts — shellcheck + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Lint shell scripts
+        run: shellcheck scripts/cicd/*.sh scripts/cicd/lib/*.sh scripts/cicd/tests/*.sh
+      - name: Run cicd unit tests
+        run: scripts/cicd/tests/run.sh

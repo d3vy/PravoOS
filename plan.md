@@ -82,17 +82,13 @@ Trade-off: главный дифференциатор legal-AI — точнос
 
 ---
 
-## 3. CI/CD + staging — БЕЗОПАСНЫЕ РЕЛИЗЫ
-Есть: `deploy.sh` (ручной, единый VPS), ModularityTests как gate. Нет: pipeline, staging, автотестов на PR, rollback.
-- GitHub Actions: на PR → `mvn verify` (модульные + Modulith) + сборка образов; на merge → staging → smoke → prod.
+## 3. CI/CD + staging — БЕЗОПАСНЫЕ РЕЛИЗЫ · ✅ СДЕЛАНО
+Было: `deploy.sh` (ручной, единый VPS), ModularityTests как gate. Стало: полный пайплайн PR → merge → GHCR → staging → smoke → (ручной аппрув) → prod, с авто-откатом. `deploy.sh` оставлен как fallback.
+- **Workflows:** `_verify.yml` (reusable — единственное определение зелёной сборки: `mvn -B verify` + Modulith-гейт + frontend lint/vitest/build + shellcheck/bash-тесты), `ci.yml` (PR/не-main + валидация сборки образов), `release.yml` (push main: publish → deploy-staging → deploy-production за environment-аппрувом), `rollback.yml` (ручной).
+- **Образы:** `docker buildx bake` (`docker-bake.hcl`) — 5 бэкендов из общего maven-stage компилятся один раз; тег = `github.sha` + `latest`; реестр GHCR. Pull-based деплой через оверлей `docker-compose.images.yml`.
+- **Модульный bash `scripts/cicd/`** (SRP + юнит-тесты): `lib/{log,health,deploy_state,registry}.sh` + энтрипоинты `smoke-test.sh`/`deploy-remote.sh` (авто-откат на previous при провале smoke/health)/`rollback-remote.sh`. Композитные actions `setup-backend`/`ssh-deploy`. Единый источник правды сервисов проверяется `tests/consistency.sh`.
+- Настройка окружений/секретов — `docs/CICD.md`.
 
-```bash
-mkdir -p .github/workflows      # ci.yml: mvn -B verify на push/PR
-# smoke-проверка после деплоя (пример):
-curl -fsS https://<domain>/actuator/health || echo "DOWN"
-# текущий деплой (ручной, оставить как fallback):
-cat deploy.sh
-```
 Trade-off: ручной деплой на 1 VPS = релиз это риск даунтайма. Дёшево, окупается на первом откате.
 
 ---

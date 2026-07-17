@@ -1,0 +1,31 @@
+name: CI
+
+# PR gate: correctness checks on every pull request and feature-branch push.
+# main is validated by release.yml. Nothing here deploys or publishes.
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ./.github/workflows/_verify.yml
+
+  images:
+    name: Docker images build (validation, no push)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Bake all images (build only)
+        uses: docker/bake-action@v5
+        with:
+          push: false

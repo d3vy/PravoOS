@@ -68,3 +68,6 @@ scripts/law218.yaml
 
 # Local RSA key material — never commit
 jwt.pem
+
+# Per-host deploy state (current/previous image tag), written by deploy-remote.sh
+.deploy/

@@ -1,0 +1,2 @@
+# External sourced files use runtime-resolved paths; don't flag them.
+disable=SC1091

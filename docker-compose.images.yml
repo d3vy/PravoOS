@@ -1,0 +1,27 @@
+# Pull-based deploy overlay: replaces on-host `build` with pre-built images from
+# the registry. Layered on top of docker-compose.yml + docker-compose.prod.yml
+# by scripts/cicd/deploy-remote.sh so servers pull instead of compiling.
+#
+#   IMAGE_REGISTRY  default ghcr.io/d3vy/pravoos
+#   IMAGE_TAG       git SHA (or "latest")
+#
+# Keep this service list in sync with docker-bake.hcl and
+# scripts/cicd/lib/registry.sh (guarded by scripts/cicd/tests/consistency.sh).
+services:
+  user-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/user-service:${IMAGE_TAG:-latest}
+
+  llm-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/llm-service:${IMAGE_TAG:-latest}
+
+  ai-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/ai-service:${IMAGE_TAG:-latest}
+
+  notification-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/notification-service:${IMAGE_TAG:-latest}
+
+  api-gateway:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/api-gateway:${IMAGE_TAG:-latest}
+
+  frontend:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/frontend:${IMAGE_TAG:-latest}

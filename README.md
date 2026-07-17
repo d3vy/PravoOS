@@ -207,13 +207,19 @@ VPS + Docker Compose + Nginx + Let's Encrypt, за Cloudflare.
 git clone <repo> /opt/pravoos && cd /opt/pravoos
 sudo ./scripts/setup-server.sh    # Docker, ufw
 cp .env.example .env && nano .env
-./scripts/deploy.sh               # сборка + SSL + запуск
+./scripts/deploy.sh               # первичный bootstrap: сборка + SSL + запуск
 
-# обновление
+# ручное обновление (fallback)
 git pull && ./scripts/deploy.sh
 ```
 
 Бэкапы: `scripts/backup.sh` (pg_dumpall + mongodump → GPG AES-256 → Telegram, crontab 02:00).
+
+### CI/CD
+
+После bootstrap регулярные релизы едут автоматически: PR гоняет `mvn verify` + фронт + bash-тесты,
+merge в `main` собирает образы в GHCR, катит на **staging → smoke → (ручной аппрув) → prod** с
+авто-откатом. Подробно — **[docs/CICD.md](docs/CICD.md)**.
 
 ---
 

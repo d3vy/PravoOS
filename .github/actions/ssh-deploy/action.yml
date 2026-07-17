@@ -1,0 +1,87 @@
+name: SSH deploy
+description: >
+  Checks out the released commit on a remote host and runs the image-based,
+  self-rolling-back deploy. Reused for both staging and production.
+
+inputs:
+  host:
+    description: Deploy host (IP or DNS).
+    required: true
+  user:
+    description: SSH user.
+    required: true
+  ssh_private_key:
+    description: Private SSH key with access to the host.
+    required: true
+  deploy_path:
+    description: Absolute path of the cloned repo on the host.
+    required: true
+  git_sha:
+    description: Commit to check out and deploy (also the image tag).
+    required: true
+  image_registry:
+    description: Image registry base (e.g. ghcr.io/owner/pravoos).
+    required: true
+  registry_username:
+    description: Registry login user.
+    required: true
+  registry_token:
+    description: Registry login token (used for docker pull of private images).
+    required: true
+  smoke_url:
+    description: Optional public URL probed after the stack is healthy.
+    required: false
+    default: ""
+  remote_command:
+    description: Deploy entrypoint to run on the host after checkout.
+    required: false
+    default: ./scripts/cicd/deploy-remote.sh
+  target_tag:
+    description: Optional explicit tag argument passed to the remote command (rollback).
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Deploy over SSH
+      shell: bash
+      env:
+        SSH_HOST: ${{ inputs.host }}
+        SSH_USER: ${{ inputs.user }}
+        SSH_KEY: ${{ inputs.ssh_private_key }}
+        DEPLOY_PATH: ${{ inputs.deploy_path }}
+        GIT_SHA: ${{ inputs.git_sha }}
+        IMAGE_REGISTRY: ${{ inputs.image_registry }}
+        REGISTRY_USERNAME: ${{ inputs.registry_username }}
+        REGISTRY_TOKEN: ${{ inputs.registry_token }}
+        SMOKE_URL: ${{ inputs.smoke_url }}
+        REMOTE_COMMAND: ${{ inputs.remote_command }}
+        TARGET_TAG: ${{ inputs.target_tag }}
+      run: |
+        set -euo pipefail
+        key_file="$(mktemp)"
+        printf '%s\n' "$SSH_KEY" > "$key_file"
+        chmod 600 "$key_file"
+        trap 'rm -f "$key_file"' EXIT
+
+        known_hosts="$(mktemp)"
+        ssh-keyscan -H "$SSH_HOST" > "$known_hosts" 2>/dev/null
+
+        ssh -i "$key_file" -o UserKnownHostsFile="$known_hosts" \
+            "${SSH_USER}@${SSH_HOST}" \
+            IMAGE_REGISTRY="$IMAGE_REGISTRY" \
+            IMAGE_TAG="$GIT_SHA" \
+            REGISTRY_USERNAME="$REGISTRY_USERNAME" \
+            REGISTRY_TOKEN="$REGISTRY_TOKEN" \
+            SMOKE_URL="$SMOKE_URL" \
+            DEPLOY_PATH="$DEPLOY_PATH" \
+            GIT_SHA="$GIT_SHA" \
+            REMOTE_COMMAND="$REMOTE_COMMAND" \
+            TARGET_TAG="$TARGET_TAG" \
+            'bash -seu' <<'REMOTE'
+        cd "$DEPLOY_PATH"
+        git fetch --all --prune --quiet
+        git checkout --quiet "$GIT_SHA"
+        "$REMOTE_COMMAND" $TARGET_TAG
+        REMOTE
