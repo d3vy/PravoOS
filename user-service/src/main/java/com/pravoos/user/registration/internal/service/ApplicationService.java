@@ -82,10 +82,10 @@ public class ApplicationService {
     public ApplicationSubmissionResponse submitApplication(ApplyRequest request) {
         String email = EmailNormalizer.normalize(request.email());
         if (applicationRepository.existsByEmailAndStatus(email, ApplicationStatus.PENDING)) {
-            throw new ApplicationAlreadyExistsException(email);
+            throw new ApplicationAlreadyExistsException();
         }
         if (userRepository.existsByEmail(email)) {
-            throw new EmailAlreadyExistsException(email);
+            throw new EmailAlreadyExistsException();
         }
 
         LawyerApplication application = new LawyerApplication();
@@ -145,10 +145,10 @@ public class ApplicationService {
         boolean emailChanged = !newEmail.equals(application.getEmail());
         if (emailChanged) {
             if (applicationRepository.existsByEmailAndStatus(newEmail, ApplicationStatus.PENDING)) {
-                throw new ApplicationAlreadyExistsException(newEmail);
+                throw new ApplicationAlreadyExistsException();
             }
             if (userRepository.existsByEmail(newEmail)) {
-                throw new EmailAlreadyExistsException(newEmail);
+                throw new EmailAlreadyExistsException();
             }
             application.setEmail(newEmail);
         }
@@ -195,7 +195,7 @@ public class ApplicationService {
         }
 
         if (userRepository.existsByEmail(application.getEmail())) {
-            throw new EmailAlreadyExistsException(application.getEmail());
+            throw new EmailAlreadyExistsException();
         }
 
         User user = buildUserFromApplication(application);

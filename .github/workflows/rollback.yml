@@ -5,13 +5,6 @@ name: Rollback
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: Target environment
-        type: choice
-        required: true
-        options:
-          - staging
-          - production
       tag:
         description: Image tag to roll back to (blank = previous recorded)
         type: string
@@ -23,9 +16,9 @@ permissions:
 
 jobs:
   rollback:
-    name: Rollback ${{ inputs.environment }}
+    name: Rollback production
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - name: Resolve registry
@@ -33,7 +26,7 @@ jobs:
         run: echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pravoos" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/ssh-deploy
         with:
-          host: ${{ inputs.environment == 'production' && secrets.PRODUCTION_HOST || secrets.STAGING_HOST }}
+          host: ${{ secrets.PRODUCTION_HOST }}
           user: ${{ secrets.DEPLOY_SSH_USER }}
           ssh_private_key: ${{ secrets.DEPLOY_SSH_KEY }}
           deploy_path: ${{ vars.DEPLOY_PATH }}

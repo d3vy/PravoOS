@@ -220,7 +220,7 @@ public class InvoicePdfWriter {
         void tableRow(String num, String description, String minutes, String rate, String amount) throws IOException {
             float fontSize = 10f;
             List<String> descLines = wrap(regular, fontSize, sanitize(regular, description), COL_DESC - 8f);
-            float rowHeight = Math.max(18f, descLines.size() * (fontSize * 1.3f) + 6f);
+            float rowHeight = Math.max(18f, descLines.size() * fontSize * 1.3f + 6f);
             if (cursorY - rowHeight < MARGIN) {
                 newPage();
                 tableHeader();

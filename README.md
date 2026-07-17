@@ -218,8 +218,8 @@ git pull && ./scripts/deploy.sh
 ### CI/CD
 
 После bootstrap регулярные релизы едут автоматически: PR гоняет `mvn verify` + фронт + bash-тесты,
-merge в `main` собирает образы в GHCR, катит на **staging → smoke → (ручной аппрув) → prod** с
-авто-откатом. Подробно — **[docs/CICD.md](docs/CICD.md)**.
+merge в `main` собирает образы в GHCR и катит на **prod после ручного аппрува**, со smoke-тестом и
+авто-откатом (топология — один VPS, staging добавляется позже). Подробно — **[docs/CICD.md](docs/CICD.md)**.
 
 ---
 

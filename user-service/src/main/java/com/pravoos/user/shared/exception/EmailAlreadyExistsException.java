@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class EmailAlreadyExistsException extends PravoosException {
 
-    public EmailAlreadyExistsException(String email) {
+    public EmailAlreadyExistsException() {
         super("Учётная запись с такой почтой уже существует", HttpStatus.CONFLICT, "EMAIL_EXISTS");
     }
 }

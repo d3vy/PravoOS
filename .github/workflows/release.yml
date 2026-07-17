@@ -1,9 +1,12 @@
 name: Release
 
-# On merge to main: re-verify, publish images to GHCR, deploy to staging with a
-# smoke test, then (after manual approval on the production environment) deploy
-# the same immutable SHA to production. Any failed smoke test auto-rolls-back on
-# the target host.
+# On merge to main: re-verify, publish images to GHCR, then (after manual
+# approval on the production environment) deploy the immutable SHA to the single
+# production host. Smoke test + auto-rollback are the safety net in place of a
+# separate staging environment.
+#
+# To add a real staging step later: recreate a `deploy-staging` job (see git
+# history / docs/CICD.md) between `publish` and `deploy-production`.
 on:
   push:
     branches:
@@ -48,30 +51,9 @@ jobs:
           TAG: latest
           SHA: ${{ github.sha }}
 
-  deploy-staging:
-    name: Deploy to staging
-    needs: publish
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://${{ vars.STAGING_DOMAIN }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/ssh-deploy
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          user: ${{ secrets.DEPLOY_SSH_USER }}
-          ssh_private_key: ${{ secrets.DEPLOY_SSH_KEY }}
-          deploy_path: ${{ vars.DEPLOY_PATH }}
-          git_sha: ${{ github.sha }}
-          image_registry: ${{ needs.publish.outputs.registry }}
-          registry_username: ${{ github.actor }}
-          registry_token: ${{ secrets.GITHUB_TOKEN }}
-          smoke_url: https://${{ vars.STAGING_DOMAIN }}
-
   deploy-production:
     name: Deploy to production
-    needs: deploy-staging
+    needs: publish
     runs-on: ubuntu-latest
     environment:
       name: production
