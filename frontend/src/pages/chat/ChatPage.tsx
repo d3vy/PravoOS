@@ -61,7 +61,12 @@ export default function ChatPage(): JSX.Element {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    if (searchParams.has('conversation')) {
+    const ask = searchParams.get('ask')
+    if (ask) {
+      setInputValue(ask)
+      requestAnimationFrame(() => textareaRef.current?.focus())
+    }
+    if (searchParams.has('conversation') || searchParams.has('ask')) {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams])

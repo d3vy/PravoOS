@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { CaseStatusBadge, CASE_STATUS_CONFIG, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 
@@ -469,15 +470,17 @@ export default function CasesPage(): JSX.Element {
             onMove={(caseId, status) => statusMutation.mutate({ caseId, status })}
           />
         ) : cases.length === 0 ? (
-          <div className="text-center py-16 rounded-xl border border-dashed border-light-border dark:border-dark-border">
-            <p className="text-light-secondary dark:text-dark-secondary text-sm">
-              {debouncedSearch
-                ? 'Ничего не найдено по запросу.'
-                : statusFilter === 'ALL'
-                  ? 'Пока нет дел. Создайте первое дело, чтобы загрузить документы и запустить AI-анализ.'
-                  : 'Нет дел с этим статусом.'}
-            </p>
-          </div>
+          debouncedSearch ? (
+            <EmptyState description="Ничего не найдено по запросу." />
+          ) : statusFilter === 'ALL' ? (
+            <EmptyState
+              title="Пока нет дел"
+              description="Создайте первое дело, чтобы загрузить документы и запустить AI-анализ."
+              action={{ label: 'Создать дело', onClick: () => setShowForm(true) }}
+            />
+          ) : (
+            <EmptyState description="Нет дел с этим статусом." />
+          )
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {cases.map((caseItem, index) => (

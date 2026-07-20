@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clientsApi } from '../../api/clients'
@@ -8,13 +8,23 @@ import type { ClientResponse } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { ClientForm } from '../../components/clients/ClientForm'
 
 export default function ClientsPage(): JSX.Element {
   const [showForm, setShowForm] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowForm(true)
+      searchParams.delete('new')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const { data: clientsPage, isLoading } = useQuery<Page<ClientResponse>>({
     queryKey: ['clients', page],
@@ -72,11 +82,11 @@ export default function ClientsPage(): JSX.Element {
             <Spinner size="lg" />
           </div>
         ) : clients.length === 0 ? (
-          <div className="text-center py-16 rounded-xl border border-dashed border-light-border dark:border-dark-border">
-            <p className="text-light-secondary dark:text-dark-secondary text-sm">
-              Пока нет клиентов. Создайте первого, чтобы привязывать к нему дела.
-            </p>
-          </div>
+          <EmptyState
+            title="Пока нет клиентов"
+            description="Создайте первого клиента, чтобы привязывать к нему дела и счета."
+            action={{ label: 'Новый клиент', onClick: () => setShowForm(true) }}
+          />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {clients.map((client, index) => (

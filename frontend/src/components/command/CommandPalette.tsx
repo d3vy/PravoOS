@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { searchApi } from '../../api/search'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { useTheme } from '../../hooks/useTheme'
-import { lawyerNavSections } from '../layout/lawyerNav'
+import { lawyerAccountLinks, lawyerNavSections } from '../layout/lawyerNav'
 import { CaseStatusBadge } from '../ui/Badge'
 import type { GlobalSearchResponse } from '../../types'
 
@@ -89,7 +89,7 @@ export function CommandPalette(): JSX.Element | null {
   }
 
   const actionGroup = useMemo<CommandGroup>(() => {
-    const navItems: CommandItem[] = lawyerNavSections.flatMap((section) =>
+    const sectionNavItems: CommandItem[] = lawyerNavSections.flatMap((section) =>
       section.items.map((item) => ({
         id: `nav:${item.to}`,
         label: item.label,
@@ -99,6 +99,26 @@ export function CommandPalette(): JSX.Element | null {
         perform: () => run(() => navigate(item.to)),
       }))
     )
+    const accountNavItems: CommandItem[] = lawyerAccountLinks.map((item) => ({
+      id: `nav:${item.to}`,
+      label: item.label,
+      hint: 'Перейти',
+      icon: item.icon,
+      keywords: `аккаунт ${item.to}`,
+      perform: () => run(() => navigate(item.to)),
+    }))
+    const navItems: CommandItem[] = [
+      ...sectionNavItems,
+      {
+        id: 'nav:/messages',
+        label: 'Сообщения',
+        hint: 'Перейти',
+        icon: <ChatIcon />,
+        keywords: 'переписка клиенты сообщения messages inbox',
+        perform: () => run(() => navigate('/messages')),
+      },
+      ...accountNavItems,
+    ]
     const quickItems: CommandItem[] = [
       {
         id: 'action:new-case',
@@ -107,6 +127,22 @@ export function CommandPalette(): JSX.Element | null {
         keywords: 'создать добавить дело case new',
         icon: <PlusIcon />,
         perform: () => run(() => navigate('/cases?new=1')),
+      },
+      {
+        id: 'action:new-client',
+        label: 'Новый клиент',
+        hint: 'Создать',
+        keywords: 'создать добавить клиент client new',
+        icon: <PlusIcon />,
+        perform: () => run(() => navigate('/clients?new=1')),
+      },
+      {
+        id: 'action:ask-ai',
+        label: 'Задать вопрос AI',
+        hint: 'AI-чат',
+        keywords: 'вопрос спросить ai чат chat ask',
+        icon: <ChatIcon />,
+        perform: () => run(() => navigate('/chat')),
       },
       {
         id: 'action:toggle-theme',

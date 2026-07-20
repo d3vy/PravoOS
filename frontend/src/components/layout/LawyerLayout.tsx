@@ -37,7 +37,7 @@ export function LawyerLayout(): JSX.Element {
   const navSections = lawyerNavSections.map((section) => ({
     ...section,
     items: section.items.map((item) =>
-      item.to === '/messages' ? { ...item, badge: unreadCount } : item
+      item.to === '/cases' ? { ...item, badge: unreadCount } : item
     ),
   }))
 

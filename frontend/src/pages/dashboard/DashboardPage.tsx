@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '../../api/dashboard'
+import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Badge, CaseStatusBadge, CASE_STATUS_CONFIG, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import type { CaseStatus, DashboardDeadline, DashboardResponse } from '../../types'
@@ -76,6 +78,10 @@ function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
     <div className="space-y-6">
       <DigestBanner data={data} />
 
+      {data.activeCases === 0 && data.recentCases.length === 0 && <QuickStartCard />}
+
+      <QuickAskWidget />
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Активные дела" value={data.activeCases} to="/cases" />
         <StatCard label="Незакрытые задачи" value={data.openTasks} />
@@ -88,6 +94,100 @@ function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
       </div>
 
       <RecentCasesWidget cases={data.recentCases} />
+    </div>
+  )
+}
+
+const ONBOARDING_DISMISSED_KEY = 'pravoos.onboarding.dismissed'
+
+const QUICK_START_STEPS: { to: string; title: string; description: string }[] = [
+  { to: '/cases?new=1', title: '1. Создайте первое дело', description: 'Загрузите документы и запустите AI-анализ.' },
+  { to: '/clients?new=1', title: '2. Добавьте клиента', description: 'Привяжите дела, счета и переписку.' },
+  { to: '/chat', title: '3. Задайте вопрос AI', description: 'Спросите по практике или загруженной базе.' },
+]
+
+function QuickStartCard(): JSX.Element | null {
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === 'true')
+
+  if (dismissed) return null
+
+  const dismiss = (): void => {
+    localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true')
+    setDismissed(true)
+  }
+
+  return (
+    <div className="card-elevated p-5">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">Быстрый старт</h2>
+          <p className="text-sm text-light-secondary dark:text-dark-secondary">Три шага, чтобы начать работу в PravoOS.</p>
+        </div>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Скрыть быстрый старт"
+          className="shrink-0 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="6" y1="18" x2="18" y2="6" />
+          </svg>
+        </button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {QUICK_START_STEPS.map((step) => (
+          <Link
+            key={step.to}
+            to={step.to}
+            className="block p-4 rounded-xl border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+          >
+            <p className="text-sm font-medium text-light-text dark:text-dark-text mb-1">{step.title}</p>
+            <p className="text-xs text-light-secondary dark:text-dark-secondary">{step.description}</p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function QuickAskWidget(): JSX.Element {
+  const navigate = useNavigate()
+  const [question, setQuestion] = useState('')
+
+  const submit = (): void => {
+    const trimmed = question.trim()
+    navigate(trimmed ? `/chat?ask=${encodeURIComponent(trimmed)}` : '/chat')
+  }
+
+  return (
+    <div className="card-elevated p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+        <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">Быстрый вопрос AI</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link to="/cases?new=1">
+            <Button variant="secondary" size="sm">Новое дело</Button>
+          </Link>
+          <Link to="/calendar">
+            <Button variant="ghost" size="sm">Календарь</Button>
+          </Link>
+        </div>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+        className="flex items-center gap-2"
+      >
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Спросите AI по практике или делу…"
+          className="flex-1 min-w-0 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+        />
+        <Button type="submit" variant="primary" size="sm">Спросить</Button>
+      </form>
     </div>
   )
 }

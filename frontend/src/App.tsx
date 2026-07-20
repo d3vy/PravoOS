@@ -44,7 +44,7 @@ import SettingsPage from './pages/settings/SettingsPage'
 function homePathForRole(role: UserRole | undefined): string {
   if (role === 'ADMIN') return '/admin/applications'
   if (role === 'CLIENT') return '/portal'
-  return '/chat'
+  return '/dashboard'
 }
 
 export default function App(): JSX.Element {

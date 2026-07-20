@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { authApi } from '../../api/auth'
@@ -7,12 +7,12 @@ import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
 import { NavTabs } from '../ui/NavTabs'
 import { ThemeToggle } from '../ui/ThemeToggle'
-import { lawyerNavSections } from './lawyerNav'
+import { lawyerAccountLinks, lawyerNavSections } from './lawyerNav'
 
 const LAWYER_MOBILE_NAV_INDICATOR_ID = 'lawyer-mobile-nav-indicator'
 
 export function Navbar(): JSX.Element {
-  const { clearAuth, isAuthenticated, effectiveRole } = useAuthStore()
+  const { user, clearAuth, isAuthenticated, effectiveRole } = useAuthStore()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
@@ -40,7 +40,7 @@ export function Navbar(): JSX.Element {
   }
 
   const role = effectiveRole()
-  const dashboardPath = role === 'ADMIN' ? '/admin/applications' : '/chat'
+  const dashboardPath = role === 'ADMIN' ? '/admin/applications' : '/dashboard'
   const authenticated = isAuthenticated()
 
   return (
@@ -55,23 +55,35 @@ export function Navbar(): JSX.Element {
           </Link>
 
           <div className="flex items-center gap-3">
+            {authenticated && role === 'LAWYER' && (
+              <div className="hidden md:block">
+                <CreateMenu />
+              </div>
+            )}
             {authenticated && role === 'LAWYER' && <CommandTrigger />}
             <ThemeToggle />
 
             {authenticated ? (
               <>
                 {role === 'ADMIN' && (
-                  <Link to={dashboardPath} className="hidden md:block">
-                    <Button variant="ghost" size="sm">
-                      Рабочий стол
-                    </Button>
-                  </Link>
+                  <>
+                    <Link to={dashboardPath} className="hidden md:block">
+                      <Button variant="ghost" size="sm">
+                        Рабочий стол
+                      </Button>
+                    </Link>
+                    <div className="hidden md:block">
+                      <Button variant="secondary" size="sm" onClick={() => void handleLogout()}>
+                        Выйти
+                      </Button>
+                    </div>
+                  </>
                 )}
-                <div className="hidden md:block">
-                  <Button variant="secondary" size="sm" onClick={() => void handleLogout()}>
-                    Выйти
-                  </Button>
-                </div>
+                {role === 'LAWYER' && (
+                  <div className="hidden md:block">
+                    <UserMenu email={user?.email ?? ''} onLogout={() => void handleLogout()} />
+                  </div>
+                )}
                 <button
                   type="button"
                   aria-label="Меню"
@@ -103,18 +115,43 @@ export function Navbar(): JSX.Element {
       {authenticated && mobileMenuOpen && (
         <div className="md:hidden border-t border-light-border dark:border-dark-border bg-light-bg/95 dark:bg-dark-bg/95 backdrop-blur-md">
           <div className="page-container py-3 flex flex-col gap-1">
-            {role === 'LAWYER' &&
-              lawyerNavSections.map((section) => (
-                <div key={section.title} className="mb-2">
-                  <p className="eyebrow px-4 mb-1">{section.title}</p>
+            {role === 'LAWYER' && (
+              <>
+                <div className="mb-2">
+                  <p className="eyebrow px-4 mb-1">Создать</p>
+                  {CREATE_ACTIONS.map((action) => (
+                    <Link
+                      key={action.to}
+                      to={action.to}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+                    >
+                      {action.label}
+                    </Link>
+                  ))}
+                </div>
+                {lawyerNavSections.map((section) => (
+                  <div key={section.title} className="mb-2">
+                    <p className="eyebrow px-4 mb-1">{section.title}</p>
+                    <NavTabs
+                      items={section.items}
+                      indicatorId={LAWYER_MOBILE_NAV_INDICATOR_ID}
+                      orientation="vertical"
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  </div>
+                ))}
+                <div className="mb-2">
+                  <p className="eyebrow px-4 mb-1">Аккаунт</p>
                   <NavTabs
-                    items={section.items}
+                    items={lawyerAccountLinks}
                     indicatorId={LAWYER_MOBILE_NAV_INDICATOR_ID}
                     orientation="vertical"
                     onNavigate={() => setMobileMenuOpen(false)}
                   />
                 </div>
-              ))}
+              </>
+            )}
             {role === 'ADMIN' && (
               <Link
                 to={dashboardPath}
@@ -134,6 +171,153 @@ export function Navbar(): JSX.Element {
         </div>
       )}
     </header>
+  )
+}
+
+const CREATE_ACTIONS: { to: string; label: string }[] = [
+  { to: '/cases?new=1', label: 'Новое дело' },
+  { to: '/clients?new=1', label: 'Новый клиент' },
+  { to: '/chat', label: 'Задать вопрос AI' },
+]
+
+function CreateMenu(): JSX.Element {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const handleEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [open])
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="inline-flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-sm font-medium hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Создать
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-52 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg py-2 z-50"
+        >
+          {CREATE_ACTIONS.map((action) => (
+            <Link
+              key={action.to}
+              to={action.to}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
+            >
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }): JSX.Element {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const initial = email.trim().charAt(0).toUpperCase() || '?'
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const handleEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [open])
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Меню пользователя"
+        onClick={() => setOpen((current) => !current)}
+        className="flex items-center justify-center w-9 h-9 rounded-full bg-light-accent/10 dark:bg-dark-accent/15 text-light-accent dark:text-dark-accent text-sm font-semibold hover:bg-light-accent/20 dark:hover:bg-dark-accent/25 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
+      >
+        {initial}
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-56 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg py-2 z-50"
+        >
+          {email && (
+            <p className="px-4 pt-1 pb-2 text-xs text-light-secondary dark:text-dark-secondary truncate border-b border-light-border dark:border-dark-border mb-1">
+              {email}
+            </p>
+          )}
+          {lawyerAccountLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
+                  isActive
+                    ? 'text-light-accent dark:text-dark-accent'
+                    : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
+                }`
+              }
+            >
+              <span aria-hidden="true">{link.icon}</span>
+              {link.label}
+            </NavLink>
+          ))}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              onLogout()
+            }}
+            className="w-full text-left px-4 py-2.5 mt-1 border-t border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
+          >
+            Выйти
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
