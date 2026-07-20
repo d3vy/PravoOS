@@ -1,12 +1,14 @@
 package com.pravoos.user.shared.security;
 
+import java.io.IOException;
+
+import org.springframework.lang.NonNull;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
 
 public class InternalSecretFilter extends OncePerRequestFilter {
 
@@ -20,14 +22,14 @@ public class InternalSecretFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         return !request.getRequestURI().startsWith(INTERNAL_PATH_PREFIX);
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain chain) throws ServletException, IOException {
         if (!secretVerifier.matches(request.getHeader(SECRET_HEADER))) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
