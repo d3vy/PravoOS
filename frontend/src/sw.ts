@@ -24,7 +24,7 @@ const FALLBACK_PAYLOAD: PushPayload = {
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/api\//] }))
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/api\//, /^\/grafana(\/|$)/] }))
 
 registerRoute(
   ({ request }) => request.destination === 'image',
