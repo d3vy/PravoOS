@@ -1,9 +1,24 @@
 package com.pravoos.user.identity.internal.controller;
 
+import java.time.Duration;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.pravoos.user.identity.api.AuthResponse;
 import com.pravoos.user.identity.api.LoginResponse;
 import com.pravoos.user.identity.api.PasswordPolicyService;
-import com.pravoos.user.identity.internal.dto.*;
+import com.pravoos.user.identity.internal.dto.ForgotPasswordRequest;
+import com.pravoos.user.identity.internal.dto.LoginRequest;
+import com.pravoos.user.identity.internal.dto.LoginResult;
+import com.pravoos.user.identity.internal.dto.MfaLoginRequest;
+import com.pravoos.user.identity.internal.dto.ResetPasswordRequest;
+import com.pravoos.user.identity.internal.dto.TokenResponse;
 import com.pravoos.user.identity.internal.security.RefreshCookieFactory;
 import com.pravoos.user.identity.internal.service.AuthService;
 import com.pravoos.user.identity.internal.service.PasswordResetService;
@@ -11,13 +26,9 @@ import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.shared.exception.TooManyRequestsException;
 import com.pravoos.user.shared.service.IpRateLimiter;
 import com.pravoos.user.shared.util.ClientIpResolver;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -33,10 +44,10 @@ public class AuthController {
     private final IpRateLimiter ipRateLimiter;
 
     public AuthController(AuthService authService,
-                          RefreshCookieFactory refreshCookieFactory,
-                          PasswordResetService passwordResetService,
-                          PasswordPolicyService passwordPolicyService,
-                          IpRateLimiter ipRateLimiter) {
+            RefreshCookieFactory refreshCookieFactory,
+            PasswordResetService passwordResetService,
+            PasswordPolicyService passwordPolicyService,
+            IpRateLimiter ipRateLimiter) {
         this.authService = authService;
         this.refreshCookieFactory = refreshCookieFactory;
         this.passwordResetService = passwordResetService;
@@ -46,7 +57,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request,
-                                               HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest) {
         String clientIp = ClientIpResolver.resolve(httpRequest);
         if (!ipRateLimiter.allow("login", clientIp, LOGIN_MAX_PER_IP, LOGIN_WINDOW)) {
             throw new TooManyRequestsException();
@@ -60,12 +71,13 @@ public class AuthController {
 
     @PostMapping("/login/mfa")
     public ResponseEntity<LoginResponse> loginMfa(@Valid @RequestBody MfaLoginRequest request,
-                                                  HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest) {
         String clientIp = ClientIpResolver.resolve(httpRequest);
         if (!ipRateLimiter.allow("login", clientIp, LOGIN_MAX_PER_IP, LOGIN_WINDOW)) {
             throw new TooManyRequestsException();
         }
-        TokenResponse tokens = authService.completeMfaLogin(request.mfaToken(), request.code(), clientIp, userAgent(httpRequest));
+        TokenResponse tokens = authService.completeMfaLogin(request.mfaToken(), request.code(), clientIp,
+                userAgent(httpRequest));
         return loginSuccess(tokens);
     }
 
@@ -76,7 +88,8 @@ public class AuthController {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new InvalidRefreshTokenException();
         }
-        return authResponse(authService.refresh(refreshToken, ClientIpResolver.resolve(httpRequest), userAgent(httpRequest)));
+        return authResponse(
+                authService.refresh(refreshToken, ClientIpResolver.resolve(httpRequest), userAgent(httpRequest)));
     }
 
     @PostMapping("/logout")

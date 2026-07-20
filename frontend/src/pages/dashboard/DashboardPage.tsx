@@ -24,6 +24,21 @@ function daysLeftLabel(daysLeft: number): string {
   return `через ${daysLeft} дн.`
 }
 
+function greeting(hour: number): string {
+  if (hour >= 5 && hour < 12) return 'Доброе утро'
+  if (hour >= 12 && hour < 18) return 'Добрый день'
+  if (hour >= 18 && hour < 23) return 'Добрый вечер'
+  return 'Доброй ночи'
+}
+
+function plural(count: number, one: string, few: string, many: string): string {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  if (mod10 === 1 && mod100 !== 11) return one
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few
+  return many
+}
+
 export default function DashboardPage(): JSX.Element {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['dashboard'],
@@ -59,6 +74,8 @@ export default function DashboardPage(): JSX.Element {
 function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
   return (
     <div className="space-y-6">
+      <DigestBanner data={data} />
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Активные дела" value={data.activeCases} to="/cases" />
         <StatCard label="Незакрытые задачи" value={data.openTasks} />
@@ -72,6 +89,85 @@ function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
 
       <RecentCasesWidget cases={data.recentCases} />
     </div>
+  )
+}
+
+function DigestBanner({ data }: { data: DashboardResponse }): JSX.Element {
+  const now = new Date()
+  const dueToday = data.upcomingDeadlines.filter((deadline) => deadline.daysLeft <= 0).length
+  const weekCount = data.upcomingDeadlines.length
+  const dateLabel = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  let focus: JSX.Element
+  if (dueToday > 0) {
+    focus = (
+      <>
+        Сегодня к сроку{' '}
+        <span className="font-semibold text-red-600 dark:text-red-400">
+          {dueToday} {plural(dueToday, 'дедлайн', 'дедлайна', 'дедлайнов')}
+        </span>
+        {' '}— не упустите.
+      </>
+    )
+  } else if (weekCount > 0) {
+    focus = (
+      <>
+        Срочного на сегодня нет. На неделе —{' '}
+        <span className="font-semibold text-light-text dark:text-dark-text">
+          {weekCount} {plural(weekCount, 'дедлайн', 'дедлайна', 'дедлайнов')}
+        </span>
+        .
+      </>
+    )
+  } else {
+    focus = <>Всё под контролем — активных дедлайнов нет.</>
+  }
+
+  return (
+    <div className="card-elevated p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text">{greeting(now.getHours())}</h2>
+          <span className="text-sm text-light-secondary dark:text-dark-secondary capitalize">{dateLabel}</span>
+        </div>
+        <p className="mt-1.5 text-sm text-light-secondary dark:text-dark-secondary">{focus}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <FocusPill label="активных дел" value={data.activeCases} to="/cases" />
+        <FocusPill label="задач" value={data.openTasks} />
+        <FocusPill label="на неделе" value={weekCount} tone={dueToday > 0 ? 'danger' : 'default'} />
+      </div>
+    </div>
+  )
+}
+
+function FocusPill({
+  label,
+  value,
+  to,
+  tone = 'default',
+}: {
+  label: string
+  value: number
+  to?: string
+  tone?: 'default' | 'danger'
+}): JSX.Element {
+  const toneClass =
+    tone === 'danger' && value > 0
+      ? 'text-red-600 dark:text-red-400'
+      : 'text-light-text dark:text-dark-text'
+  const content = (
+    <div className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-center min-w-[72px]">
+      <p className={`text-xl font-semibold ${toneClass}`}>{value}</p>
+      <p className="text-[11px] text-light-secondary dark:text-dark-secondary whitespace-nowrap">{label}</p>
+    </div>
+  )
+  return to ? (
+    <Link to={to} className="hover:opacity-90 transition-opacity">
+      {content}
+    </Link>
+  ) : (
+    content
   )
 }
 

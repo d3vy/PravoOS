@@ -122,6 +122,6 @@ class DocumentAccessImpl implements DocumentAccess {
     }
 
     private String escapeLike(String value) {
-        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 }

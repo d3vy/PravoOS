@@ -8,6 +8,7 @@ import { NavTabs } from '../ui/NavTabs'
 import { LAWYER_NAV_INDICATOR_ID, lawyerNavSections } from './lawyerNav'
 import { CollapseIcon } from './navIcons'
 import { Navbar } from './Navbar'
+import { CommandPalette } from '../command/CommandPalette'
 
 const SIDEBAR_COLLAPSED_KEY = 'pravoos.sidebar.collapsed'
 const WIDE_SCREEN_QUERY = '(min-width: 1024px)'
@@ -42,6 +43,7 @@ export function LawyerLayout(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
+      <CommandPalette />
       <Navbar />
 
       <div className="flex min-h-[calc(100vh-64px)]">

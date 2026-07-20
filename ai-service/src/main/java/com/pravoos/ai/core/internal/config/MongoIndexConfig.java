@@ -1,7 +1,7 @@
-package com.pravoos.ai.core.internal.config;
+ package com.pravoos.ai.core.internal.config;
 
-import com.pravoos.ai.core.internal.model.mongo.Conversation;
-import com.pravoos.ai.core.internal.model.mongo.Message;
+import java.time.Duration;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +12,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
 
-import java.time.Duration;
+import com.pravoos.ai.core.internal.model.mongo.Conversation;
+import com.pravoos.ai.core.internal.model.mongo.Message;
 
 @Configuration
 public class MongoIndexConfig {

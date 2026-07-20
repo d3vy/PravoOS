@@ -7,9 +7,9 @@ public final class LikePattern {
 
     public static String contains(String query) {
         String escaped = query.toLowerCase()
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
         return "%" + escaped + "%";
     }
 }

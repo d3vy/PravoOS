@@ -387,13 +387,8 @@ public class ChatService {
         List<Message> chronological = new ArrayList<>(withinBudget);
         Collections.reverse(chronological);
 
-        int firstUser = 0;
-        while (firstUser < chronological.size() && chronological.get(firstUser).getRole() != MessageRole.USER) {
-            firstUser++;
-        }
-
-        return chronological.subList(firstUser, chronological.size())
-                .stream()
+        return chronological.stream()
+                .dropWhile(m -> m.getRole() != MessageRole.USER)
                 .map(m -> new LlmMessage(m.getRole().name().toLowerCase(), m.getContent()))
                 .toList();
     }

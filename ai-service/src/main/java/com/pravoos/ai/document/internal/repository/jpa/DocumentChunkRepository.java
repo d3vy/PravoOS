@@ -23,7 +23,7 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UU
 
     @Query("""
             SELECT dc.content FROM DocumentChunk dc
-            WHERE dc.document.id = :documentId AND LOWER(dc.content) LIKE :pattern ESCAPE '\\'
+            WHERE dc.document.id = :documentId AND LOWER(dc.content) LIKE :pattern ESCAPE '!'
             ORDER BY dc.chunkIndex ASC
             """)
     List<String> findMatchingContent(@Param("documentId") UUID documentId,
@@ -35,7 +35,7 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UU
                 SELECT 1 FROM document_chunks dc
                 JOIN documents d ON d.id = dc.document_id
                 WHERE d.case_id IS NULL AND d.document_kind <> 'CHAT_ATTACHMENT'
-                  AND dc.content LIKE :pattern ESCAPE '\\'
+                  AND dc.content LIKE :pattern ESCAPE '!'
             )
             """, nativeQuery = true)
     boolean existsInKnowledgeBaseByContent(@Param("pattern") String pattern);

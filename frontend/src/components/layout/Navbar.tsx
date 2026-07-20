@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { authApi } from '../../api/auth'
 import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
@@ -54,6 +55,7 @@ export function Navbar(): JSX.Element {
           </Link>
 
           <div className="flex items-center gap-3">
+            {authenticated && role === 'LAWYER' && <CommandTrigger />}
             <ThemeToggle />
 
             {authenticated ? (
@@ -132,6 +134,29 @@ export function Navbar(): JSX.Element {
         </div>
       )}
     </header>
+  )
+}
+
+function CommandTrigger(): JSX.Element {
+  const toggle = useCommandPaletteStore((state) => state.toggle)
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label="Открыть командную палитру"
+      className="hidden md:inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:border-light-text/30 dark:hover:border-dark-text/30 transition-colors"
+    >
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="7" />
+        <line x1="16.5" y1="16.5" x2="21" y2="21" />
+      </svg>
+      <span className="text-sm">Поиск</span>
+      <kbd className="inline-flex items-center rounded border border-light-border dark:border-dark-border px-1.5 py-0.5 text-[11px] font-medium">
+        {isMac ? '⌘K' : 'Ctrl K'}
+      </kbd>
+    </button>
   )
 }
 

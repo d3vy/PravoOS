@@ -1,5 +1,18 @@
 package com.pravoos.user.identity.internal.service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.pravoos.user.billing.api.PlanClaim;
 import com.pravoos.user.billing.api.PlanClaimProvider;
 import com.pravoos.user.identity.api.OrgMembershipProvider;
@@ -21,27 +34,15 @@ import com.pravoos.user.shared.exception.MfaException;
 import com.pravoos.user.shared.service.OutboxEventService;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
-    private static final String DUMMY_PASSWORD_HASH =
-            "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+    private static final String DUMMY_PASSWORD_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
     private static final String NEW_LOGIN_TOPIC = "user.new_login";
     private static final DateTimeFormatter LOGIN_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -63,18 +64,18 @@ public class AuthService {
     private final Counter loginMfaChallengedCounter;
 
     public AuthService(UserRepository userRepository,
-                       OrgMembershipProvider orgMembershipProvider,
-                       PortalAccessProvider portalAccessProvider,
-                       PlanClaimProvider planClaimProvider,
-                       JwtTokenProvider jwtTokenProvider,
-                       PasswordEncoder passwordEncoder,
-                       RefreshTokenService refreshTokenService,
-                       LoginAttemptService loginAttemptService,
-                       MfaService mfaService,
-                       MfaChallengeService mfaChallengeService,
-                       ApplicationEventPublisher eventPublisher,
-                       OutboxEventService outboxEventService,
-                       MeterRegistry meterRegistry) {
+            OrgMembershipProvider orgMembershipProvider,
+            PortalAccessProvider portalAccessProvider,
+            PlanClaimProvider planClaimProvider,
+            JwtTokenProvider jwtTokenProvider,
+            PasswordEncoder passwordEncoder,
+            RefreshTokenService refreshTokenService,
+            LoginAttemptService loginAttemptService,
+            MfaService mfaService,
+            MfaChallengeService mfaChallengeService,
+            ApplicationEventPublisher eventPublisher,
+            OutboxEventService outboxEventService,
+            MeterRegistry meterRegistry) {
         this.userRepository = userRepository;
         this.orgMembershipProvider = orgMembershipProvider;
         this.portalAccessProvider = portalAccessProvider;
@@ -90,7 +91,8 @@ public class AuthService {
         this.loginSuccessCounter = Counter.builder("pravoos.login").tag("result", "success").register(meterRegistry);
         this.loginFailureCounter = Counter.builder("pravoos.login").tag("result", "failure").register(meterRegistry);
         this.loginLockedCounter = Counter.builder("pravoos.login").tag("result", "locked").register(meterRegistry);
-        this.loginMfaChallengedCounter = Counter.builder("pravoos.login").tag("result", "mfa_challenged").register(meterRegistry);
+        this.loginMfaChallengedCounter = Counter.builder("pravoos.login").tag("result", "mfa_challenged")
+                .register(meterRegistry);
     }
 
     @Transactional
