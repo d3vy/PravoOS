@@ -1,5 +1,6 @@
+import { useTranslation } from 'react-i18next'
 import type { CaseStatus } from '../../types'
-import { CASE_STATUS_CONFIG, CASE_STATUS_ORDER } from '../ui/Badge'
+import { caseStatusLabel, CASE_STATUS_ORDER } from '../ui/Badge'
 
 interface CaseStatusSelectProps {
   value: CaseStatus
@@ -8,6 +9,7 @@ interface CaseStatusSelectProps {
 }
 
 export function CaseStatusSelect({ value, onChange, disabled }: CaseStatusSelectProps): JSX.Element {
+  useTranslation()
   return (
     <select
       value={value}
@@ -18,7 +20,7 @@ export function CaseStatusSelect({ value, onChange, disabled }: CaseStatusSelect
     >
       {CASE_STATUS_ORDER.map((status) => (
         <option key={status} value={status}>
-          {CASE_STATUS_CONFIG[status].label}
+          {caseStatusLabel(status)}
         </option>
       ))}
     </select>

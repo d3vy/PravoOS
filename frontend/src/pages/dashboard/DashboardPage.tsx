@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { Trans, useTranslation } from 'react-i18next'
 import { dashboardApi } from '../../api/dashboard'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
-import { Badge, CaseStatusBadge, CASE_STATUS_CONFIG, CASE_STATUS_ORDER } from '../../components/ui/Badge'
+import { Badge, CaseStatusBadge, caseStatusLabel, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import type { CaseStatus, DashboardDeadline, DashboardResponse } from '../../types'
+import type { TFunction } from 'i18next'
 
 const STATUS_BAR_COLOR: Record<CaseStatus, string> = {
   INTAKE: 'bg-zinc-400 dark:bg-zinc-500',
@@ -20,28 +22,21 @@ function formatDate(isoDate: string): string {
   return `${day}.${month}.${year}`
 }
 
-function daysLeftLabel(daysLeft: number): string {
-  if (daysLeft <= 0) return 'сегодня'
-  if (daysLeft === 1) return 'завтра'
-  return `через ${daysLeft} дн.`
+function daysLeftLabel(daysLeft: number, t: TFunction): string {
+  if (daysLeft <= 0) return t('dashboard.today')
+  if (daysLeft === 1) return t('dashboard.tomorrow')
+  return t('dashboard.inDays', { count: daysLeft })
 }
 
-function greeting(hour: number): string {
-  if (hour >= 5 && hour < 12) return 'Доброе утро'
-  if (hour >= 12 && hour < 18) return 'Добрый день'
-  if (hour >= 18 && hour < 23) return 'Добрый вечер'
-  return 'Доброй ночи'
-}
-
-function plural(count: number, one: string, few: string, many: string): string {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return one
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few
-  return many
+function greeting(hour: number, t: TFunction): string {
+  if (hour >= 5 && hour < 12) return t('dashboard.greetingMorning')
+  if (hour >= 12 && hour < 18) return t('dashboard.greetingDay')
+  if (hour >= 18 && hour < 23) return t('dashboard.greetingEvening')
+  return t('dashboard.greetingNight')
 }
 
 export default function DashboardPage(): JSX.Element {
+  const { t } = useTranslation()
   const { data, isLoading, isError } = useQuery({
     queryKey: ['dashboard'],
     queryFn: dashboardApi.get,
@@ -51,8 +46,8 @@ export default function DashboardPage(): JSX.Element {
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8">
         <div className="mb-8">
-          <p className="eyebrow mb-1">Рабочий стол</p>
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">Дашборд</h1>
+          <p className="eyebrow mb-1">{t('dashboard.eyebrow')}</p>
+          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{t('dashboard.title')}</h1>
         </div>
 
         {isLoading && (
@@ -63,7 +58,7 @@ export default function DashboardPage(): JSX.Element {
 
         {isError && (
           <div className="card-elevated p-6 text-light-secondary dark:text-dark-secondary">
-            Не удалось загрузить данные дашборда. Попробуйте обновить страницу.
+            {t('dashboard.loadError')}
           </div>
         )}
 
@@ -74,6 +69,7 @@ export default function DashboardPage(): JSX.Element {
 }
 
 function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="space-y-6">
       <DigestBanner data={data} />
@@ -83,9 +79,9 @@ function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
       <QuickAskWidget />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Активные дела" value={data.activeCases} to="/cases" />
-        <StatCard label="Незакрытые задачи" value={data.openTasks} />
-        <StatCard label="Дедлайнов на неделе" value={data.upcomingDeadlines.length} />
+        <StatCard label={t('dashboard.statActiveCases')} value={data.activeCases} to="/cases" />
+        <StatCard label={t('dashboard.statOpenTasks')} value={data.openTasks} />
+        <StatCard label={t('dashboard.statWeekDeadlines')} value={data.upcomingDeadlines.length} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -100,16 +96,17 @@ function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
 
 const ONBOARDING_DISMISSED_KEY = 'pravoos.onboarding.dismissed'
 
-const QUICK_START_STEPS: { to: string; title: string; description: string }[] = [
-  { to: '/cases?new=1', title: '1. Создайте первое дело', description: 'Загрузите документы и запустите AI-анализ.' },
-  { to: '/clients?new=1', title: '2. Добавьте клиента', description: 'Привяжите дела, счета и переписку.' },
-  { to: '/chat', title: '3. Задайте вопрос AI', description: 'Спросите по практике или загруженной базе.' },
-]
-
 function QuickStartCard(): JSX.Element | null {
+  const { t } = useTranslation()
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === 'true')
 
   if (dismissed) return null
+
+  const steps = [
+    { to: '/cases?new=1', title: t('dashboard.step1Title'), description: t('dashboard.step1Desc') },
+    { to: '/clients?new=1', title: t('dashboard.step2Title'), description: t('dashboard.step2Desc') },
+    { to: '/chat', title: t('dashboard.step3Title'), description: t('dashboard.step3Desc') },
+  ]
 
   const dismiss = (): void => {
     localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true')
@@ -120,13 +117,13 @@ function QuickStartCard(): JSX.Element | null {
     <div className="card-elevated p-5">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">Быстрый старт</h2>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">Три шага, чтобы начать работу в PravoOS.</p>
+          <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">{t('dashboard.quickStartTitle')}</h2>
+          <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('dashboard.quickStartSubtitle')}</p>
         </div>
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Скрыть быстрый старт"
+          aria-label={t('dashboard.quickStartHide')}
           className="shrink-0 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -136,7 +133,7 @@ function QuickStartCard(): JSX.Element | null {
         </button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {QUICK_START_STEPS.map((step) => (
+        {steps.map((step) => (
           <Link
             key={step.to}
             to={step.to}
@@ -152,6 +149,7 @@ function QuickStartCard(): JSX.Element | null {
 }
 
 function QuickAskWidget(): JSX.Element {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [question, setQuestion] = useState('')
 
@@ -163,13 +161,13 @@ function QuickAskWidget(): JSX.Element {
   return (
     <div className="card-elevated p-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-        <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">Быстрый вопрос AI</h2>
+        <h2 className="text-lg font-semibold text-light-text dark:text-dark-text">{t('dashboard.quickAskTitle')}</h2>
         <div className="flex flex-wrap items-center gap-2">
           <Link to="/cases?new=1">
-            <Button variant="secondary" size="sm">Новое дело</Button>
+            <Button variant="secondary" size="sm">{t('dashboard.newCase')}</Button>
           </Link>
           <Link to="/calendar">
-            <Button variant="ghost" size="sm">Календарь</Button>
+            <Button variant="ghost" size="sm">{t('dashboard.calendar')}</Button>
           </Link>
         </div>
       </div>
@@ -183,59 +181,57 @@ function QuickAskWidget(): JSX.Element {
         <input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Спросите AI по практике или делу…"
+          placeholder={t('dashboard.quickAskPlaceholder')}
           className="flex-1 min-w-0 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
         />
-        <Button type="submit" variant="primary" size="sm">Спросить</Button>
+        <Button type="submit" variant="primary" size="sm">{t('dashboard.ask')}</Button>
       </form>
     </div>
   )
 }
 
 function DigestBanner({ data }: { data: DashboardResponse }): JSX.Element {
+  const { t, i18n } = useTranslation()
   const now = new Date()
   const dueToday = data.upcomingDeadlines.filter((deadline) => deadline.daysLeft <= 0).length
   const weekCount = data.upcomingDeadlines.length
-  const dateLabel = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+  const dateLabel = now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })
 
   let focus: JSX.Element
   if (dueToday > 0) {
     focus = (
-      <>
-        Сегодня к сроку{' '}
-        <span className="font-semibold text-red-600 dark:text-red-400">
-          {dueToday} {plural(dueToday, 'дедлайн', 'дедлайна', 'дедлайнов')}
-        </span>
-        {' '}— не упустите.
-      </>
+      <Trans
+        i18nKey="dashboard.focusDueToday"
+        count={dueToday}
+        components={{ 1: <span className="font-semibold text-red-600 dark:text-red-400" /> }}
+      />
     )
   } else if (weekCount > 0) {
     focus = (
-      <>
-        Срочного на сегодня нет. На неделе —{' '}
-        <span className="font-semibold text-light-text dark:text-dark-text">
-          {weekCount} {plural(weekCount, 'дедлайн', 'дедлайна', 'дедлайнов')}
-        </span>
-        .
-      </>
+      <Trans
+        i18nKey="dashboard.focusWeek"
+        count={weekCount}
+        components={{ 1: <span className="font-semibold text-light-text dark:text-dark-text" /> }}
+      />
     )
   } else {
-    focus = <>Всё под контролем — активных дедлайнов нет.</>
+    focus = <>{t('dashboard.focusNone')}</>
   }
 
   return (
     <div className="card-elevated p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div className="min-w-0">
         <div className="flex items-baseline gap-3 flex-wrap">
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text">{greeting(now.getHours())}</h2>
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text">{greeting(now.getHours(), t)}</h2>
           <span className="text-sm text-light-secondary dark:text-dark-secondary capitalize">{dateLabel}</span>
         </div>
         <p className="mt-1.5 text-sm text-light-secondary dark:text-dark-secondary">{focus}</p>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <FocusPill label="активных дел" value={data.activeCases} to="/cases" />
-        <FocusPill label="задач" value={data.openTasks} />
-        <FocusPill label="на неделе" value={weekCount} tone={dueToday > 0 ? 'danger' : 'default'} />
+        <FocusPill label={t('dashboard.pillActiveCases')} value={data.activeCases} to="/cases" />
+        <FocusPill label={t('dashboard.pillTasks')} value={data.openTasks} />
+        <FocusPill label={t('dashboard.pillWeek')} value={weekCount} tone={dueToday > 0 ? 'danger' : 'default'} />
       </div>
     </div>
   )
@@ -288,14 +284,15 @@ function StatCard({ label, value, to }: { label: string; value: number; to?: str
 }
 
 function PipelineWidget({ data }: { data: DashboardResponse }): JSX.Element {
+  const { t } = useTranslation()
   const maxCount = Math.max(1, ...data.pipeline.map((item) => item.count))
   const total = data.pipeline.reduce((sum, item) => sum + item.count, 0)
 
   return (
     <div className="card-elevated p-5">
-      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">Воронка дел</h2>
+      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">{t('dashboard.pipelineTitle')}</h2>
       {total === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">Дел пока нет.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('dashboard.noCases')}</p>
       ) : (
         <div className="space-y-3">
           {CASE_STATUS_ORDER.map((status) => {
@@ -305,7 +302,7 @@ function PipelineWidget({ data }: { data: DashboardResponse }): JSX.Element {
               <div key={status}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm text-light-text dark:text-dark-text">
-                    {CASE_STATUS_CONFIG[status].label}
+                    {caseStatusLabel(status)}
                   </span>
                   <span className="text-sm font-medium text-light-secondary dark:text-dark-secondary">{count}</span>
                 </div>
@@ -325,11 +322,12 @@ function PipelineWidget({ data }: { data: DashboardResponse }): JSX.Element {
 }
 
 function DeadlinesWidget({ deadlines }: { deadlines: DashboardDeadline[] }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="card-elevated p-5">
-      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">Ближайшие дедлайны</h2>
+      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">{t('dashboard.deadlinesTitle')}</h2>
       {deadlines.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">Дедлайнов на ближайшие 7 дней нет.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('dashboard.noDeadlines')}</p>
       ) : (
         <ul className="space-y-2">
           {deadlines.map((deadline, index) => (
@@ -347,7 +345,7 @@ function DeadlinesWidget({ deadlines }: { deadlines: DashboardDeadline[] }): JSX
                   </p>
                 </div>
                 <Badge variant={deadline.daysLeft <= 3 ? 'danger' : 'warning'}>
-                  {daysLeftLabel(deadline.daysLeft)}
+                  {daysLeftLabel(deadline.daysLeft, t)}
                 </Badge>
               </Link>
             </li>
@@ -359,11 +357,12 @@ function DeadlinesWidget({ deadlines }: { deadlines: DashboardDeadline[] }): JSX
 }
 
 function RecentCasesWidget({ cases }: { cases: DashboardResponse['recentCases'] }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="card-elevated p-5">
-      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">Последние дела</h2>
+      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-4">{t('dashboard.recentTitle')}</h2>
       {cases.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">Дел пока нет.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('dashboard.noCases')}</p>
       ) : (
         <ul className="divide-y divide-light-border dark:divide-dark-border">
           {cases.map((caseItem) => (

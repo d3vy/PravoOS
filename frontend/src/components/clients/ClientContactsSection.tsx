@@ -1,23 +1,25 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { clientsApi } from '../../api/clients'
 import { Button } from '../ui/Button'
 import { Spinner } from '../ui/Spinner'
+import i18n from '../../i18n'
 import type { ContactType } from '../../types'
-
-const CONTACT_TYPES: { value: ContactType; label: string }[] = [
-  { value: 'CALL', label: 'Звонок' },
-  { value: 'MEETING', label: 'Встреча' },
-  { value: 'LETTER', label: 'Письмо' },
-  { value: 'EMAIL', label: 'Эл. письмо' },
-  { value: 'MESSENGER', label: 'Мессенджер' },
-]
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
 export function ClientContactsSection({ clientId }: { clientId: string }): JSX.Element {
+  const { t } = useTranslation()
+  const contactTypes: { value: ContactType; label: string }[] = [
+    { value: 'CALL', label: t('clientContacts.typeCall') },
+    { value: 'MEETING', label: t('clientContacts.typeMeeting') },
+    { value: 'LETTER', label: t('clientContacts.typeLetter') },
+    { value: 'EMAIL', label: t('clientContacts.typeEmail') },
+    { value: 'MESSENGER', label: t('clientContacts.typeMessenger') },
+  ]
   const queryClient = useQueryClient()
   const [type, setType] = useState<ContactType>('CALL')
   const [contactDate, setContactDate] = useState(todayIso())
@@ -43,19 +45,19 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
       setContactDate(todayIso())
       setError(null)
     },
-    onError: () => setError('Не удалось добавить запись. Проверьте данные.'),
+    onError: () => setError(t('clientContacts.addError')),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (contactId: string) => clientsApi.deleteContact(clientId, contactId),
     onSuccess: invalidate,
-    onError: () => setError('Не удалось удалить запись.'),
+    onError: () => setError(t('clientContacts.deleteError')),
   })
 
   const handleAdd = (e: React.FormEvent): void => {
     e.preventDefault()
     if (!contactDate) {
-      setError('Укажите дату контакта')
+      setError(t('clientContacts.dateRequired'))
       return
     }
     setError(null)
@@ -65,7 +67,7 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
   return (
     <section className="mb-10">
       <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">
-        История коммуникаций
+        {t('clientContacts.title')}
         {contacts && contacts.length > 0 && (
           <span className="font-normal text-light-secondary dark:text-dark-secondary"> ({contacts.length})</span>
         )}
@@ -81,7 +83,7 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
             onChange={(e) => setType(e.target.value as ContactType)}
             className="px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
           >
-            {CONTACT_TYPES.map((option) => (
+            {contactTypes.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -97,14 +99,14 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Заметки (опционально)"
+          placeholder={t('clientContacts.notesPlaceholder')}
           rows={2}
           className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
         />
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div>
           <Button type="submit" size="sm" loading={createMutation.isPending}>
-            Добавить запись
+            {t('clientContacts.addSubmit')}
           </Button>
         </div>
       </form>
@@ -114,7 +116,7 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
           <Spinner />
         </div>
       ) : !contacts || contacts.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">Записей о контактах пока нет.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('clientContacts.empty')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {contacts.map((contact) => (
@@ -129,7 +131,7 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
                       {contact.typeName}
                     </span>
                     <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                      {new Date(contact.contactDate).toLocaleDateString('ru-RU')}
+                      {new Date(contact.contactDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                     </span>
                   </div>
                   {contact.notes && (
@@ -140,7 +142,7 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
                   onClick={() => deleteMutation.mutate(contact.id)}
                   className="shrink-0 text-xs text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400"
                 >
-                  Удалить
+                  {t('clientContacts.delete')}
                 </button>
               </div>
             </li>

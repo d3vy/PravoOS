@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { usersApi } from '../../api/users'
 import type {
   LawyerProfileResponse,
@@ -13,6 +14,7 @@ import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 
 export default function ProfilePage(): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
 
   const { data: profile, isLoading } = useQuery<LawyerProfileResponse>({
@@ -34,7 +36,7 @@ export default function ProfilePage(): JSX.Element {
     return (
       <div className="bg-light-bg dark:bg-dark-bg">
         <div className="page-container py-16 text-center">
-          <p className="text-light-secondary dark:text-dark-secondary">Профиль не найден</p>
+          <p className="text-light-secondary dark:text-dark-secondary">{t('profile.notFound')}</p>
         </div>
       </div>
     )
@@ -44,7 +46,7 @@ export default function ProfilePage(): JSX.Element {
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-lg">
         <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-8">
-          Профиль
+          {t('profile.title')}
         </h1>
         <ProfileForm profile={profile} queryClient={queryClient} />
         <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
@@ -66,6 +68,7 @@ function MfaSection({
 }: {
   queryClient: ReturnType<typeof useQueryClient>
 }): JSX.Element {
+  const { t } = useTranslation()
   const [setup, setSetup] = useState<MfaSetupResponse | null>(null)
   const [code, setCode] = useState('')
   const [disableCode, setDisableCode] = useState('')
@@ -83,7 +86,7 @@ function MfaSection({
       setCode('')
       setActionError(null)
     },
-    onError: () => setActionError('Не удалось начать настройку. Попробуйте снова.'),
+    onError: () => setActionError(t('profile.mfaSetupFailed')),
   })
 
   const enableMutation = useMutation({
@@ -94,7 +97,7 @@ function MfaSection({
       setActionError(null)
       queryClient.invalidateQueries({ queryKey: ['mfa-status'] })
     },
-    onError: () => setActionError('Неверный код. Проверьте приложение и попробуйте снова.'),
+    onError: () => setActionError(t('profile.mfaInvalidCode')),
   })
 
   const disableMutation = useMutation({
@@ -104,7 +107,7 @@ function MfaSection({
       setActionError(null)
       queryClient.invalidateQueries({ queryKey: ['mfa-status'] })
     },
-    onError: () => setActionError('Не удалось отключить. Проверьте код и попробуйте снова.'),
+    onError: () => setActionError(t('profile.mfaDisableFailed')),
   })
 
   if (isLoading || !status) {
@@ -115,25 +118,25 @@ function MfaSection({
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">
-          Двухфакторная аутентификация
+          {t('profile.mfaTitle')}
         </h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-          Дополнительный код из приложения-аутентификатора при входе (Google Authenticator, 1Password и др.).
-          {status.mandatory && ' Обязательна для администраторов.'}
+          {t('profile.mfaDesc')}
+          {status.mandatory && t('profile.mfaMandatory')}
         </p>
       </div>
 
       {status.enabled ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-green-600 dark:text-green-400">Двухфакторная аутентификация включена</p>
+          <p className="text-sm text-green-600 dark:text-green-400">{t('profile.mfaEnabled')}</p>
           {status.mandatory ? (
             <p className="text-sm text-light-secondary dark:text-dark-secondary">
-              Отключение недоступно для администраторов.
+              {t('profile.mfaDisableUnavailable')}
             </p>
           ) : (
             <div className="flex flex-col gap-2 max-w-xs">
               <Input
-                label="Код для отключения"
+                label={t('profile.mfaDisableCodeLabel')}
                 inputMode="numeric"
                 placeholder="000000"
                 value={disableCode}
@@ -146,7 +149,7 @@ function MfaSection({
                   disabled={disableCode.length !== 6}
                   onClick={() => disableMutation.mutate()}
                 >
-                  Отключить 2FA
+                  {t('profile.mfaDisable')}
                 </Button>
               </div>
             </div>
@@ -155,14 +158,14 @@ function MfaSection({
       ) : setup ? (
         <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4 max-w-md">
           <p className="text-sm text-light-text dark:text-dark-text">
-            Добавьте ключ в приложение-аутентификатор, затем введите код для подтверждения.
+            {t('profile.mfaSetupInstruction')}
           </p>
           <div>
-            <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">Секретный ключ:</p>
+            <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">{t('profile.mfaSecretKey')}</p>
             <code className="font-mono text-sm break-all text-light-text dark:text-dark-text">{setup.secret}</code>
           </div>
           <Input
-            label="Код подтверждения"
+            label={t('profile.mfaConfirmCode')}
             inputMode="numeric"
             placeholder="000000"
             value={code}
@@ -175,10 +178,10 @@ function MfaSection({
               disabled={code.length !== 6}
               onClick={() => enableMutation.mutate()}
             >
-              Включить 2FA
+              {t('profile.mfaEnable')}
             </Button>
             <Button variant="secondary" onClick={() => setSetup(null)}>
-              Отмена
+              {t('common.cancel')}
             </Button>
           </div>
         </div>
@@ -189,7 +192,7 @@ function MfaSection({
             loading={setupMutation.isPending}
             onClick={() => setupMutation.mutate()}
           >
-            Настроить 2FA
+            {t('profile.mfaSetup')}
           </Button>
         </div>
       )}
@@ -200,6 +203,7 @@ function MfaSection({
 }
 
 function SessionsSection(): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
 
   const { data: sessions, isLoading } = useQuery({
@@ -215,16 +219,16 @@ function SessionsSection(): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Активные сессии</h2>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('profile.sessionsTitle')}</h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-          Устройства с активным доступом к аккаунту. Завершите незнакомые сессии.
+          {t('profile.sessionsDesc')}
         </p>
       </div>
 
       {isLoading ? (
         <Spinner size="sm" />
       ) : !sessions || sessions.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">Активных сессий нет.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('profile.noSessions')}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {sessions.map((session) => (
@@ -250,18 +254,20 @@ function SessionRow({
   onRevoke: () => void
   revoking: boolean
 }): JSX.Element {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg border border-light-border dark:border-dark-border p-3">
       <div className="min-w-0">
         <p className="text-sm text-light-text dark:text-dark-text truncate">
-          {session.userAgent ?? 'Неизвестное устройство'}
+          {session.userAgent ?? t('profile.unknownDevice')}
         </p>
         <p className="text-xs text-light-secondary dark:text-dark-secondary truncate">
-          IP: {session.ipAddress ?? '—'} · вход {new Date(session.createdAt).toLocaleString('ru-RU')}
+          IP: {session.ipAddress ?? '—'} · {t('profile.loginAt')} {new Date(session.createdAt).toLocaleString(locale)}
         </p>
       </div>
       <Button variant="secondary" loading={revoking} onClick={onRevoke}>
-        Завершить
+        {t('profile.revoke')}
       </Button>
     </li>
   )
@@ -274,6 +280,7 @@ function TelegramSection({
   profile: LawyerProfileResponse
   queryClient: ReturnType<typeof useQueryClient>
 }): JSX.Element {
+  const { t } = useTranslation()
   const [link, setLink] = useState<TelegramLinkResponse | null>(null)
 
   const linkMutation = useMutation({
@@ -292,26 +299,26 @@ function TelegramSection({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Telegram-уведомления</h2>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('profile.telegramTitle')}</h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-          Привяжите Telegram, чтобы получать напоминания о дедлайнах по делам.
+          {t('profile.telegramDesc')}
         </p>
       </div>
 
       {profile.telegramLinked ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-green-600 dark:text-green-400">Telegram привязан</p>
+          <p className="text-sm text-green-600 dark:text-green-400">{t('settings.telegramLinked')}</p>
           <div>
             <Button
               variant="secondary"
               loading={unlinkMutation.isPending}
               onClick={() => unlinkMutation.mutate()}
             >
-              Отвязать Telegram
+              {t('settings.unlinkTelegram')}
             </Button>
           </div>
           {unlinkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">Не удалось отвязать. Попробуйте снова.</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.unlinkFailed')}</p>
           )}
         </div>
       ) : (
@@ -323,33 +330,33 @@ function TelegramSection({
                 loading={linkMutation.isPending}
                 onClick={() => linkMutation.mutate()}
               >
-                Привязать Telegram
+                {t('settings.linkTelegram')}
               </Button>
             </div>
           )}
 
           {linkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">Не удалось создать ссылку. Попробуйте снова.</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.linkCreateFailed')}</p>
           )}
 
           {link && (
             <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4">
               <p className="text-sm text-light-text dark:text-dark-text">
-                Откройте бота и нажмите «Запустить» — привязка произойдёт автоматически.
+                {t('settings.botInstruction')}
               </p>
               <div className="flex flex-wrap gap-2">
                 <a href={link.deepLink} target="_blank" rel="noopener noreferrer">
-                  <Button variant="primary">Открыть Telegram</Button>
+                  <Button variant="primary">{t('settings.openTelegram')}</Button>
                 </a>
                 <Button
                   variant="secondary"
                   onClick={() => queryClient.invalidateQueries({ queryKey: ['profile'] })}
                 >
-                  Я привязал — обновить
+                  {t('settings.iLinkedRefresh')}
                 </Button>
               </div>
               <p className="text-xs text-light-secondary dark:text-dark-secondary">
-                Если ссылка не сработала, отправьте боту команду:{' '}
+                {t('settings.botCommandHint')}{' '}
                 <code className="font-mono">/start {link.code}</code>
               </p>
             </div>
@@ -367,6 +374,7 @@ function ProfileForm({
   profile: LawyerProfileResponse
   queryClient: ReturnType<typeof useQueryClient>
 }): JSX.Element {
+  const { t } = useTranslation()
   const [fullName, setFullName] = useState(profile.fullName)
   const [specialization, setSpecialization] = useState(profile.specialization ?? '')
   const [phone, setPhone] = useState(profile.phone ?? '')
@@ -393,7 +401,7 @@ function ProfileForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="text-sm font-medium text-light-text dark:text-dark-text block mb-1.5">Email</label>
+        <label className="text-sm font-medium text-light-text dark:text-dark-text block mb-1.5">{t('common.email')}</label>
         <input
           type="email"
           value={profile.email}
@@ -403,7 +411,7 @@ function ProfileForm({
       </div>
 
       <Input
-        label="ФИО"
+        label={t('profile.fullNameLabel')}
         value={fullName}
         onChange={(e) => setFullName(e.target.value)}
         required
@@ -411,28 +419,28 @@ function ProfileForm({
       />
 
       <Input
-        label="Специализация"
+        label={t('profile.specializationLabel')}
         value={specialization}
         onChange={(e) => setSpecialization(e.target.value)}
         maxLength={255}
-        placeholder="Необязательно"
+        placeholder={t('profile.optional')}
       />
 
       <Input
-        label="Телефон"
+        label={t('profile.phoneLabel')}
         type="tel"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         maxLength={50}
-        placeholder="Необязательно"
+        placeholder={t('profile.optional')}
       />
 
       {updateMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400">Ошибка сохранения. Попробуйте снова.</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{t('profile.saveError')}</p>
       )}
 
       {success && (
-        <p className="text-sm text-green-600 dark:text-green-400">Профиль сохранён</p>
+        <p className="text-sm text-green-600 dark:text-green-400">{t('profile.saved')}</p>
       )}
 
       <div className="pt-2">
@@ -442,7 +450,7 @@ function ProfileForm({
           loading={updateMutation.isPending}
           disabled={!fullName.trim()}
         >
-          Сохранить
+          {t('common.save')}
         </Button>
       </div>
     </form>

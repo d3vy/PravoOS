@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../hooks/useTheme'
 
 export function ThemeToggle({ className = '' }: { className?: string }): JSX.Element {
+  const { t } = useTranslation()
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -8,7 +10,7 @@ export function ThemeToggle({ className = '' }: { className?: string }): JSX.Ele
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={isDark ? 'Включить светлую тему' : 'Включить тёмную тему'}
+      aria-label={isDark ? t('theme.toLight') : t('theme.toDark')}
       className={`w-9 h-9 flex items-center justify-center rounded-lg text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent ${className}`}
     >
       {isDark ? <SunIcon /> : <MoonIcon />}

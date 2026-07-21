@@ -6,6 +6,8 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -34,13 +36,14 @@ function isPersistedId(id: string): boolean {
   return !LOCAL_ID_PREFIXES.some((prefix) => id.startsWith(prefix))
 }
 
-const SUGGESTIONS = [
-  'Какой срок исковой давности по договору поставки?',
-  'Условия расторжения трудового договора по инициативе работодателя',
-  'Требования к форме доверенности',
-]
+const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
+
+function locale(): string {
+  return i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+}
 
 export default function ChatPage(): JSX.Element {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
     () => searchParams.get('conversation')
@@ -95,7 +98,7 @@ export default function ChatPage(): JSX.Element {
       setAttachedDocIds((prev) => (prev.includes(uploaded.id) ? prev : [...prev, uploaded.id]))
       queryClient.invalidateQueries({ queryKey: ['chat', 'attachments'] })
     },
-    onError: () => setUploadError('Не удалось загрузить файл. Попробуйте другой формат или размер.'),
+    onError: () => setUploadError(t('chat.uploadError')),
   })
 
   const { data: historyMessages, isLoading: messagesLoading } = useQuery<MessageResponse[]>({
@@ -262,7 +265,7 @@ export default function ChatPage(): JSX.Element {
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden fixed top-[72px] left-3 z-30 w-10 h-10 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary shadow-card dark:shadow-card-dark flex items-center justify-center"
-            aria-label="Открыть список диалогов"
+            aria-label={t('chat.openConversations')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="3" y1="6" x2="21" y2="6" />
@@ -292,7 +295,7 @@ export default function ChatPage(): JSX.Element {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Новый чат
+              {t('chat.newChat')}
             </button>
 
             {/* Search */}
@@ -304,7 +307,7 @@ export default function ChatPage(): JSX.Element {
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Поиск..."
+                placeholder={t('chat.searchPlaceholder')}
                 className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary focus:outline-none focus:ring-1 focus:ring-light-accent dark:focus:ring-dark-accent"
               />
             </div>
@@ -315,7 +318,7 @@ export default function ChatPage(): JSX.Element {
               <div className="flex justify-center py-8"><Spinner size="sm" /></div>
             ) : conversations.length === 0 ? (
               <p className="text-xs text-center text-light-secondary dark:text-dark-secondary py-8 px-4">
-                {searchQuery ? 'Ничего не найдено' : 'Нет диалогов. Начните новый чат.'}
+                {searchQuery ? t('chat.nothingFound') : t('chat.noConversations')}
               </p>
             ) : (
               <div className="flex flex-col gap-0.5">
@@ -331,7 +334,7 @@ export default function ChatPage(): JSX.Element {
                   >
                     <span className="block truncate font-medium">{conv.title}</span>
                     <span className="block text-xs text-light-secondary dark:text-dark-secondary mt-0.5">
-                      {new Date(conv.createdAt).toLocaleDateString('ru-RU')}
+                      {new Date(conv.createdAt).toLocaleDateString(locale())}
                     </span>
                   </button>
                 ))}
@@ -358,19 +361,19 @@ export default function ChatPage(): JSX.Element {
                   <PravoIcon className="w-7 h-7" />
                 </div>
                 <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-3">
-                  Задайте вопрос по правовой базе
+                  {t('chat.emptyTitle')}
                 </h2>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed">
-                  AI-ассистент ответит на основе загруженных документов и укажет источники.
+                  {t('chat.emptySubtitle')}
                 </p>
                 <div className="mt-8 grid grid-cols-1 gap-2 w-full max-w-sm">
-                  {SUGGESTIONS.map((suggestion) => (
+                  {SUGGESTION_KEYS.map((suggestionKey) => (
                     <button
-                      key={suggestion}
-                      onClick={() => { setInputValue(suggestion); textareaRef.current?.focus() }}
+                      key={suggestionKey}
+                      onClick={() => { setInputValue(t(suggestionKey)); textareaRef.current?.focus() }}
                       className="text-left text-sm px-4 py-2.5 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:border-light-accent/40 dark:hover:border-dark-accent/40 hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
                     >
-                      {suggestion}
+                      {t(suggestionKey)}
                     </button>
                   ))}
                 </div>
@@ -395,7 +398,7 @@ export default function ChatPage(): JSX.Element {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col gap-2 max-w-[80%]"
                   >
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary ml-11">Уточняющие вопросы:</p>
+                    <p className="text-xs text-light-secondary dark:text-dark-secondary ml-11">{t('chat.followUps')}</p>
                     <div className="flex flex-col gap-1.5 ml-11">
                       {lastAssistantFollowUps.map((q, i) => (
                         <button
@@ -432,12 +435,12 @@ export default function ChatPage(): JSX.Element {
                     >
                       {doc.status === 'PROCESSING' && <Spinner size="sm" />}
                       {doc.title}
-                      {doc.status === 'PROCESSING' && <span className="opacity-70">индексируется…</span>}
-                      {doc.status === 'FAILED' && <span className="opacity-70">не удалось обработать</span>}
+                      {doc.status === 'PROCESSING' && <span className="opacity-70">{t('chat.indexing')}</span>}
+                      {doc.status === 'FAILED' && <span className="opacity-70">{t('chat.processFailed')}</span>}
                       <button
                         onClick={() => toggleDoc(doc.id)}
                         className="hover:opacity-70 ml-0.5"
-                        aria-label="Убрать документ"
+                        aria-label={t('chat.removeDoc')}
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -448,7 +451,7 @@ export default function ChatPage(): JSX.Element {
                   {uploadMutation.isPending && (
                     <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
                       <Spinner size="sm" />
-                      Загрузка файла…
+                      {t('chat.uploadingFile')}
                     </span>
                   )}
                   {uploadError && (
@@ -471,9 +474,9 @@ export default function ChatPage(): JSX.Element {
                     type="button"
                     onClick={() => setAttachPickerOpen((v) => !v)}
                     disabled={isSending || uploadMutation.isPending}
-                    title="Прикрепить файл"
+                    title={t('chat.attachFile')}
                     className="w-7 h-7 rounded-md flex items-center justify-center text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent hover:bg-light-surface dark:hover:bg-dark-surface transition-colors disabled:opacity-30"
-                    aria-label="Прикрепить файл"
+                    aria-label={t('chat.attachFile')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -489,13 +492,13 @@ export default function ChatPage(): JSX.Element {
                         <svg className="shrink-0 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        Загрузить файл с компьютера
+                        {t('chat.uploadFromComputer')}
                       </button>
 
                       {attachments.length > 0 && (
                         <>
                           <p className="text-xs font-medium text-light-secondary dark:text-dark-secondary px-3 pt-3 pb-2 border-t border-light-border dark:border-dark-border">
-                            Загруженные ранее
+                            {t('chat.previouslyUploaded')}
                           </p>
                           {attachments.map((doc) => (
                             <button
@@ -530,18 +533,18 @@ export default function ChatPage(): JSX.Element {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onInput={handleTextareaInput}
-                  placeholder="Задайте вопрос"
+                  placeholder={t('chat.askPlaceholder')}
                   rows={1}
                   disabled={isSending}
-                  aria-label="Текст сообщения"
+                  aria-label={t('chat.messageText')}
                   className="flex-1 bg-transparent text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary resize-none outline-none text-[15px] leading-6 py-1.5 min-h-[36px] max-h-40 disabled:opacity-50"
                 />
                 <button
                   onClick={() => handleSend()}
                   disabled={!inputValue.trim() || isSending || hasIndexingAttachment}
-                  title={hasIndexingAttachment ? 'Дождитесь окончания индексации файла' : undefined}
+                  title={hasIndexingAttachment ? t('chat.waitIndexing') : undefined}
                   className="shrink-0 w-9 h-9 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg flex items-center justify-center hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  aria-label="Отправить"
+                  aria-label={t('chat.send')}
                 >
                   {isSending ? (
                     <Spinner size="sm" className="border-white/30 border-t-white dark:border-dark-bg/30 dark:border-t-dark-bg" />
@@ -554,7 +557,7 @@ export default function ChatPage(): JSX.Element {
                 </button>
               </div>
               <p className="text-xs text-center text-light-secondary dark:text-dark-secondary mt-2 opacity-70">
-                Ответы генерируются на основе загруженных документов. Проверяйте источники.
+                {t('chat.disclaimer')}
               </p>
             </div>
           </div>
@@ -565,6 +568,7 @@ export default function ChatPage(): JSX.Element {
 }
 
 function CopyButton({ text }: { text: string }): JSX.Element {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const handleCopy = (): void => {
     void navigator.clipboard.writeText(text).then(() => {
@@ -575,7 +579,7 @@ function CopyButton({ text }: { text: string }): JSX.Element {
   return (
     <button
       onClick={handleCopy}
-      title="Скопировать"
+      title={t('chat.copy')}
       className="text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
     >
       {copied ? (
@@ -599,6 +603,7 @@ function MessageBubble({
   message: LocalMessage
   onRate: (rating: number, comment?: string) => void
 }): JSX.Element {
+  const { t } = useTranslation()
   const isUser = message.role === 'USER'
   const canRate = !isUser && !message.isStreaming && isPersistedId(message.id)
   const showCitations = !isUser && !message.isStreaming && Boolean(message.content)
@@ -617,7 +622,7 @@ function MessageBubble({
             : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
         }`}
       >
-        {isUser ? 'Вы' : <PravoIcon className="w-4 h-4" />}
+        {isUser ? t('chat.you') : <PravoIcon className="w-4 h-4" />}
       </div>
 
       <div className={`flex flex-col gap-2 min-w-0 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
@@ -640,7 +645,7 @@ function MessageBubble({
 
         {!message.isStreaming && message.sources && message.sources.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 max-w-full">
-            <span className="text-xs text-light-secondary dark:text-dark-secondary">Источники:</span>
+            <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('chat.sources')}</span>
             {message.sources.map((source, idx) => (
               <span
                 key={idx}
@@ -671,6 +676,7 @@ function MessageBubble({
 }
 
 function ChatCitations({ text, auto }: { text: string; auto?: boolean }): JSX.Element {
+  const { t } = useTranslation()
   const checkMutation = useMutation({
     mutationFn: () => citationsApi.checkText(text),
   })
@@ -703,7 +709,7 @@ function ChatCitations({ text, auto }: { text: string; auto?: boolean }): JSX.El
               <circle cx="12" cy="12" r="9" />
             </svg>
           )}
-          Проверить ссылки
+          {t('chat.checkCitations')}
         </button>
         {result && (
           <span className="text-xs text-light-secondary dark:text-dark-secondary">
@@ -712,7 +718,7 @@ function ChatCitations({ text, auto }: { text: string; auto?: boolean }): JSX.El
         )}
       </div>
       {checkMutation.isError && (
-        <p className="text-xs text-red-600 dark:text-red-400">Не удалось проверить ссылки. Попробуйте снова.</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{t('chat.citationError')}</p>
       )}
       {result && <CitationList result={result} />}
     </div>
@@ -720,11 +726,12 @@ function ChatCitations({ text, auto }: { text: string; auto?: boolean }): JSX.El
 }
 
 function FeedbackBox({ onSubmit }: { onSubmit: (comment: string) => void }): JSX.Element {
+  const { t } = useTranslation()
   const [comment, setComment] = useState('')
   const [sent, setSent] = useState(false)
 
   if (sent) {
-    return <p className="text-xs text-light-secondary dark:text-dark-secondary">Спасибо, отзыв учтён.</p>
+    return <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('chat.feedbackThanks')}</p>
   }
 
   return (
@@ -732,7 +739,7 @@ function FeedbackBox({ onSubmit }: { onSubmit: (comment: string) => void }): JSX
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        placeholder="Что не так с ответом? (необязательно)"
+        placeholder={t('chat.feedbackPlaceholder')}
         rows={2}
         className="w-full resize-none rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg px-3 py-2 text-xs text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary focus:outline-none focus:ring-1 focus:ring-light-accent dark:focus:ring-dark-accent"
       />
@@ -741,7 +748,7 @@ function FeedbackBox({ onSubmit }: { onSubmit: (comment: string) => void }): JSX
         onClick={() => { onSubmit(comment.trim()); setSent(true) }}
         className="self-start text-xs px-3 py-1.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
       >
-        Отправить отзыв
+        {t('chat.sendFeedback')}
       </button>
     </div>
   )

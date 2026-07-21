@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { signaturesApi } from '../../api/signatures'
 import type { DocumentResponse, SignatureRequestResponse } from '../../types'
@@ -7,7 +9,7 @@ import { SignatureStatusBadge } from '../ui/SignatureStatusBadge'
 
 const errorMessage = (error: unknown): string => {
   const response = (error as { response?: { data?: { message?: string } } })?.response
-  return response?.data?.message ?? 'Не удалось выполнить действие. Попробуйте снова.'
+  return response?.data?.message ?? i18n.t('signature.actionError')
 }
 
 export function CaseSignatureSection({
@@ -17,6 +19,7 @@ export function CaseSignatureSection({
   caseId: string
   documents: DocumentResponse[]
 }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [documentId, setDocumentId] = useState('')
   const [message, setMessage] = useState('')
@@ -53,30 +56,29 @@ export function CaseSignatureSection({
   })
 
   const documentTitle = (id: string): string =>
-    documents.find((doc) => doc.id === id)?.title ?? 'Документ'
+    documents.find((doc) => doc.id === id)?.title ?? t('signature.documentFallback')
 
   return (
     <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">Электронная подпись</h2>
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">{t('signature.title')}</h2>
       <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
-        Отправьте документ клиенту на подписание простой электронной подписью (ст. 5 63-ФЗ). Клиент подтвердит
-        документ в портале — подпись фиксирует хэш документа, дату, IP и ФИО подписанта.
+        {t('signature.hint')}
       </p>
 
       {signableDocuments.length === 0 ? (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Сделайте документ видимым клиенту и дождитесь обработки, чтобы отправить его на подпись.
+          {t('signature.noDocsHint')}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs text-light-secondary dark:text-dark-secondary mb-1">Документ</label>
+            <label className="block text-xs text-light-secondary dark:text-dark-secondary mb-1">{t('signature.documentLabel')}</label>
             <select
               value={documentId}
               onChange={(e) => setDocumentId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
             >
-              <option value="">Выберите документ</option>
+              <option value="">{t('signature.selectDocument')}</option>
               {signableDocuments.map((doc) => (
                 <option key={doc.id} value={doc.id}>{doc.title}</option>
               ))}
@@ -84,14 +86,14 @@ export function CaseSignatureSection({
           </div>
           <div>
             <label className="block text-xs text-light-secondary dark:text-dark-secondary mb-1">
-              Сообщение клиенту (необязательно)
+              {t('signature.messageLabel')}
             </label>
             <input
               type="text"
               value={message}
               maxLength={1000}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Например: просьба подписать договор до пятницы"
+              placeholder={t('signature.messagePlaceholder')}
               className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
             />
           </div>
@@ -102,7 +104,7 @@ export function CaseSignatureSection({
               loading={createMutation.isPending}
               onClick={() => createMutation.mutate()}
             >
-              Отправить на подпись
+              {t('signature.sendForSignature')}
             </Button>
           </div>
         </div>
@@ -129,7 +131,7 @@ export function CaseSignatureSection({
                     disabled={cancelMutation.isPending}
                     className="text-xs px-2 py-1 rounded-md border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400 disabled:opacity-60"
                   >
-                    Отменить
+                    {t('signature.cancel')}
                   </button>
                 )}
               </div>
@@ -138,13 +140,13 @@ export function CaseSignatureSection({
               )}
               {signature.status === 'SIGNED' && (
                 <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                  Подписал: {signature.signerName}
-                  {signature.signedAt && ` · ${new Date(signature.signedAt).toLocaleString('ru-RU')}`}
+                  {t('signature.signedBy', { name: signature.signerName })}
+                  {signature.signedAt && ` · ${new Date(signature.signedAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}`}
                   {signature.signerIp && ` · IP ${signature.signerIp}`}
                 </p>
               )}
               {signature.status === 'DECLINED' && signature.declineReason && (
-                <p className="text-xs text-red-600 dark:text-red-400">Причина отказа: {signature.declineReason}</p>
+                <p className="text-xs text-red-600 dark:text-red-400">{t('signature.declineReason', { reason: signature.declineReason })}</p>
               )}
               <p className="text-[11px] font-mono text-light-secondary dark:text-dark-secondary mt-1 [overflow-wrap:anywhere]">
                 SHA-256: {signature.documentHash}

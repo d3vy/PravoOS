@@ -1,10 +1,9 @@
 import { motion, useReducedMotion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { AppWindow } from './AppWindow'
 
-const ANSWER_TEXT =
-  'Срок исковой давности по оспариванию подозрительной сделки должника — один год с момента, когда управляющий узнал или должен был узнать об основаниях (п. 2 ст. 61.2 и ст. 61.9 127-ФЗ). Течение начинается не ранее введения процедуры.'
-
 export function ChatDemo(): JSX.Element {
+  const { t } = useTranslation()
   const reduce = useReducedMotion()
   const base = reduce ? 0 : 1
 
@@ -20,7 +19,7 @@ export function ChatDemo(): JSX.Element {
       <div className="p-5 flex flex-col gap-4 min-h-[340px]">
         <motion.div {...reveal(0.1 * base)} className="self-end max-w-[80%]">
           <div className="px-4 py-2.5 rounded-2xl rounded-br-sm bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-sm">
-            Какой срок давности для оспаривания подозрительной сделки должника?
+            {t('landing.chatQuestion')}
           </div>
         </motion.div>
 
@@ -32,17 +31,17 @@ export function ChatDemo(): JSX.Element {
             <span className="text-xs text-light-secondary dark:text-dark-secondary">PravoOS</span>
           </div>
           <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text leading-relaxed">
-            {ANSWER_TEXT}
+            {t('landing.chatAnswer')}
           </div>
         </motion.div>
 
         <motion.div {...reveal(0.9 * base)} className="self-start w-full">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-light-secondary dark:text-dark-secondary mb-2">
-            Источники
+            {t('landing.chatSourcesLabel')}
           </p>
           <div className="flex flex-col gap-2">
-            <SourceRow label="ст. 61.2 127-ФЗ «О несостоятельности»" verified />
-            <SourceRow label="Анализ сделок должника.pdf · с. 12" verified />
+            <SourceRow label={t('landing.chatSource1')} verified />
+            <SourceRow label={t('landing.chatSource2')} verified />
           </div>
         </motion.div>
       </div>
@@ -51,6 +50,7 @@ export function ChatDemo(): JSX.Element {
 }
 
 function SourceRow({ label, verified }: { label: string; verified?: boolean }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
       <svg className="w-3.5 h-3.5 shrink-0 text-light-secondary dark:text-dark-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -63,7 +63,7 @@ function SourceRow({ label, verified }: { label: string; verified?: boolean }): 
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          проверено
+          {t('landing.chatVerified')}
         </span>
       )}
     </div>

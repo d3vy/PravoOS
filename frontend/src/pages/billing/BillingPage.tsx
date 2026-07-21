@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { billingApi } from '../../api/billing'
 import { refreshSession } from '../../api/client'
@@ -6,33 +8,40 @@ import type { BillingPlan, BillingStatus, PaymentRecord, PaymentStatus, Subscrip
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 
-const STATUS_LABEL: Record<SubscriptionStatus, string> = {
-  TRIALING: 'Пробный период',
-  ACTIVE: 'Активна',
-  PAST_DUE: 'Ожидает оплаты',
-  CANCELED: 'Отменена',
+const STATUS_LABEL_KEY: Record<SubscriptionStatus, string> = {
+  TRIALING: 'billing.statusTrialing',
+  ACTIVE: 'billing.statusActive',
+  PAST_DUE: 'billing.statusPastDue',
+  CANCELED: 'billing.statusCanceled',
 }
 
-const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
-  PENDING: 'Ожидает оплаты',
-  SUCCEEDED: 'Оплачен',
-  CANCELED: 'Отменён',
+const PAYMENT_STATUS_LABEL_KEY: Record<PaymentStatus, string> = {
+  PENDING: 'billing.payPending',
+  SUCCEEDED: 'billing.paySucceeded',
+  CANCELED: 'billing.payCanceled',
+}
+
+function locale(): string {
+  return i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
 }
 
 function formatPrice(kopecks: number): string {
-  return `${(kopecks / 100).toLocaleString('ru-RU')} ₽`
+  return `${(kopecks / 100).toLocaleString(locale())} ₽`
 }
 
 function formatDate(value: string | null): string {
   if (!value) return '—'
-  return new Date(value).toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' })
+  return new Date(value).toLocaleDateString(locale(), { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
 function formatTokens(tokens: number): string {
-  return tokens > 0 ? `${tokens.toLocaleString('ru-RU')} токенов/день` : 'без лимита токенов'
+  return tokens > 0
+    ? i18n.t('billing.tokensPerDay', { tokens: tokens.toLocaleString(locale()) })
+    : i18n.t('billing.noTokenLimit')
 }
 
 export default function BillingPage(): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
@@ -64,9 +73,9 @@ export default function BillingPage(): JSX.Element {
         window.location.href = checkout.confirmationUrl
         return
       }
-      setError('Платёжный провайдер не вернул ссылку на оплату.')
+      setError(t('billing.noConfirmationUrl'))
     },
-    onError: () => setError('Не удалось создать платёж. Попробуйте позже.'),
+    onError: () => setError(t('billing.createError')),
   })
 
   const cancelMutation = useMutation({
@@ -75,11 +84,11 @@ export default function BillingPage(): JSX.Element {
       setError(null)
       queryClient.invalidateQueries({ queryKey: ['billing-status'] })
     },
-    onError: () => setError('Не удалось отменить подписку.'),
+    onError: () => setError(t('billing.cancelError')),
   })
 
   const handleCancel = (): void => {
-    if (window.confirm('Отменить подписку? Доступ сохранится до конца оплаченного периода.')) {
+    if (window.confirm(t('billing.cancelConfirm'))) {
       cancelMutation.mutate()
     }
   }
@@ -99,9 +108,9 @@ export default function BillingPage(): JSX.Element {
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-4xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Подписка</h1>
+          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('billing.title')}</h1>
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Тариф определяет дневные лимиты AI-запросов и число мест в организации
+            {t('billing.subtitle')}
           </p>
         </div>
 
@@ -111,39 +120,39 @@ export default function BillingPage(): JSX.Element {
           <div className="mb-8 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">Текущий тариф</p>
+                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">{t('billing.currentPlan')}</p>
                 <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">
-                  {status.planName} · {STATUS_LABEL[status.status]}
+                  {status.planName} · {t(STATUS_LABEL_KEY[status.status])}
                 </h2>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-                  {status.dailyRequests} запросов/день · {formatTokens(status.dailyTokens)} · мест: {status.seats}
+                  {t('billing.statusMeta', { requests: status.dailyRequests, tokens: formatTokens(status.dailyTokens), seats: status.seats })}
                 </p>
               </div>
               {canCancel && (
                 <Button variant="secondary" size="sm" loading={cancelMutation.isPending} onClick={handleCancel}>
-                  Отменить подписку
+                  {t('billing.cancelSubscription')}
                 </Button>
               )}
             </div>
 
             {status.status === 'TRIALING' && (
               <p className="mt-4 text-sm text-light-text dark:text-dark-text">
-                Пробный период до {formatDate(status.trialEnd)}. Оплатите тариф, чтобы сохранить лимиты.
+                {t('billing.trialUntil', { date: formatDate(status.trialEnd) })}
               </p>
             )}
             {status.status === 'PAST_DUE' && (
               <p className="mt-4 text-sm text-red-600 dark:text-red-400">
-                Оплата не прошла. Продлите подписку, иначе лимиты снизятся до бесплатного тарифа.
+                {t('billing.pastDueMsg')}
               </p>
             )}
             {status.cancelAtPeriodEnd && (
               <p className="mt-4 text-sm text-light-text dark:text-dark-text">
-                Подписка отменена и не будет продлена. Доступ сохраняется до {formatDate(status.currentPeriodEnd)}.
+                {t('billing.canceledMsg', { date: formatDate(status.currentPeriodEnd) })}
               </p>
             )}
             {status.status === 'ACTIVE' && !status.cancelAtPeriodEnd && status.currentPeriodEnd && (
               <p className="mt-4 text-sm text-light-secondary dark:text-dark-secondary">
-                Следующее списание: {formatDate(status.currentPeriodEnd)}
+                {t('billing.nextCharge', { date: formatDate(status.currentPeriodEnd) })}
               </p>
             )}
           </div>
@@ -165,17 +174,17 @@ export default function BillingPage(): JSX.Element {
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="text-lg font-semibold text-light-text dark:text-dark-text">{plan.name}</h3>
                   <span className="text-sm text-light-text dark:text-dark-text">
-                    {isFree ? 'бесплатно' : `${formatPrice(plan.priceKopecks)}/мес`}
+                    {isFree ? t('billing.free') : t('billing.pricePerMonth', { price: formatPrice(plan.priceKopecks) })}
                   </span>
                 </div>
                 <ul className="text-sm text-light-secondary dark:text-dark-secondary flex flex-col gap-1">
-                  <li>{plan.dailyRequests} AI-запросов в день</li>
+                  <li>{t('billing.planRequests', { count: plan.dailyRequests })}</li>
                   <li>{formatTokens(plan.dailyTokens)}</li>
-                  <li>мест в организации: {plan.seats}</li>
+                  <li>{t('billing.planSeats', { count: plan.seats })}</li>
                 </ul>
                 <div className="mt-auto pt-2">
                   {isCurrent ? (
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary">Ваш текущий тариф</p>
+                    <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('billing.currentPlanBadge')}</p>
                   ) : (
                     <Button
                       size="sm"
@@ -183,7 +192,7 @@ export default function BillingPage(): JSX.Element {
                       loading={subscribeMutation.isPending && subscribeMutation.variables === plan.code}
                       onClick={() => subscribeMutation.mutate(plan.code)}
                     >
-                      {isFree ? 'Тариф по умолчанию' : 'Оплатить'}
+                      {isFree ? t('billing.defaultPlan') : t('billing.pay')}
                     </Button>
                   )}
                 </div>
@@ -194,7 +203,7 @@ export default function BillingPage(): JSX.Element {
 
         {payments.length > 0 && (
           <div>
-            <h2 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">История платежей</h2>
+            <h2 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('billing.paymentsHistory')}</h2>
             <div className="flex flex-col divide-y divide-light-border dark:divide-dark-border">
               {payments.map((payment) => (
                 <div key={payment.id} className="flex items-center justify-between gap-3 py-3 min-w-0">
@@ -208,14 +217,14 @@ export default function BillingPage(): JSX.Element {
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                      {PAYMENT_STATUS_LABEL[payment.status]}
+                      {t(PAYMENT_STATUS_LABEL_KEY[payment.status])}
                     </span>
                     {payment.status === 'PENDING' && payment.confirmationUrl && (
                       <a
                         href={payment.confirmationUrl}
                         className="text-xs text-light-text dark:text-dark-text underline"
                       >
-                        Оплатить
+                        {t('billing.pay')}
                       </a>
                     )}
                   </div>

@@ -1,16 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { PortalLayout } from '../../components/layout/PortalLayout'
 import { CaseStatusBadge } from '../../components/ui/Badge'
 import { Spinner } from '../../components/ui/Spinner'
 import { portalApi } from '../../api/portal'
+import i18n from '../../i18n'
 import type { PortalCaseResponse } from '../../types'
 
 function formatDate(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString('ru-RU') : '—'
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+  return value ? new Date(value).toLocaleDateString(locale) : '—'
 }
 
 export default function PortalCasesPage(): JSX.Element {
+  const { t } = useTranslation()
   const { data: cases = [], isLoading, isError } = useQuery<PortalCaseResponse[]>({
     queryKey: ['portal', 'cases'],
     queryFn: portalApi.listCases,
@@ -18,7 +22,7 @@ export default function PortalCasesPage(): JSX.Element {
 
   return (
     <PortalLayout>
-      <h1 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-6">Мои дела</h1>
+      <h1 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-6">{t('portalCases.title')}</h1>
 
       {isLoading && (
         <div className="flex justify-center py-16">
@@ -28,13 +32,13 @@ export default function PortalCasesPage(): JSX.Element {
 
       {isError && (
         <div className="card-elevated rounded-xl p-8 text-center text-light-secondary dark:text-dark-secondary">
-          Не удалось загрузить дела. Попробуйте обновить страницу.
+          {t('portalCases.loadError')}
         </div>
       )}
 
       {!isLoading && !isError && cases.length === 0 && (
         <div className="card-elevated rounded-xl p-10 text-center text-light-secondary dark:text-dark-secondary">
-          У вас пока нет дел. Ваш юрист добавит их сюда.
+          {t('portalCases.empty')}
         </div>
       )}
 
@@ -52,7 +56,7 @@ export default function PortalCasesPage(): JSX.Element {
                   </p>
                   {caseItem.nextHearingDate && (
                     <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-                      Ближайшее заседание: {formatDate(caseItem.nextHearingDate)}
+                      {t('portalCases.nextHearing', { date: formatDate(caseItem.nextHearingDate) })}
                     </p>
                   )}
                 </div>

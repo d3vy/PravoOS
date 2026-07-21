@@ -16,7 +16,7 @@ interface PushPayload {
 
 const FALLBACK_PAYLOAD: PushPayload = {
   title: 'PravoOS',
-  body: 'Новое уведомление',
+  body: 'New notification',
   url: '/dashboard',
   tag: 'pravoos-generic',
 }

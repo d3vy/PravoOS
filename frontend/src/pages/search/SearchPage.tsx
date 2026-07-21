@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { searchApi } from '../../api/search'
 import type { GlobalSearchResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
@@ -9,6 +10,7 @@ import { CaseStatusBadge } from '../../components/ui/Badge'
 const MIN_QUERY_LENGTH = 2
 
 export default function SearchPage(): JSX.Element {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [debouncedSearch, setDebouncedSearch] = useState(search.trim())
@@ -36,9 +38,9 @@ export default function SearchPage(): JSX.Element {
   return (
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-3xl">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Поиск</h1>
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('search.title')}</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
-          Дела, беседы с AI и документы
+          {t('search.subtitle')}
         </p>
 
         <input
@@ -46,7 +48,7 @@ export default function SearchPage(): JSX.Element {
           autoFocus
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Что ищем?"
+          placeholder={t('search.placeholder')}
           className="w-full px-4 py-3 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
         />
 
@@ -57,13 +59,13 @@ export default function SearchPage(): JSX.Element {
             onChange={(e) => setSearchContent(e.target.checked)}
             className="h-4 w-4 accent-light-accent dark:accent-dark-accent cursor-pointer"
           />
-          Искать внутри файлов
+          {t('search.searchInFiles')}
         </label>
 
         <div className="mt-6">
           {!enabled ? (
             <p className="text-sm text-light-secondary dark:text-dark-secondary text-center py-12">
-              Введите минимум {MIN_QUERY_LENGTH} символа для поиска.
+              {t('search.minChars', { count: MIN_QUERY_LENGTH })}
             </p>
           ) : isFetching ? (
             <div className="flex justify-center py-12">
@@ -71,12 +73,12 @@ export default function SearchPage(): JSX.Element {
             </div>
           ) : totalHits === 0 ? (
             <p className="text-sm text-light-secondary dark:text-dark-secondary text-center py-12">
-              Ничего не найдено по запросу «{debouncedSearch}».
+              {t('search.noResults', { query: debouncedSearch })}
             </p>
           ) : (
             <div className="flex flex-col gap-8">
               {data!.cases.length > 0 && (
-                <ResultGroup title="Дела" count={data!.cases.length}>
+                <ResultGroup title={t('search.groupCases')} count={data!.cases.length}>
                   {data!.cases.map((hit) => (
                     <Link
                       key={hit.id}
@@ -96,7 +98,7 @@ export default function SearchPage(): JSX.Element {
               )}
 
               {data!.conversations.length > 0 && (
-                <ResultGroup title="Беседы" count={data!.conversations.length}>
+                <ResultGroup title={t('search.groupConversations')} count={data!.conversations.length}>
                   {data!.conversations.map((hit) => (
                     <Link
                       key={hit.id}
@@ -110,7 +112,7 @@ export default function SearchPage(): JSX.Element {
               )}
 
               {data!.documents.length > 0 && (
-                <ResultGroup title="Документы" count={data!.documents.length}>
+                <ResultGroup title={t('search.groupDocuments')} count={data!.documents.length}>
                   {data!.documents.map((hit) => (
                     <Link
                       key={hit.id}

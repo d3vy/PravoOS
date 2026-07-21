@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { clientsApi } from '../../api/clients'
 import type { PortalInviteStatusResponse } from '../../types'
 import { Button } from '../ui/Button'
 import { Spinner } from '../ui/Spinner'
+import i18n from '../../i18n'
 
 interface ClientPortalSectionProps {
   clientId: string
@@ -11,6 +13,7 @@ interface ClientPortalSectionProps {
 }
 
 export function ClientPortalSection({ clientId, email }: ClientPortalSectionProps): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -30,7 +33,7 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
       setActionError(null)
       invalidate()
     },
-    onError: () => setActionError('Не удалось отправить приглашение. Попробуйте снова.'),
+    onError: () => setActionError(t('clientPortal.inviteError')),
   })
 
   const revokeMutation = useMutation({
@@ -39,7 +42,7 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
       setActionError(null)
       invalidate()
     },
-    onError: () => setActionError('Не удалось отозвать доступ. Попробуйте снова.'),
+    onError: () => setActionError(t('clientPortal.revokeError')),
   })
 
   const isBusy = inviteMutation.isPending || revokeMutation.isPending
@@ -48,7 +51,7 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
   return (
     <section className="mb-10 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
       <div className="flex items-center justify-between gap-4 mb-2">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Клиентский портал</h2>
+        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('clientPortal.title')}</h2>
         {!isLoading && data && <StatusBadge status={data.status} />}
       </div>
 
@@ -72,12 +75,12 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
                 loading={revokeMutation.isPending}
                 disabled={isBusy}
                 onClick={() => {
-                  if (window.confirm('Отозвать доступ клиента к порталу? Активные сессии будут завершены.')) {
+                  if (window.confirm(t('clientPortal.revokeConfirm'))) {
                     revokeMutation.mutate()
                   }
                 }}
               >
-                Отозвать доступ
+                {t('clientPortal.revokeAccess')}
               </Button>
             ) : data?.status === 'PENDING' ? (
               <>
@@ -88,7 +91,7 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
                   disabled={isBusy || !hasEmail}
                   onClick={() => inviteMutation.mutate()}
                 >
-                  Отправить повторно
+                  {t('clientPortal.resend')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -97,7 +100,7 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
                   disabled={isBusy}
                   onClick={() => revokeMutation.mutate()}
                 >
-                  Отозвать
+                  {t('clientPortal.revoke')}
                 </Button>
               </>
             ) : (
@@ -108,7 +111,7 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
                 disabled={isBusy || !hasEmail}
                 onClick={() => inviteMutation.mutate()}
               >
-                Пригласить в портал
+                {t('clientPortal.invite')}
               </Button>
             )}
           </div>
@@ -119,17 +122,18 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
 }
 
 function StatusBadge({ status }: { status: PortalInviteStatusResponse['status'] }): JSX.Element | null {
+  const { t } = useTranslation()
   if (status === 'ACCEPTED') {
     return (
       <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400">
-        Есть доступ
+        {t('clientPortal.badgeAccepted')}
       </span>
     )
   }
   if (status === 'PENDING') {
     return (
       <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
-        Приглашён
+        {t('clientPortal.badgePending')}
       </span>
     )
   }
@@ -142,14 +146,15 @@ function renderDescription(
   hasEmail: boolean,
 ): string {
   if (status === 'ACCEPTED') {
-    return 'Клиент подтвердил приглашение и имеет доступ к порталу.'
+    return i18n.t('clientPortal.descAccepted')
   }
   if (status === 'PENDING') {
-    const until = expiresAt ? ` Ссылка действительна до ${new Date(expiresAt).toLocaleDateString('ru-RU')}.` : ''
-    return `Приглашение отправлено, ожидает подтверждения клиентом.${until}`
+    const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+    const until = expiresAt ? i18n.t('clientPortal.descPendingUntil', { date: new Date(expiresAt).toLocaleDateString(locale) }) : ''
+    return `${i18n.t('clientPortal.descPending')}${until}`
   }
   if (!hasEmail) {
-    return 'Добавьте email клиенту, чтобы отправить приглашение в портал.'
+    return i18n.t('clientPortal.descNoEmail')
   }
-  return 'Клиент ещё не приглашён. Отправьте ссылку-приглашение для доступа к порталу.'
+  return i18n.t('clientPortal.descNone')
 }

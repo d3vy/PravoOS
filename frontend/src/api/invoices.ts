@@ -1,6 +1,7 @@
 import apiClient from './client'
 import { DEFAULT_PAGE_SIZE, readTotal, type Page } from './pagination'
 import type { CreateInvoiceRequest, InvoiceResponse, InvoiceStatus, InvoiceSummary } from '../types'
+import i18n from '../i18n'
 
 export const invoicesApi = {
   list: async (
@@ -42,7 +43,7 @@ export const invoicesApi = {
     const url = window.URL.createObjectURL(response.data)
     const link = document.createElement('a')
     link.href = url
-    link.download = `Счёт_${number}.pdf`
+    link.download = i18n.t('invoices.fileName', { number })
     link.click()
     window.URL.revokeObjectURL(url)
   },

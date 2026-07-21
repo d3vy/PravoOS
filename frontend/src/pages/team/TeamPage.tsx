@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { organizationsApi } from '../../api/organizations'
 import { refreshSession } from '../../api/client'
@@ -8,13 +9,13 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 
-const ROLE_LABEL: Record<OrgRole, string> = {
-  OWNER: 'Владелец',
-  MANAGER: 'Менеджер',
-  MEMBER: 'Участник',
-}
-
 export default function TeamPage(): JSX.Element {
+  const { t } = useTranslation()
+  const ROLE_LABEL: Record<OrgRole, string> = {
+    OWNER: t('team.roleOwner'),
+    MANAGER: t('team.roleManager'),
+    MEMBER: t('team.roleMember'),
+  }
   const queryClient = useQueryClient()
   const currentUserId = useAuthStore((state) => state.user?.userId)
   const [selectedOrgId, setSelectedOrgId] = useState<string>('')
@@ -64,7 +65,7 @@ export default function TeamPage(): JSX.Element {
       await refreshOrgs()
       setSelectedOrgId(org.id)
     },
-    onError: () => setError('Не удалось создать организацию.'),
+    onError: () => setError(t('team.createOrgError')),
   })
 
   const inviteMutation = useMutation({
@@ -75,7 +76,7 @@ export default function TeamPage(): JSX.Element {
       setError(null)
       queryClient.invalidateQueries({ queryKey: ['org-invites', selectedOrgId] })
     },
-    onError: () => setError('Не удалось отправить приглашение. Проверьте email и права.'),
+    onError: () => setError(t('team.sendInviteError')),
   })
 
   const revokeInviteMutation = useMutation({
@@ -101,16 +102,16 @@ export default function TeamPage(): JSX.Element {
       await refreshOrgs()
       queryClient.invalidateQueries({ queryKey: ['org-members'] })
     },
-    onError: () => setError('Не удалось покинуть организацию.'),
+    onError: () => setError(t('team.leaveOrgError')),
   })
 
   return (
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-4xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Организации</h1>
+          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('team.title')}</h1>
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Фирмы и команды: общий доступ к делам и управление участниками
+            {t('team.subtitle')}
           </p>
         </div>
 
@@ -145,18 +146,18 @@ export default function TeamPage(): JSX.Element {
                   <div>
                     <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{selectedOrg.name}</h2>
                     <p className="text-xs text-light-secondary dark:text-dark-secondary">
-                      Участников: {selectedOrg.memberCount} · Ваша роль: {ROLE_LABEL[selectedOrg.myRole]}
+                      {t('team.membersCount', { count: selectedOrg.memberCount, role: ROLE_LABEL[selectedOrg.myRole] })}
                     </p>
                   </div>
                   {!isOwner && (
                     <Button variant="secondary" size="sm" loading={leaveMutation.isPending} onClick={() => leaveMutation.mutate()}>
-                      Покинуть
+                      {t('team.leave')}
                     </Button>
                   )}
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">Участники</h3>
+                  <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('team.membersTitle')}</h3>
                   <div className="flex flex-col divide-y divide-light-border dark:divide-dark-border">
                     {members.map((member) => {
                       const isOrgOwner = member.userId === selectedOrg.ownerId
@@ -166,7 +167,7 @@ export default function TeamPage(): JSX.Element {
                           <div className="min-w-0">
                             <p className="text-sm text-light-text dark:text-dark-text truncate">
                               {member.fullName || member.email || member.userId}
-                              {isSelf && <span className="text-light-secondary dark:text-dark-secondary"> (вы)</span>}
+                              {isSelf && <span className="text-light-secondary dark:text-dark-secondary">{t('team.you')}</span>}
                             </p>
                             {member.email && (
                               <p className="text-xs text-light-secondary dark:text-dark-secondary truncate">{member.email}</p>
@@ -191,7 +192,7 @@ export default function TeamPage(): JSX.Element {
                                 onClick={() => removeMemberMutation.mutate(member.userId)}
                                 className="text-xs text-red-600 dark:text-red-400 hover:underline"
                               >
-                                Удалить
+                                {t('team.delete')}
                               </button>
                             )}
                           </div>
@@ -203,7 +204,7 @@ export default function TeamPage(): JSX.Element {
 
                 {canManage && (
                   <div>
-                    <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">Пригласить участника</h3>
+                    <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('team.inviteTitle')}</h3>
                     <div className="flex gap-2 flex-wrap items-end">
                       <div className="flex-1 min-w-[200px]">
                         <Input
@@ -227,7 +228,7 @@ export default function TeamPage(): JSX.Element {
                         disabled={!inviteEmail.trim()}
                         onClick={() => inviteMutation.mutate()}
                       >
-                        Пригласить
+                        {t('team.invite')}
                       </Button>
                     </div>
 
@@ -243,7 +244,7 @@ export default function TeamPage(): JSX.Element {
                               onClick={() => revokeInviteMutation.mutate(invite.id)}
                               className="text-xs text-red-600 dark:text-red-400 hover:underline shrink-0"
                             >
-                              Отозвать
+                              {t('team.revoke')}
                             </button>
                           </div>
                         ))}
@@ -255,11 +256,11 @@ export default function TeamPage(): JSX.Element {
             )}
 
             <div className="p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-              <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">Создать организацию</h3>
+              <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('team.createOrgTitle')}</h3>
               <div className="flex gap-2 flex-wrap items-end">
                 <div className="flex-1 min-w-[200px]">
                   <Input
-                    placeholder="Название фирмы"
+                    placeholder={t('team.orgNamePlaceholder')}
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
                     maxLength={200}
@@ -271,7 +272,7 @@ export default function TeamPage(): JSX.Element {
                   disabled={!orgName.trim()}
                   onClick={() => createOrgMutation.mutate()}
                 >
-                  Создать
+                  {t('team.create')}
                 </Button>
               </div>
             </div>

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, DocumentResponse } from '../../types'
 import { DocumentStatusBadge } from '../ui/Badge'
 import { DeadlineList } from './CaseHeaderSection'
@@ -17,10 +19,11 @@ interface OverviewStat {
 }
 
 export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavigate }: CaseOverviewTabProps): JSX.Element {
+  const { t } = useTranslation()
   const stats: OverviewStat[] = [
-    { label: 'Документы', value: documents.length, tab: 'documents' },
-    { label: 'Черновики', value: drafts.length, tab: 'documents' },
-    { label: 'Заключения AI', value: responses.length, tab: 'analysis' },
+    { label: t('overview.statDocuments'), value: documents.length, tab: 'documents' },
+    { label: t('overview.statDrafts'), value: drafts.length, tab: 'documents' },
+    { label: t('overview.statResponses'), value: responses.length, tab: 'analysis' },
   ]
 
   const hasDeadlines = Boolean(caseItem.filingDeadline || caseItem.nextHearingDate || caseItem.expiresAt)
@@ -46,13 +49,13 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
       {hasDeadlines && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Ближайшие сроки</h2>
+            <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('overview.upcomingDeadlines')}</h2>
             <button
               type="button"
               onClick={() => onNavigate('tasks')}
               className="text-xs text-light-accent dark:text-dark-accent hover:underline"
             >
-              Задачи и сроки →
+              {t('overview.tasksAndDeadlines')}
             </button>
           </div>
           <DeadlineList caseItem={caseItem} />
@@ -61,18 +64,18 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
 
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Документы дела</h2>
+          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('overview.caseDocuments')}</h2>
           <button
             type="button"
             onClick={() => onNavigate('documents')}
             className="text-xs text-light-accent dark:text-dark-accent hover:underline"
           >
-            Все документы →
+            {t('overview.allDocuments')}
           </button>
         </div>
         {recentDocuments.length === 0 ? (
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Документов пока нет. Загрузите первый на вкладке «Документы».
+            {t('overview.noDocuments')}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -94,18 +97,18 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
 
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Последнее заключение AI</h2>
+          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('overview.latestResponse')}</h2>
           <button
             type="button"
             onClick={() => onNavigate('analysis')}
             className="text-xs text-light-accent dark:text-dark-accent hover:underline"
           >
-            AI-анализ →
+            {t('overview.aiAnalysisLink')}
           </button>
         </div>
         {!latestResponse ? (
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Заключений пока нет. Запустите анализ на вкладке «AI-анализ».
+            {t('overview.noResponses')}
           </p>
         ) : (
           <button
@@ -118,7 +121,7 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
                 {latestResponse.workflowName}
               </span>
               <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                {new Date(latestResponse.createdAt).toLocaleString('ru-RU')}
+                {new Date(latestResponse.createdAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
               </span>
             </div>
             <p className="text-sm text-light-secondary dark:text-dark-secondary line-clamp-3">{latestResponse.result}</p>

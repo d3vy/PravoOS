@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface CaseTabDescriptor {
   id: string
@@ -13,6 +14,7 @@ interface CaseTabsNavProps {
 }
 
 export function CaseTabsNav({ tabs, activeTab, onSelect }: CaseTabsNavProps): JSX.Element {
+  const { t } = useTranslation()
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([])
 
   const handleKeyDown = (event: React.KeyboardEvent, index: number): void => {
@@ -28,7 +30,7 @@ export function CaseTabsNav({ tabs, activeTab, onSelect }: CaseTabsNavProps): JS
   return (
     <div
       role="tablist"
-      aria-label="Разделы дела"
+      aria-label={t('cases.tabsAria')}
       className="flex gap-1 overflow-x-auto scrollbar-thin border-b border-light-border dark:border-dark-border mb-6 -mx-1 px-1"
     >
       {tabs.map((tab, index) => {

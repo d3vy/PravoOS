@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import i18n from '../i18n'
 import { pushApi } from '../api/push'
 import {
   PushPermissionDeniedError,
@@ -74,8 +75,8 @@ export function usePushNotifications(): UsePushNotifications {
     } catch (cause) {
       setError(
         cause instanceof PushPermissionDeniedError
-          ? 'Уведомления заблокированы в браузере. Разрешите их в настройках сайта.'
-          : 'Не удалось включить push-уведомления. Попробуйте ещё раз.',
+          ? i18n.t('push.blocked')
+          : i18n.t('push.enableFailed'),
       )
     } finally {
       setIsBusy(false)
@@ -92,7 +93,7 @@ export function usePushNotifications(): UsePushNotifications {
       }
       setSubscribed(false)
     } catch {
-      setError('Не удалось отключить push-уведомления. Попробуйте ещё раз.')
+      setError(i18n.t('push.disableFailed'))
     } finally {
       setIsBusy(false)
     }

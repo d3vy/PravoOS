@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { authApi } from '../api/auth'
@@ -9,8 +10,10 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 
 export default function LoginPage(): JSX.Element {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -72,7 +75,7 @@ export default function LoginPage(): JSX.Element {
         const retryAfter = Number(err.response.headers['retry-after'])
         setLockSeconds(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 900)
       } else {
-        setError('Неверный email или пароль. Проверьте данные и попробуйте снова.')
+        setError(t('auth.invalidCredentials'))
       }
     } finally {
       setLoading(false)
@@ -93,12 +96,12 @@ export default function LoginPage(): JSX.Element {
         const code = err.response.data?.code
         if (code === 'MFA_INVALID_CHALLENGE') {
           setMfaToken(null)
-          setError('Сессия подтверждения истекла. Войдите заново.')
+          setError(t('auth.mfaChallengeExpired'))
         } else {
-          setError('Неверный код. Проверьте приложение-аутентификатор и попробуйте снова.')
+          setError(t('auth.mfaInvalidCode'))
         }
       } else {
-        setError('Не удалось подтвердить код. Попробуйте снова.')
+        setError(t('auth.mfaConfirmFailed'))
       }
     } finally {
       setLoading(false)
@@ -123,7 +126,10 @@ export default function LoginPage(): JSX.Element {
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -138,17 +144,17 @@ export default function LoginPage(): JSX.Element {
               <>
                 <div className="mb-8">
                   <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-                    Двухфакторное подтверждение
+                    {t('auth.mfaTitle')}
                   </h1>
                   <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
-                    Введите 6-значный код из приложения-аутентификатора
+                    {t('auth.mfaSubtitle')}
                   </p>
                 </div>
 
                 <form onSubmit={handleMfaSubmit} className="flex flex-col gap-5">
                   <Input
                     id="mfaCode"
-                    label="Код подтверждения"
+                    label={t('auth.mfaCodeLabel')}
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
@@ -177,7 +183,7 @@ export default function LoginPage(): JSX.Element {
                     disabled={mfaCode.length !== 6}
                     className="w-full mt-1"
                   >
-                    Подтвердить
+                    {t('auth.mfaConfirm')}
                   </Button>
 
                   <button
@@ -185,7 +191,7 @@ export default function LoginPage(): JSX.Element {
                     onClick={cancelMfa}
                     className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:underline"
                   >
-                    Вернуться ко входу
+                    {t('auth.backToLogin')}
                   </button>
                 </form>
               </>
@@ -193,10 +199,10 @@ export default function LoginPage(): JSX.Element {
             <>
             <div className="mb-8">
               <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-                Вход в систему
+                {t('auth.loginTitle')}
               </h1>
               <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
-                Введите ваши данные для доступа к PravoOS
+                {t('auth.loginSubtitle')}
               </p>
             </div>
 
@@ -216,7 +222,7 @@ export default function LoginPage(): JSX.Element {
               <div className="flex flex-col gap-1.5">
                 <Input
                   id="password"
-                  label="Пароль"
+                  label={t('auth.passwordLabel')}
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
@@ -227,7 +233,7 @@ export default function LoginPage(): JSX.Element {
                     <button
                       type="button"
                       onClick={() => setShowPassword((visible) => !visible)}
-                      aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                       aria-pressed={showPassword}
                       tabIndex={-1}
                       className="w-8 h-8 flex items-center justify-center rounded-md text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
@@ -241,7 +247,7 @@ export default function LoginPage(): JSX.Element {
                     to="/forgot-password"
                     className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:underline"
                   >
-                    Забыли пароль?
+                    {t('auth.forgotPassword')}
                   </Link>
                 </div>
               </div>
@@ -253,7 +259,7 @@ export default function LoginPage(): JSX.Element {
                   className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
                 >
                   <p className="text-sm text-amber-700 dark:text-amber-400">
-                    Слишком много неудачных попыток. Повторите через {formatLockTime(lockSeconds)}.
+                    {t('auth.tooManyAttempts', { time: formatLockTime(lockSeconds) })}
                   </p>
                 </motion.div>
               )}
@@ -276,18 +282,18 @@ export default function LoginPage(): JSX.Element {
                 disabled={isLocked}
                 className="w-full mt-1"
               >
-                Войти
+                {t('auth.loginSubmit')}
               </Button>
             </form>
 
             <div className="mt-6 pt-6 border-t border-light-border dark:border-dark-border text-center">
               <p className="text-sm text-light-secondary dark:text-dark-secondary">
-                Нет доступа?{' '}
+                {t('auth.noAccess')}{' '}
                 <Link
                   to="/apply"
                   className="text-light-text dark:text-dark-text hover:underline font-medium"
                 >
-                  Подать заявку
+                  {t('auth.apply')}
                 </Link>
               </p>
             </div>

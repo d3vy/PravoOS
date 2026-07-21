@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { reportError } from '../lib/observability'
+import i18n from '../i18n'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -33,15 +34,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-semibold">Что-то пошло не так</h1>
+        <h1 className="text-2xl font-semibold">{i18n.t('errorBoundary.title')}</h1>
         <p className="max-w-md text-sm text-gray-500 dark:text-gray-400">
-          Произошла непредвиденная ошибка интерфейса. Мы уже знаем о ней — попробуйте обновить страницу.
+          {i18n.t('errorBoundary.desc')}
         </p>
         <button
           onClick={this.handleReload}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
-          На главную
+          {i18n.t('errorBoundary.home')}
         </button>
       </div>
     )

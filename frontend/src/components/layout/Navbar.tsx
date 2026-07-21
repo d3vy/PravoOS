@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/authStore'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { authApi } from '../../api/auth'
@@ -7,11 +8,15 @@ import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
 import { NavTabs } from '../ui/NavTabs'
 import { ThemeToggle } from '../ui/ThemeToggle'
-import { lawyerAccountLinks, lawyerNavSections } from './lawyerNav'
+import { LanguageSwitcher } from '../ui/LanguageSwitcher'
+import { useLawyerAccountLinks, useLawyerNavSections } from './lawyerNav'
 
 const LAWYER_MOBILE_NAV_INDICATOR_ID = 'lawyer-mobile-nav-indicator'
 
 export function Navbar(): JSX.Element {
+  const { t } = useTranslation()
+  const lawyerNavSections = useLawyerNavSections()
+  const lawyerAccountLinks = useLawyerAccountLinks()
   const { user, clearAuth, isAuthenticated, effectiveRole } = useAuthStore()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -61,6 +66,7 @@ export function Navbar(): JSX.Element {
               </div>
             )}
             {authenticated && role === 'LAWYER' && <CommandTrigger />}
+            <LanguageSwitcher />
             <ThemeToggle />
 
             {authenticated ? (
@@ -69,12 +75,12 @@ export function Navbar(): JSX.Element {
                   <>
                     <Link to={dashboardPath} className="hidden md:block">
                       <Button variant="ghost" size="sm">
-                        Рабочий стол
+                        {t('nav.workspace')}
                       </Button>
                     </Link>
                     <div className="hidden md:block">
                       <Button variant="secondary" size="sm" onClick={() => void handleLogout()}>
-                        Выйти
+                        {t('nav.logout')}
                       </Button>
                     </div>
                   </>
@@ -86,7 +92,7 @@ export function Navbar(): JSX.Element {
                 )}
                 <button
                   type="button"
-                  aria-label="Меню"
+                  aria-label={t('nav.menu')}
                   aria-expanded={mobileMenuOpen}
                   onClick={() => setMobileMenuOpen((open) => !open)}
                   className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
@@ -98,12 +104,12 @@ export function Navbar(): JSX.Element {
               <>
                 <Link to="/login">
                   <Button variant="ghost" size="sm">
-                    Войти
+                    {t('nav.login')}
                   </Button>
                 </Link>
                 <Link to="/apply" className="hidden sm:block">
                   <Button variant="primary" size="sm">
-                    Подать заявку
+                    {t('nav.apply')}
                   </Button>
                 </Link>
               </>
@@ -118,7 +124,7 @@ export function Navbar(): JSX.Element {
             {role === 'LAWYER' && (
               <>
                 <div className="mb-2">
-                  <p className="eyebrow px-4 mb-1">Создать</p>
+                  <p className="eyebrow px-4 mb-1">{t('nav.create')}</p>
                   {CREATE_ACTIONS.map((action) => (
                     <Link
                       key={action.to}
@@ -126,12 +132,12 @@ export function Navbar(): JSX.Element {
                       onClick={() => setMobileMenuOpen(false)}
                       className="block px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
                     >
-                      {action.label}
+                      {t(action.labelKey)}
                     </Link>
                   ))}
                 </div>
                 {lawyerNavSections.map((section) => (
-                  <div key={section.title} className="mb-2">
+                  <div key={section.id} className="mb-2">
                     <p className="eyebrow px-4 mb-1">{section.title}</p>
                     <NavTabs
                       items={section.items}
@@ -142,7 +148,7 @@ export function Navbar(): JSX.Element {
                   </div>
                 ))}
                 <div className="mb-2">
-                  <p className="eyebrow px-4 mb-1">Аккаунт</p>
+                  <p className="eyebrow px-4 mb-1">{t('nav.account')}</p>
                   <NavTabs
                     items={lawyerAccountLinks}
                     indicatorId={LAWYER_MOBILE_NAV_INDICATOR_ID}
@@ -158,14 +164,14 @@ export function Navbar(): JSX.Element {
                 onClick={() => setMobileMenuOpen(false)}
                 className="px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
               >
-                Рабочий стол
+                {t('nav.workspace')}
               </Link>
             )}
             <button
               onClick={() => void handleLogout()}
               className="text-left px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
             >
-              Выйти
+              {t('nav.logout')}
             </button>
           </div>
         </div>
@@ -174,13 +180,14 @@ export function Navbar(): JSX.Element {
   )
 }
 
-const CREATE_ACTIONS: { to: string; label: string }[] = [
-  { to: '/cases?new=1', label: 'Новое дело' },
-  { to: '/clients?new=1', label: 'Новый клиент' },
-  { to: '/chat', label: 'Задать вопрос AI' },
+const CREATE_ACTIONS: { to: string; labelKey: string }[] = [
+  { to: '/cases?new=1', labelKey: 'nav.newCase' },
+  { to: '/clients?new=1', labelKey: 'nav.newClient' },
+  { to: '/chat', labelKey: 'nav.askAi' },
 ]
 
 function CreateMenu(): JSX.Element {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -215,7 +222,7 @@ function CreateMenu(): JSX.Element {
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        Создать
+        {t('nav.create')}
       </button>
 
       {open && (
@@ -231,7 +238,7 @@ function CreateMenu(): JSX.Element {
               onClick={() => setOpen(false)}
               className="block px-4 py-2.5 text-sm text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
             >
-              {action.label}
+              {t(action.labelKey)}
             </Link>
           ))}
         </div>
@@ -241,6 +248,8 @@ function CreateMenu(): JSX.Element {
 }
 
 function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }): JSX.Element {
+  const { t } = useTranslation()
+  const lawyerAccountLinks = useLawyerAccountLinks()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const initial = email.trim().charAt(0).toUpperCase() || '?'
@@ -269,7 +278,7 @@ function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }):
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Меню пользователя"
+        aria-label={t('nav.userMenu')}
         onClick={() => setOpen((current) => !current)}
         className="flex items-center justify-center w-9 h-9 rounded-full bg-light-accent/10 dark:bg-dark-accent/15 text-light-accent dark:text-dark-accent text-sm font-semibold hover:bg-light-accent/20 dark:hover:bg-dark-accent/25 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
       >
@@ -313,7 +322,7 @@ function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }):
             }}
             className="w-full text-left px-4 py-2.5 mt-1 border-t border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
           >
-            Выйти
+            {t('nav.logout')}
           </button>
         </div>
       )}
@@ -322,6 +331,7 @@ function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }):
 }
 
 function CommandTrigger(): JSX.Element {
+  const { t } = useTranslation()
   const toggle = useCommandPaletteStore((state) => state.toggle)
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -329,14 +339,14 @@ function CommandTrigger(): JSX.Element {
     <button
       type="button"
       onClick={toggle}
-      aria-label="Открыть командную палитру"
+      aria-label={t('nav.commandPalette')}
       className="hidden md:inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:border-light-text/30 dark:hover:border-dark-text/30 transition-colors"
     >
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="7" />
         <line x1="16.5" y1="16.5" x2="21" y2="21" />
       </svg>
-      <span className="text-sm">Поиск</span>
+      <span className="text-sm">{t('nav.search')}</span>
       <kbd className="inline-flex items-center rounded border border-light-border dark:border-dark-border px-1.5 py-0.5 text-[11px] font-medium">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>

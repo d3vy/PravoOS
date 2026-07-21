@@ -6,6 +6,8 @@ import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { installErrorReporting } from './lib/observability'
 import { registerServiceWorker } from './pwa/registerServiceWorker'
+import i18n from './i18n'
+import { normalizeLanguage } from './i18n/config'
 import './index.css'
 
 installErrorReporting()
@@ -25,6 +27,8 @@ const storedTheme = localStorage.getItem('pravoos-theme')
 if (storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
   document.documentElement.classList.add('dark')
 }
+
+document.documentElement.lang = normalizeLanguage(i18n.language)
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element not found')

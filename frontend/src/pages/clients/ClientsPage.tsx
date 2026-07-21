@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { clientsApi } from '../../api/clients'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { ClientResponse } from '../../types'
@@ -12,6 +13,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { ClientForm } from '../../components/clients/ClientForm'
 
 export default function ClientsPage(): JSX.Element {
+  const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
@@ -41,7 +43,7 @@ export default function ClientsPage(): JSX.Element {
       setShowForm(false)
       setFormError(null)
     },
-    onError: () => setFormError('Не удалось создать клиента. Проверьте данные и попробуйте снова.'),
+    onError: () => setFormError(t('clients.createError')),
   })
 
   return (
@@ -49,13 +51,13 @@ export default function ClientsPage(): JSX.Element {
       <div className="page-container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Клиенты</h1>
+            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('clients.title')}</h1>
             <p className="text-sm text-light-secondary dark:text-dark-secondary">
-              Карточки клиентов: контакты, реквизиты и связанные дела
+              {t('clients.subtitle')}
             </p>
           </div>
           <Button variant="primary" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? 'Отмена' : 'Новый клиент'}
+            {showForm ? t('clients.cancel') : t('clients.newClient')}
           </Button>
         </div>
 
@@ -68,7 +70,7 @@ export default function ClientsPage(): JSX.Element {
               className="mb-8 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border overflow-hidden"
             >
               <ClientForm
-                submitLabel="Создать клиента"
+                submitLabel={t('clients.createSubmit')}
                 isSubmitting={createMutation.isPending}
                 error={formError}
                 onSubmit={(data) => createMutation.mutate(data)}
@@ -83,9 +85,9 @@ export default function ClientsPage(): JSX.Element {
           </div>
         ) : clients.length === 0 ? (
           <EmptyState
-            title="Пока нет клиентов"
-            description="Создайте первого клиента, чтобы привязывать к нему дела и счета."
-            action={{ label: 'Новый клиент', onClick: () => setShowForm(true) }}
+            title={t('clients.emptyTitle')}
+            description={t('clients.emptyDescription')}
+            action={{ label: t('clients.newClient'), onClick: () => setShowForm(true) }}
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,7 +115,7 @@ export default function ClientsPage(): JSX.Element {
                     <p className="text-sm text-light-secondary dark:text-dark-secondary truncate">{client.email}</p>
                   )}
                   <p className="text-xs text-light-secondary dark:text-dark-secondary mt-3">
-                    {client.caseCount > 0 ? `Дел: ${client.caseCount}` : 'Нет дел'}
+                    {client.caseCount > 0 ? t('clients.caseCount', { count: client.caseCount }) : t('clients.noCases')}
                   </p>
                 </Link>
               </motion.div>

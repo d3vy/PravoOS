@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { authApi } from '../api/auth'
+import i18n from '../i18n'
 import type { ApplicationFormData } from '../components/ApplicationForm'
 import { ApplicationForm } from '../components/ApplicationForm'
 import { Button } from '../components/ui/Button'
@@ -19,10 +21,11 @@ function updateErrorMessage(error: unknown): string {
       return message
     }
   }
-  return 'Не удалось сохранить изменения. Попробуйте позже.'
+  return i18n.t('editApplication.saveError')
 }
 
 export default function EditApplicationPage(): JSX.Element {
+  const { t } = useTranslation()
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
   const [state, setState] = useState<LoadState>('loading')
@@ -80,7 +83,7 @@ export default function EditApplicationPage(): JSX.Element {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
           <div className="w-10 h-10 mx-auto mb-6 border-2 border-light-border dark:border-dark-border border-t-light-text dark:border-t-dark-text rounded-full animate-spin" />
-          <p className="text-light-secondary dark:text-dark-secondary">Загружаем заявку…</p>
+          <p className="text-light-secondary dark:text-dark-secondary">{t('editApplication.loading')}</p>
         </div>
       )
     }
@@ -88,12 +91,12 @@ export default function EditApplicationPage(): JSX.Element {
     if (state === 'notFound') {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Заявка не найдена</h2>
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('editApplication.notFoundTitle')}</h2>
           <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-            Ссылка неполная или повреждена. Проверьте, что скопировали её целиком.
+            {t('editApplication.notFoundText')}
           </p>
           <Link to="/apply">
-            <Button variant="primary" size="md">Подать заявку</Button>
+            <Button variant="primary" size="md">{t('editApplication.apply')}</Button>
           </Link>
         </div>
       )
@@ -102,12 +105,12 @@ export default function EditApplicationPage(): JSX.Element {
     if (state === 'locked') {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Редактирование недоступно</h2>
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('editApplication.lockedTitle')}</h2>
           <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-            Заявка уже рассмотрена, изменить её нельзя.
+            {t('editApplication.lockedText')}
           </p>
           <Link to={`/application/${token}`}>
-            <Button variant="secondary" size="md">К статусу заявки</Button>
+            <Button variant="secondary" size="md">{t('editApplication.toStatus')}</Button>
           </Link>
         </div>
       )
@@ -117,18 +120,18 @@ export default function EditApplicationPage(): JSX.Element {
       <div className="card-elevated rounded-2xl p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-            Редактирование заявки
+            {t('editApplication.title')}
           </h1>
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Исправьте данные и сохраните. При смене email мы заново отправим письмо для подтверждения почты.
+            {t('editApplication.subtitle')}
           </p>
         </div>
 
         <ApplicationForm
           initialValues={initialValues!}
           passwordRequired={false}
-          submitLabel="Сохранить изменения"
-          passwordHint="Оставьте пустым, чтобы не менять пароль"
+          submitLabel={t('editApplication.saveSubmit')}
+          passwordHint={t('editApplication.passwordHint')}
           onSubmit={handleSubmit}
         />
 
@@ -137,7 +140,7 @@ export default function EditApplicationPage(): JSX.Element {
             to={`/application/${token}`}
             className="text-sm text-light-secondary dark:text-dark-secondary hover:underline"
           >
-            ← Отмена
+            {t('editApplication.cancel')}
           </Link>
         </div>
       </div>

@@ -1,21 +1,25 @@
 import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { PortalLayout } from '../../components/layout/PortalLayout'
 import { CaseStatusBadge } from '../../components/ui/Badge'
 import { Spinner } from '../../components/ui/Spinner'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { PortalSignatureSection } from '../../components/portal/PortalSignatureSection'
 import { portalApi } from '../../api/portal'
+import i18n from '../../i18n'
 import type { DocumentResponse, PortalCaseDetailResponse } from '../../types'
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt']
 
 function formatDate(value: string | null): string {
-  return value ? new Date(value).toLocaleDateString('ru-RU') : '—'
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+  return value ? new Date(value).toLocaleDateString(locale) : '—'
 }
 
 function PortalDocumentsSection({ caseId }: { caseId: string }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -34,7 +38,7 @@ function PortalDocumentsSection({ caseId }: { caseId: string }): JSX.Element {
       ALLOWED_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext))
     )
     if (valid.length === 0) {
-      setError('Поддерживаются только PDF, DOCX и TXT')
+      setError(t('portalCaseDetail.unsupportedFormat'))
       return
     }
     setIsUploading(true)
@@ -44,7 +48,7 @@ function PortalDocumentsSection({ caseId }: { caseId: string }): JSX.Element {
       }
       queryClient.invalidateQueries({ queryKey: ['portal', 'cases', caseId, 'documents'] })
     } catch {
-      setError('Ошибка загрузки. Проверьте формат и размер файла.')
+      setError(t('portalCaseDetail.uploadError'))
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -57,7 +61,7 @@ function PortalDocumentsSection({ caseId }: { caseId: string }): JSX.Element {
     try {
       await portalApi.downloadCaseDocument(caseId, doc)
     } catch {
-      setError('Не удалось скачать документ.')
+      setError(t('portalCaseDetail.downloadError'))
     } finally {
       setDownloadingId(null)
     }
@@ -65,7 +69,7 @@ function PortalDocumentsSection({ caseId }: { caseId: string }): JSX.Element {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-3">Документы</h2>
+      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-3">{t('portalCaseDetail.documents')}</h2>
 
       <div
         onClick={() => fileInputRef.current?.click()}
@@ -85,7 +89,7 @@ function PortalDocumentsSection({ caseId }: { caseId: string }): JSX.Element {
           <Spinner size="md" />
         ) : (
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Загрузить документ (PDF, DOCX, TXT)
+            {t('portalCaseDetail.uploadCta')}
           </p>
         )}
       </div>
@@ -97,7 +101,7 @@ function PortalDocumentsSection({ caseId }: { caseId: string }): JSX.Element {
           <Spinner />
         </div>
       ) : documents.length === 0 ? (
-        <p className="text-light-secondary dark:text-dark-secondary">Документов пока нет.</p>
+        <p className="text-light-secondary dark:text-dark-secondary">{t('portalCaseDetail.noDocuments')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {documents.map((doc) => (
@@ -139,6 +143,7 @@ function DetailRow({ label, value }: { label: string; value: string }): JSX.Elem
 }
 
 export default function PortalCaseDetailPage(): JSX.Element {
+  const { t } = useTranslation()
   const { caseId } = useParams<{ caseId: string }>()
   const { data: caseData, isLoading, isError } = useQuery<PortalCaseDetailResponse>({
     queryKey: ['portal', 'cases', caseId],
@@ -155,7 +160,7 @@ export default function PortalCaseDetailPage(): JSX.Element {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        К списку дел
+        {t('portalCaseDetail.backToList')}
       </Link>
 
       {isLoading && (
@@ -166,7 +171,7 @@ export default function PortalCaseDetailPage(): JSX.Element {
 
       {isError && (
         <div className="card-elevated rounded-xl p-8 text-center text-light-secondary dark:text-dark-secondary">
-          Дело не найдено или недоступно.
+          {t('portalCaseDetail.notFound')}
         </div>
       )}
 
@@ -186,21 +191,21 @@ export default function PortalCaseDetailPage(): JSX.Element {
           )}
 
           <div className="card-elevated rounded-xl p-5">
-            <DetailRow label="Статус" value={caseData.statusName} />
-            <DetailRow label="Срок подачи" value={formatDate(caseData.filingDeadline)} />
-            <DetailRow label="Ближайшее заседание" value={formatDate(caseData.nextHearingDate)} />
+            <DetailRow label={t('portalCaseDetail.fieldStatus')} value={caseData.statusName} />
+            <DetailRow label={t('portalCaseDetail.fieldFilingDeadline')} value={formatDate(caseData.filingDeadline)} />
+            <DetailRow label={t('portalCaseDetail.fieldNextHearing')} value={formatDate(caseData.nextHearingDate)} />
             {caseData.arbitrCaseNumber && (
-              <DetailRow label="Номер дела" value={caseData.arbitrCaseNumber} />
+              <DetailRow label={t('portalCaseDetail.fieldCaseNumber')} value={caseData.arbitrCaseNumber} />
             )}
-            <DetailRow label="Создано" value={formatDate(caseData.createdAt)} />
+            <DetailRow label={t('portalCaseDetail.fieldCreated')} value={formatDate(caseData.createdAt)} />
           </div>
 
           <section>
             <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-3">
-              Судебные заседания
+              {t('portalCaseDetail.hearings')}
             </h2>
             {caseData.hearings.length === 0 ? (
-              <p className="text-light-secondary dark:text-dark-secondary">Заседаний пока нет.</p>
+              <p className="text-light-secondary dark:text-dark-secondary">{t('portalCaseDetail.noHearings')}</p>
             ) : (
               <ul className="space-y-3">
                 {caseData.hearings.map((hearing) => (

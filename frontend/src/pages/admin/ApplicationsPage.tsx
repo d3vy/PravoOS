@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import axios from 'axios'
+import i18n from '../../i18n'
 import { adminApi, DEFAULT_PAGE_SIZE, type Page } from '../../api/admin'
 import type { ApplicationResponse } from '../../types'
 import { ApplicationStatusBadge } from '../../components/ui/Badge'
@@ -12,6 +14,7 @@ import { Pagination } from '../../components/ui/Pagination'
 type Tab = 'all' | 'pending'
 
 export default function ApplicationsPage(): JSX.Element {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [page, setPage] = useState(0)
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -58,7 +61,7 @@ export default function ApplicationsPage(): JSX.Element {
       const message =
         axios.isAxiosError(error) && error.response?.data?.message
           ? error.response.data.message
-          : 'Ошибка при одобрении заявки'
+          : t('adminApplications.approveError')
       setApproveError({ id, message })
       setTimeout(() => setApproveError(null), 6000)
     },
@@ -86,7 +89,7 @@ export default function ApplicationsPage(): JSX.Element {
       const message =
         axios.isAxiosError(error) && error.response?.data?.message
           ? error.response.data.message
-          : 'Ошибка при одобрении заявки'
+          : t('adminApplications.approveError')
       setApproveError({ id, message })
       setTimeout(() => setApproveError(null), 6000)
     },
@@ -124,9 +127,9 @@ export default function ApplicationsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Заявки</h1>
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('adminApplications.title')}</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Управление заявками на доступ к платформе
+          {t('adminApplications.subtitle')}
         </p>
       </div>
 
@@ -140,7 +143,7 @@ export default function ApplicationsPage(): JSX.Element {
               : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
           }`}
         >
-          Все
+          {t('adminApplications.tabAll')}
         </button>
         <button
           onClick={() => changeTab('pending')}
@@ -150,7 +153,7 @@ export default function ApplicationsPage(): JSX.Element {
               : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
           }`}
         >
-          Ожидают
+          {t('adminApplications.tabPending')}
           {pendingCount > 0 && (
             <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 text-xs font-semibold flex items-center justify-center">
               {pendingCount}
@@ -167,7 +170,7 @@ export default function ApplicationsPage(): JSX.Element {
       ) : displayedApplications.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-light-secondary dark:text-dark-secondary">
-            {activeTab === 'pending' ? 'Нет заявок, ожидающих рассмотрения' : 'Заявок пока нет'}
+            {activeTab === 'pending' ? t('adminApplications.emptyPending') : t('adminApplications.emptyAll')}
           </p>
         </div>
       ) : (
@@ -213,6 +216,8 @@ function ApplicationCard({
   isProcessing,
   approveErrorMessage,
 }: ApplicationCardProps): JSX.Element {
+  const { t } = useTranslation()
+  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -232,24 +237,24 @@ function ApplicationCard({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1 mt-3">
             <div>
-              <span className="text-xs text-light-secondary dark:text-dark-secondary">Email</span>
+              <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('adminApplications.email')}</span>
               <div className="flex items-center gap-1.5">
                 <p className="min-w-0 text-sm text-light-text dark:text-dark-text truncate">{application.email}</p>
                 {application.emailVerified ? (
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>
                 ) : (
-                  <span className="text-xs text-amber-500 dark:text-amber-400 shrink-0" title="Email не подтверждён">!</span>
+                  <span className="text-xs text-amber-500 dark:text-amber-400 shrink-0" title={t('adminApplications.emailNotVerified')}>!</span>
                 )}
               </div>
             </div>
-            <InfoField label="Телефон" value={application.phone} />
-            <InfoField label="Специализация" value={application.specialization} />
+            <InfoField label={t('adminApplications.phone')} value={application.phone} />
+            <InfoField label={t('adminApplications.specialization')} value={application.specialization} />
           </div>
 
           <p className="text-xs text-light-secondary dark:text-dark-secondary mt-3">
-            Подана: {new Date(application.submittedAt).toLocaleString('ru-RU')}
+            {t('adminApplications.submitted', { date: new Date(application.submittedAt).toLocaleString(dateLocale) })}
             {application.reviewedAt && (
-              <> · Рассмотрена: {new Date(application.reviewedAt).toLocaleString('ru-RU')}</>
+              <>{t('adminApplications.reviewed', { date: new Date(application.reviewedAt).toLocaleString(dateLocale) })}</>
             )}
           </p>
 
@@ -278,7 +283,7 @@ function ApplicationCard({
                 loading={isProcessing}
                 disabled={isProcessing}
               >
-                Одобрить
+                {t('adminApplications.approve')}
               </Button>
               <Button
                 variant="danger"
@@ -287,7 +292,7 @@ function ApplicationCard({
                 loading={isProcessing}
                 disabled={isProcessing}
               >
-                Отклонить
+                {t('adminApplications.reject')}
               </Button>
             </div>
             {!application.emailVerified && (
@@ -297,9 +302,9 @@ function ApplicationCard({
                 onClick={onApproveForce}
                 loading={isProcessing}
                 disabled={isProcessing}
-                title="Одобрить без подтверждения email — почта будет помечена подтверждённой"
+                title={t('adminApplications.approveForceTitle')}
               >
-                Одобрить без подтверждения почты
+                {t('adminApplications.approveForce')}
               </Button>
             )}
           </div>

@@ -769,6 +769,14 @@ export interface UpdateProfileRequest {
   phone?: string
 }
 
+export interface LanguageSettingsResponse {
+  language: string
+}
+
+export interface UpdateLanguageRequest {
+  language: string
+}
+
 export interface NotificationSettingsResponse {
   loginAlertEmail: boolean
   loginAlertTelegram: boolean

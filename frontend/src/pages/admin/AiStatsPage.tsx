@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { aiStatsApi } from '../../api/aiStats'
 import { adminApi } from '../../api/admin'
 import type { AiResponseDto, AiStatsResponse, ClientStatsResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 
 export default function AiStatsPage(): JSX.Element {
+  const { t } = useTranslation()
+  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   const { data: stats, isLoading } = useQuery<AiStatsResponse>({
     queryKey: ['ai-stats'],
     queryFn: aiStatsApi.getStats,
@@ -31,27 +35,27 @@ export default function AiStatsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">AI-метрики</h1>
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('aiStats.title')}</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Использование AI-анализа и оценки юристов по workflow
+          {t('aiStats.subtitle')}
         </p>
       </div>
 
       {clientStats && (
         <div className="mb-8">
-          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Клиенты</h2>
+          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('aiStats.clients')}</h2>
           <div className="p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border max-w-xs">
             <div className="flex items-center gap-2 text-sm text-light-secondary dark:text-dark-secondary mb-2">
-              Новые клиенты
+              {t('aiStats.newClients')}
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-semibold text-light-text dark:text-dark-text">
                 +{clientStats.newThisWeek}
               </span>
-              <span className="text-xs text-light-accent dark:text-dark-accent">за неделю</span>
+              <span className="text-xs text-light-accent dark:text-dark-accent">{t('aiStats.perWeek')}</span>
             </div>
             <p className="text-xs text-light-secondary dark:text-dark-secondary mt-2">
-              Всего активных: {clientStats.totalActive}
+              {t('aiStats.totalActive', { count: clientStats.totalActive })}
             </p>
           </div>
         </div>
@@ -59,39 +63,39 @@ export default function AiStatsPage(): JSX.Element {
 
       <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">AI</h2>
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard label="Всего заключений" value={stats.totalResponses} />
-        <StatCard label="Оценено" value={stats.ratedResponses} />
-        <StatCard label="Полезных 👍" value={stats.positiveRatings} accent="positive" />
-        <StatCard label="Бесполезных 👎" value={stats.negativeRatings} accent="negative" />
+        <StatCard label={t('aiStats.totalResponses')} value={stats.totalResponses} />
+        <StatCard label={t('aiStats.rated')} value={stats.ratedResponses} />
+        <StatCard label={t('aiStats.positive')} value={stats.positiveRatings} accent="positive" />
+        <StatCard label={t('aiStats.negative')} value={stats.negativeRatings} accent="negative" />
       </div>
 
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Доверие к ответам</h2>
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('aiStats.trustTitle')}</h2>
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 mb-8">
         <ShareCard
-          label="Проверенных ссылок"
+          label={t('aiStats.verifiedCitations')}
           numerator={stats.citationsVerified}
           denominator={stats.citationsChecked}
-          hint={`${stats.citationsVerified} из ${stats.citationsChecked} проверок`}
+          hint={t('aiStats.verifiedCitationsHint', { verified: stats.citationsVerified, checked: stats.citationsChecked })}
           accent="positive"
         />
         <ShareCard
-          label="Полезных оценок"
+          label={t('aiStats.positiveRatingsShare')}
           numerator={stats.positiveRatings}
           denominator={stats.positiveRatings + stats.negativeRatings}
-          hint={`👍 ${stats.positiveRatings} · 👎 ${stats.negativeRatings}`}
+          hint={t('aiStats.positiveRatingsHint', { positive: stats.positiveRatings, negative: stats.negativeRatings })}
         />
         <ShareCard
-          label="Отказов (не по теме)"
+          label={t('aiStats.refusals')}
           numerator={stats.guardRefusals}
           denominator={stats.guardChecks}
-          hint={`${stats.guardRefusals} из ${stats.guardChecks} запросов`}
+          hint={t('aiStats.refusalsHint', { refusals: stats.guardRefusals, checks: stats.guardChecks })}
           accent="negative"
         />
       </div>
 
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">По типам анализа</h2>
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('aiStats.byWorkflowTitle')}</h2>
       {stats.workflows.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mb-8">Пока нет данных.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mb-8">{t('aiStats.noData')}</p>
       ) : (
         <div className="flex flex-col gap-2 mb-8">
           {stats.workflows.map((workflow) => (
@@ -101,7 +105,7 @@ export default function AiStatsPage(): JSX.Element {
             >
               <span className="text-sm text-light-text dark:text-dark-text">{workflow.workflowName}</span>
               <div className="flex items-center gap-6 text-sm">
-                <span className="text-light-secondary dark:text-dark-secondary">{workflow.count} запусков</span>
+                <span className="text-light-secondary dark:text-dark-secondary">{t('aiStats.runsCount', { count: workflow.count })}</span>
                 <span className="text-light-text dark:text-dark-text w-20 text-right">
                   {workflow.avgRating !== null ? `★ ${workflow.avgRating.toFixed(2)}` : '—'}
                 </span>
@@ -111,9 +115,9 @@ export default function AiStatsPage(): JSX.Element {
         </div>
       )}
 
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Последние заключения</h2>
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('aiStats.recentTitle')}</h2>
       {recent.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">Пока нет заключений.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('aiStats.noResponses')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {recent.map((response) => (
@@ -126,7 +130,7 @@ export default function AiStatsPage(): JSX.Element {
                   {response.workflowName}
                 </span>
                 <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                  {ratingLabel(response.rating)} · {new Date(response.createdAt).toLocaleDateString('ru-RU')}
+                  {ratingLabel(response.rating)} · {new Date(response.createdAt).toLocaleDateString(dateLocale)}
                 </span>
               </div>
               <p className="text-sm text-light-text dark:text-dark-text line-clamp-2">{response.result}</p>
@@ -141,7 +145,7 @@ export default function AiStatsPage(): JSX.Element {
 function ratingLabel(rating: number | null): string {
   if (rating === 1) return '👍'
   if (rating === -1) return '👎'
-  return 'без оценки'
+  return i18n.t('aiStats.unrated')
 }
 
 interface ShareCardProps {

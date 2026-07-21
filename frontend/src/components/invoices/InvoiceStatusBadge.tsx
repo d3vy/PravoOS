@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { InvoiceStatus } from '../../types'
 
 const styles: Record<InvoiceStatus, string> = {
@@ -12,11 +13,12 @@ export function InvoiceStatusBadge({
   label,
 }: {
   status: InvoiceStatus
-  label: string
+  label?: string
 }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
-      {label}
+      {label ?? t(`invoices.status.${status}`)}
     </span>
   )
 }

@@ -1,6 +1,5 @@
+import { useTranslation } from 'react-i18next'
 import { AppWindow } from './AppWindow'
-
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 type DayEvent = 'hearing' | 'deadline' | 'task'
 
@@ -20,22 +19,32 @@ const DOT_TONE: Record<DayEvent, string> = {
 }
 
 export function CalendarMockup(): JSX.Element {
+  const { t } = useTranslation()
   const days = Array.from({ length: 35 }, (_, i) => i - 2)
+  const weekdays = [
+    t('landing.calWeekdayMon'),
+    t('landing.calWeekdayTue'),
+    t('landing.calWeekdayWed'),
+    t('landing.calWeekdayThu'),
+    t('landing.calWeekdayFri'),
+    t('landing.calWeekdaySat'),
+    t('landing.calWeekdaySun'),
+  ]
 
   return (
     <AppWindow title="app.pravoos.ru/calendar">
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-light-text dark:text-dark-text">Август 2026</h3>
+          <h3 className="text-base font-semibold text-light-text dark:text-dark-text">{t('landing.calMonth')}</h3>
           <div className="flex items-center gap-3 text-[11px] text-light-secondary dark:text-dark-secondary">
-            <Legend tone="bg-red-500" label="Заседания" />
-            <Legend tone="bg-amber-500" label="Сроки" />
-            <Legend tone="bg-blue-500" label="Задачи" />
+            <Legend tone="bg-red-500" label={t('landing.calLegendHearings')} />
+            <Legend tone="bg-amber-500" label={t('landing.calLegendDeadlines')} />
+            <Legend tone="bg-blue-500" label={t('landing.calLegendTasks')} />
           </div>
         </div>
 
         <div className="grid grid-cols-7 gap-1 mb-1">
-          {WEEKDAYS.map((day) => (
+          {weekdays.map((day) => (
             <div key={day} className="text-center text-[10px] text-light-secondary dark:text-dark-secondary py-1">
               {day}
             </div>

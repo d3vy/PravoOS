@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
@@ -6,12 +8,16 @@ import type { CaseDraftDto, CaseDraftVersionDto } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 
-const AI_PRESETS: { label: string; instruction: string }[] = [
-  { label: 'Усилить формулировки', instruction: 'Усиль юридические формулировки, сделай позицию более убедительной и защищённой, сохранив исходный смысл.' },
-  { label: 'Упростить язык', instruction: 'Упрости язык, убери канцелярит и двусмысленности, сохранив юридическую точность.' },
-  { label: 'Снизить риски', instruction: 'Найди и устрани юридические риски и невыгодные формулировки для стороны, которую представляет юрист.' },
-  { label: 'Сделать формальнее', instruction: 'Сделай текст более официальным и выдержанным в деловом юридическом стиле.' },
+const AI_PRESET_KEYS: { labelKey: string; instructionKey: string }[] = [
+  { labelKey: 'draftEditor.presetStrengthenLabel', instructionKey: 'draftEditor.presetStrengthenInstruction' },
+  { labelKey: 'draftEditor.presetSimplifyLabel', instructionKey: 'draftEditor.presetSimplifyInstruction' },
+  { labelKey: 'draftEditor.presetReduceRisksLabel', instructionKey: 'draftEditor.presetReduceRisksInstruction' },
+  { labelKey: 'draftEditor.presetFormalLabel', instructionKey: 'draftEditor.presetFormalInstruction' },
 ]
+
+function locale(): string {
+  return i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+}
 
 interface Selection {
   start: number
@@ -19,6 +25,7 @@ interface Selection {
 }
 
 export default function DraftEditorPage(): JSX.Element {
+  const { t } = useTranslation()
   const { caseId = '', draftId = '' } = useParams()
   const queryClient = useQueryClient()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -124,9 +131,9 @@ export default function DraftEditorPage(): JSX.Element {
     return (
       <div className="bg-light-bg dark:bg-dark-bg">
         <div className="page-container py-16 text-center">
-          <p className="text-light-secondary dark:text-dark-secondary mb-4">Черновик не найден</p>
+          <p className="text-light-secondary dark:text-dark-secondary mb-4">{t('draftEditor.notFound')}</p>
           <Link to={`/cases/${caseId}`} className="text-light-accent dark:text-dark-accent text-sm">
-            ← К делу
+            {t('draftEditor.backToCase')}
           </Link>
         </div>
       </div>
@@ -141,20 +148,20 @@ export default function DraftEditorPage(): JSX.Element {
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
             <Link to={`/cases/${caseId}`} className="text-xs text-light-accent dark:text-dark-accent">
-              ← К делу
+              {t('draftEditor.backToCase')}
             </Link>
             <h1 className="text-lg font-semibold text-light-text dark:text-dark-text mt-1">{draft.title}</h1>
             <p className="text-xs text-light-secondary dark:text-dark-secondary">
               {draft.draftTypeName}
-              {draft.updatedAt && ` · изменён ${new Date(draft.updatedAt).toLocaleString('ru-RU')}`}
+              {draft.updatedAt && t('draftEditor.changedAt', { date: new Date(draft.updatedAt).toLocaleString(locale()) })}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowVersions((v) => !v)}>
-              История версий
+              {t('draftEditor.versionHistory')}
             </Button>
             <Button variant="secondary" size="sm" loading={downloading} onClick={() => void handleDownload()}>
-              Скачать .docx
+              {t('draftEditor.downloadDocx')}
             </Button>
           </div>
         </div>
@@ -174,7 +181,7 @@ export default function DraftEditorPage(): JSX.Element {
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Описание правки (необязательно)"
+                placeholder={t('draftEditor.notePlaceholder')}
                 className="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
               />
               <Button
@@ -183,14 +190,14 @@ export default function DraftEditorPage(): JSX.Element {
                 loading={saveMutation.isPending}
                 onClick={() => saveMutation.mutate()}
               >
-                Сохранить версию
+                {t('draftEditor.saveVersion')}
               </Button>
             </div>
             {saveMutation.isError && (
-              <p className="text-sm text-red-600 dark:text-red-400">Не удалось сохранить. Попробуйте снова.</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{t('draftEditor.saveError')}</p>
             )}
             {isDirty && !saveMutation.isPending && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">Есть несохранённые изменения.</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">{t('draftEditor.unsavedChanges')}</p>
             )}
           </div>
 
@@ -205,21 +212,21 @@ export default function DraftEditorPage(): JSX.Element {
               }} />
             ) : (
               <section className="p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-                <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">AI-помощник</h2>
+                <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">{t('draftEditor.aiAssistant')}</h2>
                 <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
-                  {hasSelection ? 'Правка применится к выделенному фрагменту.' : 'Правка применится ко всему документу. Выделите фрагмент, чтобы изменить только его.'}
+                  {hasSelection ? t('draftEditor.appliesToSelection') : t('draftEditor.appliesToDocument')}
                 </p>
 
                 <div className="flex flex-col gap-2">
-                  {AI_PRESETS.map((preset) => (
+                  {AI_PRESET_KEYS.map((preset) => (
                     <Button
-                      key={preset.label}
+                      key={preset.labelKey}
                       variant="secondary"
                       size="sm"
                       disabled={refineMutation.isPending}
-                      onClick={() => runRefine(preset.instruction)}
+                      onClick={() => runRefine(t(preset.instructionKey))}
                     >
-                      {preset.label}
+                      {t(preset.labelKey)}
                     </Button>
                   ))}
                 </div>
@@ -228,7 +235,7 @@ export default function DraftEditorPage(): JSX.Element {
                   <textarea
                     value={customInstruction}
                     onChange={(e) => setCustomInstruction(e.target.value)}
-                    placeholder="Своя инструкция, напр.: добавить условие о неустойке 0,1% за день просрочки"
+                    placeholder={t('draftEditor.customPlaceholder')}
                     rows={3}
                     className="w-full px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-y"
                   />
@@ -238,33 +245,33 @@ export default function DraftEditorPage(): JSX.Element {
                     disabled={!customInstruction.trim() || refineMutation.isPending}
                     onClick={() => runRefine(customInstruction)}
                   >
-                    Применить инструкцию
+                    {t('draftEditor.applyInstruction')}
                   </Button>
                 </div>
 
                 {refineMutation.isPending && (
                   <div className="flex items-center gap-2 mt-3 text-xs text-light-secondary dark:text-dark-secondary">
-                    <Spinner size="sm" /> AI дорабатывает текст…
+                    <Spinner size="sm" /> {t('draftEditor.refining')}
                   </div>
                 )}
                 {refineMutation.isError && (
-                  <p className="text-sm text-red-600 dark:text-red-400 mt-3">Не удалось получить правку. Попробуйте снова.</p>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-3">{t('draftEditor.refineError')}</p>
                 )}
 
                 {suggestion && (
                   <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border">
                     <h3 className="text-xs font-semibold text-light-text dark:text-dark-text mb-2">
-                      Предложение AI {suggestion.selection ? '(для фрагмента)' : '(весь документ)'}
+                      {t('draftEditor.suggestionTitle')} {suggestion.selection ? t('draftEditor.forFragment') : t('draftEditor.wholeDocument')}
                     </h3>
                     <div className="max-h-72 overflow-y-auto p-3 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-xs whitespace-pre-wrap text-light-text dark:text-dark-text">
                       {suggestion.text}
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                       <Button variant="primary" size="sm" onClick={applySuggestion}>
-                        Применить
+                        {t('draftEditor.apply')}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setSuggestion(null)}>
-                        Отклонить
+                        {t('draftEditor.reject')}
                       </Button>
                     </div>
                   </div>
@@ -287,6 +294,7 @@ function VersionsPanel({
   onClose: () => void
   onRestored: (updated: CaseDraftDto) => void
 }): JSX.Element {
+  const { t } = useTranslation()
   const { data: versions = [], isLoading } = useQuery<CaseDraftVersionDto[]>({
     queryKey: ['draft-versions', draftId],
     queryFn: () => casesApi.getDraftVersions(draftId),
@@ -300,26 +308,26 @@ function VersionsPanel({
   return (
     <section className="p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">История версий</h2>
+        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('draftEditor.versionHistory')}</h2>
         <button onClick={onClose} className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text">
-          Закрыть
+          {t('draftEditor.close')}
         </button>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner size="sm" /></div>
       ) : versions.length === 0 ? (
-        <p className="text-xs text-light-secondary dark:text-dark-secondary">Версий пока нет.</p>
+        <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('draftEditor.noVersions')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {versions.map((version) => (
             <div key={version.id} className="p-3 rounded-lg border border-light-border dark:border-dark-border">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-light-text dark:text-dark-text">
-                  Версия #{version.versionNo}
+                  {t('draftEditor.versionNo', { no: version.versionNo })}
                 </span>
                 <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                  {new Date(version.createdAt).toLocaleString('ru-RU')}
+                  {new Date(version.createdAt).toLocaleString(locale())}
                 </span>
               </div>
               {version.note && (
@@ -331,7 +339,7 @@ function VersionsPanel({
                 loading={restoreMutation.isPending && restoreMutation.variables === version.id}
                 onClick={() => restoreMutation.mutate(version.id)}
               >
-                Восстановить
+                {t('draftEditor.restore')}
               </Button>
             </div>
           ))}

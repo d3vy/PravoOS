@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg'
   className?: string
@@ -10,6 +12,7 @@ const sizeClasses = {
 }
 
 export function Spinner({ size = 'md', className = '' }: SpinnerProps): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div
       className={`
@@ -21,7 +24,7 @@ export function Spinner({ size = 'md', className = '' }: SpinnerProps): JSX.Elem
         ${className}
       `}
       role="status"
-      aria-label="Загрузка..."
+      aria-label={t('common.loading')}
     />
   )
 }

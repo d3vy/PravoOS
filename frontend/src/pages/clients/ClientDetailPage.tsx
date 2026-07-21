@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '../../api/clients'
@@ -10,6 +12,7 @@ import { ClientContactsSection } from '../../components/clients/ClientContactsSe
 import { ClientPortalSection } from '../../components/clients/ClientPortalSection'
 
 export default function ClientDetailPage(): JSX.Element {
+  const { t } = useTranslation()
   const { clientId = '' } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -32,7 +35,7 @@ export default function ClientDetailPage(): JSX.Element {
       setIsEditing(false)
       setEditError(null)
     },
-    onError: () => setEditError('Не удалось сохранить изменения. Проверьте данные.'),
+    onError: () => setEditError(t('clientDetail.updateError')),
   })
 
   const deleteMutation = useMutation({
@@ -42,7 +45,7 @@ export default function ClientDetailPage(): JSX.Element {
       queryClient.invalidateQueries({ queryKey: ['cases'] })
       navigate('/clients')
     },
-    onError: () => setDeleteError('Не удалось удалить клиента. Попробуйте снова.'),
+    onError: () => setDeleteError(t('clientDetail.deleteError')),
   })
 
   if (isLoading) {
@@ -59,9 +62,9 @@ export default function ClientDetailPage(): JSX.Element {
     return (
       <div className="bg-light-bg dark:bg-dark-bg">
         <div className="page-container py-16 text-center">
-          <p className="text-light-secondary dark:text-dark-secondary mb-4">Клиент не найден</p>
+          <p className="text-light-secondary dark:text-dark-secondary mb-4">{t('clientDetail.notFound')}</p>
           <Link to="/clients" className="text-light-accent dark:text-dark-accent text-sm">
-            ← Ко всем клиентам
+            {t('clientDetail.backToClients')}
           </Link>
         </div>
       </div>
@@ -77,7 +80,7 @@ export default function ClientDetailPage(): JSX.Element {
           to="/clients"
           className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent mb-4 inline-block"
         >
-          ← Ко всем клиентам
+          {t('clientDetail.backToClients')}
         </Link>
 
         <div className="flex items-start justify-between gap-4 mb-8">
@@ -89,16 +92,16 @@ export default function ClientDetailPage(): JSX.Element {
               </span>
             </div>
             <p className="text-xs text-light-secondary dark:text-dark-secondary">
-              Добавлен {new Date(client.createdAt).toLocaleDateString('ru-RU')}
+              {t('clientDetail.addedOn', { date: new Date(client.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US') })}
             </p>
           </div>
           {!isEditing && (
             <div className="flex gap-2 shrink-0">
               <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
-                Редактировать
+                {t('clientDetail.edit')}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowDeleteDialog(true)}>
-                Удалить
+                {t('clientDetail.delete')}
               </Button>
             </div>
           )}
@@ -107,7 +110,7 @@ export default function ClientDetailPage(): JSX.Element {
         {isEditing ? (
           <section className="mb-10 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Редактирование клиента</h2>
+              <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('clientDetail.editingTitle')}</h2>
               <button
                 onClick={() => {
                   setIsEditing(false)
@@ -115,7 +118,7 @@ export default function ClientDetailPage(): JSX.Element {
                 }}
                 className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text"
               >
-                Отмена
+                {t('clientDetail.cancel')}
               </button>
             </div>
             <ClientForm
@@ -127,7 +130,7 @@ export default function ClientDetailPage(): JSX.Element {
                 inn: client.inn ?? undefined,
                 notes: client.notes ?? undefined,
               }}
-              submitLabel="Сохранить"
+              submitLabel={t('clientDetail.save')}
               isSubmitting={updateMutation.isPending}
               error={editError}
               onSubmit={(payload) => updateMutation.mutate(payload)}
@@ -136,13 +139,13 @@ export default function ClientDetailPage(): JSX.Element {
         ) : (
           <section className="mb-10 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
             <dl className="grid gap-4 sm:grid-cols-2">
-              <DetailRow label="Телефон" value={client.phone} />
+              <DetailRow label={t('clientDetail.phone')} value={client.phone} />
               <DetailRow label="Email" value={client.email} />
-              <DetailRow label="ИНН" value={client.inn} />
+              <DetailRow label={t('clientDetail.inn')} value={client.inn} />
             </dl>
             {client.notes && (
               <div className="mt-4 pt-4 border-t border-light-border dark:border-dark-border">
-                <dt className="text-xs font-semibold text-light-secondary dark:text-dark-secondary mb-1">Заметки</dt>
+                <dt className="text-xs font-semibold text-light-secondary dark:text-dark-secondary mb-1">{t('clientDetail.notes')}</dt>
                 <dd className="text-sm text-light-text dark:text-dark-text whitespace-pre-wrap">{client.notes}</dd>
               </div>
             )}
@@ -155,14 +158,14 @@ export default function ClientDetailPage(): JSX.Element {
 
         <section>
           <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">
-            Дела клиента{' '}
+            {t('clientDetail.clientCases')}{' '}
             {cases.length > 0 && (
               <span className="font-normal text-light-secondary dark:text-dark-secondary">({cases.length})</span>
             )}
           </h2>
           {cases.length === 0 ? (
             <p className="text-sm text-light-secondary dark:text-dark-secondary">
-              К этому клиенту пока не привязано ни одного дела.
+              {t('clientDetail.noCases')}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -176,7 +179,7 @@ export default function ClientDetailPage(): JSX.Element {
                     {caseItem.title}
                   </p>
                   <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">
-                    {new Date(caseItem.createdAt).toLocaleDateString('ru-RU')}
+                    {new Date(caseItem.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                   </p>
                 </Link>
               ))}
@@ -188,11 +191,11 @@ export default function ClientDetailPage(): JSX.Element {
       {showDeleteDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border p-6">
-            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-2">Удалить клиента?</h3>
+            <h3 className="text-lg font-semibold text-light-text dark:text-dark-text mb-2">{t('clientDetail.deleteTitle')}</h3>
             <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
               {cases.length > 0
-                ? `У клиента ${cases.length} ${casesWord(cases.length)}. Выберите, что сделать с ними.`
-                : 'Клиент будет удалён без возможности восстановления.'}
+                ? t('clientDetail.deleteWithCases', { count: cases.length })
+                : t('clientDetail.deleteNoCases')}
             </p>
 
             {deleteError && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{deleteError}</p>}
@@ -205,14 +208,14 @@ export default function ClientDetailPage(): JSX.Element {
                     loading={deleteMutation.isPending}
                     onClick={() => deleteMutation.mutate(false)}
                   >
-                    Удалить клиента, дела сохранить
+                    {t('clientDetail.deleteKeepCases')}
                   </Button>
                   <Button
                     variant="primary"
                     loading={deleteMutation.isPending}
                     onClick={() => deleteMutation.mutate(true)}
                   >
-                    Удалить клиента и все дела
+                    {t('clientDetail.deleteAllCases')}
                   </Button>
                 </>
               )}
@@ -222,7 +225,7 @@ export default function ClientDetailPage(): JSX.Element {
                   loading={deleteMutation.isPending}
                   onClick={() => deleteMutation.mutate(false)}
                 >
-                  Удалить клиента
+                  {t('clientDetail.deleteClient')}
                 </Button>
               )}
               <button
@@ -232,7 +235,7 @@ export default function ClientDetailPage(): JSX.Element {
                 }}
                 className="mt-1 text-sm text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text"
               >
-                Отмена
+                {t('clientDetail.cancel')}
               </button>
             </div>
           </div>
@@ -249,12 +252,4 @@ function DetailRow({ label, value }: { label: string; value: string | null }): J
       <dd className="text-sm text-light-text dark:text-dark-text">{value ?? '—'}</dd>
     </div>
   )
-}
-
-function casesWord(count: number): string {
-  const mod10 = count % 10
-  const mod100 = count % 100
-  if (mod10 === 1 && mod100 !== 11) return 'дело'
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'дела'
-  return 'дел'
 }

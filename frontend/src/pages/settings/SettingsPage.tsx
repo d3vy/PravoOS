@@ -1,28 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { usersApi } from '../../api/users'
 import type { NotificationSettingsResponse, TelegramLinkResponse } from '../../types'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
+import { useLanguage } from '../../hooks/useLanguage'
+import { LANGUAGE_LABELS } from '../../i18n/config'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 
-type SettingsTab = 'notifications' | 'integrations'
-
-const TABS: { id: SettingsTab; label: string }[] = [
-  { id: 'notifications', label: 'Уведомления' },
-  { id: 'integrations', label: 'Интеграции' },
-]
+type SettingsTab = 'notifications' | 'integrations' | 'language'
 
 export default function SettingsPage(): JSX.Element {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SettingsTab>('notifications')
+
+  const tabs: { id: SettingsTab; label: string }[] = [
+    { id: 'notifications', label: t('settings.tabNotifications') },
+    { id: 'integrations', label: t('settings.tabIntegrations') },
+    { id: 'language', label: t('settings.tabLanguage') },
+  ]
 
   return (
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-lg">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-6">Настройки</h1>
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-6">{t('settings.title')}</h1>
 
         <div className="flex gap-1 border-b border-light-border dark:border-dark-border mb-8">
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -38,17 +43,53 @@ export default function SettingsPage(): JSX.Element {
           ))}
         </div>
 
-        {activeTab === 'notifications' ? (
+        {activeTab === 'notifications' && (
           <NotificationsTab onGoToIntegrations={() => setActiveTab('integrations')} />
-        ) : (
-          <IntegrationsTab />
         )}
+        {activeTab === 'integrations' && <IntegrationsTab />}
+        {activeTab === 'language' && <LanguageTab />}
+      </div>
+    </div>
+  )
+}
+
+function LanguageTab(): JSX.Element {
+  const { t } = useTranslation()
+  const { language, supportedLanguages, setLanguage } = useLanguage()
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('settings.languageTitle')}</h2>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">{t('settings.languageDesc')}</p>
+      </div>
+      <div className="flex flex-col gap-2 max-w-xs">
+        {supportedLanguages.map((code) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => setLanguage(code)}
+            className={`flex items-center justify-between px-4 py-3 rounded-lg border text-sm transition-colors ${
+              code === language
+                ? 'border-light-accent dark:border-dark-accent text-light-text dark:text-dark-text bg-light-accent/5 dark:bg-dark-accent/10'
+                : 'border-light-border dark:border-dark-border text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface'
+            }`}
+          >
+            {LANGUAGE_LABELS[code]}
+            {code === language && (
+              <svg className="w-4 h-4 text-light-accent dark:text-dark-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+        ))}
       </div>
     </div>
   )
 }
 
 function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => void }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
 
   const { data: settings, isLoading } = useQuery<NotificationSettingsResponse>({
@@ -106,34 +147,34 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
       <PushDeviceCard pushSelected={settings.loginAlertPush || settings.caseMessagePush} />
 
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Вход в аккаунт</h2>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('settings.loginTitle')}</h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-          Куда присылать уведомление о входе с нового устройства.
+          {t('settings.loginDesc')}
         </p>
       </div>
 
       <ChannelSelect
         options={[
-          { key: 'email', label: 'На почту', checked: settings.loginAlertEmail },
-          { key: 'telegram', label: 'В Telegram', checked: settings.loginAlertTelegram },
-          { key: 'push', label: 'Push в браузере', checked: settings.loginAlertPush },
+          { key: 'email', label: t('settings.channelEmail'), checked: settings.loginAlertEmail },
+          { key: 'telegram', label: t('settings.channelTelegram'), checked: settings.loginAlertTelegram },
+          { key: 'push', label: t('settings.channelPush'), checked: settings.loginAlertPush },
         ]}
         onToggle={toggleLoginChannel}
         disabled={updateMutation.isPending}
       />
 
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Сообщения по делу</h2>
+        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('settings.caseMsgTitle')}</h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-          Куда присылать уведомление о новом сообщении в переписке по делу.
+          {t('settings.caseMsgDesc')}
         </p>
       </div>
 
       <ChannelSelect
         options={[
-          { key: 'email', label: 'На почту', checked: settings.caseMessageEmail },
-          { key: 'telegram', label: 'В Telegram', checked: settings.caseMessageTelegram },
-          { key: 'push', label: 'Push в браузере', checked: settings.caseMessagePush },
+          { key: 'email', label: t('settings.channelEmail'), checked: settings.caseMessageEmail },
+          { key: 'telegram', label: t('settings.channelTelegram'), checked: settings.caseMessageTelegram },
+          { key: 'push', label: t('settings.channelPush'), checked: settings.caseMessagePush },
         ]}
         onToggle={toggleCaseMessageChannel}
         disabled={updateMutation.isPending}
@@ -142,22 +183,22 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
       {telegramSelectedButNotLinked && (
         <div className="rounded-lg border border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 p-3">
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            Telegram не привязан — уведомления туда не дойдут.{' '}
+            {t('settings.telegramNotLinked')}{' '}
             <button
               type="button"
               onClick={onGoToIntegrations}
               className="underline font-medium hover:no-underline"
             >
-              Привязать в «Интеграциях»
+              {t('settings.linkInIntegrations')}
             </button>
           </p>
         </div>
       )}
 
       {updateMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400">Не удалось сохранить. Попробуйте снова.</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{t('settings.saveFailed')}</p>
       )}
-      {saved && <p className="text-sm text-green-600 dark:text-green-400">Сохранено</p>}
+      {saved && <p className="text-sm text-green-600 dark:text-green-400">{t('settings.saved')}</p>}
     </div>
   )
 }
@@ -171,6 +212,7 @@ interface ChannelOption {
 }
 
 function PushDeviceCard({ pushSelected }: { pushSelected: boolean }): JSX.Element | null {
+  const { t } = useTranslation()
   const { state, isBusy, error, enable, disable } = usePushNotifications()
 
   if (state === 'unsupported' || state === 'not-configured' || state === 'loading') {
@@ -180,17 +222,15 @@ function PushDeviceCard({ pushSelected }: { pushSelected: boolean }): JSX.Elemen
   return (
     <div className="rounded-lg border border-light-border dark:border-dark-border p-4 flex flex-col gap-3">
       <div>
-        <h2 className="text-base font-semibold text-light-text dark:text-dark-text">Push на этом устройстве</h2>
+        <h2 className="text-base font-semibold text-light-text dark:text-dark-text">{t('settings.pushDeviceTitle')}</h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-          {state === 'subscribed'
-            ? 'Уведомления приходят в браузер, даже когда вкладка PravoOS закрыта.'
-            : 'Разрешите уведомления, чтобы получать дедлайны и сообщения без открытой вкладки.'}
+          {state === 'subscribed' ? t('settings.pushSubscribedDesc') : t('settings.pushEnableDesc')}
         </p>
       </div>
 
       {state === 'blocked' ? (
         <p className="text-sm text-amber-600 dark:text-amber-400">
-          Уведомления заблокированы в настройках браузера для этого сайта — разрешите их и обновите страницу.
+          {t('settings.pushBlocked')}
         </p>
       ) : (
         <Button
@@ -200,13 +240,13 @@ function PushDeviceCard({ pushSelected }: { pushSelected: boolean }): JSX.Elemen
           disabled={isBusy}
           onClick={() => void (state === 'subscribed' ? disable() : enable())}
         >
-          {state === 'subscribed' ? 'Отключить на устройстве' : 'Включить push'}
+          {state === 'subscribed' ? t('settings.pushDisableDevice') : t('settings.pushEnable')}
         </Button>
       )}
 
       {state !== 'subscribed' && pushSelected && state !== 'blocked' && (
         <p className="text-sm text-amber-600 dark:text-amber-400">
-          Канал «Push в браузере» выбран, но это устройство не подписано — уведомления сюда не дойдут.
+          {t('settings.pushChannelSelectedNotSubscribed')}
         </p>
       )}
 
@@ -224,6 +264,7 @@ function ChannelSelect({
   onToggle: (key: NotificationChannel) => void
   disabled: boolean
 }): JSX.Element {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -239,7 +280,7 @@ function ChannelSelect({
   }, [open])
 
   const selectedLabels = options.filter((option) => option.checked).map((option) => option.label)
-  const summary = selectedLabels.length === 0 ? 'Не присылать' : selectedLabels.join(', ')
+  const summary = selectedLabels.length === 0 ? t('settings.dontSend') : selectedLabels.join(', ')
 
   return (
     <div ref={containerRef} className="relative max-w-xs">
@@ -301,6 +342,7 @@ function ChevronIcon({ open }: { open: boolean }): JSX.Element {
 }
 
 function IntegrationsTab(): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [link, setLink] = useState<TelegramLinkResponse | null>(null)
 
@@ -332,24 +374,24 @@ function IntegrationsTab(): JSX.Element {
       <div>
         <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Telegram</h2>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-          Привяжите Telegram, чтобы получать уведомления о входе и напоминания о дедлайнах.
+          {t('settings.telegramDesc')}
         </p>
       </div>
 
       {settings.telegramLinked ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-green-600 dark:text-green-400">Telegram привязан</p>
+          <p className="text-sm text-green-600 dark:text-green-400">{t('settings.telegramLinked')}</p>
           <div>
             <Button
               variant="secondary"
               loading={unlinkMutation.isPending}
               onClick={() => unlinkMutation.mutate()}
             >
-              Отвязать Telegram
+              {t('settings.unlinkTelegram')}
             </Button>
           </div>
           {unlinkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">Не удалось отвязать. Попробуйте снова.</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.unlinkFailed')}</p>
           )}
         </div>
       ) : (
@@ -357,33 +399,33 @@ function IntegrationsTab(): JSX.Element {
           {!link && (
             <div>
               <Button variant="primary" loading={linkMutation.isPending} onClick={() => linkMutation.mutate()}>
-                Привязать Telegram
+                {t('settings.linkTelegram')}
               </Button>
             </div>
           )}
 
           {linkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">Не удалось создать ссылку. Попробуйте снова.</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.linkCreateFailed')}</p>
           )}
 
           {link && (
             <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4">
               <p className="text-sm text-light-text dark:text-dark-text">
-                Откройте бота и нажмите «Запустить» — привязка произойдёт автоматически.
+                {t('settings.botInstruction')}
               </p>
               <div className="flex flex-wrap gap-2">
                 <a href={link.deepLink} target="_blank" rel="noopener noreferrer">
-                  <Button variant="primary">Открыть Telegram</Button>
+                  <Button variant="primary">{t('settings.openTelegram')}</Button>
                 </a>
                 <Button
                   variant="secondary"
                   onClick={() => queryClient.invalidateQueries({ queryKey: ['notification-settings'] })}
                 >
-                  Я привязал — обновить
+                  {t('settings.iLinkedRefresh')}
                 </Button>
               </div>
               <p className="text-xs text-light-secondary dark:text-dark-secondary">
-                Если ссылка не сработала, отправьте боту команду:{' '}
+                {t('settings.botCommandHint')}{' '}
                 <code className="font-mono">/start {link.code}</code>
               </p>
             </div>

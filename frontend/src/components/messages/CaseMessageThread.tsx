@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Spinner } from '../ui/Spinner'
 import { Button } from '../ui/Button'
+import i18n from '../../i18n'
 import type { CaseMessageResponse, MessageAuthorRole } from '../../types'
 
 interface CaseMessageThreadProps {
@@ -12,7 +14,8 @@ interface CaseMessageThreadProps {
 }
 
 function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString('ru-RU', {
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+  return new Date(value).toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
@@ -21,7 +24,7 @@ function formatTimestamp(value: string): string {
 }
 
 function authorLabel(role: MessageAuthorRole): string {
-  return role === 'CLIENT' ? 'Клиент' : 'Юрист'
+  return role === 'CLIENT' ? i18n.t('messageThread.authorClient') : i18n.t('messageThread.authorLawyer')
 }
 
 export function CaseMessageThread({
@@ -30,6 +33,7 @@ export function CaseMessageThread({
   listMessages,
   sendMessage,
 }: CaseMessageThreadProps): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -60,7 +64,7 @@ export function CaseMessageThread({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-3">Переписка</h2>
+      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-3">{t('messageThread.title')}</h2>
 
       <div className="card-elevated rounded-xl p-4">
         {isLoading ? (
@@ -71,7 +75,7 @@ export function CaseMessageThread({
           <div className="max-h-96 overflow-y-auto flex flex-col gap-3 mb-4">
             {messages.length === 0 ? (
               <p className="text-light-secondary dark:text-dark-secondary text-sm text-center py-6">
-                Сообщений пока нет. Напишите первым.
+                {t('messageThread.empty')}
               </p>
             ) : (
               messages.map((message) => {
@@ -110,14 +114,14 @@ export function CaseMessageThread({
             }}
             rows={3}
             maxLength={5000}
-            placeholder="Написать сообщение…"
+            placeholder={t('messageThread.placeholder')}
             className="input-base w-full resize-none"
           />
           <div className="flex items-center justify-between gap-3">
             {sendMutation.isError ? (
-              <p className="text-sm text-red-600 dark:text-red-400">Не удалось отправить. Попробуйте снова.</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{t('messageThread.sendError')}</p>
             ) : (
-              <span className="text-xs text-light-secondary dark:text-dark-secondary">Ctrl/⌘ + Enter — отправить</span>
+              <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('messageThread.sendHint')}</span>
             )}
             <Button
               type="submit"
@@ -126,7 +130,7 @@ export function CaseMessageThread({
               disabled={!draft.trim()}
               className="shrink-0"
             >
-              Отправить
+              {t('messageThread.send')}
             </Button>
           </div>
         </form>

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { casesApi } from '../../api/cases'
 import type { CaseThreadResponse } from '../../types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { NavTabs } from '../ui/NavTabs'
-import { LAWYER_NAV_INDICATOR_ID, lawyerNavSections } from './lawyerNav'
+import { LAWYER_NAV_INDICATOR_ID, useLawyerNavSections } from './lawyerNav'
 import { CollapseIcon } from './navIcons'
 import { Navbar } from './Navbar'
 import { CommandPalette } from '../command/CommandPalette'
@@ -18,6 +19,8 @@ function readCollapsedPreference(): boolean {
 }
 
 export function LawyerLayout(): JSX.Element {
+  const { t } = useTranslation()
+  const lawyerNavSections = useLawyerNavSections()
   const isWideScreen = useMediaQuery(WIDE_SCREEN_QUERY)
   const [collapsedByUser, setCollapsedByUser] = useState(readCollapsedPreference)
 
@@ -54,7 +57,7 @@ export function LawyerLayout(): JSX.Element {
         >
           <nav className="flex-1 p-3 pt-6 flex flex-col gap-6">
             {navSections.map((section) => (
-              <div key={section.title}>
+              <div key={section.id}>
                 {!collapsed && <p className="eyebrow px-3 mb-2">{section.title}</p>}
                 <NavTabs
                   items={section.items}
@@ -70,14 +73,14 @@ export function LawyerLayout(): JSX.Element {
             <button
               type="button"
               onClick={() => setCollapsedByUser((current) => !current)}
-              aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-              title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+              aria-label={collapsed ? t('nav.expandMenu') : t('nav.collapseMenu')}
+              title={collapsed ? t('nav.expandMenu') : t('nav.collapseMenu')}
               className={`sticky bottom-0 flex items-center gap-2.5 m-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg ${
                 collapsed ? 'justify-center' : ''
               }`}
             >
               <CollapseIcon collapsed={collapsed} />
-              {!collapsed && <span>Свернуть</span>}
+              {!collapsed && <span>{t('nav.collapse')}</span>}
             </button>
           )}
         </aside>

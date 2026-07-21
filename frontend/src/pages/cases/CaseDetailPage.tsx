@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
@@ -32,6 +33,7 @@ function resolveInitialTab(param: string | null, hash: string): TabId {
 }
 
 export default function CaseDetailPage(): JSX.Element {
+  const { t } = useTranslation()
   const { caseId = '' } = useParams()
   const { hash } = useLocation()
   const queryClient = useQueryClient()
@@ -97,9 +99,9 @@ export default function CaseDetailPage(): JSX.Element {
     return (
       <div className="bg-light-bg dark:bg-dark-bg">
         <div className="page-container py-16 text-center">
-          <p className="text-light-secondary dark:text-dark-secondary mb-4">Дело не найдено</p>
+          <p className="text-light-secondary dark:text-dark-secondary mb-4">{t('caseDetail.notFound')}</p>
           <Link to="/cases" className="text-light-accent dark:text-dark-accent text-sm">
-            ← Ко всем делам
+            {t('caseDetail.backToCases')}
           </Link>
         </div>
       </div>
@@ -107,19 +109,19 @@ export default function CaseDetailPage(): JSX.Element {
   }
 
   const tabs: CaseTabDescriptor[] = [
-    { id: 'overview', label: 'Обзор' },
-    { id: 'documents', label: 'Документы', badge: documents.length },
-    { id: 'analysis', label: 'AI-анализ', badge: responses.length },
-    { id: 'time', label: 'Время и счёт' },
-    { id: 'tasks', label: 'Задачи и сроки' },
-    { id: 'messages', label: 'Сообщения' },
+    { id: 'overview', label: t('caseDetail.tabOverview') },
+    { id: 'documents', label: t('caseDetail.tabDocuments'), badge: documents.length },
+    { id: 'analysis', label: t('caseDetail.tabAnalysis'), badge: responses.length },
+    { id: 'time', label: t('caseDetail.tabTime') },
+    { id: 'tasks', label: t('caseDetail.tabTasks') },
+    { id: 'messages', label: t('caseDetail.tabMessages') },
   ]
 
   return (
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-4xl">
         <Link to="/cases" className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent mb-4 inline-block">
-          ← Ко всем делам
+          {t('caseDetail.backToCases')}
         </Link>
 
         <CaseHeaderSection caseItem={caseItem} />

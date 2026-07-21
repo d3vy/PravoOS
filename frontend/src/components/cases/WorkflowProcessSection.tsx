@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
@@ -13,32 +15,33 @@ import type {
 } from '../../types'
 import { Button } from '../ui/Button'
 
-const STEP_TYPE_LABEL: Record<WorkflowStepType, string> = {
-  AI_ANALYSIS: 'AI-анализ',
-  GENERATE_DRAFT: 'Черновик',
-  GENERATE_TASKS: 'Задачи',
-  SET_DEADLINE: 'Дедлайн',
+const STEP_TYPE_LABEL_KEY: Record<WorkflowStepType, string> = {
+  AI_ANALYSIS: 'status.workflowStepType.AI_ANALYSIS',
+  GENERATE_DRAFT: 'status.workflowStepType.GENERATE_DRAFT',
+  GENERATE_TASKS: 'status.workflowStepType.GENERATE_TASKS',
+  SET_DEADLINE: 'status.workflowStepType.SET_DEADLINE',
 }
 
-const STEP_STATUS_META: Record<WorkflowStepStatus, { label: string; tone: string }> = {
-  PENDING: { label: 'Ожидает', tone: 'border-light-border text-light-secondary bg-light-bg dark:border-dark-border dark:text-dark-secondary dark:bg-dark-bg' },
-  RUNNING: { label: 'Выполняется', tone: 'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-500/40 dark:text-blue-400 dark:bg-blue-500/10' },
-  COMPLETED: { label: 'Готово', tone: 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:bg-emerald-500/10' },
-  FAILED: { label: 'Ошибка', tone: 'border-red-300 text-red-700 bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:bg-red-500/10' },
-  SKIPPED: { label: 'Пропущено', tone: 'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:bg-amber-500/10' },
+const STEP_STATUS_META: Record<WorkflowStepStatus, { labelKey: string; tone: string }> = {
+  PENDING: { labelKey: 'status.workflowStepStatus.PENDING', tone: 'border-light-border text-light-secondary bg-light-bg dark:border-dark-border dark:text-dark-secondary dark:bg-dark-bg' },
+  RUNNING: { labelKey: 'status.workflowStepStatus.RUNNING', tone: 'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-500/40 dark:text-blue-400 dark:bg-blue-500/10' },
+  COMPLETED: { labelKey: 'status.workflowStepStatus.COMPLETED', tone: 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:bg-emerald-500/10' },
+  FAILED: { labelKey: 'status.workflowStepStatus.FAILED', tone: 'border-red-300 text-red-700 bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:bg-red-500/10' },
+  SKIPPED: { labelKey: 'status.workflowStepStatus.SKIPPED', tone: 'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:bg-amber-500/10' },
 }
 
-const RUN_STATUS_META: Record<WorkflowRunStatus, { label: string; tone: string }> = {
-  RUNNING: { label: 'Выполняется', tone: 'text-blue-600 dark:text-blue-400' },
-  COMPLETED: { label: 'Завершён', tone: 'text-emerald-600 dark:text-emerald-400' },
-  FAILED: { label: 'Ошибка', tone: 'text-red-600 dark:text-red-400' },
+const RUN_STATUS_META: Record<WorkflowRunStatus, { labelKey: string; tone: string }> = {
+  RUNNING: { labelKey: 'status.workflowRunStatus.RUNNING', tone: 'text-blue-600 dark:text-blue-400' },
+  COMPLETED: { labelKey: 'status.workflowRunStatus.COMPLETED', tone: 'text-emerald-600 dark:text-emerald-400' },
+  FAILED: { labelKey: 'status.workflowRunStatus.FAILED', tone: 'text-red-600 dark:text-red-400' },
 }
 
 function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(value).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [selectedId, setSelectedId] = useState('')
 
@@ -69,13 +72,13 @@ export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Elem
   return (
     <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Процессы (AI-workflow)</h2>
+        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('process.title')}</h2>
         <Link to="/workflows" className="text-xs text-light-accent dark:text-dark-accent hover:underline">
-          Конструктор процессов →
+          {t('process.builderLink')}
         </Link>
       </div>
       <p className="text-xs text-light-secondary dark:text-dark-secondary mb-4">
-        Многошаговый сценарий: анализ, документы, черновики и дедлайны выполняются последовательно.
+        {t('process.hint')}
       </p>
 
       <div className="grid gap-2 sm:grid-cols-2 mb-3">
@@ -92,14 +95,14 @@ export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Elem
           >
             <span className="block font-medium text-light-text dark:text-dark-text">{definition.name}</span>
             <span className="block text-xs mt-0.5">
-              {definition.categoryName} · {definition.steps.length} шаг(ов)
+              {definition.categoryName} · {t('process.stepsCount', { count: definition.steps.length })}
             </span>
           </button>
         ))}
       </div>
 
       {definitions.length === 0 && (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mb-3">Нет доступных процессов.</p>
+        <p className="text-sm text-light-secondary dark:text-dark-secondary mb-3">{t('process.noProcesses')}</p>
       )}
 
       {selected && (
@@ -112,7 +115,7 @@ export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Elem
               <li key={step.order} className="text-xs text-light-text dark:text-dark-text flex gap-2">
                 <span className="text-light-secondary dark:text-dark-secondary">{step.order + 1}.</span>
                 <span className="px-1.5 py-0.5 rounded bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
-                  {STEP_TYPE_LABEL[step.type]}
+                  {t(STEP_TYPE_LABEL_KEY[step.type])}
                 </span>
                 <span>{step.title}</span>
               </li>
@@ -122,7 +125,7 @@ export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Elem
       )}
 
       {runMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400 mb-2">Не удалось запустить процесс. Попробуйте снова.</p>
+        <p className="text-sm text-red-600 dark:text-red-400 mb-2">{t('process.runError')}</p>
       )}
 
       <Button
@@ -131,13 +134,13 @@ export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Elem
         loading={runMutation.isPending}
         onClick={() => runMutation.mutate()}
       >
-        Запустить процесс
+        {t('process.runProcess')}
       </Button>
 
       {runs.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xs font-semibold text-light-secondary dark:text-dark-secondary uppercase tracking-wide mb-2">
-            История запусков
+            {t('process.runHistory')}
           </h3>
           <div className="space-y-3">
             {runs.map((run) => (
@@ -151,12 +154,13 @@ export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Elem
 }
 
 function WorkflowRunCard({ run }: { run: WorkflowRunDto }): JSX.Element {
+  const { t } = useTranslation()
   const statusMeta = RUN_STATUS_META[run.status]
   return (
     <div className="p-3 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-light-text dark:text-dark-text">{run.definitionName}</span>
-        <span className={`text-xs font-semibold ${statusMeta.tone}`}>{statusMeta.label}</span>
+        <span className={`text-xs font-semibold ${statusMeta.tone}`}>{t(statusMeta.labelKey)}</span>
       </div>
       <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2">{formatDateTime(run.startedAt)}</p>
       <div className="space-y-1.5">
@@ -169,10 +173,11 @@ function WorkflowRunCard({ run }: { run: WorkflowRunDto }): JSX.Element {
 }
 
 function WorkflowRunStepRow({ step }: { step: WorkflowStepRun }): JSX.Element {
+  const { t } = useTranslation()
   const meta = STEP_STATUS_META[step.status]
   return (
     <div className="flex items-start gap-2 text-xs">
-      <span className={`shrink-0 px-1.5 py-0.5 rounded border ${meta.tone}`}>{meta.label}</span>
+      <span className={`shrink-0 px-1.5 py-0.5 rounded border ${meta.tone}`}>{t(meta.labelKey)}</span>
       <div className="min-w-0">
         <span className="text-light-text dark:text-dark-text">{step.title}</span>
         {step.detail && (

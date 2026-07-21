@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { workflowDefinitionsApi } from '../../api/workflows'
 import { casesApi } from '../../api/cases'
@@ -14,24 +15,24 @@ import type {
   WorkflowStepType,
 } from '../../types'
 
-const CATEGORY_OPTIONS: { value: WorkflowCategory; label: string }[] = [
-  { value: 'BANKRUPTCY', label: 'Банкротство' },
-  { value: 'DEBT_COLLECTION', label: 'Взыскание задолженности' },
-  { value: 'REGISTRATION', label: 'Регистрация' },
-  { value: 'CUSTOM', label: 'Пользовательский' },
+const CATEGORY_OPTIONS: { value: WorkflowCategory; labelKey: string }[] = [
+  { value: 'BANKRUPTCY', labelKey: 'workflowBuilder.catBankruptcy' },
+  { value: 'DEBT_COLLECTION', labelKey: 'workflowBuilder.catDebtCollection' },
+  { value: 'REGISTRATION', labelKey: 'workflowBuilder.catRegistration' },
+  { value: 'CUSTOM', labelKey: 'workflowBuilder.catCustom' },
 ]
 
-const STEP_TYPE_OPTIONS: { value: WorkflowStepType; label: string }[] = [
-  { value: 'AI_ANALYSIS', label: 'AI-анализ' },
-  { value: 'GENERATE_DRAFT', label: 'Генерация черновика' },
-  { value: 'GENERATE_TASKS', label: 'Задачи по чеклисту' },
-  { value: 'SET_DEADLINE', label: 'Дедлайн' },
+const STEP_TYPE_OPTIONS: { value: WorkflowStepType; labelKey: string }[] = [
+  { value: 'AI_ANALYSIS', labelKey: 'workflowBuilder.stepAiAnalysis' },
+  { value: 'GENERATE_DRAFT', labelKey: 'workflowBuilder.stepGenerateDraft' },
+  { value: 'GENERATE_TASKS', labelKey: 'workflowBuilder.stepGenerateTasks' },
+  { value: 'SET_DEADLINE', labelKey: 'workflowBuilder.stepSetDeadline' },
 ]
 
 const DEADLINE_OPTIONS = [
-  { value: 'FILING_DEADLINE', label: 'Срок подачи' },
-  { value: 'NEXT_HEARING', label: 'Судебное заседание' },
-  { value: 'EXPIRY', label: 'Истечение срока' },
+  { value: 'FILING_DEADLINE', labelKey: 'workflowBuilder.deadlineFiling' },
+  { value: 'NEXT_HEARING', labelKey: 'workflowBuilder.deadlineHearing' },
+  { value: 'EXPIRY', labelKey: 'workflowBuilder.deadlineExpiry' },
 ]
 
 const SELECT_CLASS =
@@ -41,6 +42,7 @@ const TEXTAREA_CLASS = `${SELECT_CLASS} resize-none`
 type EditorState = { mode: 'new' } | { mode: 'edit'; definition: WorkflowDefinitionDto } | null
 
 export default function WorkflowsPage(): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [editor, setEditor] = useState<EditorState>(null)
 
@@ -59,15 +61,15 @@ export default function WorkflowsPage(): JSX.Element {
       <div className="page-container py-8 max-w-4xl">
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
-            <p className="eyebrow mb-1">AI-процессы</p>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">Конструктор процессов</h1>
+            <p className="eyebrow mb-1">{t('workflowBuilder.eyebrow')}</p>
+            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{t('workflowBuilder.title')}</h1>
             <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
-              Настраиваемые многошаговые сценарии. Запуск — на странице дела.
+              {t('workflowBuilder.subtitle')}
             </p>
           </div>
           {editor === null && (
             <Button size="sm" onClick={() => setEditor({ mode: 'new' })}>
-              Новый процесс
+              {t('workflowBuilder.newProcess')}
             </Button>
           )}
         </div>
@@ -85,7 +87,7 @@ export default function WorkflowsPage(): JSX.Element {
             <Spinner size="lg" />
           </div>
         )}
-        {isError && <p className="text-sm text-red-600 dark:text-red-400">Не удалось загрузить процессы.</p>}
+        {isError && <p className="text-sm text-red-600 dark:text-red-400">{t('workflowBuilder.loadError')}</p>}
 
         <div className="space-y-3 mt-2">
           {definitions.map((definition) => (
@@ -102,7 +104,7 @@ export default function WorkflowsPage(): JSX.Element {
                     </span>
                     {definition.system && (
                       <span className="text-xs px-1.5 py-0.5 rounded bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
-                        Системный
+                        {t('workflowBuilder.system')}
                       </span>
                     )}
                   </div>
@@ -110,12 +112,12 @@ export default function WorkflowsPage(): JSX.Element {
                     <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">{definition.description}</p>
                   )}
                   <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">
-                    {definition.steps.length} шаг(ов): {definition.steps.map((s) => s.title).join(' → ')}
+                    {t('workflowBuilder.stepsSummary', { count: definition.steps.length, titles: definition.steps.map((s) => s.title).join(' → ') })}
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <Button size="sm" variant="secondary" onClick={() => setEditor({ mode: 'edit', definition })}>
-                    {definition.editable ? 'Изменить' : 'Просмотр'}
+                    {definition.editable ? t('workflowBuilder.edit') : t('workflowBuilder.view')}
                   </Button>
                   {definition.editable && (
                     <Button
@@ -123,10 +125,10 @@ export default function WorkflowsPage(): JSX.Element {
                       variant="ghost"
                       loading={deleteMutation.isPending && deleteMutation.variables === definition.id}
                       onClick={() => {
-                        if (window.confirm('Удалить процесс?')) deleteMutation.mutate(definition.id)
+                        if (window.confirm(t('workflowBuilder.deleteConfirm'))) deleteMutation.mutate(definition.id)
                       }}
                     >
-                      Удалить
+                      {t('workflowBuilder.delete')}
                     </Button>
                   )}
                 </div>
@@ -150,6 +152,7 @@ function WorkflowEditor({
   initial?: WorkflowDefinitionDto
   onClose: () => void
 }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const readOnly = initial != null && !initial.editable
 
@@ -222,17 +225,17 @@ function WorkflowEditor({
   return (
     <div className="mb-8 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
       <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-4">
-        {initial ? (readOnly ? 'Просмотр процесса' : 'Редактирование процесса') : 'Новый процесс'}
+        {initial ? (readOnly ? t('workflowBuilder.editorViewTitle') : t('workflowBuilder.editorEditTitle')) : t('workflowBuilder.editorNewTitle')}
       </h2>
 
       <div className="space-y-3">
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название процесса" disabled={readOnly} />
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('workflowBuilder.namePlaceholder')} disabled={readOnly} />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
           maxLength={1000}
-          placeholder="Описание (опционально)"
+          placeholder={t('workflowBuilder.descPlaceholder')}
           disabled={readOnly}
           className={TEXTAREA_CLASS}
         />
@@ -244,7 +247,7 @@ function WorkflowEditor({
         >
           {CATEGORY_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {t(option.labelKey)}
             </option>
           ))}
         </select>
@@ -252,7 +255,7 @@ function WorkflowEditor({
 
       <div className="mt-5 space-y-3">
         <h3 className="text-xs font-semibold text-light-secondary dark:text-dark-secondary uppercase tracking-wide">
-          Шаги
+          {t('workflowBuilder.stepsHeader')}
         </h3>
         {steps.map((step, index) => (
           <div
@@ -269,15 +272,15 @@ function WorkflowEditor({
               >
                 {STEP_TYPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.labelKey)}
                   </option>
                 ))}
               </select>
               {!readOnly && (
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => moveStep(index, -1)} className="px-2 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text" aria-label="Вверх">↑</button>
-                  <button type="button" onClick={() => moveStep(index, 1)} className="px-2 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text" aria-label="Вниз">↓</button>
-                  <button type="button" onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))} className="px-2 text-red-600 dark:text-red-400" aria-label="Удалить шаг">✕</button>
+                  <button type="button" onClick={() => moveStep(index, -1)} className="px-2 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text" aria-label={t('workflowBuilder.moveUp')}>↑</button>
+                  <button type="button" onClick={() => moveStep(index, 1)} className="px-2 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text" aria-label={t('workflowBuilder.moveDown')}>↓</button>
+                  <button type="button" onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))} className="px-2 text-red-600 dark:text-red-400" aria-label={t('workflowBuilder.deleteStep')}>✕</button>
                 </div>
               )}
             </div>
@@ -285,7 +288,7 @@ function WorkflowEditor({
             <Input
               value={step.title}
               onChange={(e) => updateStep(index, { title: e.target.value })}
-              placeholder="Название шага"
+              placeholder={t('workflowBuilder.stepTitlePlaceholder')}
               disabled={readOnly}
             />
 
@@ -295,7 +298,7 @@ function WorkflowEditor({
                 onChange={(e) => updateStep(index, { instruction: e.target.value })}
                 rows={3}
                 maxLength={4000}
-                placeholder={step.type === 'GENERATE_TASKS' ? 'Инструкция для чеклиста (markdown-таблица Документ | Статус | Примечание)' : 'Инструкция для AI'}
+                placeholder={step.type === 'GENERATE_TASKS' ? t('workflowBuilder.tasksInstructionPlaceholder') : t('workflowBuilder.aiInstructionPlaceholder')}
                 disabled={readOnly}
                 className={TEXTAREA_CLASS}
               />
@@ -308,7 +311,7 @@ function WorkflowEditor({
                 disabled={readOnly}
                 className={SELECT_CLASS}
               >
-                <option value="">— выберите тип черновика —</option>
+                <option value="">{t('workflowBuilder.chooseDraftType')}</option>
                 {draftTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.displayName}
@@ -325,10 +328,10 @@ function WorkflowEditor({
                   disabled={readOnly}
                   className={SELECT_CLASS}
                 >
-                  <option value="">— тип дедлайна —</option>
+                  <option value="">{t('workflowBuilder.chooseDeadlineType')}</option>
                   {DEADLINE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {t(option.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -338,7 +341,7 @@ function WorkflowEditor({
                   max={3650}
                   value={step.deadlineOffsetDays ?? ''}
                   onChange={(e) => updateStep(index, { deadlineOffsetDays: e.target.value === '' ? undefined : Number(e.target.value) })}
-                  placeholder="Дней"
+                  placeholder={t('workflowBuilder.daysPlaceholder')}
                   disabled={readOnly}
                   className={`${SELECT_CLASS} w-28`}
                 />
@@ -349,23 +352,23 @@ function WorkflowEditor({
 
         {!readOnly && (
           <Button size="sm" variant="secondary" onClick={() => setSteps((prev) => [...prev, emptyStep()])}>
-            + Добавить шаг
+            {t('workflowBuilder.addStep')}
           </Button>
         )}
       </div>
 
       {saveMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400 mt-3">Не удалось сохранить процесс. Проверьте поля шагов.</p>
+        <p className="text-sm text-red-600 dark:text-red-400 mt-3">{t('workflowBuilder.saveError')}</p>
       )}
 
       <div className="flex gap-2 mt-5">
         {!readOnly && (
           <Button onClick={handleSave} disabled={!canSave} loading={saveMutation.isPending}>
-            Сохранить
+            {t('workflowBuilder.save')}
           </Button>
         )}
         <Button variant="ghost" onClick={onClose}>
-          {readOnly ? 'Закрыть' : 'Отмена'}
+          {readOnly ? t('workflowBuilder.close') : t('workflowBuilder.cancel')}
         </Button>
       </div>
     </div>

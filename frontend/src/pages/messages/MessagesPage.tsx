@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { casesApi } from '../../api/cases'
 import type { CaseThreadResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
+import i18n from '../../i18n'
 
 function formatTimestamp(value: string): string {
   const date = new Date(value)
@@ -13,12 +15,14 @@ function formatTimestamp(value: string): string {
     date.getMonth() === today.getMonth() &&
     date.getFullYear() === today.getFullYear()
 
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   return sameDay
-    ? date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-    : date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    ? date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 export default function MessagesPage(): JSX.Element {
+  const { t } = useTranslation()
   const { data: threads = [], isLoading } = useQuery<CaseThreadResponse[]>({
     queryKey: ['messageThreads'],
     queryFn: casesApi.listThreads,
@@ -28,9 +32,9 @@ export default function MessagesPage(): JSX.Element {
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8 max-w-3xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Сообщения</h1>
+          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('messages.title')}</h1>
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Переписка с клиентами по делам
+            {t('messages.subtitle')}
           </p>
         </div>
 
@@ -41,13 +45,13 @@ export default function MessagesPage(): JSX.Element {
         ) : threads.length === 0 ? (
           <div className="card-elevated rounded-xl p-10 text-center">
             <p className="text-light-secondary dark:text-dark-secondary text-sm">
-              Переписок пока нет. Откройте дело и напишите клиенту первым.
+              {t('messages.empty')}
             </p>
             <Link
               to="/cases"
               className="inline-block mt-4 text-sm text-light-accent dark:text-dark-accent hover:underline"
             >
-              Перейти к делам
+              {t('messages.goToCases')}
             </Link>
           </div>
         ) : (
@@ -75,11 +79,11 @@ export default function MessagesPage(): JSX.Element {
                       )}
                     </div>
                     <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1.5 truncate">
-                      {thread.clientName ?? 'Клиент не назначен'}
+                      {thread.clientName ?? t('messages.noClient')}
                     </p>
                     <p className="text-sm text-light-secondary dark:text-dark-secondary truncate">
                       <span className="opacity-70">
-                        {thread.lastAuthorRole === 'LAWYER' ? 'Вы: ' : ''}
+                        {thread.lastAuthorRole === 'LAWYER' ? t('messages.youPrefix') : ''}
                       </span>
                       {thread.lastMessagePreview}
                     </p>

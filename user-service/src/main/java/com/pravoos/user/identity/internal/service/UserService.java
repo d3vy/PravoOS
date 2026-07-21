@@ -1,7 +1,9 @@
 package com.pravoos.user.identity.internal.service;
 
 import com.pravoos.user.identity.api.LawyerProfileResponse;
+import com.pravoos.user.identity.internal.dto.LanguageSettingsResponse;
 import com.pravoos.user.identity.internal.dto.NotificationSettingsResponse;
+import com.pravoos.user.identity.internal.dto.UpdateLanguageRequest;
 import com.pravoos.user.identity.internal.dto.UpdateNotificationSettingsRequest;
 import com.pravoos.user.identity.internal.dto.UpdateProfileRequest;
 import com.pravoos.user.identity.model.entity.LawyerProfile;
@@ -59,6 +61,20 @@ public class UserService {
         user.setCaseMessageTelegram(request.caseMessageTelegram());
         user.setCaseMessagePush(request.caseMessagePush());
         return toSettingsResponse(user);
+    }
+
+    public LanguageSettingsResponse getLanguage(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(ProfileNotFoundException::new);
+        return new LanguageSettingsResponse(user.getPreferredLanguage());
+    }
+
+    @Transactional
+    public LanguageSettingsResponse updateLanguage(UUID userId, UpdateLanguageRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(ProfileNotFoundException::new);
+        user.setPreferredLanguage(request.language());
+        return new LanguageSettingsResponse(user.getPreferredLanguage());
     }
 
     private NotificationSettingsResponse toSettingsResponse(User user) {

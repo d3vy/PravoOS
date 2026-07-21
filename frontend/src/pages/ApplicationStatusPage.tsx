@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { authApi } from '../api/auth'
 import type { ApplicationResponse, ApplicationStatus } from '../types'
 import { Button } from '../components/ui/Button'
@@ -9,27 +11,28 @@ import { ThemeToggle } from '../components/ui/ThemeToggle'
 
 type LoadState = 'loading' | 'loaded' | 'notFound'
 
-const STATUS_META: Record<ApplicationStatus, { label: string; description: string; className: string }> = {
+const STATUS_META: Record<ApplicationStatus, { labelKey: string; descriptionKey: string; className: string }> = {
   PENDING: {
-    label: 'На рассмотрении',
-    description: 'Администратор проверяет вашу заявку. Обычно это занимает не более одного рабочего дня.',
+    labelKey: 'applicationStatus.statusPendingLabel',
+    descriptionKey: 'applicationStatus.statusPendingDesc',
     className: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
   },
   APPROVED: {
-    label: 'Одобрена',
-    description: 'Доступ к системе предоставлен. Войдите, используя email и пароль из заявки.',
+    labelKey: 'applicationStatus.statusApprovedLabel',
+    descriptionKey: 'applicationStatus.statusApprovedDesc',
     className: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400',
   },
   REJECTED: {
-    label: 'Отклонена',
-    description: 'К сожалению, заявка отклонена. Свяжитесь с администратором для уточнения деталей.',
+    labelKey: 'applicationStatus.statusRejectedLabel',
+    descriptionKey: 'applicationStatus.statusRejectedDesc',
     className: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
   },
 }
 
 function formatDateTime(value: string | null): string {
   if (!value) return '—'
-  return new Date(value).toLocaleString('ru-RU', {
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+  return new Date(value).toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -56,6 +59,7 @@ function StatusField({ label, value, highlight = false }: { label: string; value
 }
 
 export default function ApplicationStatusPage(): JSX.Element {
+  const { t } = useTranslation()
   const { token } = useParams<{ token: string }>()
   const [state, setState] = useState<LoadState>('loading')
   const [application, setApplication] = useState<ApplicationResponse | null>(null)
@@ -86,7 +90,7 @@ export default function ApplicationStatusPage(): JSX.Element {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
           <div className="w-10 h-10 mx-auto mb-6 border-2 border-light-border dark:border-dark-border border-t-light-text dark:border-t-dark-text rounded-full animate-spin" />
-          <p className="text-light-secondary dark:text-dark-secondary">Загружаем заявку…</p>
+          <p className="text-light-secondary dark:text-dark-secondary">{t('applicationStatus.loading')}</p>
         </div>
       )
     }
@@ -101,12 +105,12 @@ export default function ApplicationStatusPage(): JSX.Element {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Заявка не найдена</h2>
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('applicationStatus.notFoundTitle')}</h2>
           <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-            Ссылка неполная или повреждена. Проверьте, что скопировали её целиком.
+            {t('applicationStatus.notFoundDesc')}
           </p>
           <Link to="/apply">
-            <Button variant="primary" size="md">Подать заявку</Button>
+            <Button variant="primary" size="md">{t('applicationStatus.submitApplication')}</Button>
           </Link>
         </div>
       )
@@ -118,58 +122,57 @@ export default function ApplicationStatusPage(): JSX.Element {
       <div className="card-elevated rounded-2xl p-8">
         <div className="mb-6">
           <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${meta.className}`}>
-            {meta.label}
+            {t(meta.labelKey)}
           </span>
         </div>
 
         <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-          Статус заявки
+          {t('applicationStatus.title')}
         </h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed mb-6">
-          {meta.description}
+          {t(meta.descriptionKey)}
         </p>
 
         <div className="rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-5 mb-6">
           <dl className="flex flex-col gap-2.5 text-sm">
-            <StatusField label="Полное имя" value={application.fullName} />
-            <StatusField label="Email" value={application.email} highlight />
+            <StatusField label={t('apply.fieldFullName')} value={application.fullName} />
+            <StatusField label={t('applicationStatus.fieldEmail')} value={application.email} highlight />
             <StatusField
-              label="Почта подтверждена"
-              value={application.emailVerified ? 'Да' : 'Нет'}
+              label={t('applicationStatus.fieldEmailVerified')}
+              value={application.emailVerified ? t('common.yes') : t('common.no')}
             />
-            <StatusField label="Телефон" value={application.phone} />
-            <StatusField label="Специализация" value={application.specialization} />
-            <StatusField label="Подана" value={formatDateTime(application.submittedAt)} />
+            <StatusField label={t('apply.fieldPhone')} value={application.phone} />
+            <StatusField label={t('apply.fieldSpecialization')} value={application.specialization} />
+            <StatusField label={t('applicationStatus.fieldSubmitted')} value={formatDateTime(application.submittedAt)} />
             {application.reviewedAt && (
-              <StatusField label="Рассмотрена" value={formatDateTime(application.reviewedAt)} />
+              <StatusField label={t('applicationStatus.fieldReviewed')} value={formatDateTime(application.reviewedAt)} />
             )}
           </dl>
         </div>
 
         {application.status === 'PENDING' && !application.emailVerified && (
           <p className="text-xs text-light-secondary dark:text-dark-secondary mb-6">
-            Письмо для подтверждения почты не пришло? Проверьте, что email указан верно, и запросите
-            письмо повторно на странице{' '}
+            {t('applicationStatus.verifyHintBefore')}
             <Link to="/verify-email" className="text-light-accent dark:text-dark-accent hover:underline">
-              подтверждения почты
+              {t('applicationStatus.verifyHintLink')}
             </Link>
-            .
+            {t('applicationStatus.verifyHintAfter')}
           </p>
         )}
 
         {application.status === 'PENDING' && (
           <Link to={`/application/${token}/edit`}>
-            <Button variant="primary" size="md" className="w-full mb-3">Редактировать заявку</Button>
+            <Button variant="primary" size="md" className="w-full mb-3">{t('applicationStatus.editApplication')}</Button>
           </Link>
         )}
 
         {application.status === 'APPROVED' ? (
           <Link to="/login">
-            <Button variant="primary" size="md" className="w-full">Войти в систему</Button>
+            <Button variant="primary" size="md" className="w-full">{t('applicationStatus.login')}</Button>
           </Link>
         ) : (
           <Link to="/">
-            <Button variant="ghost" size="md" className="w-full">← Вернуться на главную</Button>
+            <Button variant="ghost" size="md" className="w-full">{t('apply.backHome')}</Button>
           </Link>
         )}
       </div>

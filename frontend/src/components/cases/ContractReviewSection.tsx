@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { contractReviewsApi } from '../../api/contractReviews'
 import type { ContractReviewDto, DocumentResponse } from '../../types'
@@ -6,6 +8,7 @@ import { Button } from '../ui/Button'
 import { RISK_LEVEL_META, riskScoreTone } from './caseFormatting'
 
 export function ContractReviewSection({ caseId, documents }: { caseId: string; documents: DocumentResponse[] }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [selectedDocId, setSelectedDocId] = useState('')
   const readyDocuments = documents.filter((doc) => doc.status === 'READY')
@@ -26,14 +29,14 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
 
   return (
     <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">AI-ревью договора</h2>
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">{t('contractReview.title')}</h2>
       <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
-        Выберите загруженный договор — AI выделит рискованные условия и предложит правки.
+        {t('contractReview.hint')}
       </p>
 
       {readyDocuments.length === 0 ? (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Загрузите документ дела (PDF, DOCX) и дождитесь обработки, чтобы запустить ревью.
+          {t('contractReview.uploadHint')}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -42,7 +45,7 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
             onChange={(e) => setSelectedDocId(e.target.value)}
             className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
           >
-            <option value="">Выберите договор</option>
+            <option value="">{t('contractReview.selectContract')}</option>
             {readyDocuments.map((doc) => (
               <option key={doc.id} value={doc.id}>
                 {doc.title}
@@ -51,7 +54,7 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
           </select>
 
           {reviewMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">Не удалось выполнить ревью. Попробуйте снова.</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('contractReview.reviewError')}</p>
           )}
 
           <div>
@@ -61,7 +64,7 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
               loading={reviewMutation.isPending}
               onClick={() => reviewMutation.mutate()}
             >
-              Проанализировать риски
+              {t('contractReview.analyzeRisks')}
             </Button>
           </div>
         </div>
@@ -79,20 +82,21 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
 }
 
 function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="p-4 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">{review.documentTitle}</p>
           <p className="text-xs text-light-secondary dark:text-dark-secondary">
-            {new Date(review.createdAt).toLocaleString('ru-RU')}
+            {new Date(review.createdAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
           </p>
         </div>
         <div className="text-right shrink-0">
           <span className={`text-lg font-semibold ${riskScoreTone(review.riskScore)}`}>{review.riskScore}</span>
           <span className="text-xs text-light-secondary dark:text-dark-secondary">/100</span>
           {review.highRiskCount > 0 && (
-            <p className="text-xs text-red-600 dark:text-red-400">{review.highRiskCount} высоких</p>
+            <p className="text-xs text-red-600 dark:text-red-400">{t('contractReview.highRiskCount', { count: review.highRiskCount })}</p>
           )}
         </div>
       </div>
@@ -100,7 +104,7 @@ function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Elem
       <p className="text-sm text-light-text dark:text-dark-text whitespace-pre-wrap mb-3">{review.summary}</p>
 
       {review.findings.length === 0 ? (
-        <p className="text-xs text-light-secondary dark:text-dark-secondary">Существенных рисков не выявлено.</p>
+        <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('contractReview.noRisks')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {review.findings.map((risk, i) => {
@@ -108,7 +112,7 @@ function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Elem
             return (
               <div key={i} className={`p-3 rounded-lg border ${meta.tone}`}>
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide">{meta.label} · {risk.category}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide">{t(meta.labelKey)} · {risk.category}</span>
                 </div>
                 <p className="text-sm font-medium text-light-text dark:text-dark-text mb-1">{risk.clause}</p>
                 {risk.explanation && (
@@ -116,7 +120,7 @@ function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Elem
                 )}
                 {risk.recommendation && (
                   <p className="text-xs text-light-text dark:text-dark-text">
-                    <span className="font-semibold">Рекомендация:</span> {risk.recommendation}
+                    <span className="font-semibold">{t('contractReview.recommendation')}</span> {risk.recommendation}
                   </p>
                 )}
               </div>

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import axios from 'axios'
@@ -23,25 +25,19 @@ function submissionErrorMessage(error: unknown): string {
     const message = error.response?.data?.message as string | undefined
     const code = error.response?.data?.code as string | undefined
     if (status === 409 && code === 'APPLICATION_PENDING') {
-      return (
-        'Заявка с этим email уже находится на рассмотрении. ' +
-        'Если письмо для подтверждения почты не пришло — запросите его повторно или проверьте статус заявки.'
-      )
+      return i18n.t('apply.errorPending')
     }
     if (status === 409 && code === 'EMAIL_EXISTS') {
-      return (
-        'Пользователь с таким email уже зарегистрирован. ' +
-        'Попробуйте войти в аккаунт или восстановить пароль.'
-      )
+      return i18n.t('apply.errorEmailExists')
     }
     if (status === 409) {
-      return message ?? 'Заявка с таким email уже существует.'
+      return message ?? i18n.t('apply.errorConflict')
     }
     if (status === 400 && message) {
       return message
     }
   }
-  return 'Произошла ошибка при отправке заявки. Попробуйте позже или свяжитесь с администратором.'
+  return i18n.t('apply.errorGeneric')
 }
 
 function ApplicationField({
@@ -70,6 +66,7 @@ function ApplicationField({
 }
 
 export default function ApplyPage(): JSX.Element {
+  const { t } = useTranslation()
   const [submission, setSubmission] = useState<ApplicationSubmissionResponse | null>(null)
 
   const handleSubmit = async (data: ApplicationFormData): Promise<void> => {
@@ -105,55 +102,53 @@ export default function ApplyPage(): JSX.Element {
                 </svg>
               </div>
               <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">
-                Заявка подана
+                {t('apply.submitted')}
               </h2>
 
               <div className="text-left rounded-xl border border-light-accent/30 dark:border-dark-accent/30 bg-light-accent/5 dark:bg-dark-accent/10 p-5 mb-6">
                 <p className="font-semibold text-light-text dark:text-dark-text mb-1">
-                  Подтвердите email
+                  {t('apply.confirmEmail')}
                 </p>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed">
-                  Мы отправили письмо на {submission.application.email} — перейдите по ссылке в
-                  нём, иначе мы не сможем выдать вам доступ.
+                  {t('apply.sentEmailTo', { email: submission.application.email })}
                 </p>
               </div>
 
               <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-6">
-                Администратор рассмотрит заявку и свяжется с вами. Обычно это занимает не более
-                одного рабочего дня.
+                {t('apply.adminReview')}
               </p>
 
               <div className="text-left rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-5 mb-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-light-secondary dark:text-dark-secondary mb-3">
-                  Отправленные данные
+                  {t('apply.submittedData')}
                 </p>
                 <dl className="flex flex-col gap-2.5 text-sm">
-                  <ApplicationField label="Полное имя" value={submission.application.fullName} />
+                  <ApplicationField label={t('apply.fieldFullName')} value={submission.application.fullName} />
                   <ApplicationField label="Email" value={submission.application.email} highlight />
-                  <ApplicationField label="Телефон" value={submission.application.phone} />
-                  <ApplicationField label="Специализация" value={submission.application.specialization} />
+                  <ApplicationField label={t('apply.fieldPhone')} value={submission.application.phone} />
+                  <ApplicationField label={t('apply.fieldSpecialization')} value={submission.application.specialization} />
                 </dl>
               </div>
 
               <p className="text-xs text-light-secondary dark:text-dark-secondary mb-4">
-                Если в данных ошибка, откройте заявку по ссылке ниже и нажмите «Редактировать».
+                {t('apply.editHint')}
               </p>
 
               <div className="text-left rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-4 mb-6">
                 <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2">
-                  Сохраните ссылку, чтобы в любой момент проверить или изменить заявку:
+                  {t('apply.saveLinkHint')}
                 </p>
                 <Link
                   to={`/application/${submission.statusToken}`}
                   className="text-sm font-medium text-light-accent dark:text-dark-accent hover:underline break-all"
                 >
-                  Открыть статус заявки →
+                  {t('apply.openStatus')}
                 </Link>
               </div>
 
               <Link to="/">
                 <Button variant="ghost" size="md" className="w-full">
-                  ← Вернуться на главную
+                  {t('apply.backHome')}
                 </Button>
               </Link>
             </div>
@@ -168,28 +163,28 @@ export default function ApplyPage(): JSX.Element {
             <div className="card-elevated rounded-2xl p-8">
               <div className="mb-8">
                 <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-                  Заявка на доступ
+                  {t('apply.title')}
                 </h1>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary">
-                  Заполните форму — администратор проверит данные и предоставит доступ к системе
+                  {t('apply.subtitle')}
                 </p>
               </div>
 
               <ApplicationForm
                 initialValues={EMPTY_FORM}
                 passwordRequired
-                submitLabel="Отправить заявку"
+                submitLabel={t('apply.submit')}
                 onSubmit={handleSubmit}
               />
 
               <div className="mt-6 pt-6 border-t border-light-border dark:border-dark-border text-center">
                 <p className="text-sm text-light-secondary dark:text-dark-secondary">
-                  Уже есть доступ?{' '}
+                  {t('apply.alreadyHaveAccess')}{' '}
                   <Link
                     to="/login"
                     className="text-light-accent dark:text-dark-accent hover:underline font-medium"
                   >
-                    Войти
+                    {t('apply.login')}
                   </Link>
                 </p>
               </div>

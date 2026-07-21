@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface DateFieldProps {
   label: string
   value: string
@@ -5,10 +7,11 @@ interface DateFieldProps {
 }
 
 export function DateField({ label, value, onChange }: DateFieldProps): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div>
       <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-        {label} <span className="text-light-secondary dark:text-dark-secondary font-normal">(опционально)</span>
+        {label} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('cases.optionalHint')}</span>
       </label>
       <input
         type="date"

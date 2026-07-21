@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import i18n from '../../i18n'
 import { calendarApi } from '../../api/calendar'
 import { clientsApi } from '../../api/clients'
 import { casesApi } from '../../api/cases'
@@ -9,12 +11,6 @@ import { Spinner } from '../../components/ui/Spinner'
 import type { CalendarEvent, CalendarEventType } from '../../types'
 
 type ViewMode = 'month' | 'week'
-
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-const MONTHS = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
-]
 
 const EVENT_STYLE: Record<CalendarEventType, string> = {
   DEADLINE: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
@@ -59,7 +55,17 @@ function buildGrid(anchor: Date, view: ViewMode): Date[] {
 }
 
 export default function CalendarPage(): JSX.Element {
+  const { t } = useTranslation()
   const navigate = useNavigate()
+  const weekdays = [
+    t('calendar.weekdayMon'), t('calendar.weekdayTue'), t('calendar.weekdayWed'),
+    t('calendar.weekdayThu'), t('calendar.weekdayFri'), t('calendar.weekdaySat'), t('calendar.weekdaySun'),
+  ]
+  const months = [
+    t('calendar.monthJanuary'), t('calendar.monthFebruary'), t('calendar.monthMarch'), t('calendar.monthApril'),
+    t('calendar.monthMay'), t('calendar.monthJune'), t('calendar.monthJuly'), t('calendar.monthAugust'),
+    t('calendar.monthSeptember'), t('calendar.monthOctober'), t('calendar.monthNovember'), t('calendar.monthDecember'),
+  ]
   const [anchor, setAnchor] = useState<Date>(() => new Date())
   const [view, setView] = useState<ViewMode>('month')
   const [clientId, setClientId] = useState('')
@@ -107,7 +113,7 @@ export default function CalendarPage(): JSX.Element {
   const title =
     view === 'week'
       ? `${toDisplay(grid[0])} — ${toDisplay(grid[6])}`
-      : `${MONTHS[currentMonth]} ${anchor.getFullYear()}`
+      : `${months[currentMonth]} ${anchor.getFullYear()}`
 
   const handleExport = (): void => {
     void calendarApi.exportIcs(from, to, filters)
@@ -122,21 +128,21 @@ export default function CalendarPage(): JSX.Element {
       <div className="page-container py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="eyebrow mb-1">Планирование</p>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">Календарь</h1>
+            <p className="eyebrow mb-1">{t('calendar.eyebrow')}</p>
+            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{t('calendar.title')}</h1>
           </div>
           <Button variant="secondary" size="sm" onClick={handleExport}>
-            Экспорт в iCal
+            {t('calendar.exportIcal')}
           </Button>
         </div>
 
         <div className="card-elevated p-4 mb-6 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1 rounded-lg border border-light-border dark:border-dark-border p-1">
             <ViewButton active={view === 'month'} onClick={() => setView('month')}>
-              Месяц
+              {t('calendar.viewMonth')}
             </ViewButton>
             <ViewButton active={view === 'week'} onClick={() => setView('week')}>
-              Неделя
+              {t('calendar.viewWeek')}
             </ViewButton>
           </div>
 
@@ -145,7 +151,7 @@ export default function CalendarPage(): JSX.Element {
               ←
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
-              Сегодня
+              {t('calendar.today')}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => shift(1)}>
               →
@@ -160,7 +166,7 @@ export default function CalendarPage(): JSX.Element {
               onChange={(e) => setClientId(e.target.value)}
               className="px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
             >
-              <option value="">Все клиенты</option>
+              <option value="">{t('calendar.allClients')}</option>
               {clients?.map((client) => (
                 <option key={client.id} value={client.id}>
                   {client.name}
@@ -172,7 +178,7 @@ export default function CalendarPage(): JSX.Element {
               onChange={(e) => setCaseId(e.target.value)}
               className="px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
             >
-              <option value="">Все дела</option>
+              <option value="">{t('calendar.allCases')}</option>
               {casesPage?.items.map((caseItem) => (
                 <option key={caseItem.id} value={caseItem.id}>
                   {caseItem.title}
@@ -183,9 +189,9 @@ export default function CalendarPage(): JSX.Element {
         </div>
 
         <div className="flex flex-wrap gap-4 mb-4 text-xs text-light-secondary dark:text-dark-secondary">
-          <Legend type="DEADLINE" label="Дедлайн" />
-          <Legend type="HEARING" label="Заседание" />
-          <Legend type="TASK" label="Задача" />
+          <Legend type="DEADLINE" label={t('calendar.legendDeadline')} />
+          <Legend type="HEARING" label={t('calendar.legendHearing')} />
+          <Legend type="TASK" label={t('calendar.legendTask')} />
         </div>
 
         {isLoading && (
@@ -196,7 +202,7 @@ export default function CalendarPage(): JSX.Element {
 
         {isError && (
           <div className="card-elevated p-6 text-light-secondary dark:text-dark-secondary">
-            Не удалось загрузить календарь. Попробуйте обновить страницу.
+            {t('calendar.loadError')}
           </div>
         )}
 
@@ -212,7 +218,7 @@ export default function CalendarPage(): JSX.Element {
         {!isLoading && !isError && (
           <div className="hidden sm:block card-elevated overflow-hidden">
             <div className="grid grid-cols-7 border-b border-light-border dark:border-dark-border">
-              {WEEKDAYS.map((day) => (
+              {weekdays.map((day) => (
                 <div
                   key={day}
                   className="px-2 py-2 text-center text-xs font-medium text-light-secondary dark:text-dark-secondary"
@@ -251,7 +257,8 @@ function toDisplay(date: Date): string {
 }
 
 function toAgendaHeading(date: Date): string {
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+  return date.toLocaleDateString(locale, { day: 'numeric', month: 'long', weekday: 'short' })
 }
 
 function AgendaList({
@@ -265,12 +272,13 @@ function AgendaList({
   todayIso: string
   onOpen: (event: CalendarEvent) => void
 }): JSX.Element {
+  const { t } = useTranslation()
   const daysWithEvents = days.filter((day) => (eventsByDate.get(toIso(day)) ?? []).length > 0)
 
   if (daysWithEvents.length === 0) {
     return (
       <div className="sm:hidden card-elevated p-6 text-sm text-light-secondary dark:text-dark-secondary">
-        В этом периоде событий нет.
+        {t('calendar.noEvents')}
       </div>
     )
   }
@@ -290,7 +298,7 @@ function AgendaList({
               }`}
             >
               {toAgendaHeading(day)}
-              {isToday && ' · сегодня'}
+              {isToday && t('calendar.todaySuffix')}
             </p>
             <div className="flex flex-col gap-2">
               {(eventsByDate.get(iso) ?? []).map((event) => (
@@ -363,6 +371,7 @@ function DayCell({
   events: CalendarEvent[]
   onOpen: (event: CalendarEvent) => void
 }): JSX.Element {
+  const { t } = useTranslation()
   const visibleLimit = tall ? events.length : 3
   const visible = events.slice(0, visibleLimit)
   const overflow = events.length - visible.length
@@ -398,7 +407,7 @@ function DayCell({
         ))}
         {overflow > 0 && (
           <span className="text-[11px] text-light-secondary dark:text-dark-secondary px-1.5">
-            +{overflow} ещё
+            {t('calendar.overflowMore', { count: overflow })}
           </span>
         )}
       </div>

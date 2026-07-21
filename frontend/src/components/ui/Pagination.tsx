@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface PaginationProps {
   page: number
   pageSize: number
@@ -6,6 +8,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, pageSize, total, onPageChange }: PaginationProps): JSX.Element | null {
+  const { t } = useTranslation()
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   if (totalPages <= 1) {
     return null
@@ -19,17 +22,17 @@ export function Pagination({ page, pageSize, total, onPageChange }: PaginationPr
   return (
     <div className="flex items-center justify-center gap-3 mt-6">
       <button className={buttonClass} disabled={page <= 0} onClick={() => onPageChange(page - 1)}>
-        ‹ Назад
+        {t('pagination.prev')}
       </button>
       <span className="text-sm text-light-secondary dark:text-dark-secondary">
-        Стр. {page + 1} из {totalPages} · всего {total}
+        {t('pagination.info', { page: page + 1, total: totalPages, count: total })}
       </span>
       <button
         className={buttonClass}
         disabled={page >= totalPages - 1}
         onClick={() => onPageChange(page + 1)}
       >
-        Вперёд ›
+        {t('pagination.next')}
       </button>
     </div>
   )

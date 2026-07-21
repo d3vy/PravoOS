@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { templatesApi } from '../../api/templates'
 import { Button } from '../../components/ui/Button'
@@ -22,6 +23,7 @@ const PLACEHOLDERS = [
 type EditorState = { mode: 'new' } | { mode: 'edit'; template: TemplateResponse } | null
 
 export default function TemplatesPage(): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [editor, setEditor] = useState<EditorState>(null)
 
@@ -40,12 +42,12 @@ export default function TemplatesPage(): JSX.Element {
       <div className="page-container py-8 max-w-4xl">
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
-            <p className="eyebrow mb-1">Документы</p>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">Шаблоны</h1>
+            <p className="eyebrow mb-1">{t('templates.eyebrow')}</p>
+            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{t('templates.title')}</h1>
           </div>
           {editor === null && (
             <Button size="sm" onClick={() => setEditor({ mode: 'new' })}>
-              Новый шаблон
+              {t('templates.newTemplate')}
             </Button>
           )}
         </div>
@@ -66,13 +68,13 @@ export default function TemplatesPage(): JSX.Element {
 
         {isError && (
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Не удалось загрузить шаблоны. Обновите страницу.
+            {t('templates.loadError')}
           </p>
         )}
 
         {templates && templates.length === 0 && editor === null && (
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Шаблонов пока нет. Создайте первый — и применяйте его к делам в один клик.
+            {t('templates.empty')}
           </p>
         )}
 
@@ -92,7 +94,7 @@ export default function TemplatesPage(): JSX.Element {
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <Button variant="secondary" size="sm" onClick={() => setEditor({ mode: 'edit', template })}>
-                      Изменить
+                      {t('templates.edit')}
                     </Button>
                     <Button
                       variant="ghost"
@@ -100,7 +102,7 @@ export default function TemplatesPage(): JSX.Element {
                       loading={deleteMutation.isPending && deleteMutation.variables === template.id}
                       onClick={() => deleteMutation.mutate(template.id)}
                     >
-                      Удалить
+                      {t('templates.delete')}
                     </Button>
                   </div>
                 </div>
@@ -120,6 +122,7 @@ function TemplateEditor({
   initial?: TemplateResponse
   onClose: () => void
 }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [name, setName] = useState(initial?.name ?? '')
   const [content, setContent] = useState(initial?.content ?? '')
@@ -152,17 +155,17 @@ function TemplateEditor({
       void queryClient.invalidateQueries({ queryKey: ['templates'] })
       onClose()
     },
-    onError: () => setError('Не удалось сохранить шаблон. Проверьте поля.'),
+    onError: () => setError(t('templates.saveError')),
   })
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
     if (!name.trim()) {
-      setError('Укажите название шаблона')
+      setError(t('templates.nameRequired'))
       return
     }
     if (!content.trim()) {
-      setError('Текст шаблона не может быть пустым')
+      setError(t('templates.contentRequired'))
       return
     }
     setError(null)
@@ -176,21 +179,21 @@ function TemplateEditor({
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
-          {initial ? 'Редактирование шаблона' : 'Новый шаблон'}
+          {initial ? t('templates.editTitle') : t('templates.newTemplate')}
         </h2>
         <button
           type="button"
           onClick={onClose}
           className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text"
         >
-          Отмена
+          {t('templates.cancel')}
         </button>
       </div>
 
-      <Input label="Название" value={name} onChange={(e) => setName(e.target.value)} maxLength={300} />
+      <Input label={t('templates.nameLabel')} value={name} onChange={(e) => setName(e.target.value)} maxLength={300} />
 
       <div>
-        <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">Текст шаблона</label>
+        <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">{t('templates.contentLabel')}</label>
         <textarea
           ref={contentRef}
           value={content}
@@ -202,9 +205,8 @@ function TemplateEditor({
 
       <div className="text-xs text-light-secondary dark:text-dark-secondary">
         <p className="mb-1.5">
-          Пишите текст как обычно. Там, где должно подставиться имя клиента, дата или другие данные дела,
-          вставьте плейсхолдер — например <code className="px-1 rounded bg-light-bg dark:bg-dark-bg">{'{{client_name}}'}</code>.
-          При применении шаблона к делу он заменится на реальное значение. Нажмите на плейсхолдер, чтобы вставить его в текст.
+          {t('templates.helpTextBefore')} <code className="px-1 rounded bg-light-bg dark:bg-dark-bg">{'{{client_name}}'}</code>.{' '}
+          {t('templates.helpTextAfter')}
         </p>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {PLACEHOLDERS.map((placeholder) => (
@@ -224,7 +226,7 @@ function TemplateEditor({
 
       <div>
         <Button type="submit" size="sm" loading={saveMutation.isPending}>
-          {initial ? 'Сохранить' : 'Создать шаблон'}
+          {initial ? t('templates.save') : t('templates.create')}
         </Button>
       </div>
     </form>

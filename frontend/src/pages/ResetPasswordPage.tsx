@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { authApi } from '../api/auth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 import { validatePassword } from '../utils/password'
 
 interface FieldErrors {
@@ -15,6 +17,7 @@ interface FieldErrors {
 }
 
 export default function ResetPasswordPage(): JSX.Element {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [token] = useState(() => searchParams.get('token') ?? '')
@@ -36,7 +39,7 @@ export default function ResetPasswordPage(): JSX.Element {
     const next: FieldErrors = {}
     const passwordError = validatePassword(password)
     if (passwordError) next.password = passwordError
-    if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают'
+    if (confirmPassword !== password) next.confirmPassword = t('auth.passwordsDontMatch')
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -53,9 +56,9 @@ export default function ResetPasswordPage(): JSX.Element {
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 400) {
         const message = err.response.data?.message as string | undefined
-        setSubmitError(message ?? 'Ссылка недействительна или истекла. Запросите сброс пароля заново.')
+        setSubmitError(message ?? t('auth.resetLinkInvalid'))
       } else {
-        setSubmitError('Не удалось сбросить пароль. Попробуйте позже.')
+        setSubmitError(t('auth.resetFailed'))
       }
     } finally {
       setLoading(false)
@@ -77,11 +80,11 @@ export default function ResetPasswordPage(): JSX.Element {
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Ссылка недействительна</h2>
+        <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('auth.linkInvalidTitle')}</h2>
         <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">{text}</p>
         <Link to="/forgot-password">
           <Button variant="primary" size="md">
-            Запросить новую ссылку
+            {t('auth.requestNewLink')}
           </Button>
         </Link>
       </div>
@@ -94,12 +97,15 @@ export default function ResetPasswordPage(): JSX.Element {
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         {!token ? (
-          renderInvalidLink('Ссылка для сброса пароля неполная или повреждена. Запросите сброс пароля заново.')
+          renderInvalidLink(t('auth.resetLinkIncomplete'))
         ) : done ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
@@ -113,12 +119,12 @@ export default function ResetPasswordPage(): JSX.Element {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Пароль изменён</h2>
+              <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('auth.passwordChanged')}</h2>
               <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-                Теперь вы можете войти в систему с новым паролем.
+                {t('auth.canSignInNow')}
               </p>
               <Button variant="primary" size="md" onClick={() => navigate('/login', { replace: true })}>
-                Перейти ко входу
+                {t('auth.goToLogin')}
               </Button>
             </div>
           </motion.div>
@@ -132,19 +138,19 @@ export default function ResetPasswordPage(): JSX.Element {
             <div className="card-elevated rounded-2xl p-8">
               <div className="mb-8">
                 <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-                  Новый пароль
+                  {t('auth.newPasswordTitle')}
                 </h1>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
-                  Введите новый пароль и повторите его для подтверждения
+                  {t('auth.newPasswordSubtitle')}
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
                 <Input
                   id="password"
-                  label="Новый пароль"
+                  label={t('auth.newPasswordLabel')}
                   type="password"
-                  placeholder="Не менее 8 символов, буква и цифра"
+                  placeholder={t('auth.newPasswordPlaceholder')}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value)
@@ -157,7 +163,7 @@ export default function ResetPasswordPage(): JSX.Element {
 
                 <Input
                   id="confirmPassword"
-                  label="Повторите пароль"
+                  label={t('auth.repeatPasswordLabel')}
                   type="password"
                   placeholder="••••••••"
                   value={confirmPassword}
@@ -180,7 +186,7 @@ export default function ResetPasswordPage(): JSX.Element {
                 )}
 
                 <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full mt-1">
-                  Сохранить пароль
+                  {t('auth.savePassword')}
                 </Button>
               </form>
             </div>

@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { invoicesApi } from '../../api/invoices'
 import type { InvoiceResponse, InvoiceStatus } from '../../types'
 import { Button } from '../../components/ui/Button'
@@ -7,18 +8,20 @@ import { Spinner } from '../../components/ui/Spinner'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
 import { formatDuration, formatMoney } from '../../utils/billing'
 
-const NEXT_STATUS: Partial<Record<InvoiceStatus, { to: InvoiceStatus; label: string; variant: 'primary' | 'secondary' }[]>> = {
+const NEXT_STATUS: Partial<Record<InvoiceStatus, { to: InvoiceStatus; labelKey: string; variant: 'primary' | 'secondary' }[]>> = {
   DRAFT: [
-    { to: 'ISSUED', label: 'Выставить', variant: 'primary' },
-    { to: 'CANCELED', label: 'Отменить', variant: 'secondary' },
+    { to: 'ISSUED', labelKey: 'invoices.actionIssue', variant: 'primary' },
+    { to: 'CANCELED', labelKey: 'invoices.actionCancel', variant: 'secondary' },
   ],
   ISSUED: [
-    { to: 'PAID', label: 'Отметить оплаченным', variant: 'primary' },
-    { to: 'CANCELED', label: 'Отменить', variant: 'secondary' },
+    { to: 'PAID', labelKey: 'invoices.actionMarkPaid', variant: 'primary' },
+    { to: 'CANCELED', labelKey: 'invoices.actionCancel', variant: 'secondary' },
   ],
 }
 
 export default function InvoiceDetailPage(): JSX.Element {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   const { invoiceId = '' } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -64,25 +67,25 @@ export default function InvoiceDetailPage(): JSX.Element {
           onClick={() => navigate('/invoices')}
           className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent mb-4"
         >
-          ← Ко всем счетам
+          {t('invoices.backToAll')}
         </button>
 
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-semibold text-light-text dark:text-dark-text">
-                Счёт {invoice.number}
+                {t('invoices.invoiceNumber', { number: invoice.number })}
               </h1>
-              <InvoiceStatusBadge status={invoice.status} label={invoice.statusLabel} />
+              <InvoiceStatusBadge status={invoice.status} />
             </div>
             <p className="text-sm text-light-secondary dark:text-dark-secondary">
-              {invoice.clientName ?? 'Клиент удалён'} ·{' '}
-              {new Date(invoice.issueDate).toLocaleDateString('ru-RU')}
-              {invoice.dueDate && ` · оплатить до ${new Date(invoice.dueDate).toLocaleDateString('ru-RU')}`}
+              {invoice.clientName ?? t('invoices.clientDeleted')} ·{' '}
+              {new Date(invoice.issueDate).toLocaleDateString(locale)}
+              {invoice.dueDate && ` · ${t('invoices.dueBy', { date: new Date(invoice.dueDate).toLocaleDateString(locale) })}`}
             </p>
           </div>
           <Button variant="secondary" size="sm" onClick={() => invoicesApi.exportPdf(invoiceId, invoice.number)}>
-            Скачать PDF
+            {t('invoices.downloadPdf')}
           </Button>
         </div>
 
@@ -90,10 +93,10 @@ export default function InvoiceDetailPage(): JSX.Element {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-light-surface dark:bg-dark-surface text-left text-light-secondary dark:text-dark-secondary">
-                <th className="px-4 py-2.5 font-medium">Описание</th>
-                <th className="px-4 py-2.5 font-medium text-right">Время</th>
-                <th className="px-4 py-2.5 font-medium text-right">Ставка</th>
-                <th className="px-4 py-2.5 font-medium text-right">Сумма</th>
+                <th className="px-4 py-2.5 font-medium">{t('invoices.colDescription')}</th>
+                <th className="px-4 py-2.5 font-medium text-right">{t('invoices.colTime')}</th>
+                <th className="px-4 py-2.5 font-medium text-right">{t('invoices.colRate')}</th>
+                <th className="px-4 py-2.5 font-medium text-right">{t('invoices.colAmount')}</th>
               </tr>
             </thead>
             <tbody>
@@ -115,7 +118,7 @@ export default function InvoiceDetailPage(): JSX.Element {
             <tfoot>
               <tr className="border-t border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
                 <td className="px-4 py-3 font-semibold text-light-text dark:text-dark-text" colSpan={3}>
-                  Итого к оплате
+                  {t('invoices.totalDue')}
                 </td>
                 <td className="px-4 py-3 text-right font-semibold text-light-text dark:text-dark-text tabular-nums">
                   {formatMoney(invoice.total, invoice.currency)}
@@ -140,7 +143,7 @@ export default function InvoiceDetailPage(): JSX.Element {
               loading={statusMutation.isPending}
               onClick={() => statusMutation.mutate(action.to)}
             >
-              {action.label}
+              {t(action.labelKey)}
             </Button>
           ))}
           {invoice.status === 'DRAFT' && (
@@ -150,7 +153,7 @@ export default function InvoiceDetailPage(): JSX.Element {
               loading={deleteMutation.isPending}
               onClick={() => deleteMutation.mutate()}
             >
-              Удалить черновик
+              {t('invoices.deleteDraft')}
             </Button>
           )}
         </div>

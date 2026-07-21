@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { authApi } from '../api/auth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 
 type Status = 'verifying' | 'success' | 'invalid' | 'missing'
 
 export default function VerifyEmailPage(): JSX.Element {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const token = useRef(searchParams.get('token') ?? '').current
@@ -86,8 +89,8 @@ export default function VerifyEmailPage(): JSX.Element {
       return card(
         <>
           <div className="w-10 h-10 mx-auto mb-6 border-2 border-light-border dark:border-dark-border border-t-light-text dark:border-t-dark-text rounded-full animate-spin" />
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-2">Подтверждаем почту…</h2>
-          <p className="text-light-secondary dark:text-dark-secondary">Пожалуйста, подождите.</p>
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-2">{t('verify.verifying')}</h2>
+          <p className="text-light-secondary dark:text-dark-secondary">{t('verify.pleaseWait')}</p>
         </>,
       )
     }
@@ -96,12 +99,12 @@ export default function VerifyEmailPage(): JSX.Element {
       return card(
         <>
           {successIcon}
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Почта подтверждена</h2>
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('verify.successTitle')}</h2>
           <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-            Ваша заявка отправлена на рассмотрение. Мы уведомим вас после одобрения.
+            {t('verify.successText')}
           </p>
           <Button variant="primary" size="md" onClick={() => navigate('/login', { replace: true })}>
-            Перейти ко входу
+            {t('auth.goToLogin')}
           </Button>
         </>,
       )
@@ -111,12 +114,12 @@ export default function VerifyEmailPage(): JSX.Element {
       return card(
         <>
           {successIcon}
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Письмо отправлено</h2>
+          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('verify.resendDoneTitle')}</h2>
           <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-            Если для этой почты есть незавершённая заявка, мы отправили новое письмо со ссылкой подтверждения.
+            {t('verify.resendDoneText')}
           </p>
           <Link to="/login">
-            <Button variant="primary" size="md">Перейти ко входу</Button>
+            <Button variant="primary" size="md">{t('auth.goToLogin')}</Button>
           </Link>
         </>,
       )
@@ -125,16 +128,14 @@ export default function VerifyEmailPage(): JSX.Element {
     return card(
       <>
         {warningIcon}
-        <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Ссылка недействительна</h2>
+        <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('verify.invalidTitle')}</h2>
         <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-          {status === 'missing'
-            ? 'Ссылка подтверждения неполная или повреждена.'
-            : 'Срок действия ссылки истёк или она уже использована. Запросите новое письмо.'}
+          {status === 'missing' ? t('verify.missingText') : t('verify.expiredText')}
         </p>
         <form onSubmit={handleResend} className="flex flex-col gap-4 text-left" noValidate>
           <Input
             id="resendEmail"
-            label="Ваша почта"
+            label={t('verify.yourEmail')}
             type="email"
             placeholder="you@example.com"
             value={resendEmail}
@@ -142,7 +143,7 @@ export default function VerifyEmailPage(): JSX.Element {
             autoComplete="email"
           />
           <Button type="submit" variant="primary" size="lg" loading={resendLoading} className="w-full">
-            Отправить письмо повторно
+            {t('verify.resend')}
           </Button>
         </form>
       </>,
@@ -155,7 +156,10 @@ export default function VerifyEmailPage(): JSX.Element {
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">{renderBody()}</main>

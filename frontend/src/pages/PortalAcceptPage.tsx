@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { authApi } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
@@ -9,6 +10,7 @@ import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { Spinner } from '../components/ui/Spinner'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 import { validatePassword } from '../utils/password'
 
 interface FieldErrors {
@@ -17,6 +19,7 @@ interface FieldErrors {
 }
 
 export default function PortalAcceptPage(): JSX.Element {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const setSession = useAuthStore((state) => state.setSession)
@@ -68,13 +71,13 @@ export default function PortalAcceptPage(): JSX.Element {
   const validate = (): boolean => {
     const next: FieldErrors = {}
     if (accountExists) {
-      if (!password) next.password = 'Введите пароль от аккаунта'
+      if (!password) next.password = t('portalAccept.enterPassword')
       setErrors(next)
       return Object.keys(next).length === 0
     }
     const passwordError = validatePassword(password)
     if (passwordError) next.password = passwordError
-    if (confirmPassword !== password) next.confirmPassword = 'Пароли не совпадают'
+    if (confirmPassword !== password) next.confirmPassword = t('auth.passwordsDontMatch')
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -97,14 +100,14 @@ export default function PortalAcceptPage(): JSX.Element {
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
-        setSubmitError('Неверный пароль от аккаунта. Попробуйте снова.')
+        setSubmitError(t('portalAccept.wrongPassword'))
       } else if (axios.isAxiosError(err) && err.response?.status === 409) {
-        setSubmitError('Этот email нельзя использовать для входа в клиентский портал.')
+        setSubmitError(t('portalAccept.emailNotAllowed'))
       } else if (axios.isAxiosError(err) && err.response?.status === 400) {
         const message = err.response.data?.message as string | undefined
-        setSubmitError(message ?? 'Ссылка недействительна или истекла. Запросите новое приглашение у вашего юриста.')
+        setSubmitError(message ?? t('portalAccept.linkInvalid'))
       } else {
-        setSubmitError('Не удалось получить доступ. Попробуйте позже.')
+        setSubmitError(t('portalAccept.accessFailed'))
       }
     } finally {
       setLoading(false)
@@ -126,13 +129,13 @@ export default function PortalAcceptPage(): JSX.Element {
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">Приглашение недействительно</h2>
+        <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('portalAccept.invalidTitle')}</h2>
         <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-          Ссылка-приглашение повреждена или истекла. Запросите новое приглашение у вашего юриста.
+          {t('portalAccept.invalidText')}
         </p>
         <Link to="/login">
           <Button variant="primary" size="md">
-            Перейти ко входу
+            {t('auth.goToLogin')}
           </Button>
         </Link>
       </div>
@@ -145,7 +148,10 @@ export default function PortalAcceptPage(): JSX.Element {
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -163,12 +169,12 @@ export default function PortalAcceptPage(): JSX.Element {
             <div className="card-elevated rounded-2xl p-8">
               <div className="mb-8">
                 <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-                  Доступ к порталу
+                  {t('portalAccept.title')}
                 </h1>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
                   {accountExists
-                    ? 'У вас уже есть аккаунт — войдите, чтобы привязать новое дело'
-                    : 'Задайте пароль для входа'}
+                    ? t('portalAccept.subtitleExisting')
+                    : t('portalAccept.subtitleNew')}
                   {email ? ' — ' : ''}
                   {email && <span className="text-light-text dark:text-dark-text font-medium">{email}</span>}
                 </p>
@@ -177,9 +183,9 @@ export default function PortalAcceptPage(): JSX.Element {
               <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
                 <Input
                   id="password"
-                  label={accountExists ? 'Пароль от аккаунта' : 'Пароль'}
+                  label={accountExists ? t('portalAccept.accountPassword') : t('auth.passwordLabel')}
                   type="password"
-                  placeholder={accountExists ? '••••••••' : 'Не менее 8 символов, буква и цифра'}
+                  placeholder={accountExists ? '••••••••' : t('auth.newPasswordPlaceholder')}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value)
@@ -193,7 +199,7 @@ export default function PortalAcceptPage(): JSX.Element {
                 {!accountExists && (
                   <Input
                     id="confirmPassword"
-                    label="Повторите пароль"
+                    label={t('auth.repeatPasswordLabel')}
                     type="password"
                     placeholder="••••••••"
                     value={confirmPassword}
@@ -217,7 +223,7 @@ export default function PortalAcceptPage(): JSX.Element {
                 )}
 
                 <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full mt-1">
-                  {accountExists ? 'Войти и привязать дело' : 'Создать доступ и войти'}
+                  {accountExists ? t('portalAccept.submitExisting') : t('portalAccept.submitNew')}
                 </Button>
               </form>
             </div>

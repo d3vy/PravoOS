@@ -3,10 +3,11 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { searchApi } from '../../api/search'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { useTheme } from '../../hooks/useTheme'
-import { lawyerAccountLinks, lawyerNavSections } from '../layout/lawyerNav'
+import { useLawyerAccountLinks, useLawyerNavSections } from '../layout/lawyerNav'
 import { CaseStatusBadge } from '../ui/Badge'
 import type { GlobalSearchResponse } from '../../types'
 
@@ -38,9 +39,12 @@ function matches(query: string, item: CommandItem): boolean {
 }
 
 export function CommandPalette(): JSX.Element | null {
+  const { t } = useTranslation()
   const { open, setOpen, toggle } = useCommandPaletteStore()
   const navigate = useNavigate()
   const { toggleTheme } = useTheme()
+  const lawyerNavSections = useLawyerNavSections()
+  const lawyerAccountLinks = useLawyerAccountLinks()
 
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -93,7 +97,7 @@ export function CommandPalette(): JSX.Element | null {
       section.items.map((item) => ({
         id: `nav:${item.to}`,
         label: item.label,
-        hint: 'Перейти',
+        hint: t('command.goTo'),
         icon: item.icon,
         keywords: `${section.title} ${item.to}`,
         perform: () => run(() => navigate(item.to)),
@@ -102,17 +106,17 @@ export function CommandPalette(): JSX.Element | null {
     const accountNavItems: CommandItem[] = lawyerAccountLinks.map((item) => ({
       id: `nav:${item.to}`,
       label: item.label,
-      hint: 'Перейти',
+      hint: t('command.goTo'),
       icon: item.icon,
-      keywords: `аккаунт ${item.to}`,
+      keywords: `аккаунт account ${item.to}`,
       perform: () => run(() => navigate(item.to)),
     }))
     const navItems: CommandItem[] = [
       ...sectionNavItems,
       {
         id: 'nav:/messages',
-        label: 'Сообщения',
-        hint: 'Перейти',
+        label: t('command.messages'),
+        hint: t('command.goTo'),
         icon: <ChatIcon />,
         keywords: 'переписка клиенты сообщения messages inbox',
         perform: () => run(() => navigate('/messages')),
@@ -122,39 +126,39 @@ export function CommandPalette(): JSX.Element | null {
     const quickItems: CommandItem[] = [
       {
         id: 'action:new-case',
-        label: 'Новое дело',
-        hint: 'Создать',
+        label: t('command.newCase'),
+        hint: t('command.create'),
         keywords: 'создать добавить дело case new',
         icon: <PlusIcon />,
         perform: () => run(() => navigate('/cases?new=1')),
       },
       {
         id: 'action:new-client',
-        label: 'Новый клиент',
-        hint: 'Создать',
+        label: t('command.newClient'),
+        hint: t('command.create'),
         keywords: 'создать добавить клиент client new',
         icon: <PlusIcon />,
         perform: () => run(() => navigate('/clients?new=1')),
       },
       {
         id: 'action:ask-ai',
-        label: 'Задать вопрос AI',
-        hint: 'AI-чат',
+        label: t('command.askAi'),
+        hint: t('command.aiChat'),
         keywords: 'вопрос спросить ai чат chat ask',
         icon: <ChatIcon />,
         perform: () => run(() => navigate('/chat')),
       },
       {
         id: 'action:toggle-theme',
-        label: 'Переключить тему',
-        hint: 'Оформление',
+        label: t('command.toggleTheme'),
+        hint: t('command.appearance'),
         keywords: 'тема тёмная светлая dark light theme',
         icon: <ThemeIcon />,
         perform: () => run(toggleTheme),
       },
     ]
-    return { title: 'Действия', items: [...quickItems, ...navItems] }
-  }, [navigate, toggleTheme])
+    return { title: t('command.actions'), items: [...quickItems, ...navItems] }
+  }, [navigate, toggleTheme, lawyerNavSections, lawyerAccountLinks, t])
 
   const groups = useMemo<CommandGroup[]>(() => {
     const filteredActions: CommandGroup = {
@@ -166,7 +170,7 @@ export function CommandPalette(): JSX.Element | null {
     if (searchEnabled && searchResults) {
       if (searchResults.cases.length > 0) {
         result.push({
-          title: 'Дела',
+          title: t('command.cases'),
           items: searchResults.cases.map((hit) => ({
             id: `case:${hit.id}`,
             label: hit.title,
@@ -179,7 +183,7 @@ export function CommandPalette(): JSX.Element | null {
       }
       if (searchResults.conversations.length > 0) {
         result.push({
-          title: 'Беседы',
+          title: t('command.conversations'),
           items: searchResults.conversations.map((hit) => ({
             id: `conversation:${hit.id}`,
             label: hit.title,
@@ -190,7 +194,7 @@ export function CommandPalette(): JSX.Element | null {
       }
       if (searchResults.documents.length > 0) {
         result.push({
-          title: 'Документы',
+          title: t('command.documents'),
           items: searchResults.documents.map((hit) => ({
             id: `document:${hit.id}`,
             label: hit.title,
@@ -202,7 +206,7 @@ export function CommandPalette(): JSX.Element | null {
       }
     }
     return result
-  }, [actionGroup, debouncedQuery, searchEnabled, searchResults, navigate])
+  }, [actionGroup, debouncedQuery, searchEnabled, searchResults, navigate, t])
 
   const flatItems = useMemo(() => groups.flatMap((group) => group.items), [groups])
 
@@ -246,7 +250,7 @@ export function CommandPalette(): JSX.Element | null {
           onMouseDown={close}
           role="dialog"
           aria-modal="true"
-          aria-label="Командная палитра"
+          aria-label={t('command.dialog')}
         >
           <motion.div
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -268,9 +272,9 @@ export function CommandPalette(): JSX.Element | null {
                   setQuery(event.target.value)
                   setActiveIndex(0)
                 }}
-                placeholder="Поиск по делам, беседам, документам или команда…"
+                placeholder={t('command.placeholder')}
                 className="flex-1 bg-transparent py-4 text-sm text-light-text dark:text-dark-text placeholder:text-light-secondary/70 dark:placeholder:text-dark-secondary/70 focus:outline-none"
-                aria-label="Поиск и команды"
+                aria-label={t('command.inputAria')}
               />
               <kbd className="hidden sm:inline-flex items-center rounded-md border border-light-border dark:border-dark-border px-1.5 py-0.5 text-[11px] font-medium text-light-secondary dark:text-dark-secondary">
                 ESC
@@ -281,8 +285,8 @@ export function CommandPalette(): JSX.Element | null {
               {flatItems.length === 0 ? (
                 <p className="px-3 py-10 text-center text-sm text-light-secondary dark:text-dark-secondary">
                   {debouncedQuery.length >= MIN_SEARCH_LENGTH
-                    ? `Ничего не найдено по запросу «${debouncedQuery}».`
-                    : 'Начните вводить запрос или выберите действие.'}
+                    ? t('command.nothingFound', { query: debouncedQuery })
+                    : t('command.startTyping')}
                 </p>
               ) : (
                 groups.map((group) => (
@@ -328,9 +332,9 @@ export function CommandPalette(): JSX.Element | null {
             </div>
 
             <div className="hidden sm:flex items-center gap-4 border-t border-light-border dark:border-dark-border px-4 py-2.5 text-[11px] text-light-secondary dark:text-dark-secondary">
-              <HintKey combo="↑↓" label="навигация" />
-              <HintKey combo="↵" label="выбрать" />
-              <HintKey combo="esc" label="закрыть" />
+              <HintKey combo="↑↓" label={t('command.hintNavigate')} />
+              <HintKey combo="↵" label={t('command.hintSelect')} />
+              <HintKey combo="esc" label={t('command.hintClose')} />
             </div>
           </motion.div>
         </motion.div>

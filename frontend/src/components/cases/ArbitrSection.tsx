@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import type { CaseHearingEvent, CaseResponse } from '../../types'
@@ -5,6 +7,7 @@ import { Button } from '../ui/Button'
 import { Spinner } from '../ui/Spinner'
 
 export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const hasNumber = Boolean(caseItem.arbitrCaseNumber)
 
@@ -26,7 +29,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
-          События по делу (КАД.Арбитр)
+          {t('arbitr.title')}
         </h2>
         {hasNumber && (
           <Button
@@ -35,20 +38,20 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
             loading={syncMutation.isPending}
             onClick={() => syncMutation.mutate()}
           >
-            Обновить из КАД
+            {t('arbitr.syncButton')}
           </Button>
         )}
       </div>
 
       {!hasNumber ? (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Укажите номер дела в КАД.Арбитр в карточке дела, чтобы отслеживать заседания и события.
+          {t('arbitr.noNumberHint')}
         </p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
             <span className="text-light-secondary dark:text-dark-secondary">
-              Номер: <span className="text-light-text dark:text-dark-text font-medium">{caseItem.arbitrCaseNumber}</span>
+              {t('arbitr.numberLabel')} <span className="text-light-text dark:text-dark-text font-medium">{caseItem.arbitrCaseNumber}</span>
             </span>
             {caseItem.arbitrCardUrl && (
               <a
@@ -57,14 +60,14 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
                 rel="noreferrer"
                 className="text-light-accent dark:text-dark-accent hover:underline"
               >
-                Открыть на kad.arbitr.ru ↗
+                {t('arbitr.openOnKad')}
               </a>
             )}
           </div>
 
           {syncMutation.isError && (
             <p className="text-sm text-red-600 dark:text-red-400 mb-3">
-              Не удалось обновить данные из КАД. Попробуйте позже.
+              {t('arbitr.syncError')}
             </p>
           )}
 
@@ -72,7 +75,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
             <Spinner size="md" />
           ) : hearings.length === 0 ? (
             <p className="text-sm text-light-secondary dark:text-dark-secondary">
-              Событий пока нет. Нажмите «Обновить из КАД».
+              {t('arbitr.emptyEvents')}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -83,10 +86,10 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
                 >
                   <div className="flex items-center justify-between gap-3 mb-0.5">
                     <span className="text-sm font-medium text-light-text dark:text-dark-text">
-                      {event.eventType ?? 'Событие'}
+                      {event.eventType ?? t('arbitr.eventFallback')}
                     </span>
                     <span className="text-xs text-light-secondary dark:text-dark-secondary shrink-0">
-                      {event.eventDate ? new Date(event.eventDate).toLocaleDateString('ru-RU') : ''}
+                      {event.eventDate ? new Date(event.eventDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US') : ''}
                     </span>
                   </div>
                   {event.description && (

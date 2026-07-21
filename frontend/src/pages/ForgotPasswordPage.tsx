@@ -1,15 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { authApi } from '../api/auth'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function ForgotPasswordPage(): JSX.Element {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -18,7 +21,7 @@ export default function ForgotPasswordPage(): JSX.Element {
   const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
     if (!EMAIL_REGEX.test(email.trim())) {
-      setError('Введите корректный email')
+      setError(t('auth.invalidEmail'))
       return
     }
 
@@ -40,7 +43,10 @@ export default function ForgotPasswordPage(): JSX.Element {
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -60,15 +66,14 @@ export default function ForgotPasswordPage(): JSX.Element {
                 </svg>
               </div>
               <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">
-                Проверьте почту
+                {t('auth.checkEmail')}
               </h2>
               <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
-                Если аккаунт с адресом <span className="font-medium text-light-text dark:text-dark-text">{email.trim()}</span> существует,
-                мы отправили на него письмо со ссылкой для сброса пароля. Ссылка действительна один час.
+                {t('auth.resetLinkSent', { email: email.trim() })}
               </p>
               <Link to="/login">
                 <Button variant="secondary" size="md">
-                  ← Вернуться ко входу
+                  {t('auth.backToLoginArrow')}
                 </Button>
               </Link>
             </div>
@@ -83,17 +88,17 @@ export default function ForgotPasswordPage(): JSX.Element {
             <div className="card-elevated rounded-2xl p-8">
               <div className="mb-8">
                 <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
-                  Восстановление пароля
+                  {t('auth.forgotTitle')}
                 </h1>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
-                  Укажите email — мы отправим ссылку для сброса пароля
+                  {t('auth.forgotSubtitle')}
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
                 <Input
                   id="email"
-                  label="Email"
+                  label={t('common.email')}
                   type="email"
                   placeholder="example@lawfirm.ru"
                   value={email}
@@ -107,15 +112,15 @@ export default function ForgotPasswordPage(): JSX.Element {
                 />
 
                 <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full mt-1">
-                  Отправить ссылку
+                  {t('auth.sendLink')}
                 </Button>
               </form>
 
               <div className="mt-6 pt-6 border-t border-light-border dark:border-dark-border text-center">
                 <p className="text-sm text-light-secondary dark:text-dark-secondary">
-                  Вспомнили пароль?{' '}
+                  {t('auth.rememberedPassword')}{' '}
                   <Link to="/login" className="text-light-text dark:text-dark-text hover:underline font-medium">
-                    Войти
+                    {t('auth.loginSubmit')}
                   </Link>
                 </p>
               </div>

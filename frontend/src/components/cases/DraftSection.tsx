@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
@@ -7,6 +9,7 @@ import type { CaseDraftSummaryDto, DraftTypeInfo } from '../../types'
 import { Button } from '../ui/Button'
 
 export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseDraftSummaryDto[] }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [selectedDraftType, setSelectedDraftType] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('')
@@ -48,7 +51,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
 
   return (
     <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Черновик документа</h2>
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('draft.title')}</h2>
 
       <div className="flex flex-col gap-3">
         <select
@@ -56,7 +59,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
           onChange={(e) => setSelectedDraftType(e.target.value)}
           className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
         >
-          <option value="">Выберите тип документа</option>
+          <option value="">{t('draft.selectDocType')}</option>
           {draftTypes.map((type) => (
             <option key={type.id} value={type.id}>
               {type.displayName}
@@ -65,7 +68,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
         </select>
 
         {generateMutation.isError && (
-          <p className="text-sm text-red-600 dark:text-red-400">Ошибка генерации. Попробуйте снова.</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{t('draft.generateError')}</p>
         )}
 
         <div>
@@ -75,19 +78,19 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
             loading={generateMutation.isPending}
             onClick={() => generateMutation.mutate()}
           >
-            Сгенерировать
+            {t('draft.generate')}
           </Button>
         </div>
 
         <div className="pt-3 mt-1 border-t border-light-border dark:border-dark-border flex flex-col gap-2">
           <span className="text-xs font-semibold text-light-secondary dark:text-dark-secondary">
-            Применить шаблон
+            {t('draft.applyTemplate')}
           </span>
           {templates.length === 0 ? (
             <p className="text-xs text-light-secondary dark:text-dark-secondary">
-              Шаблонов нет.{' '}
+              {t('draft.noTemplates')}{' '}
               <Link to="/templates" className="text-light-accent dark:text-dark-accent">
-                Создать шаблон
+                {t('draft.createTemplate')}
               </Link>
             </p>
           ) : (
@@ -97,7 +100,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
                 onChange={(e) => setSelectedTemplate(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
               >
-                <option value="">Выберите шаблон</option>
+                <option value="">{t('draft.selectTemplate')}</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.name}
@@ -105,7 +108,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
                 ))}
               </select>
               {applyTemplateMutation.isError && (
-                <p className="text-sm text-red-600 dark:text-red-400">Не удалось применить шаблон.</p>
+                <p className="text-sm text-red-600 dark:text-red-400">{t('draft.applyTemplateError')}</p>
               )}
               <div>
                 <Button
@@ -114,7 +117,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
                   loading={applyTemplateMutation.isPending}
                   onClick={() => applyTemplateMutation.mutate()}
                 >
-                  Применить шаблон
+                  {t('draft.applyTemplate')}
                 </Button>
               </div>
             </>
@@ -131,7 +134,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-medium text-light-text dark:text-dark-text">{draft.draftTypeName}</span>
                   <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                    {new Date(draft.createdAt).toLocaleString('ru-RU')}
+                    {new Date(draft.createdAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                   </span>
                 </div>
                 <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2 line-clamp-2">
@@ -140,7 +143,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
                 <div className="flex items-center gap-2">
                   <Link to={`/cases/${caseId}/drafts/${draft.id}`}>
                     <Button variant="primary" size="sm">
-                      Редактировать
+                      {t('common.edit')}
                     </Button>
                   </Link>
                   <Button
@@ -149,7 +152,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
                     loading={downloadingId === draft.id}
                     onClick={() => void handleDownload(draft)}
                   >
-                    Скачать .docx
+                    {t('draft.downloadDocx')}
                   </Button>
                 </div>
               </div>

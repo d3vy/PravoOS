@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { adminApi, DEFAULT_PAGE_SIZE, type Page } from '../../api/admin'
+import i18n from '../../i18n'
 import type { LawyerProfileResponse } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
 
 export default function UsersPage(): JSX.Element {
+  const { t } = useTranslation()
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -30,13 +33,13 @@ export default function UsersPage(): JSX.Element {
       if (failed > 0) {
         throw new Error(
           failed === ids.length
-            ? 'Не удалось удалить выбранных юристов.'
-            : `Удалено ${ids.length - failed} из ${ids.length}. Часть юристов удалить не удалось.`,
+            ? i18n.t('adminUsers.deleteAllFailed')
+            : i18n.t('adminUsers.deletePartial', { done: ids.length - failed, total: ids.length }),
         )
       }
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Ошибка при удалении юриста'
+      const message = error instanceof Error ? error.message : i18n.t('adminUsers.deleteGenericError')
       setDeleteError(message)
       setTimeout(() => setDeleteError(null), 6000)
     },
@@ -75,9 +78,9 @@ export default function UsersPage(): JSX.Element {
     <div className="p-6 lg:p-8">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Юристы</h1>
+          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('adminUsers.title')}</h1>
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            {selectionMode ? 'Выберите юристов для удаления' : 'Активные пользователи платформы'}
+            {selectionMode ? t('adminUsers.selectPrompt') : t('adminUsers.subtitle')}
           </p>
         </div>
 
@@ -86,7 +89,7 @@ export default function UsersPage(): JSX.Element {
             {selectionMode ? (
               <>
                 <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
-                  Отмена
+                  {t('adminUsers.cancel')}
                 </Button>
                 <Button
                   variant="danger"
@@ -95,12 +98,12 @@ export default function UsersPage(): JSX.Element {
                   loading={deleteMutation.isPending}
                   onClick={() => setConfirmOpen(true)}
                 >
-                  Удалить{selectedCount > 0 ? ` (${selectedCount})` : ''}
+                  {t('adminUsers.delete')}{selectedCount > 0 ? ` (${selectedCount})` : ''}
                 </Button>
               </>
             ) : (
               <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>
-                Выбрать
+                {t('adminUsers.select')}
               </Button>
             )}
           </div>
@@ -127,7 +130,7 @@ export default function UsersPage(): JSX.Element {
       ) : lawyers.length === 0 ? (
         <div className="text-center py-16 rounded-xl border border-dashed border-light-border dark:border-dark-border">
           <p className="text-light-secondary dark:text-dark-secondary text-sm">
-            Нет активных юристов
+            {t('adminUsers.empty')}
           </p>
         </div>
       ) : (
@@ -175,6 +178,7 @@ function LawyerCard({
   selected: boolean
   onToggle: () => void
 }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -225,8 +229,8 @@ function LawyerCard({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm">
-          <InfoField label="Специализация" value={lawyer.specialization} />
-          <InfoField label="Телефон" value={lawyer.phone} />
+          <InfoField label={t('adminUsers.fieldSpecialization')} value={lawyer.specialization} />
+          <InfoField label={t('adminUsers.fieldPhone')} value={lawyer.phone} />
         </div>
       </div>
     </motion.div>
@@ -255,6 +259,7 @@ function ConfirmDeleteModal({
   onCancel: () => void
   onConfirm: () => void
 }): JSX.Element {
+  const { t } = useTranslation()
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -272,7 +277,7 @@ function ConfirmDeleteModal({
         className="w-full max-w-md rounded-xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg p-6 shadow-xl"
       >
         <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-2">
-          Удалить {count === 1 ? 'юриста' : `юристов (${count})`}?
+          {count === 1 ? t('adminUsers.confirmTitleOne') : t('adminUsers.confirmTitleMany', { count })}
         </h2>
         <ul className="mb-4 max-h-40 overflow-y-auto rounded-lg border border-light-border dark:border-dark-border divide-y divide-light-border dark:divide-dark-border text-sm">
           {names.map((name, i) => (
@@ -282,15 +287,14 @@ function ConfirmDeleteModal({
           ))}
         </ul>
         <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
-          Учётные записи, персональные данные, а также дела, черновики и чаты юриста будут удалены
-          без возможности восстановления.
+          {t('adminUsers.confirmWarning')}
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={loading}>
-            Отмена
+            {t('adminUsers.cancel')}
           </Button>
           <Button variant="danger" size="sm" loading={loading} onClick={onConfirm}>
-            Удалить
+            {t('adminUsers.delete')}
           </Button>
         </div>
       </motion.div>

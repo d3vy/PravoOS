@@ -1,14 +1,20 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import type { ApplicationStatus, CaseStatus, DocumentStatus } from '../../types'
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'neutral' | 'info'
 
-export const CASE_STATUS_CONFIG: Record<CaseStatus, { variant: BadgeVariant; label: string }> = {
-  INTAKE: { variant: 'neutral', label: 'Приём' },
-  IN_PROGRESS: { variant: 'info', label: 'В работе' },
-  SUBMITTED: { variant: 'warning', label: 'Подано в суд' },
-  CLOSED_WON: { variant: 'success', label: 'Выиграно' },
-  CLOSED_LOST: { variant: 'danger', label: 'Проиграно' },
+export const CASE_STATUS_VARIANT: Record<CaseStatus, BadgeVariant> = {
+  INTAKE: 'neutral',
+  IN_PROGRESS: 'info',
+  SUBMITTED: 'warning',
+  CLOSED_WON: 'success',
+  CLOSED_LOST: 'danger',
+}
+
+export function caseStatusLabel(status: CaseStatus): string {
+  return i18n.t(`status.case.${status}`)
 }
 
 export const CASE_STATUS_ORDER: CaseStatus[] = [
@@ -45,27 +51,29 @@ export function Badge({ variant, children }: BadgeProps): JSX.Element {
   )
 }
 
+const APPLICATION_STATUS_VARIANT: Record<ApplicationStatus, BadgeVariant> = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'danger',
+}
+
 export function ApplicationStatusBadge({ status }: { status: ApplicationStatus }): JSX.Element {
-  const config: Record<ApplicationStatus, { variant: BadgeVariant; label: string }> = {
-    PENDING: { variant: 'warning', label: 'Ожидает' },
-    APPROVED: { variant: 'success', label: 'Одобрена' },
-    REJECTED: { variant: 'danger', label: 'Отклонена' },
-  }
-  const { variant, label } = config[status]
-  return <Badge variant={variant}>{label}</Badge>
+  const { t } = useTranslation()
+  return <Badge variant={APPLICATION_STATUS_VARIANT[status]}>{t(`status.application.${status}`)}</Badge>
+}
+
+const DOCUMENT_STATUS_VARIANT: Record<DocumentStatus, BadgeVariant> = {
+  PROCESSING: 'warning',
+  READY: 'success',
+  FAILED: 'danger',
 }
 
 export function DocumentStatusBadge({ status }: { status: DocumentStatus }): JSX.Element {
-  const config: Record<DocumentStatus, { variant: BadgeVariant; label: string }> = {
-    PROCESSING: { variant: 'warning', label: 'Обработка...' },
-    READY: { variant: 'success', label: 'Готов' },
-    FAILED: { variant: 'danger', label: 'Ошибка' },
-  }
-  const { variant, label } = config[status]
-  return <Badge variant={variant}>{label}</Badge>
+  const { t } = useTranslation()
+  return <Badge variant={DOCUMENT_STATUS_VARIANT[status]}>{t(`status.document.${status}`)}</Badge>
 }
 
 export function CaseStatusBadge({ status }: { status: CaseStatus }): JSX.Element {
-  const { variant, label } = CASE_STATUS_CONFIG[status]
-  return <Badge variant={variant}>{label}</Badge>
+  const { t } = useTranslation()
+  return <Badge variant={CASE_STATUS_VARIANT[status]}>{t(`status.case.${status}`)}</Badge>
 }

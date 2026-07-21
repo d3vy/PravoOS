@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface RatingButtonsProps {
   rating: number | null | undefined
   onRate: (rating: number) => void
@@ -5,13 +7,14 @@ interface RatingButtonsProps {
 }
 
 export function RatingButtons({ rating, onRate, disabled = false }: RatingButtonsProps): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-1.5">
       <button
         type="button"
         onClick={() => onRate(1)}
         disabled={disabled}
-        aria-label="Полезный ответ"
+        aria-label={t('rating.helpful')}
         aria-pressed={rating === 1}
         className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
           rating === 1
@@ -25,7 +28,7 @@ export function RatingButtons({ rating, onRate, disabled = false }: RatingButton
         type="button"
         onClick={() => onRate(-1)}
         disabled={disabled}
-        aria-label="Бесполезный ответ"
+        aria-label={t('rating.notHelpful')}
         aria-pressed={rating === -1}
         className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
           rating === -1

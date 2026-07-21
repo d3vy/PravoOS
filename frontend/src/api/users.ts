@@ -8,6 +8,8 @@ import type {
   SessionResponse,
   NotificationSettingsResponse,
   UpdateNotificationSettingsRequest,
+  LanguageSettingsResponse,
+  UpdateLanguageRequest,
 } from '../types'
 
 export const usersApi = {
@@ -66,6 +68,16 @@ export const usersApi = {
     data: UpdateNotificationSettingsRequest,
   ): Promise<NotificationSettingsResponse> => {
     const response = await apiClient.put<NotificationSettingsResponse>('/api/user/settings/notifications', data)
+    return response.data
+  },
+
+  getLanguage: async (): Promise<LanguageSettingsResponse> => {
+    const response = await apiClient.get<LanguageSettingsResponse>('/api/user/settings/language')
+    return response.data
+  },
+
+  updateLanguage: async (data: UpdateLanguageRequest): Promise<LanguageSettingsResponse> => {
+    const response = await apiClient.put<LanguageSettingsResponse>('/api/user/settings/language', data)
     return response.data
   },
 }

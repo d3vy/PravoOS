@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { timeApi } from '../../api/time'
@@ -15,6 +17,7 @@ interface Props {
 const todayIso = (): string => new Date().toISOString().slice(0, 10)
 
 export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
@@ -48,7 +51,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
   const startTimer = useMutation({
     mutationFn: () =>
       timeApi.startTimer(caseId, {
-        description: description.trim() || 'Работа по делу',
+        description: description.trim() || t('timeTracking.defaultDescription'),
         hourlyRate: Number(rate.replace(',', '.')) || 0,
         billable,
       }),
@@ -56,7 +59,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
       invalidate()
       setError(null)
     },
-    onError: () => setError('Не удалось запустить таймер. Возможно, таймер уже идёт по другому делу.'),
+    onError: () => setError(t('timeTracking.startError')),
   })
 
   const stopTimer = useMutation({
@@ -96,12 +99,12 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       navigate(`/invoices/${invoice.id}`)
     },
-    onError: () => setError('Нет несписанных оплачиваемых часов для счёта.'),
+    onError: () => setError(t('timeTracking.noInvoiceHours')),
   })
 
   const handleManualAdd = (): void => {
     if (!description.trim() || parseHoursToMinutes(hours) === 0) {
-      setError('Укажите описание и длительность в часах (например, 1,5).')
+      setError(t('timeTracking.manualError'))
       return
     }
     createEntry.mutate()
@@ -113,12 +116,13 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
     <section className="mb-10">
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
-          Учёт времени
+          {t('timeTracking.title')}
           {summary && summary.uninvoicedBillableMinutes > 0 && (
             <span className="font-normal text-light-secondary dark:text-dark-secondary">
-              {' '}
-              · к счёту {formatDuration(summary.uninvoicedBillableMinutes)} (
-              {formatMoney(summary.uninvoicedBillableAmount)})
+              {t('timeTracking.toInvoice', {
+                duration: formatDuration(summary.uninvoicedBillableMinutes),
+                amount: formatMoney(summary.uninvoicedBillableAmount),
+              })}
             </span>
           )}
         </h2>
@@ -127,14 +131,10 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
           size="sm"
           disabled={!clientId || !summary || summary.uninvoicedBillableMinutes === 0}
           loading={createInvoice.isPending}
-          title={
-            !clientId
-              ? 'Привяжите клиента к делу, чтобы выставить счёт'
-              : 'Создать счёт по несписанным оплачиваемым часам'
-          }
+          title={!clientId ? t('timeTracking.noClientTooltip') : t('timeTracking.createInvoiceTooltip')}
           onClick={() => createInvoice.mutate()}
         >
-          Выставить счёт
+          {t('timeTracking.issueInvoice')}
         </Button>
       </div>
 
@@ -147,7 +147,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={2000}
-              placeholder="Что делали (напр., подготовка иска)"
+              placeholder={t('timeTracking.descPlaceholder')}
               className={fieldClass + ' flex-1'}
             />
             <input
@@ -162,14 +162,14 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
               value={hours}
               onChange={(e) => setHours(e.target.value)}
               inputMode="decimal"
-              placeholder="Часы (1,5)"
+              placeholder={t('timeTracking.hoursPlaceholder')}
               className={fieldClass + ' sm:w-32'}
             />
             <input
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               inputMode="decimal"
-              placeholder="Ставка ₽/час"
+              placeholder={t('timeTracking.ratePlaceholder')}
               className={fieldClass + ' sm:w-40'}
             />
             <label className="flex items-center gap-2 text-sm text-light-text dark:text-dark-text select-none">
@@ -179,20 +179,20 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
                 onChange={(e) => setBillable(e.target.checked)}
                 className="h-4 w-4 accent-light-accent dark:accent-dark-accent"
               />
-              К оплате
+              {t('timeTracking.billable')}
             </label>
             <div className="flex gap-2 sm:ml-auto">
               <Button variant="secondary" loading={createEntry.isPending} onClick={handleManualAdd}>
-                Добавить
+                {t('common.add')}
               </Button>
               <Button
                 variant="ghost"
                 loading={startTimer.isPending}
                 disabled={runningElsewhere}
-                title={runningElsewhere ? 'Таймер уже идёт по другому делу' : 'Запустить таймер'}
+                title={runningElsewhere ? t('timeTracking.timerElsewhereTooltip') : t('timeTracking.startTimerTooltip')}
                 onClick={() => startTimer.mutate()}
               >
-                ▶ Таймер
+                {t('timeTracking.timerButton')}
               </Button>
             </div>
           </div>
@@ -203,7 +203,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
 
       {entries.length === 0 ? (
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Записей учёта времени пока нет.
+          {t('timeTracking.emptyEntries')}
         </p>
       ) : (
         <div className="flex flex-col gap-2">
@@ -218,15 +218,15 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
                   {entry.description}
                 </p>
                 <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                  {new Date(entry.activityDate).toLocaleDateString('ru-RU')} · {formatDuration(entry.minutes)}
-                  {entry.billable ? ` · ${formatMoney(entry.amount)}` : ' · не к оплате'}
-                  {entry.invoiced ? ' · в счёте' : ''}
+                  {new Date(entry.activityDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')} · {formatDuration(entry.minutes)}
+                  {entry.billable ? ` · ${formatMoney(entry.amount)}` : t('timeTracking.notBillable')}
+                  {entry.invoiced ? t('timeTracking.invoiced') : ''}
                 </span>
               </div>
               {!entry.invoiced && !entry.running && (
                 <button
                   type="button"
-                  title="Удалить запись"
+                  title={t('timeTracking.deleteEntryTitle')}
                   disabled={deleteEntry.isPending}
                   onClick={() => deleteEntry.mutate(entry.id)}
                   className="shrink-0 text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400 transition-colors"
@@ -257,6 +257,7 @@ function RunningTimer({
   onStop: () => void
   stopping: boolean
 }): JSX.Element {
+  const { t } = useTranslation()
   const [elapsed, setElapsed] = useState('00:00')
 
   useEffect(() => {
@@ -280,7 +281,7 @@ function RunningTimer({
         {entry.description}
       </span>
       <Button variant="danger" size="sm" loading={stopping} onClick={onStop}>
-        ■ Стоп
+        {t('timeTracking.stop')}
       </Button>
     </div>
   )

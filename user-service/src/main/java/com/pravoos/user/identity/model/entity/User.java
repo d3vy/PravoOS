@@ -50,6 +50,9 @@ public class User {
     @Column(name = "case_message_push", nullable = false)
     private boolean caseMessagePush = true;
 
+    @Column(name = "preferred_language", nullable = false, length = 8)
+    private String preferredLanguage = "ru";
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private LawyerProfile lawyerProfile;
 
@@ -93,6 +96,9 @@ public class User {
 
     public boolean isCaseMessagePush() { return caseMessagePush; }
     public void setCaseMessagePush(boolean caseMessagePush) { this.caseMessagePush = caseMessagePush; }
+
+    public String getPreferredLanguage() { return preferredLanguage; }
+    public void setPreferredLanguage(String preferredLanguage) { this.preferredLanguage = preferredLanguage; }
 
     public LawyerProfile getLawyerProfile() { return lawyerProfile; }
     public void setLawyerProfile(LawyerProfile lawyerProfile) { this.lawyerProfile = lawyerProfile; }

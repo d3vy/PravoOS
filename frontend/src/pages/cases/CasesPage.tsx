@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { DateField } from '../../components/cases/DateField'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
@@ -13,7 +15,7 @@ import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
-import { CaseStatusBadge, CASE_STATUS_CONFIG, CASE_STATUS_ORDER } from '../../components/ui/Badge'
+import { CaseStatusBadge, caseStatusLabel, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 
 type ViewMode = 'list' | 'board'
@@ -44,6 +46,7 @@ function persistSavedViews(views: SavedCaseView[]): void {
 }
 
 export default function CasesPage(): JSX.Element {
+  const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -132,7 +135,7 @@ export default function CasesPage(): JSX.Element {
       setArbitrCaseNumber('')
       setFormError(null)
     },
-    onError: () => setFormError('Не удалось создать дело. Попробуйте снова.'),
+    onError: () => setFormError(t('cases.createError')),
   })
 
   const statusMutation = useMutation({
@@ -204,7 +207,7 @@ export default function CasesPage(): JSX.Element {
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
     if (!title.trim()) {
-      setFormError('Укажите название дела')
+      setFormError(t('cases.titleRequired'))
       return
     }
     createMutation.mutate({
@@ -224,9 +227,9 @@ export default function CasesPage(): JSX.Element {
       <div className="page-container py-8">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Дела</h1>
+            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('cases.title')}</h1>
             <p className="text-sm text-light-secondary dark:text-dark-secondary">
-              Банкротные дела: статус, документы, AI-анализ и история заключений
+              {t('cases.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -242,12 +245,12 @@ export default function CasesPage(): JSX.Element {
                       : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
                   }`}
                 >
-                  {mode === 'list' ? 'Список' : 'Доска'}
+                  {mode === 'list' ? t('cases.viewList') : t('cases.viewBoard')}
                 </button>
               ))}
             </div>
             <Button variant="primary" onClick={() => setShowForm((v) => !v)}>
-              {showForm ? 'Отмена' : 'Новое дело'}
+              {showForm ? t('common.cancel') : t('cases.newCase')}
             </Button>
           </div>
         </div>
@@ -263,35 +266,35 @@ export default function CasesPage(): JSX.Element {
             >
               <div className="flex flex-col gap-4">
                 <Input
-                  label="Название дела"
-                  placeholder="Например: Банкротство ООО «Рассвет», дело № А40-..."
+                  label={t('cases.titleLabel')}
+                  placeholder={t('cases.titlePlaceholder')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={500}
                 />
                 <div>
                   <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                    Описание <span className="text-light-secondary dark:text-dark-secondary font-normal">(опционально)</span>
+                    {t('cases.descriptionOptional')} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('cases.optionalHint')}</span>
                   </label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
                     maxLength={5000}
-                    placeholder="Краткое описание дела, ключевые обстоятельства"
+                    placeholder={t('cases.descriptionPlaceholder')}
                     className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                    Клиент <span className="text-light-secondary dark:text-dark-secondary font-normal">(опционально)</span>
+                    {t('cases.clientLabel')} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('cases.optionalHint')}</span>
                   </label>
                   <select
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                   >
-                    <option value="">Без клиента</option>
+                    <option value="">{t('cases.noClient')}</option>
                     {clients.map((client) => (
                       <option key={client.id} value={client.id}>
                         {client.name} ({client.typeName})
@@ -302,14 +305,14 @@ export default function CasesPage(): JSX.Element {
                 {organizations.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                      Организация <span className="text-light-secondary dark:text-dark-secondary font-normal">(опционально)</span>
+                      {t('cases.orgLabel')} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('cases.optionalHint')}</span>
                     </label>
                     <select
                       value={orgId}
                       onChange={(e) => setOrgId(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                     >
-                      <option value="">Личное дело</option>
+                      <option value="">{t('cases.personalCase')}</option>
                       {organizations.map((org) => (
                         <option key={org.id} value={org.id}>
                           {org.name}
@@ -317,26 +320,26 @@ export default function CasesPage(): JSX.Element {
                       ))}
                     </select>
                     <p className="mt-1 text-xs text-light-secondary dark:text-dark-secondary">
-                      Дело организации видят все её участники. Личное дело — только вы.
+                      {t('cases.orgHint')}
                     </p>
                   </div>
                 )}
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <DateField label="Срок подачи" value={filingDeadline} onChange={setFilingDeadline} />
-                  <DateField label="Заседание" value={nextHearingDate} onChange={setNextHearingDate} />
-                  <DateField label="Истечение срока" value={expiresAt} onChange={setExpiresAt} />
+                  <DateField label={t('cases.filingDeadline')} value={filingDeadline} onChange={setFilingDeadline} />
+                  <DateField label={t('cases.hearing')} value={nextHearingDate} onChange={setNextHearingDate} />
+                  <DateField label={t('cases.expiresAt')} value={expiresAt} onChange={setExpiresAt} />
                 </div>
                 <Input
-                  label="Номер дела в КАД.Арбитр (опционально)"
+                  label={t('cases.arbitrNumberLabel')}
                   value={arbitrCaseNumber}
                   onChange={(e) => setArbitrCaseNumber(e.target.value)}
                   maxLength={50}
-                  placeholder="А40-12345/2024"
+                  placeholder={t('cases.arbitrPlaceholder')}
                 />
                 {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
                 <div>
                   <Button type="submit" variant="primary" loading={createMutation.isPending}>
-                    Создать дело
+                    {t('cases.createCase')}
                   </Button>
                 </div>
               </div>
@@ -349,7 +352,7 @@ export default function CasesPage(): JSX.Element {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по названию, описанию или клиенту…"
+            placeholder={t('cases.searchPlaceholder')}
             className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
           />
         </div>
@@ -361,7 +364,7 @@ export default function CasesPage(): JSX.Element {
               onChange={(e) => setOrgFilter(e.target.value)}
               className="w-full sm:w-72 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
             >
-              <option value="">Все дела</option>
+              <option value="">{t('cases.allCases')}</option>
               {organizations.map((org) => (
                 <option key={org.id} value={org.id}>
                   {org.name}
@@ -388,7 +391,7 @@ export default function CasesPage(): JSX.Element {
                 <button
                   type="button"
                   onClick={() => deleteView(savedView.id)}
-                  aria-label={`Удалить вид «${savedView.name}»`}
+                  aria-label={t('cases.deleteViewAria', { name: savedView.name })}
                   className="pr-2.5 pl-0.5 py-1.5 opacity-60 hover:opacity-100"
                 >
                   ×
@@ -409,7 +412,7 @@ export default function CasesPage(): JSX.Element {
                     }
                   }}
                   maxLength={40}
-                  placeholder="Название вида"
+                  placeholder={t('cases.viewNamePlaceholder')}
                   className="px-3 py-1.5 rounded-full text-xs border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                 />
                 <button
@@ -417,7 +420,7 @@ export default function CasesPage(): JSX.Element {
                   onClick={saveCurrentView}
                   className="px-3 py-1.5 rounded-full text-xs font-medium bg-light-text dark:bg-dark-text text-light-bg dark:text-dark-bg"
                 >
-                  Сохранить
+                  {t('common.save')}
                 </button>
               </span>
             ) : (
@@ -426,7 +429,7 @@ export default function CasesPage(): JSX.Element {
                 onClick={() => setNamingView(true)}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
               >
-                + Сохранить вид
+                {t('cases.saveView')}
               </button>
             )}
           </div>
@@ -434,11 +437,11 @@ export default function CasesPage(): JSX.Element {
 
         {view === 'list' && (
           <div className="flex flex-wrap gap-2 mb-4">
-            <FilterChip label="Все" active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
+            <FilterChip label={t('common.all')} active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
             {CASE_STATUS_ORDER.map((status) => (
               <FilterChip
                 key={status}
-                label={CASE_STATUS_CONFIG[status].label}
+                label={caseStatusLabel(status)}
                 active={statusFilter === status}
                 onClick={() => setStatusFilter(status)}
               />
@@ -455,7 +458,7 @@ export default function CasesPage(): JSX.Element {
                 onChange={toggleSelectAll}
                 className="h-4 w-4 rounded accent-light-accent dark:accent-dark-accent cursor-pointer"
               />
-              {selectedIds.size > 0 ? `Выбрано: ${selectedIds.size}` : 'Выбрать все на странице'}
+              {selectedIds.size > 0 ? t('cases.selectedCount', { count: selectedIds.size }) : t('cases.selectAllOnPage')}
             </label>
           </div>
         )}
@@ -471,15 +474,15 @@ export default function CasesPage(): JSX.Element {
           />
         ) : cases.length === 0 ? (
           debouncedSearch ? (
-            <EmptyState description="Ничего не найдено по запросу." />
+            <EmptyState description={t('cases.notFound')} />
           ) : statusFilter === 'ALL' ? (
             <EmptyState
-              title="Пока нет дел"
-              description="Создайте первое дело, чтобы загрузить документы и запустить AI-анализ."
-              action={{ label: 'Создать дело', onClick: () => setShowForm(true) }}
+              title={t('cases.emptyTitle')}
+              description={t('cases.emptyDescription')}
+              action={{ label: t('cases.createCase'), onClick: () => setShowForm(true) }}
             />
           ) : (
-            <EmptyState description="Нет дел с этим статусом." />
+            <EmptyState description={t('cases.noStatusCases')} />
           )
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -500,7 +503,7 @@ export default function CasesPage(): JSX.Element {
                     type="checkbox"
                     checked={selectedIds.has(caseItem.id)}
                     onChange={() => toggleSelected(caseItem.id)}
-                    aria-label={`Выбрать дело «${caseItem.title}»`}
+                    aria-label={t('cases.selectCaseAria', { title: caseItem.title })}
                     className="mt-1 h-4 w-4 shrink-0 rounded accent-light-accent dark:accent-dark-accent cursor-pointer"
                   />
                   <Link to={`/cases/${caseItem.id}`} className="flex-1 min-w-0">
@@ -510,7 +513,7 @@ export default function CasesPage(): JSX.Element {
                   </div>
                   {caseItem.orgId && (
                     <span className="inline-block mb-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
-                      {orgNameById.get(caseItem.orgId) ?? 'Организация'}
+                      {orgNameById.get(caseItem.orgId) ?? t('cases.orgFallback')}
                     </span>
                   )}
                   {caseItem.clientName && (
@@ -530,7 +533,7 @@ export default function CasesPage(): JSX.Element {
                     onChange={(status) => statusMutation.mutate({ caseId: caseItem.id, status })}
                   />
                   <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                    {new Date(caseItem.createdAt).toLocaleDateString('ru-RU')}
+                    {new Date(caseItem.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                   </span>
                 </div>
               </motion.div>
@@ -553,7 +556,7 @@ export default function CasesPage(): JSX.Element {
             >
               <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-surface shadow-card dark:shadow-card-dark px-4 py-2.5">
                 <span className="text-sm font-medium text-light-text dark:text-dark-text">
-                  Выбрано: {selectedIds.size}
+                  {t('cases.selectedCount', { count: selectedIds.size })}
                 </span>
                 <span className="h-5 w-px bg-light-border dark:bg-dark-border" />
                 <select
@@ -565,10 +568,10 @@ export default function CasesPage(): JSX.Element {
                   }}
                   className="px-3 py-1.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent disabled:opacity-50"
                 >
-                  <option value="">Сменить статус…</option>
+                  <option value="">{t('cases.changeStatus')}</option>
                   {CASE_STATUS_ORDER.map((status) => (
                     <option key={status} value={status}>
-                      {CASE_STATUS_CONFIG[status].label}
+                      {caseStatusLabel(status)}
                     </option>
                   ))}
                 </select>
@@ -577,7 +580,7 @@ export default function CasesPage(): JSX.Element {
                   onClick={() => setSelectedIds(new Set())}
                   className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
                 >
-                  Снять
+                  {t('cases.deselect')}
                 </button>
               </div>
             </motion.div>
@@ -642,7 +645,7 @@ function BoardView({
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-light-text dark:text-dark-text">
-                {CASE_STATUS_CONFIG[status].label}
+                {caseStatusLabel(status)}
               </span>
               <span className="text-xs text-light-secondary dark:text-dark-secondary">{columnCases.length}</span>
             </div>

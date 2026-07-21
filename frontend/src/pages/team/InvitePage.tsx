@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { organizationsApi } from '../../api/organizations'
 import { refreshSession } from '../../api/client'
 import type { Organization } from '../../types'
 import { Button } from '../../components/ui/Button'
 
 export default function InvitePage(): JSX.Element {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''
   const queryClient = useQueryClient()
@@ -29,32 +31,32 @@ export default function InvitePage(): JSX.Element {
           {joined ? (
             <>
               <h1 className="text-xl font-semibold text-light-text dark:text-dark-text mb-2">
-                Вы присоединились к «{joined.name}»
+                {t('invite.joinedTitle', { name: joined.name })}
               </h1>
               <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
-                Теперь вам доступны общие дела организации.
+                {t('invite.joinedText')}
               </p>
               <Link to="/team">
-                <Button variant="primary">Перейти к организации</Button>
+                <Button variant="primary">{t('invite.goToOrg')}</Button>
               </Link>
             </>
           ) : !token ? (
-            <p className="text-sm text-red-600 dark:text-red-400">Некорректная ссылка приглашения.</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{t('invite.badLink')}</p>
           ) : (
             <>
               <h1 className="text-xl font-semibold text-light-text dark:text-dark-text mb-2">
-                Приглашение в организацию
+                {t('invite.title')}
               </h1>
               <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
-                Примите приглашение, чтобы получить доступ к общим делам фирмы.
+                {t('invite.text')}
               </p>
               {acceptMutation.isError && (
                 <p className="mb-4 text-sm text-red-600 dark:text-red-400">
-                  Приглашение недействительно, истекло или предназначено для другого email.
+                  {t('invite.error')}
                 </p>
               )}
               <Button variant="primary" loading={acceptMutation.isPending} onClick={() => acceptMutation.mutate()}>
-                Принять приглашение
+                {t('invite.accept')}
               </Button>
             </>
           )}

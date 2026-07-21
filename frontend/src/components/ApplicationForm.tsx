@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { validatePassword } from '../utils/password'
+import i18n from '../i18n'
 
 export interface ApplicationFormData {
   fullName: string
@@ -55,20 +57,20 @@ function sanitizePhone(value: string): string {
 
 function validatePhone(phone: string): string | undefined {
   const digits = phone.replace(/\D/g, '')
-  if (!digits) return 'Укажите контактный телефон'
-  if (digits.length < 11) return 'Введите корректный телефон'
+  if (!digits) return i18n.t('applicationForm.phoneRequired')
+  if (digits.length < 11) return i18n.t('applicationForm.phoneInvalid')
   return undefined
 }
 
 function validate(data: ApplicationFormData, passwordRequired: boolean): FormErrors {
   const errors: FormErrors = {}
-  if (!data.fullName.trim()) errors.fullName = 'Укажите полное имя'
-  if (!EMAIL_REGEX.test(data.email.trim())) errors.email = 'Введите корректный email'
+  if (!data.fullName.trim()) errors.fullName = i18n.t('applicationForm.nameRequired')
+  if (!EMAIL_REGEX.test(data.email.trim())) errors.email = i18n.t('applicationForm.emailInvalid')
   if (passwordRequired || data.password.length > 0) {
     const passwordError = validatePassword(data.password)
     if (passwordError) errors.password = passwordError
   }
-  if (!data.specialization.trim()) errors.specialization = 'Укажите специализацию'
+  if (!data.specialization.trim()) errors.specialization = i18n.t('applicationForm.specializationRequired')
   const phoneError = validatePhone(data.phone)
   if (phoneError) errors.phone = phoneError
   return errors
@@ -81,6 +83,7 @@ export function ApplicationForm({
   passwordHint,
   onSubmit,
 }: ApplicationFormProps): JSX.Element {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState<ApplicationFormData>(initialValues)
   const [errors, setErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
@@ -114,7 +117,7 @@ export function ApplicationForm({
     try {
       await onSubmit(formData)
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Произошла ошибка. Попробуйте позже.')
+      setSubmitError(error instanceof Error ? error.message : t('applicationForm.genericError'))
     } finally {
       setLoading(false)
     }
@@ -124,9 +127,9 @@ export function ApplicationForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       <Input
         id="fullName"
-        label="Полное имя"
+        label={t('applicationForm.nameLabel')}
         type="text"
-        placeholder="Иванов Иван Иванович"
+        placeholder={t('applicationForm.namePlaceholder')}
         value={formData.fullName}
         onChange={updateField('fullName')}
         error={errors.fullName}
@@ -145,7 +148,7 @@ export function ApplicationForm({
         />
         <Input
           id="phone"
-          label="Телефон"
+          label={t('applicationForm.phoneLabel')}
           type="tel"
           inputMode="tel"
           placeholder="+7 (999) 000-00-00"
@@ -158,9 +161,9 @@ export function ApplicationForm({
 
       <Input
         id="password"
-        label="Пароль"
+        label={t('applicationForm.passwordLabel')}
         type="password"
-        placeholder={passwordRequired ? 'Не менее 8 символов, буква и цифра' : passwordHint ?? 'Оставьте пустым, чтобы не менять'}
+        placeholder={passwordRequired ? t('applicationForm.passwordPlaceholderRequired') : passwordHint ?? t('applicationForm.passwordPlaceholderOptional')}
         value={formData.password}
         onChange={updateField('password')}
         error={errors.password}
@@ -168,9 +171,9 @@ export function ApplicationForm({
 
       <Input
         id="specialization"
-        label="Специализация"
+        label={t('applicationForm.specializationLabel')}
         type="text"
-        placeholder="Корпоративное право"
+        placeholder={t('applicationForm.specializationPlaceholder')}
         value={formData.specialization}
         onChange={updateField('specialization')}
         error={errors.specialization}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import { workflowsApi } from '../../api/workflows'
@@ -6,12 +7,13 @@ import type { WorkflowInfo } from '../../types'
 import { Button } from '../ui/Button'
 
 const WORKFLOW_TABS = [
-  { id: 'analysis', label: 'Анализ', ids: ['DEBTOR_SOLVENCY_ANALYSIS', 'CHALLENGE_TRANSACTIONS', 'CREDITOR_CLAIMS', 'SUBSIDIARY_LIABILITY', 'BANKRUPTCY_ESTATE'] },
-  { id: 'documents', label: 'Документы', ids: ['DOCUMENT_CHECKLIST', 'DATA_EXTRACTION'] },
-  { id: 'summary', label: 'Итоги', ids: ['CASE_SUMMARY', 'RISK_MAP', 'CHRONOLOGY'] },
+  { id: 'analysis', labelKey: 'workflow.tabAnalysis', ids: ['DEBTOR_SOLVENCY_ANALYSIS', 'CHALLENGE_TRANSACTIONS', 'CREDITOR_CLAIMS', 'SUBSIDIARY_LIABILITY', 'BANKRUPTCY_ESTATE'] },
+  { id: 'documents', labelKey: 'workflow.tabDocuments', ids: ['DOCUMENT_CHECKLIST', 'DATA_EXTRACTION'] },
+  { id: 'summary', labelKey: 'workflow.tabSummary', ids: ['CASE_SUMMARY', 'RISK_MAP', 'CHRONOLOGY'] },
 ] as const
 
 export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<string>('analysis')
   const [selectedId, setSelectedId] = useState('')
@@ -41,7 +43,7 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
 
   return (
     <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">Запустить AI-анализ</h2>
+      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('workflow.runTitle')}</h2>
 
       <div className="flex gap-1 mb-4 p-1 rounded-lg bg-light-bg dark:bg-dark-bg">
         {WORKFLOW_TABS.map((tab) => (
@@ -55,7 +57,7 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
                 : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
             }`}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -87,12 +89,12 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
           onChange={(e) => setQuestion(e.target.value)}
           rows={2}
           maxLength={2000}
-          placeholder="Дополнительный вопрос (опционально)"
+          placeholder={t('workflow.extraQuestion')}
           className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
         />
 
         {runMutation.isError && (
-          <p className="text-sm text-red-600 dark:text-red-400">Ошибка запуска анализа. Попробуйте снова.</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{t('workflow.runError')}</p>
         )}
 
         <div>
@@ -102,7 +104,7 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
             loading={runMutation.isPending}
             onClick={() => runMutation.mutate()}
           >
-            Запустить анализ
+            {t('workflow.runAction')}
           </Button>
         </div>
       </div>

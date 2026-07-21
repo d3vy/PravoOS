@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AnimatedSection } from '../components/ui/AnimatedSection'
 import { Button } from '../components/ui/Button'
 import { Navbar } from '../components/layout/Navbar'
@@ -8,66 +9,53 @@ import { ChatDemo } from '../components/landing/ChatDemo'
 import { CaseMockup } from '../components/landing/CaseMockup'
 import { CalendarMockup } from '../components/landing/CalendarMockup'
 
-const capabilities = [
-  'RAG-поиск по вашей базе',
-  'Ответы со ссылками на НПА',
-  'Дела · сроки · клиенты',
-  'Учёт времени и счета',
-  'Экспорт в DOCX / PDF',
-]
-
-const painPoints: { title: string; problem: string; solution: string; visual: ReactNode }[] = [
-  {
-    title: 'Часы на поиск прецедентов',
-    problem:
-      'Поиск по правовым базам, судебной практике и нормативным актам занимает 2–4 часа на каждый запрос. Это время не приносит клиентам никакой ценности.',
-    solution: 'PravoOS находит релевантную практику и нормы за секунды — сразу со ссылками на источник.',
-    visual: <SearchVisual />,
-  },
-  {
-    title: 'Ручной анализ сотен страниц',
-    problem:
-      'Изучение объёмных договоров, дел и регулятивных документов — одна из самых затратных операций рабочего дня юриста.',
-    solution: 'AI анализирует загруженные документы, выделяет ключевые условия и риски и отвечает на вопросы по тексту.',
-    visual: <RiskVisual />,
-  },
-  {
-    title: 'Рутинные ответы и черновики',
-    problem:
-      'Типовые разъяснения и проекты документов повторяются снова и снова — каждый требует сверки с актуальным законом.',
-    solution: 'AI готовит проект на основе актуальной базы. Юрист проверяет и утверждает — вместо написания с нуля.',
-    visual: <DraftVisual />,
-  },
-]
-
-const steps = [
-  {
-    number: '01',
-    title: 'Загрузите базу',
-    description: 'Нормативка, судебная практика, внутренние регламенты. Система строит векторный индекс для точного поиска.',
-  },
-  {
-    number: '02',
-    title: 'Спросите на обычном языке',
-    description: 'Сформулируйте вопрос так, как спросили бы коллегу. Никакого специального синтаксиса.',
-  },
-  {
-    number: '03',
-    title: 'Получите ответ со ссылками',
-    description: 'Развёрнутый ответ с указанием документов и норм. Видно, откуда взята каждая часть — с проверкой цитат.',
-  },
-]
-
-const securityItems = [
-  { title: 'Шифрование документов', description: 'Файлы хранятся зашифрованными at-rest (AES-256-GCM).' },
-  { title: 'Антивирус загрузок', description: 'Каждый файл проверяется ClamAV до сохранения.' },
-  { title: 'Строгий вход', description: 'JWT RS256, ротация сессий, 2FA (TOTP).' },
-  { title: 'Изоляция данных', description: 'Каждый юрист и фирма видят только свои дела и документы.' },
-  { title: 'Без обучения на ваших данных', description: 'Загруженное не уходит на обучение моделей и третьим лицам.' },
-  { title: 'Аудит доступа', description: 'Действия с документами и клиентами фиксируются в журнале.' },
-]
-
 export default function LandingPage(): JSX.Element {
+  const { t } = useTranslation()
+
+  const capabilities = [
+    t('landing.capSearch'),
+    t('landing.capCitations'),
+    t('landing.capCases'),
+    t('landing.capBilling'),
+    t('landing.capExport'),
+  ]
+
+  const painPoints: { title: string; problem: string; solution: string; visual: ReactNode }[] = [
+    {
+      title: t('landing.pain1Title'),
+      problem: t('landing.pain1Problem'),
+      solution: t('landing.pain1Solution'),
+      visual: <SearchVisual />,
+    },
+    {
+      title: t('landing.pain2Title'),
+      problem: t('landing.pain2Problem'),
+      solution: t('landing.pain2Solution'),
+      visual: <RiskVisual />,
+    },
+    {
+      title: t('landing.pain3Title'),
+      problem: t('landing.pain3Problem'),
+      solution: t('landing.pain3Solution'),
+      visual: <DraftVisual />,
+    },
+  ]
+
+  const steps = [
+    { number: '01', title: t('landing.step1Title'), description: t('landing.step1Desc') },
+    { number: '02', title: t('landing.step2Title'), description: t('landing.step2Desc') },
+    { number: '03', title: t('landing.step3Title'), description: t('landing.step3Desc') },
+  ]
+
+  const securityItems = [
+    { title: t('landing.sec1Title'), description: t('landing.sec1Desc') },
+    { title: t('landing.sec2Title'), description: t('landing.sec2Desc') },
+    { title: t('landing.sec3Title'), description: t('landing.sec3Desc') },
+    { title: t('landing.sec4Title'), description: t('landing.sec4Desc') },
+    { title: t('landing.sec5Title'), description: t('landing.sec5Desc') },
+    { title: t('landing.sec6Title'), description: t('landing.sec6Desc') },
+  ]
+
   return (
     <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85">
       <Navbar />
@@ -85,28 +73,27 @@ export default function LandingPage(): JSX.Element {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
             >
-              <p className="eyebrow mb-6 tracking-[0.2em]">AI-платформа для юристов</p>
+              <p className="eyebrow mb-6 tracking-[0.2em]">{t('landing.heroEyebrow')}</p>
               <h1 className="font-sans text-4xl sm:text-5xl md:text-6xl font-black text-light-text dark:text-dark-text leading-[1.05] tracking-tight mb-6">
-                Юрист должен<br />заниматься правом.
+                {t('landing.heroTitleLine1')}<br />{t('landing.heroTitleLine2')}
               </h1>
               <p className="text-lg text-light-secondary dark:text-dark-secondary leading-relaxed mb-8 max-w-lg font-light">
-                Задайте вопрос — получите ответ со ссылками на ваши документы и актуальные нормы.
-                Дела, сроки, клиенты и счета — в одном месте. Рутину берёт на себя AI.
+                {t('landing.heroSubtitle')}
               </p>
               <div className="flex flex-wrap items-center gap-4">
                 <Link to="/apply">
                   <Button variant="primary" size="lg">
-                    Получить доступ
+                    {t('landing.heroCtaPrimary')}
                   </Button>
                 </Link>
                 <Link to="/login">
                   <Button variant="ghost" size="lg">
-                    Войти в систему →
+                    {t('landing.heroCtaSecondary')}
                   </Button>
                 </Link>
               </div>
               <p className="mt-6 text-sm text-light-secondary dark:text-dark-secondary">
-                Закрытый доступ по заявке · рассмотрим за рабочий день · без карты
+                {t('landing.heroNote')}
               </p>
             </motion.div>
 
@@ -140,9 +127,9 @@ export default function LandingPage(): JSX.Element {
       <section className="py-24 md:py-28">
         <div className="page-container">
           <AnimatedSection className="mb-14 max-w-2xl">
-            <p className="eyebrow mb-5">Продукт</p>
+            <p className="eyebrow mb-5">{t('landing.showcaseEyebrow')}</p>
             <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text leading-tight tracking-tight">
-              Не на словах — посмотрите, как это выглядит
+              {t('landing.showcaseHeading')}
             </h2>
           </AnimatedSection>
 
@@ -151,11 +138,10 @@ export default function LandingPage(): JSX.Element {
               <CaseMockup />
               <div className="mt-5 max-w-md">
                 <h3 className="font-sans font-semibold text-light-text dark:text-dark-text mb-1.5">
-                  Дело целиком — во вкладках
+                  {t('landing.showcaseCaseTitle')}
                 </h3>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed font-light">
-                  Документы, AI-анализ, время и счета, задачи и переписка с клиентом. Ничего не теряется —
-                  всё привязано к делу.
+                  {t('landing.showcaseCaseDesc')}
                 </p>
               </div>
             </AnimatedSection>
@@ -164,11 +150,10 @@ export default function LandingPage(): JSX.Element {
               <CalendarMockup />
               <div className="mt-5 max-w-md">
                 <h3 className="font-sans font-semibold text-light-text dark:text-dark-text mb-1.5">
-                  Единый календарь сроков
+                  {t('landing.showcaseCalendarTitle')}
                 </h3>
                 <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed font-light">
-                  Заседания из КАД.Арбитр, процессуальные сроки и задачи по делам — в одной сетке.
-                  Напоминания за 7 / 3 / 1 день.
+                  {t('landing.showcaseCalendarDesc')}
                 </p>
               </div>
             </AnimatedSection>
@@ -180,9 +165,9 @@ export default function LandingPage(): JSX.Element {
       <section className="py-24 md:py-28 bg-light-surface dark:bg-dark-surface border-y border-light-border dark:border-dark-border">
         <div className="page-container">
           <AnimatedSection className="mb-16 max-w-2xl">
-            <p className="eyebrow mb-5">Зачем это нужно</p>
+            <p className="eyebrow mb-5">{t('landing.painEyebrow')}</p>
             <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text leading-tight tracking-tight">
-              Где теряется время квалифицированного юриста
+              {t('landing.painHeading')}
             </h2>
           </AnimatedSection>
 
@@ -232,9 +217,9 @@ export default function LandingPage(): JSX.Element {
       <section className="py-24 md:py-28">
         <div className="page-container">
           <AnimatedSection className="mb-16 max-w-2xl">
-            <p className="eyebrow mb-5">Как это работает</p>
+            <p className="eyebrow mb-5">{t('landing.stepsEyebrow')}</p>
             <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text leading-tight tracking-tight">
-              Три шага до ответа по правовой базе
+              {t('landing.stepsHeading')}
             </h2>
           </AnimatedSection>
 
@@ -265,9 +250,9 @@ export default function LandingPage(): JSX.Element {
       <section className="py-24 md:py-28 bg-light-surface dark:bg-dark-surface border-y border-light-border dark:border-dark-border">
         <div className="page-container">
           <AnimatedSection className="mb-14 max-w-2xl">
-            <p className="eyebrow mb-5">Безопасность и данные</p>
+            <p className="eyebrow mb-5">{t('landing.securityEyebrow')}</p>
             <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text leading-tight tracking-tight">
-              Данные клиентов — под защитой
+              {t('landing.securityHeading')}
             </h2>
           </AnimatedSection>
 
@@ -301,14 +286,13 @@ export default function LandingPage(): JSX.Element {
             <div className="max-w-3xl mx-auto text-center">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-light-accent/40 dark:border-dark-accent/40 text-light-accent dark:text-dark-accent text-xs font-medium mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-light-accent dark:bg-dark-accent" />
-                Ранний доступ
+                {t('landing.earlyAccessBadge')}
               </span>
               <p className="font-sans text-2xl md:text-3xl font-semibold text-light-text dark:text-dark-text leading-snug tracking-tight mb-4">
-                «Мы делаем инструмент, которым хотели бы пользоваться сами — чтобы юрист занимался
-                правом, а не искал документ в сотый раз».
+                {t('landing.earlyAccessQuote')}
               </p>
               <p className="text-sm text-light-secondary dark:text-dark-secondary">
-                Команда PravoOS · закрытый набор практик и юрфирм
+                {t('landing.earlyAccessAttribution')}
               </p>
             </div>
           </AnimatedSection>
@@ -320,17 +304,16 @@ export default function LandingPage(): JSX.Element {
         <div className="page-container">
           <AnimatedSection>
             <div className="max-w-xl">
-              <p className="eyebrow mb-6">Начать работу</p>
+              <p className="eyebrow mb-6">{t('landing.ctaEyebrow')}</p>
               <h2 className="font-sans text-3xl sm:text-4xl md:text-5xl font-black text-light-text dark:text-dark-text mb-6 leading-tight tracking-tight">
-                Освободите время для настоящей работы
+                {t('landing.ctaHeading')}
               </h2>
               <p className="text-light-secondary dark:text-dark-secondary mb-10 text-lg leading-relaxed font-light">
-                Оставьте заявку — откроем доступ вашей практике и поможем перенести базу.
-                Отвечаем в течение рабочего дня.
+                {t('landing.ctaSubtitle')}
               </p>
               <Link to="/apply">
                 <Button variant="primary" size="lg">
-                  Получить доступ для вашей практики
+                  {t('landing.ctaButton')}
                 </Button>
               </Link>
             </div>
@@ -347,36 +330,36 @@ export default function LandingPage(): JSX.Element {
                 Pravo<span className="font-light">OS</span>
               </span>
               <p className="mt-2 text-sm text-light-secondary dark:text-dark-secondary font-light leading-relaxed">
-                AI-платформа для юристов и юрфирм.
+                {t('landing.footerTagline')}
               </p>
             </div>
             <FooterColumn
-              title="Продукт"
+              title={t('landing.footerProductTitle')}
               links={[
-                { label: 'Войти', to: '/login' },
-                { label: 'Получить доступ', to: '/apply' },
+                { label: t('landing.footerLogin'), to: '/login' },
+                { label: t('landing.footerApply'), to: '/apply' },
               ]}
             />
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-light-secondary dark:text-dark-secondary mb-3">
-                Безопасность
+                {t('landing.footerSecurityTitle')}
               </p>
               <p className="text-sm text-light-secondary dark:text-dark-secondary font-light leading-relaxed">
-                Шифрование at-rest, изоляция данных, аудит доступа. Не обучаемся на ваших данных.
+                {t('landing.footerSecurityText')}
               </p>
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-light-secondary dark:text-dark-secondary mb-3">
-                Контакты
+                {t('landing.footerContactsTitle')}
               </p>
               <p className="text-sm text-light-secondary dark:text-dark-secondary font-light leading-relaxed">
-                По вопросам доступа — через форму заявки.
+                {t('landing.footerContactsText')}
               </p>
             </div>
           </div>
           <div className="pt-6 border-t border-light-border dark:border-dark-border">
             <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
-              © {new Date().getFullYear()} PravoOS. AI-платформа для юристов.
+              {t('landing.footerCopyright', { year: new Date().getFullYear() })}
             </p>
           </div>
         </div>
@@ -408,6 +391,8 @@ function FooterColumn({ title, links }: { title: string; links: { label: string;
 }
 
 function SearchVisual(): JSX.Element {
+  const { t } = useTranslation()
+  const results = [t('landing.visualSearchResult1'), t('landing.visualSearchResult2'), t('landing.visualSearchResult3')]
   return (
     <div className="p-5 rounded-2xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-light-border dark:border-dark-border mb-3">
@@ -415,13 +400,13 @@ function SearchVisual(): JSX.Element {
           <circle cx="11" cy="11" r="7" />
           <line x1="16.5" y1="16.5" x2="21" y2="21" />
         </svg>
-        <span className="text-xs text-light-secondary dark:text-dark-secondary">субсидиарная ответственность КДЛ</span>
+        <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('landing.visualSearchQuery')}</span>
       </div>
       <div className="flex flex-col gap-2">
-        {['Определение ВС РФ № 305-ЭС...', 'ст. 61.11 127-ФЗ', 'Пленум ВС № 53, п. 16'].map((r) => (
+        {results.map((r) => (
           <div key={r} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
             <span className="text-xs text-light-text dark:text-dark-text truncate">{r}</span>
-            <span className="text-[10px] text-light-secondary dark:text-dark-secondary shrink-0">0.9с</span>
+            <span className="text-[10px] text-light-secondary dark:text-dark-secondary shrink-0">{t('landing.visualSearchTime')}</span>
           </div>
         ))}
       </div>
@@ -430,19 +415,20 @@ function SearchVisual(): JSX.Element {
 }
 
 function RiskVisual(): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="p-5 rounded-2xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-light-text dark:text-dark-text">Договор поставки.pdf</span>
-        <span className="text-xs font-semibold text-red-600 dark:text-red-400">риск 72/100</span>
+        <span className="text-xs font-medium text-light-text dark:text-dark-text">{t('landing.visualRiskFile')}</span>
+        <span className="text-xs font-semibold text-red-600 dark:text-red-400">{t('landing.visualRiskScore')}</span>
       </div>
       <div className="flex flex-col gap-2">
         {[
-          { level: 'Высокий', tone: 'border-red-300 text-red-700 dark:border-red-500/40 dark:text-red-400', text: 'Односторонний отказ без компенсации' },
-          { level: 'Средний', tone: 'border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-400', text: 'Неустойка выше обычая делового оборота' },
+          { level: t('landing.visualRiskHighLevel'), tone: 'border-red-300 text-red-700 dark:border-red-500/40 dark:text-red-400', text: t('landing.visualRiskHighText') },
+          { level: t('landing.visualRiskMediumLevel'), tone: 'border-amber-300 text-amber-700 dark:border-amber-500/40 dark:text-amber-400', text: t('landing.visualRiskMediumText') },
         ].map((f) => (
           <div key={f.text} className={`px-3 py-2 rounded-lg border ${f.tone}`}>
-            <span className="text-[10px] font-semibold uppercase tracking-wide">{f.level} риск</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide">{f.level} {t('landing.visualRiskSuffix')}</span>
             <p className="text-xs text-light-text dark:text-dark-text mt-0.5">{f.text}</p>
           </div>
         ))}
@@ -452,13 +438,14 @@ function RiskVisual(): JSX.Element {
 }
 
 function DraftVisual(): JSX.Element {
+  const { t } = useTranslation()
   return (
     <div className="p-5 rounded-2xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
       <div className="flex items-center gap-2 mb-3">
         <span className="w-5 h-5 rounded-md bg-light-accent/15 dark:bg-dark-accent/20 text-light-accent dark:text-dark-accent text-[10px] font-bold flex items-center justify-center">
           AI
         </span>
-        <span className="text-xs font-medium text-light-text dark:text-dark-text">Проект: претензия должнику</span>
+        <span className="text-xs font-medium text-light-text dark:text-dark-text">{t('landing.visualDraftTitle')}</span>
       </div>
       <div className="flex flex-col gap-1.5">
         {[92, 76, 84, 60].map((w, i) => (
@@ -466,8 +453,8 @@ function DraftVisual(): JSX.Element {
         ))}
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] px-2 py-0.5 rounded-md bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent">Скачать .docx</span>
-        <span className="text-[11px] px-2 py-0.5 rounded-md border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">Редактировать</span>
+        <span className="text-[11px] px-2 py-0.5 rounded-md bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent">{t('landing.visualDraftDownload')}</span>
+        <span className="text-[11px] px-2 py-0.5 rounded-md border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">{t('landing.visualDraftEdit')}</span>
       </div>
     </div>
   )

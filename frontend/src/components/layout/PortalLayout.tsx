@@ -4,7 +4,9 @@ import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
+import { LanguageSwitcher } from '../ui/LanguageSwitcher'
 import { authApi } from '../../api/auth'
+import { useTranslation } from 'react-i18next'
 
 interface PortalLayoutProps {
   children: ReactNode
@@ -12,6 +14,7 @@ interface PortalLayoutProps {
 
 export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
   const { user, clearAuth } = useAuthStore()
+  const { t } = useTranslation()
 
   const handleLogout = async (): Promise<void> => {
     try {
@@ -34,9 +37,10 @@ export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
               {user.email}
             </span>
           )}
+          <LanguageSwitcher />
           <ThemeToggle />
           <Button variant="ghost" size="sm" onClick={handleLogout}>
-            Выйти
+            {t('nav.logout')}
           </Button>
         </div>
       </header>

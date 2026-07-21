@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { invoicesApi } from '../../api/invoices'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { InvoiceStatus, InvoiceSummary } from '../../types'
@@ -10,6 +11,8 @@ import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge
 import { formatMoney } from '../../utils/billing'
 
 export default function InvoicesPage(): JSX.Element {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   const [page, setPage] = useState(0)
 
   const { data, isLoading } = useQuery<Page<InvoiceSummary>>({
@@ -25,9 +28,9 @@ export default function InvoicesPage(): JSX.Element {
     <div className="bg-light-bg dark:bg-dark-bg">
       <div className="page-container py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Счета</h1>
+          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('invoices.title')}</h1>
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Счета за услуги — формируются из учёта времени по делам
+            {t('invoices.subtitle')}
           </p>
         </div>
 
@@ -37,7 +40,7 @@ export default function InvoicesPage(): JSX.Element {
           </div>
         ) : invoices.length === 0 ? (
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Счетов пока нет. Откройте дело, спишите время и нажмите «Выставить счёт».
+            {t('invoices.emptyHint')}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -52,11 +55,11 @@ export default function InvoicesPage(): JSX.Element {
                     {invoice.number}
                   </p>
                   <span className="text-xs text-light-secondary dark:text-dark-secondary">
-                    {invoice.clientName ?? 'Клиент удалён'} ·{' '}
-                    {new Date(invoice.issueDate).toLocaleDateString('ru-RU')}
+                    {invoice.clientName ?? t('invoices.clientDeleted')} ·{' '}
+                    {new Date(invoice.issueDate).toLocaleDateString(locale)}
                   </span>
                 </div>
-                <InvoiceStatusBadge status={invoice.status as InvoiceStatus} label={invoice.statusLabel} />
+                <InvoiceStatusBadge status={invoice.status as InvoiceStatus} />
                 <span className="text-sm font-semibold text-light-text dark:text-dark-text tabular-nums">
                   {formatMoney(invoice.total, invoice.currency)}
                 </span>

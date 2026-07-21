@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useAuthBootstrap } from './hooks/useAuthBootstrap'
+import { useLanguageSync } from './hooks/useLanguage'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { FullScreenLoader } from './components/ui/FullScreenLoader'
 import { AdminLayout } from './components/layout/AdminLayout'
@@ -50,6 +51,7 @@ function homePathForRole(role: UserRole | undefined): string {
 export default function App(): JSX.Element {
   const { isAuthenticated, bootstrapped, effectiveRole } = useAuthStore()
   useAuthBootstrap()
+  useLanguageSync()
 
   if (!bootstrapped) {
     return <FullScreenLoader />

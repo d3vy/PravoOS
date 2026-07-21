@@ -1,6 +1,7 @@
 import apiClient, { refreshSession } from './client'
 import { MAX_PAGE_SIZE } from './pagination'
 import { useAuthStore } from '../store/authStore'
+import i18n from '../i18n'
 import type {
   ChatRequest,
   ChatResponse,
@@ -12,7 +13,7 @@ import type {
 } from '../types'
 
 const baseURL = import.meta.env.VITE_API_URL || ''
-const GENERIC_STREAM_ERROR = 'Произошла ошибка при обработке запроса. Попробуйте ещё раз.'
+const genericStreamError = (): string => i18n.t('chat.streamError')
 
 export interface ChatStreamCallbacks {
   onToken: (token: string) => void
@@ -24,7 +25,7 @@ export async function streamMessage(data: ChatRequest, callbacks: ChatStreamCall
   try {
     await runStream(data, callbacks, false)
   } catch {
-    callbacks.onError(GENERIC_STREAM_ERROR)
+    callbacks.onError(genericStreamError())
   }
 }
 
@@ -62,7 +63,7 @@ async function extractErrorMessage(response: Response): Promise<string> {
   } catch {
     /* non-JSON body */
   }
-  return GENERIC_STREAM_ERROR
+  return genericStreamError()
 }
 
 async function consumeEventStream(body: ReadableStream<Uint8Array>, callbacks: ChatStreamCallbacks): Promise<void> {
@@ -98,7 +99,7 @@ function dispatchEvent(rawEvent: string, callbacks: ChatStreamCallbacks): void {
     else if (eventName === 'done') callbacks.onDone(JSON.parse(payload) as ChatResponse)
     else if (eventName === 'error') callbacks.onError((JSON.parse(payload) as { message: string }).message)
   } catch {
-    callbacks.onError(GENERIC_STREAM_ERROR)
+    callbacks.onError(genericStreamError())
   }
 }
 

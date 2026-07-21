@@ -1,18 +1,20 @@
 import { Outlet } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { NavTabs } from '../ui/NavTabs'
 import type { NavTabItem } from '../ui/NavTabs'
 import { Navbar } from './Navbar'
 
-const navItems: NavTabItem[] = [
-  { to: '/admin/applications', label: 'Заявки', end: true },
-  { to: '/admin/users', label: 'Юристы', end: true },
-  { to: '/admin/documents', label: 'Документы', end: true },
-  { to: '/admin/ai-stats', label: 'AI-метрики', end: true },
-]
-
 const GRAFANA_URL = '/grafana/'
 
 export function AdminLayout(): JSX.Element {
+  const { t } = useTranslation()
+  const navItems: NavTabItem[] = [
+    { to: '/admin/applications', label: t('admin.applications'), end: true },
+    { to: '/admin/users', label: t('admin.lawyers'), end: true },
+    { to: '/admin/documents', label: t('admin.documents'), end: true },
+    { to: '/admin/ai-stats', label: t('admin.aiMetrics'), end: true },
+  ]
+
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
       <Navbar />
@@ -27,14 +29,14 @@ export function AdminLayout(): JSX.Element {
           className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text"
         >
           <ChartIcon />
-          <span>Метрики</span>
+          <span>{t('admin.metrics')}</span>
         </a>
       </nav>
 
       <div className="flex min-h-[calc(100vh-64px)]">
         <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
           <nav className="p-4 flex flex-col gap-1 pt-6 flex-1">
-            <p className="eyebrow px-3 mb-3">Управление</p>
+            <p className="eyebrow px-3 mb-3">{t('admin.management')}</p>
             <NavTabs items={navItems} indicatorId="admin-sidebar-tab-indicator" orientation="vertical" />
             <a
               href={GRAFANA_URL}
@@ -43,7 +45,7 @@ export function AdminLayout(): JSX.Element {
               className="px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg flex items-center gap-2"
             >
               <ChartIcon />
-              <span>Метрики (Grafana)</span>
+              <span>{t('admin.metricsGrafana')}</span>
             </a>
           </nav>
         </aside>

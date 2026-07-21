@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
@@ -12,6 +14,7 @@ import { CaseStatusSelect } from './CaseStatusSelect'
 import { DateField } from './DateField'
 
 export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(caseItem.title)
@@ -42,9 +45,9 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
     setExportError(null)
     try {
       const safeTitle = caseItem.title.replace(/[^\wА-Яа-яёЁ]+/g, '_').slice(0, 80)
-      await casesApi.exportCase(caseItem.id, format, `Дело_${safeTitle}`)
+      await casesApi.exportCase(caseItem.id, format, t('cases.exportFileName', { title: safeTitle }))
     } catch {
-      setExportError('Не удалось сформировать файл. Попробуйте снова.')
+      setExportError(t('cases.exportError'))
     } finally {
       setExporting(null)
     }
@@ -75,7 +78,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
       queryClient.invalidateQueries({ queryKey: ['cases'] })
       setError(null)
     },
-    onError: () => setError('Не удалось изменить организацию дела.'),
+    onError: () => setError(t('cases.changeOrgError')),
   })
 
   const transferMutation = useMutation({
@@ -87,14 +90,14 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
       setIsEditing(false)
       setError(null)
     },
-    onError: () => setError('Не удалось передать владельца дела.'),
+    onError: () => setError(t('cases.transferError')),
   })
 
   const handleTransfer = (): void => {
     if (!transferTo) return
     const member = orgMembers.find((m) => m.userId === transferTo)
-    const name = member?.fullName || member?.email || 'выбранного участника'
-    if (!window.confirm(`Передать дело участнику «${name}»? Вы перестанете быть владельцем дела.`)) return
+    const name = member?.fullName || member?.email || t('cases.selectedMemberFallback')
+    if (!window.confirm(t('cases.transferConfirm', { name }))) return
     transferMutation.mutate(transferTo)
   }
 
@@ -115,12 +118,12 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
       setIsEditing(false)
       setError(null)
     },
-    onError: () => setError('Не удалось сохранить изменения. Попробуйте снова.'),
+    onError: () => setError(t('cases.updateError')),
   })
 
   const handleSave = (): void => {
     if (!title.trim()) {
-      setError('Укажите название дела')
+      setError(t('cases.titleRequired'))
       return
     }
     updateMutation.mutate()
@@ -142,9 +145,9 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
     return (
       <section className="mb-6 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
         <div className="flex flex-col gap-4">
-          <Input label="Название дела" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={500} />
+          <Input label={t('cases.titleLabel')} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={500} />
           <div>
-            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">Описание</label>
+            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">{t('common.description')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -154,13 +157,13 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">Клиент</label>
+            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">{t('cases.clientLabel')}</label>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
             >
-              <option value="">Без клиента</option>
+              <option value="">{t('cases.noClient')}</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
                   {client.name} ({client.typeName})
@@ -169,22 +172,22 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             </select>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <DateField label="Срок подачи" value={filingDeadline} onChange={setFilingDeadline} />
-            <DateField label="Заседание" value={nextHearingDate} onChange={setNextHearingDate} />
-            <DateField label="Истечение срока" value={expiresAt} onChange={setExpiresAt} />
+            <DateField label={t('cases.filingDeadline')} value={filingDeadline} onChange={setFilingDeadline} />
+            <DateField label={t('cases.hearing')} value={nextHearingDate} onChange={setNextHearingDate} />
+            <DateField label={t('cases.expiresAt')} value={expiresAt} onChange={setExpiresAt} />
           </div>
           <Input
-            label="Номер дела в КАД.Арбитр"
+            label={t('cases.arbitrNumberEditLabel')}
             value={arbitrCaseNumber}
             onChange={(e) => setArbitrCaseNumber(e.target.value)}
             maxLength={50}
-            placeholder="А40-12345/2024"
+            placeholder={t('cases.arbitrPlaceholder')}
           />
           {isOwner && (
             <div className="flex flex-col gap-4 pt-4 border-t border-light-border dark:border-dark-border">
               <div>
                 <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                  Организация
+                  {t('cases.orgLabel')}
                 </label>
                 <select
                   value={caseItem.orgId ?? ''}
@@ -192,7 +195,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
                   onChange={(e) => changeOrgMutation.mutate(e.target.value || null)}
                   className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent disabled:opacity-60"
                 >
-                  <option value="">Личное дело</option>
+                  <option value="">{t('cases.personalCase')}</option>
                   {organizations.map((org) => (
                     <option key={org.id} value={org.id}>
                       {org.name}
@@ -200,13 +203,13 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-light-secondary dark:text-dark-secondary">
-                  Дело в организации видят и редактируют её участники. «Личное дело» — только вы.
+                  {t('cases.orgHintEdit')}
                 </p>
               </div>
               {caseItem.orgId && (
                 <div>
                   <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                    Передать владельца
+                    {t('cases.transferOwner')}
                   </label>
                   <div className="flex gap-2">
                     <select
@@ -214,7 +217,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
                       onChange={(e) => setTransferTo(e.target.value)}
                       className="flex-1 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
                     >
-                      <option value="">Выберите участника</option>
+                      <option value="">{t('cases.selectMember')}</option>
                       {orgMembers
                         .filter((member) => member.userId !== caseItem.ownerId)
                         .map((member) => (
@@ -229,7 +232,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
                       loading={transferMutation.isPending}
                       onClick={handleTransfer}
                     >
-                      Передать
+                      {t('cases.transfer')}
                     </Button>
                   </div>
                 </div>
@@ -239,10 +242,10 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex gap-2">
             <Button variant="primary" loading={updateMutation.isPending} onClick={handleSave}>
-              Сохранить
+              {t('common.save')}
             </Button>
             <Button variant="ghost" onClick={handleCancel}>
-              Отмена
+              {t('common.cancel')}
             </Button>
           </div>
         </div>
@@ -256,7 +259,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
         <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{caseItem.title}</h1>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
-            Редактировать
+            {t('common.edit')}
           </Button>
           <Button
             variant="ghost"
@@ -265,7 +268,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             disabled={exporting !== null}
             onClick={() => void handleExport('docx')}
           >
-            Экспорт .docx
+            {t('cases.exportDocx')}
           </Button>
           <Button
             variant="ghost"
@@ -274,7 +277,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             disabled={exporting !== null}
             onClick={() => void handleExport('pdf')}
           >
-            Экспорт .pdf
+            {t('cases.exportPdf')}
           </Button>
         </div>
       </div>
@@ -289,7 +292,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             to={`/clients/${caseItem.clientId}`}
             className="text-sm text-light-accent dark:text-dark-accent hover:underline"
           >
-            Клиент: {caseItem.clientName}
+            {t('cases.clientPrefix', { name: caseItem.clientName })}
           </Link>
         )}
       </div>
@@ -303,10 +306,11 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
 }
 
 export function DeadlineList({ caseItem }: { caseItem: CaseResponse }): JSX.Element | null {
+  const { t } = useTranslation()
   const deadlines = [
-    { label: 'Срок подачи', value: caseItem.filingDeadline },
-    { label: 'Заседание', value: caseItem.nextHearingDate },
-    { label: 'Истечение срока', value: caseItem.expiresAt },
+    { label: t('cases.filingDeadline'), value: caseItem.filingDeadline },
+    { label: t('cases.hearing'), value: caseItem.nextHearingDate },
+    { label: t('cases.expiresAt'), value: caseItem.expiresAt },
   ].filter((deadline) => deadline.value)
 
   if (deadlines.length === 0) {
@@ -323,6 +327,7 @@ export function DeadlineList({ caseItem }: { caseItem: CaseResponse }): JSX.Elem
 }
 
 function DeadlineBadge({ label, value }: { label: string; value: string }): JSX.Element {
+  const { t } = useTranslation()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const target = new Date(`${value}T00:00:00`)
@@ -334,8 +339,14 @@ function DeadlineBadge({ label, value }: { label: string; value: string }): JSX.
     ? 'border-red-300 text-red-700 dark:border-red-500/40 dark:text-red-400'
     : 'border-light-border text-light-secondary dark:border-dark-border dark:text-dark-secondary'
 
-  const formatted = target.toLocaleDateString('ru-RU')
-  const suffix = overdue ? ' (просрочено)' : daysLeft === 0 ? ' (сегодня)' : urgent ? ` (через ${daysLeft} дн.)` : ''
+  const formatted = target.toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')
+  const suffix = overdue
+    ? t('cases.deadlineOverdue')
+    : daysLeft === 0
+      ? t('cases.deadlineToday')
+      : urgent
+        ? t('cases.deadlineDaysLeft', { count: daysLeft })
+        : ''
 
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs ${tone}`}>

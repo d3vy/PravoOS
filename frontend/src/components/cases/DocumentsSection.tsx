@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import type { DocumentResponse } from '../../types'
@@ -7,6 +8,7 @@ import { DocumentStatusBadge } from '../ui/Badge'
 import { ALLOWED_DOCUMENT_EXTENSIONS } from './caseFormatting'
 
 export function DocumentsSection({ caseId, documents }: { caseId: string; documents: DocumentResponse[] }): JSX.Element {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -20,7 +22,7 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
       await casesApi.setDocumentVisibility(caseId, doc.id, !doc.visibleToClient)
       queryClient.invalidateQueries({ queryKey: ['case-documents', caseId] })
     } catch {
-      setError('Не удалось изменить видимость документа.')
+      setError(t('caseDocs.visibilityError'))
     } finally {
       setTogglingId(null)
     }
@@ -33,7 +35,7 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
       ALLOWED_DOCUMENT_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext))
     )
     if (valid.length === 0) {
-      setError('Поддерживаются только PDF и DOCX')
+      setError(t('caseDocs.onlyPdfDocx'))
       return
     }
     setIsUploading(true)
@@ -43,7 +45,7 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
       }
       queryClient.invalidateQueries({ queryKey: ['case-documents', caseId] })
     } catch {
-      setError('Ошибка загрузки. Проверьте формат и размер файла.')
+      setError(t('caseDocs.uploadError'))
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -53,7 +55,7 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
   return (
     <section className="mb-10">
       <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">
-        Документы дела {documents.length > 0 && <span className="font-normal text-light-secondary dark:text-dark-secondary">({documents.length})</span>}
+        {t('caseDocs.title')} {documents.length > 0 && <span className="font-normal text-light-secondary dark:text-dark-secondary">({documents.length})</span>}
       </h2>
 
       <div
@@ -74,7 +76,7 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
           <Spinner size="md" />
         ) : (
           <p className="text-sm text-light-secondary dark:text-dark-secondary">
-            Загрузить документы дела (PDF, DOCX)
+            {t('caseDocs.uploadCta')}
           </p>
         )}
       </div>
@@ -96,14 +98,14 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
                 type="button"
                 onClick={() => void toggleVisibility(doc)}
                 disabled={togglingId === doc.id}
-                title={doc.visibleToClient ? 'Виден клиенту в портале' : 'Скрыт от клиента'}
+                title={doc.visibleToClient ? t('caseDocs.visibleTooltip') : t('caseDocs.hiddenTooltip')}
                 className={`text-xs px-2 py-1 rounded-md border transition-colors disabled:opacity-60 ${
                   doc.visibleToClient
                     ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
                     : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
                 }`}
               >
-                {doc.visibleToClient ? 'Виден клиенту' : 'Скрыт'}
+                {doc.visibleToClient ? t('caseDocs.visibleShort') : t('caseDocs.hiddenShort')}
               </button>
               <DocumentStatusBadge status={doc.status} />
             </div>

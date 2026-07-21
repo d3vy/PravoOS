@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, type DragEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import i18n from '../../i18n'
 import { documentsApi } from '../../api/documents'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { DocumentResponse, LegislationResponse } from '../../types'
@@ -20,6 +22,7 @@ function isAllowedFile(file: File): boolean {
 }
 
 export default function DocumentsPage(): JSX.Element {
+  const { t } = useTranslation()
   const [isDragging, setIsDragging] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -60,7 +63,7 @@ export default function DocumentsPage(): JSX.Element {
 
       const validFiles = Array.from(files).filter(isAllowedFile)
       if (validFiles.length === 0) {
-        setUploadError('Поддерживаются только файлы PDF и DOCX')
+        setUploadError(t('documents.onlyPdfDocx'))
         return
       }
 
@@ -72,7 +75,7 @@ export default function DocumentsPage(): JSX.Element {
         }
         queryClient.invalidateQueries({ queryKey: ['documents'] })
       } catch {
-        setUploadError('Ошибка при загрузке файла. Проверьте формат и размер.')
+        setUploadError(t('documents.uploadFileError'))
       } finally {
         setIsUploading(false)
         if (fileInputRef.current) fileInputRef.current.value = ''
@@ -114,9 +117,9 @@ export default function DocumentsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">Документы</h1>
+        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('documents.title')}</h1>
         <p className="text-sm text-light-secondary dark:text-dark-secondary">
-          Загрузите PDF и DOCX-файлы для формирования базы знаний AI-ассистента
+          {t('documents.subtitle')}
         </p>
       </div>
 
@@ -137,7 +140,7 @@ export default function DocumentsPage(): JSX.Element {
         `}
         role="button"
         tabIndex={0}
-        aria-label="Зона загрузки документов"
+        aria-label={t('documents.uploadZoneLabel')}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click() }}
       >
         <input
@@ -153,7 +156,7 @@ export default function DocumentsPage(): JSX.Element {
           <>
             <Spinner size="md" />
             <p className="text-sm text-light-secondary dark:text-dark-secondary">
-              Загрузка документов...
+              {t('documents.uploading')}
             </p>
           </>
         ) : (
@@ -167,10 +170,10 @@ export default function DocumentsPage(): JSX.Element {
             </div>
             <div>
               <p className="text-sm font-medium text-light-text dark:text-dark-text mb-1">
-                Перетащите файлы сюда или нажмите для выбора
+                {t('documents.dropHint')}
               </p>
               <p className="text-xs text-light-secondary dark:text-dark-secondary">
-                PDF, DOCX — нормативные акты, судебная практика, регламенты
+                {t('documents.allowedTypesHint')}
               </p>
             </div>
           </>
@@ -191,7 +194,7 @@ export default function DocumentsPage(): JSX.Element {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
-            Загруженные документы
+            {t('documents.uploaded')}
             {total > 0 && (
               <span className="ml-2 text-light-secondary dark:text-dark-secondary font-normal">
                 ({total})
@@ -201,7 +204,7 @@ export default function DocumentsPage(): JSX.Element {
           {documents.some((d) => d.status === 'PROCESSING') && (
             <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
               <Spinner size="sm" className="border-amber-200 border-t-amber-500 dark:border-amber-800 dark:border-t-amber-400" />
-              Обработка...
+              {t('documents.processing')}
             </div>
           )}
         </div>
@@ -213,7 +216,7 @@ export default function DocumentsPage(): JSX.Element {
         ) : documents.length === 0 ? (
           <div className="text-center py-16 rounded-xl border border-dashed border-light-border dark:border-dark-border">
             <p className="text-light-secondary dark:text-dark-secondary text-sm">
-              Нет загруженных документов. Начните с загрузки правовой базы.
+              {t('documents.empty')}
             </p>
           </div>
         ) : (
@@ -243,6 +246,8 @@ export default function DocumentsPage(): JSX.Element {
 }
 
 function LegislationSection(): JSX.Element {
+  const { t } = useTranslation()
+  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   const queryClient = useQueryClient()
   const [actCanonical, setActCanonical] = useState('')
   const [articleNumber, setArticleNumber] = useState('')
@@ -269,7 +274,7 @@ function LegislationSection(): JSX.Element {
       setFile(null)
       if (legislationFileRef.current) legislationFileRef.current.value = ''
     },
-    onError: () => setError('Не удалось загрузить НПА. Проверьте поля и формат файла.'),
+    onError: () => setError(t('documents.uploadLegislationError')),
   })
 
   const canSubmit = actCanonical.trim() && articleNumber.trim() && editionDate && file
@@ -284,9 +289,9 @@ function LegislationSection(): JSX.Element {
   return (
     <div className="mt-12">
       <div className="mb-4">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">Законодательство (НПА)</h2>
+        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('documents.legislationTitle')}</h2>
         <p className="text-xs text-light-secondary dark:text-dark-secondary mt-0.5">
-          Актуальные редакции норм. Новая редакция статьи автоматически заменяет прежнюю.
+          {t('documents.legislationSubtitle')}
         </p>
       </div>
 
@@ -298,14 +303,14 @@ function LegislationSection(): JSX.Element {
           type="text"
           value={actCanonical}
           onChange={(e) => setActCanonical(e.target.value)}
-          placeholder="Акт (напр. ГК РФ)"
+          placeholder={t('documents.actPlaceholder')}
           className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
         />
         <input
           type="text"
           value={articleNumber}
           onChange={(e) => setArticleNumber(e.target.value)}
-          placeholder="Статья (напр. 450)"
+          placeholder={t('documents.articlePlaceholder')}
           className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
         />
         <input
@@ -324,7 +329,7 @@ function LegislationSection(): JSX.Element {
         <div className="sm:col-span-2 lg:col-span-4 flex items-center justify-between gap-3">
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <Button type="submit" size="sm" disabled={!canSubmit} loading={uploadMutation.isPending} className="ml-auto">
-            Загрузить НПА
+            {t('documents.uploadLegislation')}
           </Button>
         </div>
       </form>
@@ -336,7 +341,7 @@ function LegislationSection(): JSX.Element {
       ) : legislation.length === 0 ? (
         <div className="text-center py-10 rounded-xl border border-dashed border-light-border dark:border-dark-border">
           <p className="text-light-secondary dark:text-dark-secondary text-sm">
-            Нормативные акты ещё не загружены.
+            {t('documents.noLegislation')}
           </p>
         </div>
       ) : (
@@ -348,10 +353,10 @@ function LegislationSection(): JSX.Element {
             >
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-light-text dark:text-dark-text text-sm truncate">
-                  ст. {norm.articleNumber} {norm.actCanonical}
+                  {t('documents.article')} {norm.articleNumber} {norm.actCanonical}
                 </p>
                 <p className="text-xs text-light-secondary dark:text-dark-secondary truncate mt-0.5">
-                  ред. от {new Date(norm.editionDate).toLocaleDateString('ru-RU')}
+                  {t('documents.editionFrom')} {new Date(norm.editionDate).toLocaleDateString(dateLocale)}
                 </p>
               </div>
               <DocumentStatusBadge status={norm.status} />
@@ -371,6 +376,8 @@ interface DocumentRowProps {
 }
 
 function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JSX.Element {
+  const { t } = useTranslation()
+  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
 
@@ -419,7 +426,7 @@ function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JS
           {doc.title}
         </p>
         <p className="text-xs text-light-secondary dark:text-dark-secondary truncate mt-0.5">
-          {doc.fileName} · {new Date(doc.uploadedAt).toLocaleDateString('ru-RU')}
+          {doc.fileName} · {new Date(doc.uploadedAt).toLocaleDateString(dateLocale)}
         </p>
       </div>
 
@@ -433,7 +440,7 @@ function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JS
         disabled={isOpening}
         className="shrink-0"
       >
-        Открыть
+        {t('documents.open')}
       </Button>
 
       <Button
@@ -444,7 +451,7 @@ function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JS
         disabled={isDeleting}
         className="shrink-0"
       >
-        {confirmDelete ? 'Подтвердить' : 'Удалить'}
+        {confirmDelete ? t('documents.confirm') : t('documents.delete')}
       </Button>
     </motion.div>
   )
