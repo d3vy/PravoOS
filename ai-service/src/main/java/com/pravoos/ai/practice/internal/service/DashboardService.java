@@ -65,6 +65,17 @@ public class DashboardService {
             collectDeadline(deadlines, caseEntity, DeadlineType.NEXT_HEARING, Case::getNextHearingDate, today, horizon);
             collectDeadline(deadlines, caseEntity, DeadlineType.EXPIRY, Case::getExpiresAt, today, horizon);
         }
+        for (CaseTaskRepository.UpcomingTaskView task
+                : caseTaskRepository.findUpcomingByLawyerId(lawyerId, CLOSED_STATUSES, today, horizon)) {
+            deadlines.add(new UpcomingDeadline(
+                    task.getCaseId(),
+                    task.getCaseTitle(),
+                    DeadlineType.TASK,
+                    DeadlineType.TASK.getDisplayName(),
+                    task.getDueDate(),
+                    ChronoUnit.DAYS.between(today, task.getDueDate())
+            ));
+        }
         deadlines.sort(Comparator.comparing(UpcomingDeadline::date));
         return deadlines;
     }

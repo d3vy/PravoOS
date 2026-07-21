@@ -4,7 +4,8 @@ public enum DeadlineType {
 
     FILING_DEADLINE("Срок подачи"),
     NEXT_HEARING("Судебное заседание"),
-    EXPIRY("Истечение срока");
+    EXPIRY("Истечение срока"),
+    TASK("Задача");
 
     private final String displayName;
 
