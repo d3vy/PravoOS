@@ -94,6 +94,52 @@ services:
       retries: 5
       start_period: 300s
 
+  discovery-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: discovery-server
+    container_name: pravoos-discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms32m -Xmx150m"
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    volumes:
+      - ./logs/discovery-server:/app/logs/discovery-server
+
+  config-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: config-server
+    container_name: pravoos-config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xms32m -Xmx150m"
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8888/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    volumes:
+      - ./logs/config-server:/app/logs/config-server
+
   user-service:
     build:
       context: .
@@ -112,6 +158,10 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       SPRING_PROFILES_ACTIVE: docker
+      EUREKA_ENABLED: "true"
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      CONFIG_SERVER_ENABLED: "true"
+      CONFIG_SERVER_URL: http://config-server:8888
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx200m"
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
@@ -125,6 +175,10 @@ services:
       GRAFANA_ADMIN_PASSWORD: ""
       VAPID_PRIVATE_KEY: ""
     depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       kafka:
@@ -151,6 +205,10 @@ services:
     env_file: .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      EUREKA_ENABLED: "true"
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      CONFIG_SERVER_ENABLED: "true"
+      CONFIG_SERVER_URL: http://config-server:8888
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx200m"
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       DB_PASSWORD: ""
@@ -169,6 +227,11 @@ services:
       FILE_ENCRYPTION_KEY: ""
       GRAFANA_ADMIN_PASSWORD: ""
       VAPID_PRIVATE_KEY: ""
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8084/actuator/health/readiness || exit 1"]
       interval: 30s
@@ -198,11 +261,15 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
+      EUREKA_ENABLED: "true"
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      CONFIG_SERVER_ENABLED: "true"
+      CONFIG_SERVER_URL: http://config-server:8888
       JAVA_TOOL_OPTIONS: "-Xms64m -Xmx300m"
       CLAMAV_HOST: clamav
       CLAMAV_PORT: "3310"
-      USER_SERVICE_BASE_URL: http://user-service:8081
-      LLM_SERVICE_BASE_URL: http://llm-service:8084
+      USER_SERVICE_BASE_URL: lb://user-service
+      LLM_SERVICE_BASE_URL: lb://llm-service
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
       RESEND_API_KEY: ""
@@ -214,6 +281,10 @@ services:
       GRAFANA_ADMIN_PASSWORD: ""
       VAPID_PRIVATE_KEY: ""
     depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       mongodb:
@@ -247,12 +318,16 @@ services:
     env_file: .env
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      USER_SERVICE_BASE_URL: http://user-service:8081
+      USER_SERVICE_BASE_URL: lb://user-service
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       JWT_PRIVATE_KEY: ""
       SPRING_PROFILES_ACTIVE: docker
+      EUREKA_ENABLED: "true"
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      CONFIG_SERVER_ENABLED: "true"
+      CONFIG_SERVER_URL: http://config-server:8888
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx100m"
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
@@ -269,6 +344,10 @@ services:
       FILE_ENCRYPTION_KEY: ""
       GRAFANA_ADMIN_PASSWORD: ""
     depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       kafka:
         condition: service_healthy
       user-service:
@@ -288,8 +367,8 @@ services:
       - "8080:8080"
     env_file: .env
     environment:
-      USER_SERVICE_URL: http://user-service:8081
-      AI_SERVICE_URL: http://ai-service:8082
+      USER_SERVICE_URL: lb://user-service
+      AI_SERVICE_URL: lb://ai-service
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
@@ -298,6 +377,10 @@ services:
       SERVER_DOMAIN: ${SERVER_DOMAIN:-}
       CORS_INCLUDE_LOCALHOST: ${CORS_INCLUDE_LOCALHOST:-true}
       SPRING_PROFILES_ACTIVE: docker
+      EUREKA_ENABLED: "true"
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      CONFIG_SERVER_ENABLED: "true"
+      CONFIG_SERVER_URL: http://config-server:8888
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx150m"
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
@@ -317,6 +400,10 @@ services:
       GRAFANA_ADMIN_PASSWORD: ""
       VAPID_PRIVATE_KEY: ""
     depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
       user-service:
         condition: service_healthy
       ai-service:

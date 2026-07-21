@@ -1,0 +1,33 @@
+spring:
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      enabled: ${CONFIG_SERVER_ENABLED:false}
+      fail-fast: ${CONFIG_SERVER_FAIL_FAST:true}
+      request-connect-timeout: 5000
+      request-read-timeout: 10000
+      retry:
+        max-attempts: 8
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 10000
+    loadbalancer:
+      health-check:
+        initial-delay: 5s
+
+eureka:
+  client:
+    enabled: ${EUREKA_ENABLED:false}
+    register-with-eureka: true
+    fetch-registry: true
+    registry-fetch-interval-seconds: ${EUREKA_FETCH_INTERVAL:10}
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${EUREKA_INSTANCE_SUFFIX:${server.port}}
+    lease-renewal-interval-in-seconds: ${EUREKA_LEASE_RENEWAL:10}
+    lease-expiration-duration-in-seconds: ${EUREKA_LEASE_EXPIRATION:30}
+    metadata-map:
+      management.port: ${management.server.port:${server.port}}

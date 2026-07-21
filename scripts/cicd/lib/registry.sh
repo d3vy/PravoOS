@@ -11,6 +11,8 @@ set -euo pipefail
 
 # shellcheck disable=SC2034  # consumed by sourcing scripts
 readonly PRAVOOS_APP_SERVICES=(
+  discovery-server
+  config-server
   user-service
   llm-service
   ai-service
@@ -22,6 +24,8 @@ readonly PRAVOOS_APP_SERVICES=(
 # Services with a Docker healthcheck we gate the smoke test on.
 # shellcheck disable=SC2034  # consumed by sourcing scripts
 readonly PRAVOOS_HEALTHCHECKED_SERVICES=(
+  discovery-server
+  config-server
   user-service
   llm-service
   ai-service

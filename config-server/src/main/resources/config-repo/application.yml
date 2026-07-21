@@ -1,0 +1,23 @@
+# Общая конфигурация всех сервисов PravoOS (Config Server, native backend).
+#
+# ВАЖНО:
+#  1. Секретов здесь быть не должно — они приходят из env конкретного контейнера.
+#  2. Плейсхолдеры ${...} резолвятся на стороне Config Server, где env сервисов нет,
+#     поэтому здесь только литеральные значения.
+#  3. Переменные окружения контейнера имеют приоритет над этими значениями.
+logging:
+  level:
+    root: INFO
+    com.pravoos: INFO
+    com.netflix.discovery: WARN
+    com.netflix.eureka: WARN
+    org.springframework.cloud.config.client: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never

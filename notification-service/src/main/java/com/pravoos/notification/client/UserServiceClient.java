@@ -1,8 +1,10 @@
 package com.pravoos.notification.client;
 
+import com.pravoos.cloud.DiscoveryAwareRestClients;
 import com.pravoos.notification.config.UserServiceProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -26,11 +28,12 @@ public class UserServiceClient {
     private final RestClient restClient;
     private final String internalSecret;
 
-    public UserServiceClient(UserServiceProperties properties) {
+    public UserServiceClient(UserServiceProperties properties,
+                            @LoadBalanced RestClient.Builder loadBalancedRestClientBuilder) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
         requestFactory.setReadTimeout(READ_TIMEOUT);
-        this.restClient = RestClient.builder()
+        this.restClient = DiscoveryAwareRestClients.builderFor(properties.baseUrl(), loadBalancedRestClientBuilder)
                 .baseUrl(properties.baseUrl())
                 .requestFactory(requestFactory)
                 .build();

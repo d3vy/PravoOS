@@ -19,6 +19,18 @@ services:
     healthcheck:
       start_period: 120s
 
+  discovery-server:
+    restart: unless-stopped
+    ports: !reset []
+    healthcheck:
+      start_period: 90s
+
+  config-server:
+    restart: unless-stopped
+    ports: !reset []
+    healthcheck:
+      start_period: 90s
+
   user-service:
     restart: unless-stopped
     ports: !reset []

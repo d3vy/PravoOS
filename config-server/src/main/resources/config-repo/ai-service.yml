@@ -1,0 +1,4 @@
+# Централизованные настройки ai-service. Секреты — только через env контейнера.
+logging:
+  level:
+    com.pravoos.ai: INFO

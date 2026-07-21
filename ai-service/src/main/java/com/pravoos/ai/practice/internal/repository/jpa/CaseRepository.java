@@ -123,10 +123,10 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
             SELECT c FROM Case c
             WHERE c.lawyerId = :lawyerId
               AND (:status IS NULL OR c.status = :status)
-              AND (LOWER(c.title) LIKE :pattern ESCAPE '\\'
-                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+              AND (LOWER(c.title) LIKE :pattern ESCAPE '!'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '!'
                    OR EXISTS (SELECT 1 FROM Client cl
-                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '!'))
             ORDER BY c.createdAt DESC
             """)
     List<Case> search(@Param("lawyerId") UUID lawyerId,
@@ -137,20 +137,20 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
             SELECT c FROM Case c
             WHERE c.lawyerId = :lawyerId
               AND (:status IS NULL OR c.status = :status)
-              AND (LOWER(c.title) LIKE :pattern ESCAPE '\\'
-                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+              AND (LOWER(c.title) LIKE :pattern ESCAPE '!'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '!'
                    OR EXISTS (SELECT 1 FROM Client cl
-                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '!'))
             ORDER BY c.createdAt DESC
             """,
             countQuery = """
             SELECT COUNT(c) FROM Case c
             WHERE c.lawyerId = :lawyerId
               AND (:status IS NULL OR c.status = :status)
-              AND (LOWER(c.title) LIKE :pattern ESCAPE '\\'
-                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+              AND (LOWER(c.title) LIKE :pattern ESCAPE '!'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '!'
                    OR EXISTS (SELECT 1 FROM Client cl
-                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '!'))
             """)
     Page<Case> search(@Param("lawyerId") UUID lawyerId,
                       @Param("status") CaseStatus status,
@@ -163,10 +163,10 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
               AND (:status IS NULL OR c.status = :status)
               AND (:orgFilter IS NULL OR c.orgId = :orgFilter)
               AND (:pattern IS NULL
-                   OR LOWER(c.title) LIKE :pattern ESCAPE '\\'
-                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(c.title) LIKE :pattern ESCAPE '!'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '!'
                    OR EXISTS (SELECT 1 FROM Client cl
-                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '!'))
             ORDER BY c.createdAt DESC
             """,
             countQuery = """
@@ -175,10 +175,10 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
               AND (:status IS NULL OR c.status = :status)
               AND (:orgFilter IS NULL OR c.orgId = :orgFilter)
               AND (:pattern IS NULL
-                   OR LOWER(c.title) LIKE :pattern ESCAPE '\\'
-                   OR LOWER(c.description) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(c.title) LIKE :pattern ESCAPE '!'
+                   OR LOWER(c.description) LIKE :pattern ESCAPE '!'
                    OR EXISTS (SELECT 1 FROM Client cl
-                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '\\'))
+                              WHERE cl.id = c.clientId AND LOWER(cl.name) LIKE :pattern ESCAPE '!'))
             """)
     Page<Case> findVisible(@Param("lawyerId") UUID lawyerId,
                            @Param("orgIds") Collection<UUID> orgIds,

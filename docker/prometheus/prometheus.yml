@@ -40,3 +40,17 @@ scrape_configs:
       - targets: ["api-gateway:8090"]
         labels:
           service: api-gateway
+
+  - job_name: discovery-server
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["discovery-server:8761"]
+        labels:
+          service: discovery-server
+
+  - job_name: config-server
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["config-server:8888"]
+        labels:
+          service: config-server

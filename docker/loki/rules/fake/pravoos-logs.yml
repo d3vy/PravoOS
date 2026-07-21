@@ -23,7 +23,7 @@ groups:
           description: "Более 30 ERROR-записей за минуту — вероятен отказ зависимости или крэш-луп."
 
       - alert: ServiceLogsSilent
-        expr: sum by (app) (count_over_time({app=~"api-gateway|user-service|ai-service|llm-service|notification-service"}[10m])) == 0
+        expr: sum by (app) (count_over_time({app=~"api-gateway|user-service|ai-service|llm-service|notification-service|discovery-server|config-server"}[10m])) == 0
         for: 10m
         labels:
           severity: warning

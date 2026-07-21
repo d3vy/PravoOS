@@ -82,6 +82,7 @@ public class DeadlineReminderService {
             case FILING_DEADLINE -> caseRepository.findByFilingDeadline(target);
             case NEXT_HEARING -> caseRepository.findByNextHearingDate(target);
             case EXPIRY -> caseRepository.findByExpiresAt(target);
+            case TASK -> List.of();
         };
     }
 

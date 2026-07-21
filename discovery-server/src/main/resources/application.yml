@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: discovery-server
+  config:
+    import: "classpath:config/pravoos-observability.yml"
+
+server:
+  port: ${DISCOVERY_SERVER_PORT:8761}
+
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME:localhost}
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:false}
+    eviction-interval-timer-in-ms: ${EUREKA_EVICTION_INTERVAL_MS:15000}
+    response-cache-update-interval-ms: ${EUREKA_RESPONSE_CACHE_UPDATE_MS:5000}
+    wait-time-in-ms-when-sync-empty: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+logging:
+  config: classpath:logback-spring.xml

@@ -4,8 +4,10 @@ import com.pravoos.ai.shared.config.UserServiceProperties;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.exception.OrgMembershipCheckException;
 import com.pravoos.ai.shared.exception.PortalInviteException;
+import com.pravoos.cloud.DiscoveryAwareRestClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -25,11 +27,12 @@ public class UserServiceClient {
     private final RestClient restClient;
     private final String internalSecret;
 
-    public UserServiceClient(UserServiceProperties properties) {
+    public UserServiceClient(UserServiceProperties properties,
+                            @LoadBalanced RestClient.Builder loadBalancedRestClientBuilder) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
         requestFactory.setReadTimeout(READ_TIMEOUT);
-        this.restClient = RestClient.builder()
+        this.restClient = DiscoveryAwareRestClients.builderFor(properties.baseUrl(), loadBalancedRestClientBuilder)
                 .baseUrl(properties.baseUrl())
                 .requestFactory(requestFactory)
                 .build();

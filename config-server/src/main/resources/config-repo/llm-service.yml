@@ -1,0 +1,4 @@
+# Централизованные настройки llm-service. Секреты — только через env контейнера.
+logging:
+  level:
+    com.pravoos.llm: INFO
