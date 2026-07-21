@@ -152,7 +152,9 @@ B2B-платформа для юристов и юрфирм. Вход — за�
 - **2FA (TOTP)** — RFC 6238 без внешних либ, обязателен для админов.
 - **Парольная политика** — чёрный список + HIBP k-anonymity.
 - **Brute-force / rate-limit** — Redis: per-email lockout, per-IP лимиты, denylist токенов на revoke.
-- **Документы** — антивирус ClamAV, шифрование at-rest AES-256-GCM, audit trail доступа, secure-заголовки.
+- **Документы** — антивирус ClamAV (fail-closed, freshclam + контроль свежести баз), upload-guard
+  (лимит размера, активное содержимое в PDF, VBA-макросы и zip-бомбы в DOCX), шифрование at-rest
+  AES-256-GCM, audit trail доступа, secure-заголовки.
 - **Transactional Outbox** — атомарность БД ↔ Kafka, идемпотентность, DLT на ошибках.
 - **Origin lockdown** — ufw только с диапазонов Cloudflare, опциональный mTLS (Authenticated Origin Pull).
 

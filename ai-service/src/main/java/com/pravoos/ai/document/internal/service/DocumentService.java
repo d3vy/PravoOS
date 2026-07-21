@@ -49,6 +49,7 @@ public class DocumentService {
     private final DocumentProperties documentProperties;
     private final FileCryptoService fileCryptoService;
     private final MalwareScanClient malwareScanClient;
+    private final UploadContentInspector uploadContentInspector;
     private final UploadRateLimiter uploadRateLimiter;
     private final Counter processingFailedCounter;
 
@@ -58,6 +59,7 @@ public class DocumentService {
                            DocumentProperties documentProperties,
                            FileCryptoService fileCryptoService,
                            MalwareScanClient malwareScanClient,
+                           UploadContentInspector uploadContentInspector,
                            UploadRateLimiter uploadRateLimiter,
                            MeterRegistry meterRegistry) {
         this.documentRepository = documentRepository;
@@ -66,6 +68,7 @@ public class DocumentService {
         this.documentProperties = documentProperties;
         this.fileCryptoService = fileCryptoService;
         this.malwareScanClient = malwareScanClient;
+        this.uploadContentInspector = uploadContentInspector;
         this.uploadRateLimiter = uploadRateLimiter;
         this.processingFailedCounter = Counter.builder("pravoos.document.processing")
                 .description("Document embedding-pipeline outcomes")
@@ -177,9 +180,11 @@ public class DocumentService {
     }
 
     private byte[] validateAndScan(MultipartFile file, UUID uploadedBy, String originalName, String fileType) {
+        uploadContentInspector.assertWithinSizeLimit(file.getSize(), originalName);
         byte[] content = readBytes(file);
         enforceStorageQuota(uploadedBy, content.length);
         validateContentMatchesType(content, fileType);
+        uploadContentInspector.inspect(content, fileType, originalName);
         malwareScanClient.scan(content, originalName);
         return content;
     }

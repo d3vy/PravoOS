@@ -132,6 +132,15 @@ document:
     port: ${CLAMAV_PORT:3310}
     timeout-ms: ${CLAMAV_TIMEOUT_MS:15000}
     fail-open: ${CLAMAV_FAIL_OPEN:false}
+    max-signature-age-days: ${CLAMAV_MAX_SIGNATURE_AGE_DAYS:7}
+    signature-check-initial-delay: ${CLAMAV_SIGNATURE_CHECK_INITIAL_DELAY:PT2M}
+    signature-check-interval: ${CLAMAV_SIGNATURE_CHECK_INTERVAL:PT1H}
+  upload-guard:
+    max-file-bytes: ${DOCUMENT_MAX_FILE_BYTES:52428800}
+    max-uncompressed-bytes: ${DOCUMENT_MAX_UNCOMPRESSED_BYTES:536870912}
+    max-compression-ratio: ${DOCUMENT_MAX_COMPRESSION_RATIO:200}
+    max-archive-entries: ${DOCUMENT_MAX_ARCHIVE_ENTRIES:2000}
+    block-active-content: ${DOCUMENT_BLOCK_ACTIVE_CONTENT:true}
 
 arbitr:
   api:

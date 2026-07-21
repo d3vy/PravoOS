@@ -7,6 +7,7 @@ import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
 import com.pravoos.ai.document.internal.service.DocumentService;
 import com.pravoos.ai.document.internal.service.FileCryptoService;
 import com.pravoos.ai.document.internal.service.MalwareScanClient;
+import com.pravoos.ai.document.internal.service.UploadContentInspector;
 import com.pravoos.ai.document.internal.service.UploadRateLimiter;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
@@ -34,6 +35,7 @@ class DocumentClientVisibilityTest {
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private FileCryptoService fileCryptoService;
     @Mock private MalwareScanClient malwareScanClient;
+    @Mock private UploadContentInspector uploadContentInspector;
     @Mock private UploadRateLimiter uploadRateLimiter;
 
     private DocumentService service;
@@ -43,7 +45,8 @@ class DocumentClientVisibilityTest {
         DocumentProperties properties = new DocumentProperties(
                 "/tmp/pravoos-test", 1000, 100, 5, 5000, 50, 0, 0, 60);
         service = new DocumentService(documentRepository, documentChunkRepository, eventPublisher,
-                properties, fileCryptoService, malwareScanClient, uploadRateLimiter, new SimpleMeterRegistry());
+                properties, fileCryptoService, malwareScanClient, uploadContentInspector, uploadRateLimiter,
+                new SimpleMeterRegistry());
     }
 
     private Document caseDocument(UUID caseId, boolean visibleToClient) {

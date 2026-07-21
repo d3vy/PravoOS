@@ -85,8 +85,13 @@ services:
     container_name: pravoos-clamav
     environment:
       CLAMAV_NO_MILTERD: "true"
+      # freshclamd крутится рядом с clamd и обновляет базы 24 раза в сутки.
+      CLAMAV_NO_FRESHCLAMD: "false"
+      FRESHCLAM_CHECKS: "24"
     volumes:
       - clamav_data:/var/lib/clamav
+      - ./docker/clamav/clamd.conf:/etc/clamav/clamd.conf:ro
+      - ./docker/clamav/freshclam.conf:/etc/clamav/freshclam.conf:ro
     healthcheck:
       test: ["CMD", "clamdcheck.sh"]
       interval: 60s
