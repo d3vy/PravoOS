@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Trans, useTranslation } from 'react-i18next'
 import { dashboardApi } from '../../api/dashboard'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { Badge, CaseStatusBadge, caseStatusLabel, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import type { CaseStatus, DashboardDeadline, DashboardResponse } from '../../types'
 import type { TFunction } from 'i18next'
@@ -50,11 +50,7 @@ export default function DashboardPage(): JSX.Element {
           <h1 className="text-3xl font-semibold text-fg">{t('dashboard.title')}</h1>
         </div>
 
-        {isLoading && (
-          <div className="flex justify-center py-20">
-            <Spinner />
-          </div>
-        )}
+        {isLoading && <DashboardSkeleton />}
 
         {isError && (
           <div className="card-elevated p-6 text-fg-muted">
@@ -63,6 +59,66 @@ export default function DashboardPage(): JSX.Element {
         )}
 
         {data && <DashboardContent data={data} />}
+      </div>
+    </div>
+  )
+}
+
+function DashboardSkeleton(): JSX.Element {
+  return (
+    <div className="space-y-6" aria-hidden="true">
+      <div className="card-elevated p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <Skeleton className="h-7 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-14 w-[72px] rounded-lg" />
+          ))}
+        </div>
+      </div>
+
+      <div className="card-elevated p-5">
+        <Skeleton className="h-5 w-40 mb-3" />
+        <Skeleton className="h-11 w-full rounded-lg" />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="card-elevated p-5">
+            <Skeleton className="h-4 w-24 mb-2" />
+            <Skeleton className="h-8 w-12" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card-elevated p-5">
+          <Skeleton className="h-5 w-32 mb-4" />
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-6 w-full" />
+            ))}
+          </div>
+        </div>
+        <div className="card-elevated p-5">
+          <Skeleton className="h-5 w-32 mb-4" />
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="card-elevated p-5">
+        <Skeleton className="h-5 w-32 mb-4" />
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </div>
       </div>
     </div>
   )

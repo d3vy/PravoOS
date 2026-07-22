@@ -10,6 +10,7 @@ import { LAWYER_NAV_INDICATOR_ID, useLawyerNavSections } from './lawyerNav'
 import { CollapseIcon } from './navIcons'
 import { Navbar } from './Navbar'
 import { CommandPalette } from '../command/CommandPalette'
+import { GlobalProgressBar } from '../ui/GlobalProgressBar'
 
 const SIDEBAR_COLLAPSED_KEY = 'pravoos.sidebar.collapsed'
 const WIDE_SCREEN_QUERY = '(min-width: 1024px)'
@@ -46,6 +47,7 @@ export function LawyerLayout(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-bg">
+      <GlobalProgressBar />
       <CommandPalette />
       <Navbar />
 

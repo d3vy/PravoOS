@@ -12,7 +12,7 @@ import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type Page } from '../../api/paginatio
 import type { CaseResponse, CaseStatus, ClientResponse, Organization } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
-import { Spinner } from '../../components/ui/Spinner'
+import { SkeletonCardGrid } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Modal } from '../../components/ui/Modal'
@@ -146,7 +146,20 @@ export default function CasesPage(): JSX.Element {
   const statusMutation = useMutation({
     mutationFn: ({ caseId, status }: { caseId: string; status: CaseStatus }) =>
       casesApi.updateStatus(caseId, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cases'] }),
+    onMutate: async ({ caseId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['cases'] })
+      const previous = queryClient.getQueriesData<Page<CaseResponse>>({ queryKey: ['cases'] })
+      queryClient.setQueriesData<Page<CaseResponse>>({ queryKey: ['cases'] }, (old) =>
+        old
+          ? { ...old, items: old.items.map((c) => (c.id === caseId ? { ...c, status } : c)) }
+          : old
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data))
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['cases'] }),
   })
 
   const bulkStatusMutation = useMutation({
@@ -459,9 +472,7 @@ export default function CasesPage(): JSX.Element {
         )}
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner size="lg" />
-          </div>
+          <SkeletonCardGrid count={isBoard ? 5 : 6} />
         ) : view === 'board' ? (
           <BoardView
             cases={cases}

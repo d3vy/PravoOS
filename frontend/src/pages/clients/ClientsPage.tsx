@@ -7,7 +7,7 @@ import { clientsApi } from '../../api/clients'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { ClientResponse } from '../../types'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { SkeletonCardGrid } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Modal } from '../../components/ui/Modal'
@@ -76,9 +76,7 @@ export default function ClientsPage(): JSX.Element {
         </Modal>
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner size="lg" />
-          </div>
+          <SkeletonCardGrid />
         ) : clients.length === 0 ? (
           <EmptyState
             title={t('clients.emptyTitle')}

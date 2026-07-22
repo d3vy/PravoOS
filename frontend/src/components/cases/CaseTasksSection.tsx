@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import type { CaseTaskResponse } from '../../types'
 import { Button } from '../ui/Button'
+import { SkeletonList } from '../ui/Skeleton'
 
 export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
   const { t } = useTranslation()
@@ -13,7 +14,7 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
   const [dueDate, setDueDate] = useState('')
   const [generateError, setGenerateError] = useState<string | null>(null)
 
-  const { data: tasks = [] } = useQuery<CaseTaskResponse[]>({
+  const { data: tasks = [], isLoading } = useQuery<CaseTaskResponse[]>({
     queryKey: ['case-tasks', caseId],
     queryFn: () => casesApi.getTasks(caseId),
     enabled: caseId !== '',
@@ -40,7 +41,18 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
         dueDate: task.dueDate,
         done: !task.done,
       }),
-    onSuccess: invalidate,
+    onMutate: async (task) => {
+      await queryClient.cancelQueries({ queryKey: ['case-tasks', caseId] })
+      const previous = queryClient.getQueryData<CaseTaskResponse[]>(['case-tasks', caseId])
+      queryClient.setQueryData<CaseTaskResponse[]>(['case-tasks', caseId], (old) =>
+        old?.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t))
+      )
+      return { previous }
+    },
+    onError: (_err, _task, context) => {
+      if (context?.previous) queryClient.setQueryData(['case-tasks', caseId], context.previous)
+    },
+    onSettled: invalidate,
   })
 
   const deleteMutation = useMutation({
@@ -110,7 +122,9 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
 
       {generateError && <p className="text-sm text-danger mb-3">{generateError}</p>}
 
-      {tasks.length === 0 ? (
+      {isLoading ? (
+        <SkeletonList count={3} />
+      ) : tasks.length === 0 ? (
         <p className="text-sm text-fg-muted">
           {t('tasks.emptyTasks')}
         </p>

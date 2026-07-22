@@ -39,7 +39,18 @@ export default function InvoiceDetailPage(): JSX.Element {
 
   const statusMutation = useMutation({
     mutationFn: (status: InvoiceStatus) => invoicesApi.updateStatus(invoiceId, status),
-    onSuccess: invalidate,
+    onMutate: async (status) => {
+      await queryClient.cancelQueries({ queryKey: ['invoice', invoiceId] })
+      const previous = queryClient.getQueryData<InvoiceResponse>(['invoice', invoiceId])
+      queryClient.setQueryData<InvoiceResponse>(['invoice', invoiceId], (old) =>
+        old ? { ...old, status } : old
+      )
+      return { previous }
+    },
+    onError: (_err, _status, context) => {
+      if (context?.previous) queryClient.setQueryData(['invoice', invoiceId], context.previous)
+    },
+    onSettled: invalidate,
   })
 
   const deleteMutation = useMutation({

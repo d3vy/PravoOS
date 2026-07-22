@@ -7,6 +7,7 @@ import { timeApi } from '../../api/time'
 import { invoicesApi } from '../../api/invoices'
 import type { CaseTimeSummary, TimeEntryResponse } from '../../types'
 import { Button } from '../ui/Button'
+import { SkeletonList } from '../ui/Skeleton'
 import { formatDuration, formatMoney, parseHoursToMinutes } from '../../utils/billing'
 
 interface Props {
@@ -28,7 +29,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
   const [billable, setBillable] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: summary } = useQuery<CaseTimeSummary>({
+  const { data: summary, isLoading: summaryLoading } = useQuery<CaseTimeSummary>({
     queryKey: ['case-time', caseId],
     queryFn: () => timeApi.summary(caseId),
     enabled: caseId !== '',
@@ -55,19 +56,47 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
         hourlyRate: Number(rate.replace(',', '.')) || 0,
         billable,
       }),
-    onSuccess: () => {
-      invalidate()
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['active-timer'] })
+      const previous = queryClient.getQueryData<TimeEntryResponse | null>(['active-timer'])
+      const optimisticEntry: TimeEntryResponse = {
+        id: 'optimistic-timer',
+        caseId,
+        description: description.trim() || t('timeTracking.defaultDescription'),
+        activityDate: todayIso(),
+        minutes: 0,
+        hourlyRate: Number(rate.replace(',', '.')) || 0,
+        amount: 0,
+        billable,
+        running: true,
+        startedAt: new Date().toISOString(),
+        invoiced: false,
+        createdAt: new Date().toISOString(),
+      }
+      queryClient.setQueryData<TimeEntryResponse | null>(['active-timer'], optimisticEntry)
       setError(null)
+      return { previous }
     },
-    onError: () => setError(t('timeTracking.startError')),
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(['active-timer'], context?.previous ?? null)
+      setError(t('timeTracking.startError'))
+    },
+    onSettled: invalidate,
   })
 
   const stopTimer = useMutation({
     mutationFn: () => timeApi.stopTimer(caseId),
-    onSuccess: () => {
-      invalidate()
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['active-timer'] })
+      const previous = queryClient.getQueryData<TimeEntryResponse | null>(['active-timer'])
+      queryClient.setQueryData<TimeEntryResponse | null>(['active-timer'], null)
       setDescription('')
+      return { previous }
     },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(['active-timer'], context?.previous ?? null)
+    },
+    onSettled: invalidate,
   })
 
   const createEntry = useMutation({
@@ -201,7 +230,9 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
 
       {error && <p className="text-sm text-danger mb-3">{error}</p>}
 
-      {entries.length === 0 ? (
+      {summaryLoading ? (
+        <SkeletonList count={3} />
+      ) : entries.length === 0 ? (
         <p className="text-sm text-fg-muted">
           {t('timeTracking.emptyEntries')}
         </p>

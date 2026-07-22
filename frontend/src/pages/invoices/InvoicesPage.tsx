@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { invoicesApi } from '../../api/invoices'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { InvoiceStatus, InvoiceSummary } from '../../types'
-import { Spinner } from '../../components/ui/Spinner'
+import { SkeletonList } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
 import { formatMoney } from '../../utils/billing'
@@ -35,9 +35,7 @@ export default function InvoicesPage(): JSX.Element {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner />
-          </div>
+          <SkeletonList count={6} />
         ) : invoices.length === 0 ? (
           <p className="text-sm text-fg-muted">
             {t('invoices.emptyHint')}
