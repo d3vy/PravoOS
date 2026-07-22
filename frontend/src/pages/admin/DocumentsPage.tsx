@@ -117,8 +117,8 @@ export default function DocumentsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('documents.title')}</h1>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <h1 className="text-3xl font-semibold text-fg mb-1">{t('documents.title')}</h1>
+        <p className="text-sm text-fg-muted">
           {t('documents.subtitle')}
         </p>
       </div>
@@ -134,8 +134,8 @@ export default function DocumentsPage(): JSX.Element {
           relative mb-8 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-150
           flex flex-col items-center justify-center gap-3 py-12 px-6 text-center
           ${isDragging
-            ? 'border-light-accent dark:border-dark-accent bg-light-accent/5 dark:bg-dark-accent/10'
-            : 'border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 hover:bg-light-surface dark:hover:bg-dark-surface'
+            ? 'border-accent bg-accent/5'
+            : 'border-line hover:border-accent/50 hover:bg-surface'
           }
         `}
         role="button"
@@ -155,13 +155,13 @@ export default function DocumentsPage(): JSX.Element {
         {isUploading ? (
           <>
             <Spinner size="md" />
-            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            <p className="text-sm text-fg-muted">
               {t('documents.uploading')}
             </p>
           </>
         ) : (
           <>
-            <div className="w-12 h-12 rounded-full bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border flex items-center justify-center text-light-secondary dark:text-dark-secondary">
+            <div className="w-12 h-12 rounded-full bg-bg border border-line flex items-center justify-center text-fg-muted">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="17 8 12 3 7 8" />
@@ -169,10 +169,10 @@ export default function DocumentsPage(): JSX.Element {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-light-text dark:text-dark-text mb-1">
+              <p className="text-sm font-medium text-fg mb-1">
                 {t('documents.dropHint')}
               </p>
-              <p className="text-xs text-light-secondary dark:text-dark-secondary">
+              <p className="text-xs text-fg-muted">
                 {t('documents.allowedTypesHint')}
               </p>
             </div>
@@ -184,25 +184,25 @@ export default function DocumentsPage(): JSX.Element {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+          className="mb-6 p-3 rounded-lg bg-danger-soft border border-danger/30"
         >
-          <p className="text-sm text-red-700 dark:text-red-400">{uploadError}</p>
+          <p className="text-sm text-danger">{uploadError}</p>
         </motion.div>
       )}
 
       {/* Documents list */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
+          <h2 className="text-sm font-semibold text-fg">
             {t('documents.uploaded')}
             {total > 0 && (
-              <span className="ml-2 text-light-secondary dark:text-dark-secondary font-normal">
+              <span className="ml-2 text-fg-muted font-normal">
                 ({total})
               </span>
             )}
           </h2>
           {documents.some((d) => d.status === 'PROCESSING') && (
-            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+            <div className="flex items-center gap-1.5 text-xs text-warning">
               <Spinner size="sm" className="border-amber-200 border-t-amber-500 dark:border-amber-800 dark:border-t-amber-400" />
               {t('documents.processing')}
             </div>
@@ -214,8 +214,8 @@ export default function DocumentsPage(): JSX.Element {
             <Spinner size="lg" />
           </div>
         ) : documents.length === 0 ? (
-          <div className="text-center py-16 rounded-xl border border-dashed border-light-border dark:border-dark-border">
-            <p className="text-light-secondary dark:text-dark-secondary text-sm">
+          <div className="text-center py-16 rounded-xl border border-dashed border-line">
+            <p className="text-fg-muted text-sm">
               {t('documents.empty')}
             </p>
           </div>
@@ -289,45 +289,45 @@ function LegislationSection(): JSX.Element {
   return (
     <div className="mt-12">
       <div className="mb-4">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('documents.legislationTitle')}</h2>
-        <p className="text-xs text-light-secondary dark:text-dark-secondary mt-0.5">
+        <h2 className="text-sm font-semibold text-fg">{t('documents.legislationTitle')}</h2>
+        <p className="text-xs text-fg-muted mt-0.5">
           {t('documents.legislationSubtitle')}
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="mb-6 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        className="mb-6 p-4 rounded-xl bg-surface border border-line grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
       >
         <input
           type="text"
           value={actCanonical}
           onChange={(e) => setActCanonical(e.target.value)}
           placeholder={t('documents.actPlaceholder')}
-          className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
+          className="px-3 py-2 rounded-lg bg-bg border border-line text-sm text-fg"
         />
         <input
           type="text"
           value={articleNumber}
           onChange={(e) => setArticleNumber(e.target.value)}
           placeholder={t('documents.articlePlaceholder')}
-          className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
+          className="px-3 py-2 rounded-lg bg-bg border border-line text-sm text-fg"
         />
         <input
           type="date"
           value={editionDate}
           onChange={(e) => setEditionDate(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text"
+          className="px-3 py-2 rounded-lg bg-bg border border-line text-sm text-fg"
         />
         <input
           ref={legislationFileRef}
           type="file"
           accept=".pdf,.docx,.txt"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="text-xs text-light-secondary dark:text-dark-secondary file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-light-border dark:file:border-dark-border file:bg-light-bg dark:file:bg-dark-bg file:text-light-text dark:file:text-dark-text"
+          className="text-xs text-fg-muted file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-line file:bg-bg file:text-fg"
         />
         <div className="sm:col-span-2 lg:col-span-4 flex items-center justify-between gap-3">
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <Button type="submit" size="sm" disabled={!canSubmit} loading={uploadMutation.isPending} className="ml-auto">
             {t('documents.uploadLegislation')}
           </Button>
@@ -339,8 +339,8 @@ function LegislationSection(): JSX.Element {
           <Spinner size="md" />
         </div>
       ) : legislation.length === 0 ? (
-        <div className="text-center py-10 rounded-xl border border-dashed border-light-border dark:border-dark-border">
-          <p className="text-light-secondary dark:text-dark-secondary text-sm">
+        <div className="text-center py-10 rounded-xl border border-dashed border-line">
+          <p className="text-fg-muted text-sm">
             {t('documents.noLegislation')}
           </p>
         </div>
@@ -349,13 +349,13 @@ function LegislationSection(): JSX.Element {
           {legislation.map((norm) => (
             <div
               key={norm.id}
-              className="flex items-center gap-4 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+              className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-line"
             >
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-light-text dark:text-dark-text text-sm truncate">
+                <p className="font-medium text-fg text-sm truncate">
                   {t('documents.article')} {norm.articleNumber} {norm.actCanonical}
                 </p>
-                <p className="text-xs text-light-secondary dark:text-dark-secondary truncate mt-0.5">
+                <p className="text-xs text-fg-muted truncate mt-0.5">
                   {t('documents.editionFrom')} {new Date(norm.editionDate).toLocaleDateString(dateLocale)}
                 </p>
               </div>
@@ -415,17 +415,17 @@ function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JS
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.2, delay: index * 0.03 }}
-      className="flex items-center gap-4 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+      className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-line"
     >
-      <div className="w-9 h-9 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border flex items-center justify-center text-light-secondary dark:text-dark-secondary shrink-0">
+      <div className="w-9 h-9 rounded-lg bg-bg border border-line flex items-center justify-center text-fg-muted shrink-0">
         <FileIcon fileName={doc.fileName} />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-light-text dark:text-dark-text text-sm truncate">
+        <p className="font-medium text-fg text-sm truncate">
           {doc.title}
         </p>
-        <p className="text-xs text-light-secondary dark:text-dark-secondary truncate mt-0.5">
+        <p className="text-xs text-fg-muted truncate mt-0.5">
           {doc.fileName} · {new Date(doc.uploadedAt).toLocaleDateString(dateLocale)}
         </p>
       </div>

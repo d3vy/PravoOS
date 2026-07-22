@@ -60,6 +60,33 @@ public class SignatureRequest {
     @Column(length = 1000)
     private String consentText;
 
+    @Column(columnDefinition = "text")
+    private String signatureData;
+
+    @Column(length = 300)
+    private String signatureFileName;
+
+    @Column(length = 120)
+    private String signatureAlgorithm;
+
+    @Column(length = 1000)
+    private String certificateSubject;
+
+    @Column(length = 1000)
+    private String certificateIssuer;
+
+    @Column(length = 100)
+    private String certificateSerial;
+
+    @Column
+    private LocalDateTime certificateValidFrom;
+
+    @Column
+    private LocalDateTime certificateValidTo;
+
+    @Column
+    private LocalDateTime declaredSigningTime;
+
     @Column
     private LocalDateTime signedAt;
 
@@ -135,6 +162,39 @@ public class SignatureRequest {
 
     public String getConsentText() { return consentText; }
     public void setConsentText(String consentText) { this.consentText = consentText; }
+
+    public String getSignatureData() { return signatureData; }
+    public void setSignatureData(String signatureData) { this.signatureData = signatureData; }
+
+    public String getSignatureFileName() { return signatureFileName; }
+    public void setSignatureFileName(String signatureFileName) { this.signatureFileName = signatureFileName; }
+
+    public String getSignatureAlgorithm() { return signatureAlgorithm; }
+    public void setSignatureAlgorithm(String signatureAlgorithm) { this.signatureAlgorithm = signatureAlgorithm; }
+
+    public String getCertificateSubject() { return certificateSubject; }
+    public void setCertificateSubject(String certificateSubject) { this.certificateSubject = certificateSubject; }
+
+    public String getCertificateIssuer() { return certificateIssuer; }
+    public void setCertificateIssuer(String certificateIssuer) { this.certificateIssuer = certificateIssuer; }
+
+    public String getCertificateSerial() { return certificateSerial; }
+    public void setCertificateSerial(String certificateSerial) { this.certificateSerial = certificateSerial; }
+
+    public LocalDateTime getCertificateValidFrom() { return certificateValidFrom; }
+    public void setCertificateValidFrom(LocalDateTime certificateValidFrom) {
+        this.certificateValidFrom = certificateValidFrom;
+    }
+
+    public LocalDateTime getCertificateValidTo() { return certificateValidTo; }
+    public void setCertificateValidTo(LocalDateTime certificateValidTo) {
+        this.certificateValidTo = certificateValidTo;
+    }
+
+    public LocalDateTime getDeclaredSigningTime() { return declaredSigningTime; }
+    public void setDeclaredSigningTime(LocalDateTime declaredSigningTime) {
+        this.declaredSigningTime = declaredSigningTime;
+    }
 
     public LocalDateTime getSignedAt() { return signedAt; }
     public void setSignedAt(LocalDateTime signedAt) { this.signedAt = signedAt; }

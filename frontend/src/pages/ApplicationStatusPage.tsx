@@ -15,17 +15,17 @@ const STATUS_META: Record<ApplicationStatus, { labelKey: string; descriptionKey:
   PENDING: {
     labelKey: 'applicationStatus.statusPendingLabel',
     descriptionKey: 'applicationStatus.statusPendingDesc',
-    className: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
+    className: 'bg-warning-soft text-warning',
   },
   APPROVED: {
     labelKey: 'applicationStatus.statusApprovedLabel',
     descriptionKey: 'applicationStatus.statusApprovedDesc',
-    className: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400',
+    className: 'bg-success-soft text-success',
   },
   REJECTED: {
     labelKey: 'applicationStatus.statusRejectedLabel',
     descriptionKey: 'applicationStatus.statusRejectedDesc',
-    className: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+    className: 'bg-danger-soft text-danger',
   },
 }
 
@@ -44,12 +44,12 @@ function formatDateTime(value: string | null): string {
 function StatusField({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }): JSX.Element {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-light-secondary dark:text-dark-secondary shrink-0">{label}</dt>
+      <dt className="text-fg-muted shrink-0">{label}</dt>
       <dd
         className={`text-right break-all ${
           highlight
-            ? 'font-semibold text-light-accent dark:text-dark-accent'
-            : 'text-light-text dark:text-dark-text'
+            ? 'font-semibold text-accent'
+            : 'text-fg'
         }`}
       >
         {value}
@@ -89,8 +89,8 @@ export default function ApplicationStatusPage(): JSX.Element {
     if (state === 'loading') {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
-          <div className="w-10 h-10 mx-auto mb-6 border-2 border-light-border dark:border-dark-border border-t-light-text dark:border-t-dark-text rounded-full animate-spin" />
-          <p className="text-light-secondary dark:text-dark-secondary">{t('applicationStatus.loading')}</p>
+          <div className="w-10 h-10 mx-auto mb-6 border-2 border-line border-t-fg rounded-full animate-spin" />
+          <p className="text-fg-muted">{t('applicationStatus.loading')}</p>
         </div>
       )
     }
@@ -98,15 +98,15 @@ export default function ApplicationStatusPage(): JSX.Element {
     if (state === 'notFound' || !application) {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
-          <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 mx-auto mb-6">
+          <div className="w-16 h-16 rounded-full bg-warning-soft flex items-center justify-center text-warning mx-auto mb-6">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('applicationStatus.notFoundTitle')}</h2>
-          <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
+          <h2 className="text-2xl font-semibold text-fg mb-4">{t('applicationStatus.notFoundTitle')}</h2>
+          <p className="text-fg-muted leading-relaxed mb-8">
             {t('applicationStatus.notFoundDesc')}
           </p>
           <Link to="/apply">
@@ -126,14 +126,14 @@ export default function ApplicationStatusPage(): JSX.Element {
           </span>
         </div>
 
-        <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
+        <h1 className="text-2xl font-bold text-fg mb-2 tracking-tight">
           {t('applicationStatus.title')}
         </h1>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed mb-6">
+        <p className="text-sm text-fg-muted leading-relaxed mb-6">
           {t(meta.descriptionKey)}
         </p>
 
-        <div className="rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-5 mb-6">
+        <div className="rounded-xl border border-line bg-surface p-5 mb-6">
           <dl className="flex flex-col gap-2.5 text-sm">
             <StatusField label={t('apply.fieldFullName')} value={application.fullName} />
             <StatusField label={t('applicationStatus.fieldEmail')} value={application.email} highlight />
@@ -151,9 +151,9 @@ export default function ApplicationStatusPage(): JSX.Element {
         </div>
 
         {application.status === 'PENDING' && !application.emailVerified && (
-          <p className="text-xs text-light-secondary dark:text-dark-secondary mb-6">
+          <p className="text-xs text-fg-muted mb-6">
             {t('applicationStatus.verifyHintBefore')}
-            <Link to="/verify-email" className="text-light-accent dark:text-dark-accent hover:underline">
+            <Link to="/verify-email" className="text-accent hover:underline">
               {t('applicationStatus.verifyHintLink')}
             </Link>
             {t('applicationStatus.verifyHintAfter')}
@@ -180,8 +180,8 @@ export default function ApplicationStatusPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85 flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+    <div className="auth-shell flex flex-col">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>

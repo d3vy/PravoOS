@@ -124,12 +124,12 @@ export default function CalendarPage(): JSX.Element {
   }
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow mb-1">{t('calendar.eyebrow')}</p>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{t('calendar.title')}</h1>
+            <h1 className="text-3xl font-semibold text-fg">{t('calendar.title')}</h1>
           </div>
           <Button variant="secondary" size="sm" onClick={handleExport}>
             {t('calendar.exportIcal')}
@@ -137,7 +137,7 @@ export default function CalendarPage(): JSX.Element {
         </div>
 
         <div className="card-elevated p-4 mb-6 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 rounded-lg border border-light-border dark:border-dark-border p-1">
+          <div className="flex items-center gap-1 rounded-lg border border-line p-1">
             <ViewButton active={view === 'month'} onClick={() => setView('month')}>
               {t('calendar.viewMonth')}
             </ViewButton>
@@ -158,13 +158,13 @@ export default function CalendarPage(): JSX.Element {
             </Button>
           </div>
 
-          <span className="text-sm font-medium text-light-text dark:text-dark-text min-w-0">{title}</span>
+          <span className="text-sm font-medium text-fg min-w-0">{title}</span>
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              className="px-3 py-2 rounded-lg border border-line bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{t('calendar.allClients')}</option>
               {clients?.map((client) => (
@@ -176,7 +176,7 @@ export default function CalendarPage(): JSX.Element {
             <select
               value={caseId}
               onChange={(e) => setCaseId(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              className="px-3 py-2 rounded-lg border border-line bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{t('calendar.allCases')}</option>
               {casesPage?.items.map((caseItem) => (
@@ -188,7 +188,7 @@ export default function CalendarPage(): JSX.Element {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-4 text-xs text-light-secondary dark:text-dark-secondary">
+        <div className="flex flex-wrap gap-4 mb-4 text-xs text-fg-muted">
           <Legend type="DEADLINE" label={t('calendar.legendDeadline')} />
           <Legend type="HEARING" label={t('calendar.legendHearing')} />
           <Legend type="TASK" label={t('calendar.legendTask')} />
@@ -201,7 +201,7 @@ export default function CalendarPage(): JSX.Element {
         )}
 
         {isError && (
-          <div className="card-elevated p-6 text-light-secondary dark:text-dark-secondary">
+          <div className="card-elevated p-6 text-fg-muted">
             {t('calendar.loadError')}
           </div>
         )}
@@ -217,11 +217,11 @@ export default function CalendarPage(): JSX.Element {
 
         {!isLoading && !isError && (
           <div className="hidden sm:block card-elevated overflow-hidden">
-            <div className="grid grid-cols-7 border-b border-light-border dark:border-dark-border">
+            <div className="grid grid-cols-7 border-b border-line">
               {weekdays.map((day) => (
                 <div
                   key={day}
-                  className="px-2 py-2 text-center text-xs font-medium text-light-secondary dark:text-dark-secondary"
+                  className="px-2 py-2 text-center text-xs font-medium text-fg-muted"
                 >
                   {day}
                 </div>
@@ -277,7 +277,7 @@ function AgendaList({
 
   if (daysWithEvents.length === 0) {
     return (
-      <div className="sm:hidden card-elevated p-6 text-sm text-light-secondary dark:text-dark-secondary">
+      <div className="sm:hidden card-elevated p-6 text-sm text-fg-muted">
         {t('calendar.noEvents')}
       </div>
     )
@@ -293,8 +293,8 @@ function AgendaList({
             <p
               className={`text-sm font-medium mb-3 ${
                 isToday
-                  ? 'text-light-accent dark:text-dark-accent'
-                  : 'text-light-text dark:text-dark-text'
+                  ? 'text-accent'
+                  : 'text-fg'
               }`}
             >
               {toAgendaHeading(day)}
@@ -338,8 +338,8 @@ function ViewButton({
       onClick={onClick}
       className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
         active
-          ? 'bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg'
-          : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+          ? 'bg-accent-solid text-accent-fg'
+          : 'text-fg-muted hover:text-fg'
       }`}
     >
       {children}
@@ -378,17 +378,17 @@ function DayCell({
 
   return (
     <div
-      className={`border-b border-r border-light-border dark:border-dark-border p-1.5 flex flex-col gap-1 ${
+      className={`border-b border-r border-line p-1.5 flex flex-col gap-1 ${
         tall ? 'min-h-[9rem]' : 'min-h-[6.5rem]'
-      } ${outside ? 'bg-light-bg/50 dark:bg-dark-bg/40' : ''}`}
+      } ${outside ? 'bg-bg/50' : ''}`}
     >
       <span
         className={`text-xs font-medium ${
           isToday
-            ? 'inline-flex items-center justify-center w-6 h-6 rounded-full bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg'
+            ? 'inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent-solid text-accent-fg'
             : outside
-              ? 'text-light-secondary/50 dark:text-dark-secondary/50'
-              : 'text-light-text dark:text-dark-text'
+              ? 'text-fg-muted/50'
+              : 'text-fg'
         }`}
       >
         {day.getDate()}
@@ -406,7 +406,7 @@ function DayCell({
           </button>
         ))}
         {overflow > 0 && (
-          <span className="text-[11px] text-light-secondary dark:text-dark-secondary px-1.5">
+          <span className="text-[11px] text-fg-muted px-1.5">
             {t('calendar.overflowMore', { count: overflow })}
           </span>
         )}

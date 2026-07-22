@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +21,8 @@ public interface SignatureRequestRepository extends JpaRepository<SignatureReque
 
     Optional<SignatureRequest> findByDocumentIdAndSignerClientIdAndStatus(
             UUID documentId, UUID signerClientId, SignatureStatus status);
+
+    List<SignatureRequest> findByStatusAndExpiresAtBefore(SignatureStatus status, LocalDateTime moment);
 
     void deleteByCaseId(UUID caseId);
 

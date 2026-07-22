@@ -11,7 +11,7 @@ export function ThemeToggle({ className = '' }: { className?: string }): JSX.Ele
       type="button"
       onClick={toggleTheme}
       aria-label={isDark ? t('theme.toLight') : t('theme.toDark')}
-      className={`w-9 h-9 flex items-center justify-center rounded-lg text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent ${className}`}
+      className={`w-9 h-9 flex items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-bg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
     </button>

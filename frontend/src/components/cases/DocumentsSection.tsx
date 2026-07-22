@@ -54,13 +54,13 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
 
   return (
     <section className="mb-10">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">
-        {t('caseDocs.title')} {documents.length > 0 && <span className="font-normal text-light-secondary dark:text-dark-secondary">({documents.length})</span>}
+      <h2 className="text-sm font-semibold text-fg mb-3">
+        {t('caseDocs.title')} {documents.length > 0 && <span className="font-normal text-fg-muted">({documents.length})</span>}
       </h2>
 
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="mb-3 rounded-xl border-2 border-dashed border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 cursor-pointer flex flex-col items-center justify-center gap-2 py-8 px-6 text-center transition-colors"
+        className="mb-3 rounded-xl border-2 border-dashed border-line hover:border-accent/50 cursor-pointer flex flex-col items-center justify-center gap-2 py-8 px-6 text-center transition-colors"
         role="button"
         tabIndex={0}
       >
@@ -75,25 +75,25 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
         {isUploading ? (
           <Spinner size="md" />
         ) : (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm text-fg-muted">
             {t('caseDocs.uploadCta')}
           </p>
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
+      {error && <p className="text-sm text-danger mb-3">{error}</p>}
 
       {documents.length > 0 && (
         <div className="flex flex-col gap-2">
           {documents.map((doc) => (
             <div
               key={doc.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+              className="flex items-center gap-3 p-3 rounded-lg bg-surface border border-line"
             >
-              <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-9 shrink-0">
+              <span className="text-xs font-bold uppercase text-fg-muted w-9 shrink-0">
                 {doc.fileName.split('.').pop()}
               </span>
-              <p className="flex-1 min-w-0 text-sm text-light-text dark:text-dark-text truncate">{doc.title}</p>
+              <p className="flex-1 min-w-0 text-sm text-fg truncate">{doc.title}</p>
               <button
                 type="button"
                 onClick={() => void toggleVisibility(doc)}
@@ -101,8 +101,8 @@ export function DocumentsSection({ caseId, documents }: { caseId: string; docume
                 title={doc.visibleToClient ? t('caseDocs.visibleTooltip') : t('caseDocs.hiddenTooltip')}
                 className={`text-xs px-2 py-1 rounded-md border transition-colors disabled:opacity-60 ${
                   doc.visibleToClient
-                    ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                    : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
+                    ? 'border-emerald-500/40 text-success bg-emerald-500/10'
+                    : 'border-line text-fg-muted'
                 }`}
               >
                 {doc.visibleToClient ? t('caseDocs.visibleShort') : t('caseDocs.hiddenShort')}

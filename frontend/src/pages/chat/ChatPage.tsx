@@ -258,13 +258,13 @@ export default function ChatPage(): JSX.Element {
   })()
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-light-bg dark:bg-dark-bg flex flex-col">
+    <div className="h-[calc(100vh-64px)] bg-bg flex flex-col">
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden fixed top-[72px] left-3 z-30 w-10 h-10 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary shadow-card dark:shadow-card-dark flex items-center justify-center"
+            className="md:hidden fixed top-[72px] left-3 z-30 w-10 h-10 rounded-lg bg-surface border border-line text-fg-muted shadow-card flex items-center justify-center"
             aria-label={t('chat.openConversations')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -281,15 +281,15 @@ export default function ChatPage(): JSX.Element {
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             md:translate-x-0 fixed md:relative z-20 md:z-auto
             w-72 md:w-64 h-full flex flex-col
-            bg-light-surface dark:bg-dark-surface
-            border-r border-light-border dark:border-dark-border
+            bg-surface
+            border-r border-line
             transition-transform duration-200 md:transition-none
           `}
         >
-          <div className="p-4 border-b border-light-border dark:border-dark-border flex flex-col gap-2">
+          <div className="p-4 border-b border-line flex flex-col gap-2">
             <button
               onClick={startNewChat}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-sm font-medium hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-accent-solid text-accent-fg text-sm font-medium hover:bg-accent-solid-hover transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -300,7 +300,7 @@ export default function ChatPage(): JSX.Element {
 
             {/* Search */}
             <div className="relative">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-light-secondary dark:text-dark-secondary w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
@@ -308,7 +308,7 @@ export default function ChatPage(): JSX.Element {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('chat.searchPlaceholder')}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary focus:outline-none focus:ring-1 focus:ring-light-accent dark:focus:ring-dark-accent"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-line bg-bg text-fg placeholder-fg-muted focus:outline-none focus:ring-1 focus:ring-accent"
               />
             </div>
           </div>
@@ -317,7 +317,7 @@ export default function ChatPage(): JSX.Element {
             {conversationsLoading ? (
               <div className="flex justify-center py-8"><Spinner size="sm" /></div>
             ) : conversations.length === 0 ? (
-              <p className="text-xs text-center text-light-secondary dark:text-dark-secondary py-8 px-4">
+              <p className="text-xs text-center text-fg-muted py-8 px-4">
                 {searchQuery ? t('chat.nothingFound') : t('chat.noConversations')}
               </p>
             ) : (
@@ -328,12 +328,12 @@ export default function ChatPage(): JSX.Element {
                     onClick={() => selectConversation(conv.id)}
                     className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
                       activeConversationId === conv.id
-                        ? 'bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent'
-                        : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-fg hover:bg-bg'
                     }`}
                   >
                     <span className="block truncate font-medium">{conv.title}</span>
-                    <span className="block text-xs text-light-secondary dark:text-dark-secondary mt-0.5">
+                    <span className="block text-xs text-fg-muted mt-0.5">
                       {new Date(conv.createdAt).toLocaleDateString(locale())}
                     </span>
                   </button>
@@ -357,13 +357,13 @@ export default function ChatPage(): JSX.Element {
               <div className="flex justify-center py-12"><Spinner size="md" /></div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
-                <div className="w-14 h-14 rounded-2xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border flex items-center justify-center text-light-secondary dark:text-dark-secondary mb-5">
+                <div className="w-14 h-14 rounded-2xl bg-surface border border-line flex items-center justify-center text-fg-muted mb-5">
                   <PravoIcon className="w-7 h-7" />
                 </div>
-                <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-3">
+                <h2 className="text-2xl font-semibold text-fg mb-3">
                   {t('chat.emptyTitle')}
                 </h2>
-                <p className="text-sm text-light-secondary dark:text-dark-secondary leading-relaxed">
+                <p className="text-sm text-fg-muted leading-relaxed">
                   {t('chat.emptySubtitle')}
                 </p>
                 <div className="mt-8 grid grid-cols-1 gap-2 w-full max-w-sm">
@@ -371,7 +371,7 @@ export default function ChatPage(): JSX.Element {
                     <button
                       key={suggestionKey}
                       onClick={() => { setInputValue(t(suggestionKey)); textareaRef.current?.focus() }}
-                      className="text-left text-sm px-4 py-2.5 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:border-light-accent/40 dark:hover:border-dark-accent/40 hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+                      className="text-left text-sm px-4 py-2.5 rounded-lg border border-line text-fg-muted hover:text-fg hover:border-accent/40 hover:bg-surface transition-colors"
                     >
                       {t(suggestionKey)}
                     </button>
@@ -398,13 +398,13 @@ export default function ChatPage(): JSX.Element {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col gap-2 max-w-[80%]"
                   >
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary ml-11">{t('chat.followUps')}</p>
+                    <p className="text-xs text-fg-muted ml-11">{t('chat.followUps')}</p>
                     <div className="flex flex-col gap-1.5 ml-11">
                       {lastAssistantFollowUps.map((q, i) => (
                         <button
                           key={i}
                           onClick={() => handleSend(q)}
-                          className="text-left text-xs px-3 py-2 rounded-lg border border-light-accent/30 dark:border-dark-accent/30 text-light-accent dark:text-dark-accent hover:bg-light-accent/5 dark:hover:bg-dark-accent/10 transition-colors"
+                          className="text-left text-xs px-3 py-2 rounded-lg border border-accent/30 text-accent hover:bg-accent/5 transition-colors"
                         >
                           {q}
                         </button>
@@ -419,7 +419,7 @@ export default function ChatPage(): JSX.Element {
           </div>
 
           {/* Input area */}
-          <div className="border-t border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface p-4">
+          <div className="border-t border-line bg-surface p-4">
             <div className="max-w-3xl mx-auto">
               {/* Attached docs chips */}
               {(attachedDocs.length > 0 || uploadMutation.isPending || uploadError) && (
@@ -429,8 +429,8 @@ export default function ChatPage(): JSX.Element {
                       key={doc.id}
                       className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border ${
                         doc.status === 'FAILED'
-                          ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
-                          : 'bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent border-light-accent/20 dark:border-dark-accent/20'
+                          ? 'bg-red-500/10 text-danger border-red-500/20'
+                          : 'bg-accent/10 text-accent border-accent/20'
                       }`}
                     >
                       {doc.status === 'PROCESSING' && <Spinner size="sm" />}
@@ -449,18 +449,18 @@ export default function ChatPage(): JSX.Element {
                     </span>
                   ))}
                   {uploadMutation.isPending && (
-                    <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border border-line text-fg-muted">
                       <Spinner size="sm" />
                       {t('chat.uploadingFile')}
                     </span>
                   )}
                   {uploadError && (
-                    <span className="text-xs text-red-600 dark:text-red-400">{uploadError}</span>
+                    <span className="text-xs text-danger">{uploadError}</span>
                   )}
                 </div>
               )}
 
-              <div className="flex gap-3 items-end rounded-xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg focus-within:border-light-accent dark:focus-within:border-dark-accent focus-within:ring-1 focus-within:ring-light-accent dark:focus-within:ring-dark-accent transition-all px-4 py-3">
+              <div className="flex gap-3 items-end rounded-xl border border-line bg-bg focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all px-4 py-3">
                 {/* Attach button */}
                 <div className="relative shrink-0" ref={attachPickerRef}>
                   <input
@@ -475,7 +475,7 @@ export default function ChatPage(): JSX.Element {
                     onClick={() => setAttachPickerOpen((v) => !v)}
                     disabled={isSending || uploadMutation.isPending}
                     title={t('chat.attachFile')}
-                    className="w-7 h-7 rounded-md flex items-center justify-center text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent hover:bg-light-surface dark:hover:bg-dark-surface transition-colors disabled:opacity-30"
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-fg-muted hover:text-accent hover:bg-surface transition-colors disabled:opacity-30"
                     aria-label={t('chat.attachFile')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -484,10 +484,10 @@ export default function ChatPage(): JSX.Element {
                   </button>
 
                   {attachPickerOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg z-10">
+                    <div className="absolute bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg z-10">
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full text-left px-3 py-2.5 text-sm flex items-center gap-2 text-light-accent dark:text-dark-accent hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
+                        className="w-full text-left px-3 py-2.5 text-sm flex items-center gap-2 text-accent hover:bg-bg transition-colors"
                       >
                         <svg className="shrink-0 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -497,7 +497,7 @@ export default function ChatPage(): JSX.Element {
 
                       {attachments.length > 0 && (
                         <>
-                          <p className="text-xs font-medium text-light-secondary dark:text-dark-secondary px-3 pt-3 pb-2 border-t border-light-border dark:border-dark-border">
+                          <p className="text-xs font-medium text-fg-muted px-3 pt-3 pb-2 border-t border-line">
                             {t('chat.previouslyUploaded')}
                           </p>
                           {attachments.map((doc) => (
@@ -506,11 +506,11 @@ export default function ChatPage(): JSX.Element {
                               onClick={() => { toggleDoc(doc.id); setAttachPickerOpen(false) }}
                               className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
                                 attachedDocIds.includes(doc.id)
-                                  ? 'text-light-accent dark:text-dark-accent bg-light-accent/5 dark:bg-dark-accent/10'
-                                  : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
+                                  ? 'text-accent bg-accent/5'
+                                  : 'text-fg hover:bg-bg'
                               }`}
                             >
-                              <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-7 shrink-0">
+                              <span className="text-xs font-bold uppercase text-fg-muted w-7 shrink-0">
                                 {doc.fileName.split('.').pop()}
                               </span>
                               <span className="min-w-0 truncate">{doc.title}</span>
@@ -537,17 +537,17 @@ export default function ChatPage(): JSX.Element {
                   rows={1}
                   disabled={isSending}
                   aria-label={t('chat.messageText')}
-                  className="flex-1 bg-transparent text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary resize-none outline-none text-[15px] leading-6 py-1.5 min-h-[36px] max-h-40 disabled:opacity-50"
+                  className="flex-1 bg-transparent text-fg placeholder-fg-muted resize-none outline-none text-[15px] leading-6 py-1.5 min-h-[36px] max-h-40 disabled:opacity-50"
                 />
                 <button
                   onClick={() => handleSend()}
                   disabled={!inputValue.trim() || isSending || hasIndexingAttachment}
                   title={hasIndexingAttachment ? t('chat.waitIndexing') : undefined}
-                  className="shrink-0 w-9 h-9 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg flex items-center justify-center hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="shrink-0 w-9 h-9 rounded-lg bg-accent-solid text-accent-fg flex items-center justify-center hover:bg-accent-solid-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   aria-label={t('chat.send')}
                 >
                   {isSending ? (
-                    <Spinner size="sm" className="border-white/30 border-t-white dark:border-dark-bg/30 dark:border-t-dark-bg" />
+                    <Spinner size="sm" className="border-accent-fg/30 border-t-accent-fg" />
                   ) : (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="22" y1="2" x2="11" y2="13" />
@@ -556,7 +556,7 @@ export default function ChatPage(): JSX.Element {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-center text-light-secondary dark:text-dark-secondary mt-2 opacity-70">
+              <p className="text-xs text-center text-fg-muted mt-2 opacity-70">
                 {t('chat.disclaimer')}
               </p>
             </div>
@@ -580,7 +580,7 @@ function CopyButton({ text }: { text: string }): JSX.Element {
     <button
       onClick={handleCopy}
       title={t('chat.copy')}
-      className="text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
+      className="text-fg-muted hover:text-fg transition-colors"
     >
       {copied ? (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -618,8 +618,8 @@ function MessageBubble({
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 ${
           isUser
-            ? 'bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg'
-            : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary'
+            ? 'bg-accent-solid text-accent-fg'
+            : 'bg-surface border border-line text-fg-muted'
         }`}
       >
         {isUser ? t('chat.you') : <PravoIcon className="w-4 h-4" />}
@@ -629,8 +629,8 @@ function MessageBubble({
         <div
           className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
             isUser
-              ? 'bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg rounded-tr-sm'
-              : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text dark:text-dark-text rounded-tl-sm'
+              ? 'bg-accent-solid text-accent-fg rounded-tr-sm'
+              : 'bg-surface border border-line text-fg rounded-tl-sm'
           }`}
         >
           {message.isStreaming && !message.content ? (
@@ -645,11 +645,11 @@ function MessageBubble({
 
         {!message.isStreaming && message.sources && message.sources.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 max-w-full">
-            <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('chat.sources')}</span>
+            <span className="text-xs text-fg-muted">{t('chat.sources')}</span>
             {message.sources.map((source, idx) => (
               <span
                 key={idx}
-                className="text-xs px-2 py-0.5 rounded-full bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary truncate max-w-[200px]"
+                className="text-xs px-2 py-0.5 rounded-full bg-bg border border-line text-fg-muted truncate max-w-[200px]"
                 title={source}
               >
                 {source}
@@ -699,7 +699,7 @@ function ChatCitations({ text, auto }: { text: string; auto?: boolean }): JSX.El
           type="button"
           onClick={() => checkMutation.mutate()}
           disabled={checkMutation.isPending}
-          className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+          className="text-xs text-fg-muted hover:text-accent transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         >
           {checkMutation.isPending ? (
             <Spinner size="sm" />
@@ -712,13 +712,13 @@ function ChatCitations({ text, auto }: { text: string; auto?: boolean }): JSX.El
           {t('chat.checkCitations')}
         </button>
         {result && (
-          <span className="text-xs text-light-secondary dark:text-dark-secondary">
+          <span className="text-xs text-fg-muted">
             {citationSummary(result)}
           </span>
         )}
       </div>
       {checkMutation.isError && (
-        <p className="text-xs text-red-600 dark:text-red-400">{t('chat.citationError')}</p>
+        <p className="text-xs text-danger">{t('chat.citationError')}</p>
       )}
       {result && <CitationList result={result} />}
     </div>
@@ -731,7 +731,7 @@ function FeedbackBox({ onSubmit }: { onSubmit: (comment: string) => void }): JSX
   const [sent, setSent] = useState(false)
 
   if (sent) {
-    return <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('chat.feedbackThanks')}</p>
+    return <p className="text-xs text-fg-muted">{t('chat.feedbackThanks')}</p>
   }
 
   return (
@@ -741,12 +741,12 @@ function FeedbackBox({ onSubmit }: { onSubmit: (comment: string) => void }): JSX
         onChange={(e) => setComment(e.target.value)}
         placeholder={t('chat.feedbackPlaceholder')}
         rows={2}
-        className="w-full resize-none rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg px-3 py-2 text-xs text-light-text dark:text-dark-text placeholder-light-secondary dark:placeholder-dark-secondary focus:outline-none focus:ring-1 focus:ring-light-accent dark:focus:ring-dark-accent"
+        className="w-full resize-none rounded-lg border border-line bg-bg px-3 py-2 text-xs text-fg placeholder-fg-muted focus:outline-none focus:ring-1 focus:ring-accent"
       />
       <button
         type="button"
         onClick={() => { onSubmit(comment.trim()); setSent(true) }}
-        className="self-start text-xs px-3 py-1.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg hover:bg-light-accent-hover dark:hover:bg-dark-accent-hover transition-colors"
+        className="self-start text-xs px-3 py-1.5 rounded-lg bg-accent-solid text-accent-fg hover:bg-accent-solid-hover transition-colors"
       >
         {t('chat.sendFeedback')}
       </button>

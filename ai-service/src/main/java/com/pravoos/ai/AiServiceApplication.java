@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableConfigurationProperties({LlmServiceProperties.class, DocumentProperties.class, JwtProperties.class,
         ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class,
+        UploadGuardProperties.class,
         ContractReviewProperties.class, DocumentComparisonProperties.class,
         CitationCheckProperties.class, UserServiceProperties.class, DraftEditingProperties.class,
         HybridSearchProperties.class, SignatureProperties.class})

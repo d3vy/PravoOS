@@ -88,7 +88,7 @@ class PortalSignatureServiceTest {
         SignerContext signer = new SignerContext(UUID.randomUUID(), "ip", "ua");
         service.sign(signatureId, signRequest, List.of(clientId), signer);
 
-        verify(signatureService).sign(eq(caseId), eq(signatureId), eq(signRequest), eq(signer));
+        verify(signatureService).sign(eq(caseEntity), eq(signatureId), eq(signRequest), eq(signer));
     }
 
     @Test

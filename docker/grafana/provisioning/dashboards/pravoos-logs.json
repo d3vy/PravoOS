@@ -16,7 +16,7 @@
         "includeAll": true,
         "multi": true,
         "current": { "text": "All", "value": "$__all" },
-        "query": "api-gateway,user-service,ai-service,llm-service,notification-service",
+        "query": "api-gateway,user-service,ai-service,llm-service,notification-service,discovery-server,config-server",
         "options": []
       }
     ]

@@ -183,9 +183,9 @@ export function ApplicationForm({
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+          className="p-3 rounded-lg bg-danger-soft border border-danger/30"
         >
-          <p className="text-sm text-red-700 dark:text-red-400">{submitError}</p>
+          <p className="text-sm text-danger">{submitError}</p>
         </motion.div>
       )}
 

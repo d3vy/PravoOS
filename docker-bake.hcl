@@ -34,6 +34,8 @@ function "tags" {
 
 group "default" {
   targets = [
+    "discovery-server",
+    "config-server",
     "user-service",
     "llm-service",
     "ai-service",
@@ -49,6 +51,18 @@ target "_backend" {
   platforms  = ["linux/amd64"]
   cache-from = ["type=gha,scope=backend"]
   cache-to   = ["type=gha,scope=backend,mode=max"]
+}
+
+target "discovery-server" {
+  inherits = ["_backend"]
+  target   = "discovery-server"
+  tags     = tags("discovery-server")
+}
+
+target "config-server" {
+  inherits = ["_backend"]
+  target   = "config-server"
+  tags     = tags("config-server")
 }
 
 target "user-service" {

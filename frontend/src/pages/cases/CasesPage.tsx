@@ -15,8 +15,10 @@ import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Modal } from '../../components/ui/Modal'
 import { CaseStatusBadge, caseStatusLabel, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
+import { useToast } from '../../hooks/useToast'
 
 type ViewMode = 'list' | 'board'
 
@@ -47,6 +49,7 @@ function persistSavedViews(views: SavedCaseView[]): void {
 
 export default function CasesPage(): JSX.Element {
   const { t } = useTranslation()
+  const toast = useToast()
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -122,7 +125,7 @@ export default function CasesPage(): JSX.Element {
 
   const createMutation = useMutation({
     mutationFn: casesApi.create,
-    onSuccess: () => {
+    onSuccess: (createdCase) => {
       queryClient.invalidateQueries({ queryKey: ['cases'] })
       setShowForm(false)
       setTitle('')
@@ -134,8 +137,10 @@ export default function CasesPage(): JSX.Element {
       setExpiresAt('')
       setArbitrCaseNumber('')
       setFormError(null)
+      toast.success(t('cases.createSuccess', { title: createdCase.title }))
     },
     onError: () => setFormError(t('cases.createError')),
+    meta: { suppressErrorToast: true },
   })
 
   const statusMutation = useMutation({
@@ -223,17 +228,17 @@ export default function CasesPage(): JSX.Element {
   }
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('cases.title')}</h1>
-            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            <h1 className="text-3xl font-semibold text-fg mb-1">{t('cases.title')}</h1>
+            <p className="text-sm text-fg-muted">
               {t('cases.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex p-1 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+            <div className="flex p-1 rounded-lg bg-surface border border-line">
               {(['list', 'board'] as ViewMode[]).map((mode) => (
                 <button
                   key={mode}
@@ -241,111 +246,101 @@ export default function CasesPage(): JSX.Element {
                   onClick={() => setView(mode)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     view === mode
-                      ? 'bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text shadow-sm'
-                      : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+                      ? 'bg-bg text-fg shadow-sm'
+                      : 'text-fg-muted hover:text-fg'
                   }`}
                 >
                   {mode === 'list' ? t('cases.viewList') : t('cases.viewBoard')}
                 </button>
               ))}
             </div>
-            <Button variant="primary" onClick={() => setShowForm((v) => !v)}>
-              {showForm ? t('common.cancel') : t('cases.newCase')}
+            <Button variant="primary" onClick={() => setShowForm(true)}>
+              {t('cases.newCase')}
             </Button>
           </div>
         </div>
 
-        <AnimatePresence>
-          {showForm && (
-            <motion.form
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              onSubmit={handleSubmit}
-              className="mb-8 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border overflow-hidden"
-            >
-              <div className="flex flex-col gap-4">
-                <Input
-                  label={t('cases.titleLabel')}
-                  placeholder={t('cases.titlePlaceholder')}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  maxLength={500}
-                />
-                <div>
-                  <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                    {t('cases.descriptionOptional')} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('cases.optionalHint')}</span>
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    maxLength={5000}
-                    placeholder={t('cases.descriptionPlaceholder')}
-                    className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                    {t('cases.clientLabel')} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('cases.optionalHint')}</span>
-                  </label>
-                  <select
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
-                  >
-                    <option value="">{t('cases.noClient')}</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name} ({client.typeName})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {organizations.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
-                      {t('cases.orgLabel')} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('cases.optionalHint')}</span>
-                    </label>
-                    <select
-                      value={orgId}
-                      onChange={(e) => setOrgId(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
-                    >
-                      <option value="">{t('cases.personalCase')}</option>
-                      {organizations.map((org) => (
-                        <option key={org.id} value={org.id}>
-                          {org.name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-xs text-light-secondary dark:text-dark-secondary">
-                      {t('cases.orgHint')}
-                    </p>
-                  </div>
-                )}
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <DateField label={t('cases.filingDeadline')} value={filingDeadline} onChange={setFilingDeadline} />
-                  <DateField label={t('cases.hearing')} value={nextHearingDate} onChange={setNextHearingDate} />
-                  <DateField label={t('cases.expiresAt')} value={expiresAt} onChange={setExpiresAt} />
-                </div>
-                <Input
-                  label={t('cases.arbitrNumberLabel')}
-                  value={arbitrCaseNumber}
-                  onChange={(e) => setArbitrCaseNumber(e.target.value)}
-                  maxLength={50}
-                  placeholder={t('cases.arbitrPlaceholder')}
-                />
-                {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
-                <div>
-                  <Button type="submit" variant="primary" loading={createMutation.isPending}>
-                    {t('cases.createCase')}
-                  </Button>
-                </div>
+        <Modal open={showForm} onClose={() => setShowForm(false)} title={t('cases.newCase')} size="lg">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Input
+              label={t('cases.titleLabel')}
+              placeholder={t('cases.titlePlaceholder')}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={500}
+            />
+            <div>
+              <label className="block text-sm font-medium text-fg mb-1.5">
+                {t('cases.descriptionOptional')} <span className="text-fg-muted font-normal">{t('cases.optionalHint')}</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                maxLength={5000}
+                placeholder={t('cases.descriptionPlaceholder')}
+                className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-fg mb-1.5">
+                {t('cases.clientLabel')} <span className="text-fg-muted font-normal">{t('cases.optionalHint')}</span>
+              </label>
+              <select
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <option value="">{t('cases.noClient')}</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name} ({client.typeName})
+                  </option>
+                ))}
+              </select>
+            </div>
+            {organizations.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-fg mb-1.5">
+                  {t('cases.orgLabel')} <span className="text-fg-muted font-normal">{t('cases.optionalHint')}</span>
+                </label>
+                <select
+                  value={orgId}
+                  onChange={(e) => setOrgId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="">{t('cases.personalCase')}</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-fg-muted">
+                  {t('cases.orgHint')}
+                </p>
               </div>
-            </motion.form>
-          )}
-        </AnimatePresence>
+            )}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <DateField label={t('cases.filingDeadline')} value={filingDeadline} onChange={setFilingDeadline} />
+              <DateField label={t('cases.hearing')} value={nextHearingDate} onChange={setNextHearingDate} />
+              <DateField label={t('cases.expiresAt')} value={expiresAt} onChange={setExpiresAt} />
+            </div>
+            <Input
+              label={t('cases.arbitrNumberLabel')}
+              value={arbitrCaseNumber}
+              onChange={(e) => setArbitrCaseNumber(e.target.value)}
+              maxLength={50}
+              placeholder={t('cases.arbitrPlaceholder')}
+            />
+            {formError && <p className="text-sm text-danger">{formError}</p>}
+            <div>
+              <Button type="submit" variant="primary" loading={createMutation.isPending}>
+                {t('cases.createCase')}
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         <div className="mb-4">
           <input
@@ -353,7 +348,7 @@ export default function CasesPage(): JSX.Element {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('cases.searchPlaceholder')}
-            className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+            className="w-full px-3 py-2.5 rounded-lg border border-line bg-surface text-fg text-sm placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
 
@@ -362,7 +357,7 @@ export default function CasesPage(): JSX.Element {
             <select
               value={orgFilter}
               onChange={(e) => setOrgFilter(e.target.value)}
-              className="w-full sm:w-72 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              className="w-full sm:w-72 px-3 py-2.5 rounded-lg border border-line bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{t('cases.allCases')}</option>
               {organizations.map((org) => (
@@ -381,8 +376,8 @@ export default function CasesPage(): JSX.Element {
                 key={savedView.id}
                 className={`inline-flex items-center rounded-full text-xs font-medium border transition-colors ${
                   activeView?.id === savedView.id
-                    ? 'bg-light-text dark:bg-dark-text text-light-bg dark:text-dark-bg border-transparent'
-                    : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+                    ? 'bg-fg text-bg border-transparent'
+                    : 'border-line text-fg-muted hover:text-fg'
                 }`}
               >
                 <button type="button" onClick={() => applyView(savedView)} className="pl-3 pr-1.5 py-1.5">
@@ -413,12 +408,12 @@ export default function CasesPage(): JSX.Element {
                   }}
                   maxLength={40}
                   placeholder={t('cases.viewNamePlaceholder')}
-                  className="px-3 py-1.5 rounded-full text-xs border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                  className="px-3 py-1.5 rounded-full text-xs border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 <button
                   type="button"
                   onClick={saveCurrentView}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-light-text dark:bg-dark-text text-light-bg dark:text-dark-bg"
+                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-fg text-bg"
                 >
                   {t('common.save')}
                 </button>
@@ -427,7 +422,7 @@ export default function CasesPage(): JSX.Element {
               <button
                 type="button"
                 onClick={() => setNamingView(true)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-line text-fg-muted hover:text-fg transition-colors"
               >
                 {t('cases.saveView')}
               </button>
@@ -451,12 +446,12 @@ export default function CasesPage(): JSX.Element {
 
         {view === 'list' && cases.length > 0 && (
           <div className="mb-4">
-            <label className="inline-flex items-center gap-2 text-xs text-light-secondary dark:text-dark-secondary cursor-pointer select-none">
+            <label className="inline-flex items-center gap-2 text-xs text-fg-muted cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={allOnPageSelected}
                 onChange={toggleSelectAll}
-                className="h-4 w-4 rounded accent-light-accent dark:accent-dark-accent cursor-pointer"
+                className="h-4 w-4 rounded accent-accent cursor-pointer"
               />
               {selectedIds.size > 0 ? t('cases.selectedCount', { count: selectedIds.size }) : t('cases.selectAllOnPage')}
             </label>
@@ -492,10 +487,10 @@ export default function CasesPage(): JSX.Element {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: index * 0.03 }}
-                className={`h-full p-5 rounded-xl bg-light-surface dark:bg-dark-surface border transition-colors flex flex-col ${
+                className={`h-full p-5 rounded-xl bg-surface border transition-colors flex flex-col ${
                   selectedIds.has(caseItem.id)
-                    ? 'border-light-accent dark:border-dark-accent ring-1 ring-light-accent/40 dark:ring-dark-accent/40'
-                    : 'border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50'
+                    ? 'border-accent ring-1 ring-accent/40'
+                    : 'border-line hover:border-accent/50'
                 }`}
               >
                 <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -504,35 +499,35 @@ export default function CasesPage(): JSX.Element {
                     checked={selectedIds.has(caseItem.id)}
                     onChange={() => toggleSelected(caseItem.id)}
                     aria-label={t('cases.selectCaseAria', { title: caseItem.title })}
-                    className="mt-1 h-4 w-4 shrink-0 rounded accent-light-accent dark:accent-dark-accent cursor-pointer"
+                    className="mt-1 h-4 w-4 shrink-0 rounded accent-accent cursor-pointer"
                   />
                   <Link to={`/cases/${caseItem.id}`} className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-medium text-light-text dark:text-dark-text line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{caseItem.title}</h3>
+                    <h3 className="font-medium text-fg line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{caseItem.title}</h3>
                     <CaseStatusBadge status={caseItem.status} />
                   </div>
                   {caseItem.orgId && (
-                    <span className="inline-block mb-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                    <span className="inline-block mb-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-bg border border-line text-fg-muted">
                       {orgNameById.get(caseItem.orgId) ?? t('cases.orgFallback')}
                     </span>
                   )}
                   {caseItem.clientName && (
-                    <p className="text-xs text-light-accent dark:text-dark-accent mb-2 truncate">{caseItem.clientName}</p>
+                    <p className="text-xs text-accent mb-2 truncate">{caseItem.clientName}</p>
                   )}
                   {caseItem.description && (
-                    <p className="text-sm text-light-secondary dark:text-dark-secondary line-clamp-2 mb-3">
+                    <p className="text-sm text-fg-muted line-clamp-2 mb-3">
                       {caseItem.description}
                     </p>
                   )}
                 </Link>
                 </div>
-                <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-light-border dark:border-dark-border">
+                <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-line">
                   <CaseStatusSelect
                     value={caseItem.status}
                     disabled={statusMutation.isPending}
                     onChange={(status) => statusMutation.mutate({ caseId: caseItem.id, status })}
                   />
-                  <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                  <span className="text-xs text-fg-muted">
                     {new Date(caseItem.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                   </span>
                 </div>
@@ -554,11 +549,11 @@ export default function CasesPage(): JSX.Element {
               transition={{ duration: 0.18, ease: 'easeOut' }}
               className="fixed inset-x-0 bottom-6 z-40 flex justify-center px-4 pointer-events-none"
             >
-              <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-surface shadow-card dark:shadow-card-dark px-4 py-2.5">
-                <span className="text-sm font-medium text-light-text dark:text-dark-text">
+              <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-line bg-overlay shadow-card px-4 py-2.5">
+                <span className="text-sm font-medium text-fg">
                   {t('cases.selectedCount', { count: selectedIds.size })}
                 </span>
-                <span className="h-5 w-px bg-light-border dark:bg-dark-border" />
+                <span className="h-5 w-px bg-line" />
                 <select
                   value=""
                   disabled={bulkStatusMutation.isPending}
@@ -566,7 +561,7 @@ export default function CasesPage(): JSX.Element {
                     const status = e.target.value as CaseStatus
                     if (status) bulkStatusMutation.mutate({ ids: Array.from(selectedIds), status })
                   }}
-                  className="px-3 py-1.5 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
                 >
                   <option value="">{t('cases.changeStatus')}</option>
                   {CASE_STATUS_ORDER.map((status) => (
@@ -578,7 +573,7 @@ export default function CasesPage(): JSX.Element {
                 <button
                   type="button"
                   onClick={() => setSelectedIds(new Set())}
-                  className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
+                  className="text-sm text-fg-muted hover:text-fg transition-colors"
                 >
                   {t('cases.deselect')}
                 </button>
@@ -598,8 +593,8 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
         active
-          ? 'bg-light-text dark:bg-dark-text text-light-bg dark:text-dark-bg border-transparent'
-          : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+          ? 'bg-fg text-bg border-transparent'
+          : 'border-line text-fg-muted hover:text-fg'
       }`}
     >
       {label}
@@ -639,15 +634,15 @@ function BoardView({
             onDrop={(e) => handleDrop(status, e.dataTransfer.getData('text/plain'))}
             className={`flex flex-col rounded-xl border p-3 min-h-[120px] transition-colors ${
               dragOver === status
-                ? 'border-light-accent dark:border-dark-accent bg-light-accent/5 dark:bg-dark-accent/10'
-                : 'border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface'
+                ? 'border-accent bg-accent/5'
+                : 'border-line bg-surface'
             }`}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-light-text dark:text-dark-text">
+              <span className="text-xs font-semibold text-fg">
                 {caseStatusLabel(status)}
               </span>
-              <span className="text-xs text-light-secondary dark:text-dark-secondary">{columnCases.length}</span>
+              <span className="text-xs text-fg-muted">{columnCases.length}</span>
             </div>
             <div className="flex flex-col gap-2">
               {columnCases.map((caseItem) => (
@@ -655,14 +650,14 @@ function BoardView({
                   key={caseItem.id}
                   draggable
                   onDragStart={(e) => e.dataTransfer.setData('text/plain', caseItem.id)}
-                  className="rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg p-3 cursor-grab active:cursor-grabbing"
+                  className="rounded-lg border border-line bg-bg p-3 cursor-grab active:cursor-grabbing"
                 >
                   <Link to={`/cases/${caseItem.id}`} className="block">
-                    <p className="text-sm font-medium text-light-text dark:text-dark-text line-clamp-2">
+                    <p className="text-sm font-medium text-fg line-clamp-2">
                       {caseItem.title}
                     </p>
                     {caseItem.clientName && (
-                      <p className="text-xs text-light-accent dark:text-dark-accent mt-1 truncate">
+                      <p className="text-xs text-accent mt-1 truncate">
                         {caseItem.clientName}
                       </p>
                     )}

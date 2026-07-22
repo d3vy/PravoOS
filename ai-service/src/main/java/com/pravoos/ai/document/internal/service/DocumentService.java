@@ -1,6 +1,7 @@
 package com.pravoos.ai.document.internal.service;
 
 import com.pravoos.ai.document.api.DocumentContent;
+import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.document.internal.dto.LegislationResponse;
@@ -49,6 +50,7 @@ public class DocumentService {
     private final DocumentProperties documentProperties;
     private final FileCryptoService fileCryptoService;
     private final MalwareScanClient malwareScanClient;
+    private final UploadContentInspector uploadContentInspector;
     private final UploadRateLimiter uploadRateLimiter;
     private final Counter processingFailedCounter;
 
@@ -58,6 +60,7 @@ public class DocumentService {
                            DocumentProperties documentProperties,
                            FileCryptoService fileCryptoService,
                            MalwareScanClient malwareScanClient,
+                           UploadContentInspector uploadContentInspector,
                            UploadRateLimiter uploadRateLimiter,
                            MeterRegistry meterRegistry) {
         this.documentRepository = documentRepository;
@@ -66,6 +69,7 @@ public class DocumentService {
         this.documentProperties = documentProperties;
         this.fileCryptoService = fileCryptoService;
         this.malwareScanClient = malwareScanClient;
+        this.uploadContentInspector = uploadContentInspector;
         this.uploadRateLimiter = uploadRateLimiter;
         this.processingFailedCounter = Counter.builder("pravoos.document.processing")
                 .description("Document embedding-pipeline outcomes")
@@ -177,9 +181,11 @@ public class DocumentService {
     }
 
     private byte[] validateAndScan(MultipartFile file, UUID uploadedBy, String originalName, String fileType) {
+        uploadContentInspector.assertWithinSizeLimit(file.getSize(), originalName);
         byte[] content = readBytes(file);
         enforceStorageQuota(uploadedBy, content.length);
         validateContentMatchesType(content, fileType);
+        uploadContentInspector.inspect(content, fileType, originalName);
         malwareScanClient.scan(content, originalName);
         return content;
     }
@@ -304,6 +310,12 @@ public class DocumentService {
     public DocumentContent loadClientContent(UUID documentId, UUID caseId) {
         Document document = requireClientVisibleDocument(documentId, caseId);
         return buildContent(document);
+    }
+
+    @Transactional(readOnly = true)
+    public DocumentRef clientVisibleRef(UUID documentId, UUID caseId) {
+        Document document = requireClientVisibleDocument(documentId, caseId);
+        return new DocumentRef(document.getId(), document.getCaseId(), document.getUploadedBy(), document.getTitle());
     }
 
     @Transactional(readOnly = true)

@@ -77,6 +77,29 @@ export const portalApi = {
     return response.data
   },
 
+  signDocumentWithCms: async (signatureId: string, file: File): Promise<SignatureRequestResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post<SignatureRequestResponse>(
+      `/api/ai/portal/signatures/${signatureId}/sign-cms`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return response.data
+  },
+
+  downloadSignatureProtocol: async (signatureId: string): Promise<void> => {
+    const response = await apiClient.get<Blob>(`/api/ai/portal/signatures/${signatureId}/protocol`, {
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `signature-protocol-${signatureId}.pdf`
+    link.click()
+    window.URL.revokeObjectURL(url)
+  },
+
   declineSignature: async (signatureId: string, reason: string): Promise<SignatureRequestResponse> => {
     const response = await apiClient.post<SignatureRequestResponse>(
       `/api/ai/portal/signatures/${signatureId}/decline`,

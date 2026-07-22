@@ -50,14 +50,14 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
   }
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('draft.title')}</h2>
+    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+      <h2 className="text-sm font-semibold text-fg mb-3">{t('draft.title')}</h2>
 
       <div className="flex flex-col gap-3">
         <select
           value={selectedDraftType}
           onChange={(e) => setSelectedDraftType(e.target.value)}
-          className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+          className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <option value="">{t('draft.selectDocType')}</option>
           {draftTypes.map((type) => (
@@ -68,7 +68,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
         </select>
 
         {generateMutation.isError && (
-          <p className="text-sm text-red-600 dark:text-red-400">{t('draft.generateError')}</p>
+          <p className="text-sm text-danger">{t('draft.generateError')}</p>
         )}
 
         <div>
@@ -82,14 +82,14 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
           </Button>
         </div>
 
-        <div className="pt-3 mt-1 border-t border-light-border dark:border-dark-border flex flex-col gap-2">
-          <span className="text-xs font-semibold text-light-secondary dark:text-dark-secondary">
+        <div className="pt-3 mt-1 border-t border-line flex flex-col gap-2">
+          <span className="text-xs font-semibold text-fg-muted">
             {t('draft.applyTemplate')}
           </span>
           {templates.length === 0 ? (
-            <p className="text-xs text-light-secondary dark:text-dark-secondary">
+            <p className="text-xs text-fg-muted">
               {t('draft.noTemplates')}{' '}
-              <Link to="/templates" className="text-light-accent dark:text-dark-accent">
+              <Link to="/templates" className="text-accent">
                 {t('draft.createTemplate')}
               </Link>
             </p>
@@ -98,7 +98,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
               <select
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">{t('draft.selectTemplate')}</option>
                 {templates.map((template) => (
@@ -108,7 +108,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
                 ))}
               </select>
               {applyTemplateMutation.isError && (
-                <p className="text-sm text-red-600 dark:text-red-400">{t('draft.applyTemplateError')}</p>
+                <p className="text-sm text-danger">{t('draft.applyTemplateError')}</p>
               )}
               <div>
                 <Button
@@ -129,15 +129,15 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
             {drafts.map((draft) => (
               <div
                 key={draft.id}
-                className="p-3 rounded-lg border border-light-border dark:border-dark-border"
+                className="p-3 rounded-lg border border-line"
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium text-light-text dark:text-dark-text">{draft.draftTypeName}</span>
-                  <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                  <span className="text-xs font-medium text-fg">{draft.draftTypeName}</span>
+                  <span className="text-xs text-fg-muted">
                     {new Date(draft.createdAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                   </span>
                 </div>
-                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2 line-clamp-2">
+                <p className="text-xs text-fg-muted mb-2 line-clamp-2">
                   {draft.title}
                 </p>
                 <div className="flex items-center gap-2">

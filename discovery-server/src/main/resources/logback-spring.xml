@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property name="serviceName" value="discovery-server"/>
+    <property name="appPackage" value="com.pravoos.discovery"/>
+    <property name="appLogLevel" value="INFO"/>
+    <property name="fileLogSizeCap" value="200MB"/>
+
+    <include resource="logback/pravoos-base.xml"/>
+</configuration>

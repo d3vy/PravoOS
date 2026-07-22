@@ -28,7 +28,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
+        <h2 className="text-sm font-semibold text-fg">
           {t('arbitr.title')}
         </h2>
         {hasNumber && (
@@ -44,21 +44,21 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
       </div>
 
       {!hasNumber ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <p className="text-sm text-fg-muted">
           {t('arbitr.noNumberHint')}
         </p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
-            <span className="text-light-secondary dark:text-dark-secondary">
-              {t('arbitr.numberLabel')} <span className="text-light-text dark:text-dark-text font-medium">{caseItem.arbitrCaseNumber}</span>
+            <span className="text-fg-muted">
+              {t('arbitr.numberLabel')} <span className="text-fg font-medium">{caseItem.arbitrCaseNumber}</span>
             </span>
             {caseItem.arbitrCardUrl && (
               <a
                 href={caseItem.arbitrCardUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-light-accent dark:text-dark-accent hover:underline"
+                className="text-accent hover:underline"
               >
                 {t('arbitr.openOnKad')}
               </a>
@@ -66,7 +66,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
           </div>
 
           {syncMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+            <p className="text-sm text-danger mb-3">
               {t('arbitr.syncError')}
             </p>
           )}
@@ -74,7 +74,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
           {isLoading ? (
             <Spinner size="md" />
           ) : hearings.length === 0 ? (
-            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            <p className="text-sm text-fg-muted">
               {t('arbitr.emptyEvents')}
             </p>
           ) : (
@@ -82,21 +82,21 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
               {hearings.map((event) => (
                 <div
                   key={event.id}
-                  className="p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+                  className="p-3 rounded-lg bg-surface border border-line"
                 >
                   <div className="flex items-center justify-between gap-3 mb-0.5">
-                    <span className="text-sm font-medium text-light-text dark:text-dark-text">
+                    <span className="text-sm font-medium text-fg">
                       {event.eventType ?? t('arbitr.eventFallback')}
                     </span>
-                    <span className="text-xs text-light-secondary dark:text-dark-secondary shrink-0">
+                    <span className="text-xs text-fg-muted shrink-0">
                       {event.eventDate ? new Date(event.eventDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US') : ''}
                     </span>
                   </div>
                   {event.description && (
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary">{event.description}</p>
+                    <p className="text-xs text-fg-muted">{event.description}</p>
                   )}
                   {event.courtName && (
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary mt-0.5">{event.courtName}</p>
+                    <p className="text-xs text-fg-muted mt-0.5">{event.courtName}</p>
                   )}
                 </div>
               ))}

@@ -49,7 +49,7 @@ B2B-платформа для юристов и юрфирм. Вход — за�
 
 ## Архитектура
 
-Монорепо (Maven multi-module, `com.pravoos`) → 4 сервиса + 2 общих библиотеки.
+Монорепо (Maven multi-module, `com.pravoos`) → 4 прикладных сервиса + 2 инфраструктурных + 4 общих библиотеки.
 Внутри `user-service` и `ai-service` — модульная структура на **Spring Modulith** с проверкой границ в CI.
 
 ```
@@ -78,11 +78,31 @@ B2B-платформа для юристов и юрфирм. Вход — за�
 | **user-service** | 8081 | auth, заявки, пользователи, 2FA, сессии, организации, инвайты | PostgreSQL `pravoos_users` |
 | **ai-service** | 8082 | RAG, LLM, дела, клиенты, документы, дедлайны, КАД.Арбитр | PostgreSQL `pravoos_ai` + pgvector · MongoDB `pravoos_chat` |
 | **notification-service** | 8083 | Kafka-consumer + Telegram-бот + email-fallback | stateless |
+| **llm-service** | 8084 | единственный шлюз к OpenAI (internal-only, не в gateway) | stateless |
+| **discovery-server** | 8761 | Eureka Server — реестр сервисов | in-memory |
+| **config-server** | 8888 | Spring Cloud Config Server — общая конфигурация | `config-repo` в образе |
+
+### Service discovery и централизованная конфигурация
+
+**Eureka.** Прикладные сервисы регистрируются в `discovery-server` и находят друг друга по имени, а не по `host:port`.
+Адрес вида `lb://<service-id>` (`USER_SERVICE_URL`, `AI_SERVICE_URL`, `LLM_SERVICE_BASE_URL`, `USER_SERVICE_BASE_URL`)
+резолвится Spring Cloud LoadBalancer'ом: в gateway — штатно, в блокирующих клиентах — через `@LoadBalanced RestClient.Builder`.
+`DiscoveryAwareRestClients.builderFor(...)` выбирает балансируемый билдер только для `lb://`, обычный http-URL идёт напрямую —
+поэтому статический адрес остаётся рабочим escape hatch'ем, если Eureka выключена.
+
+**Config Server.** `config-server` раздаёт `config-repo/` (native backend, запечён в образ): `application.yml` — общее для всех,
+`<service>.yml` — по сервису. Секретов там нет: они приходят из env контейнера и имеют приоритет.
+Клиенты подключаются через `spring.config.import: optional:configserver:...` с `fail-fast` и ретраями.
+
+Оба механизма выключены по умолчанию (`EUREKA_ENABLED` / `CONFIG_SERVER_ENABLED` = `false`), чтобы одиночный
+`mvn spring-boot:run` работал без поднятой инфраструктуры. В `docker-compose.yml` оба включены жёстко.
 
 ### Общие модули
 
 - **`pravoos-common`** — `JwtVerifier` (RSA), нормализация телефонов, guard'ы конфигурации.
 - **`pravoos-common-web`** — `RequestIdFilter`, `SecurityUtils`, `OrgContext`.
+- **`pravoos-observability`** — общий logback + Sentry.
+- **`pravoos-cloud`** — Eureka-клиент, клиент Config Server, `config/pravoos-cloud.yml`, `@LoadBalanced RestClient.Builder`.
 
 ### Внутренняя модульность (Spring Modulith)
 
@@ -132,7 +152,9 @@ B2B-платформа для юристов и юрфирм. Вход — за�
 - **2FA (TOTP)** — RFC 6238 без внешних либ, обязателен для админов.
 - **Парольная политика** — чёрный список + HIBP k-anonymity.
 - **Brute-force / rate-limit** — Redis: per-email lockout, per-IP лимиты, denylist токенов на revoke.
-- **Документы** — антивирус ClamAV, шифрование at-rest AES-256-GCM, audit trail доступа, secure-заголовки.
+- **Документы** — антивирус ClamAV (fail-closed, freshclam + контроль свежести баз), upload-guard
+  (лимит размера, активное содержимое в PDF, VBA-макросы и zip-бомбы в DOCX), шифрование at-rest
+  AES-256-GCM, audit trail доступа, secure-заголовки.
 - **Transactional Outbox** — атомарность БД ↔ Kafka, идемпотентность, DLT на ошибках.
 - **Origin lockdown** — ufw только с диапазонов Cloudflare, опциональный mTLS (Authenticated Origin Pull).
 
@@ -177,7 +199,8 @@ openssl rand -base64 32   # FILE_ENCRYPTION_KEY
 
 `docker compose` поднимает полный стек:
 
-**Приложения:** api-gateway · user-service · ai-service · notification-service · frontend (nginx)
+**Приложения:** api-gateway · user-service · ai-service · llm-service · notification-service · frontend (nginx)
+**Платформа:** discovery-server (Eureka) · config-server
 **Данные:** postgres (pgvector) · mongodb · redis · kafka
 **Безопасность:** clamav
 **Observability:** prometheus · grafana · tempo · loki · alloy · alertmanager
@@ -244,6 +267,9 @@ PravoOS/
 ├── pravoos-common/            # JwtVerifier, утилиты, guard'ы
 ├── pravoos-common-web/        # RequestIdFilter, SecurityUtils, OrgContext
 ├── pravoos-observability/     # JSON-логи (общий logback) + Sentry (PII-скраб, фильтр 4xx)
+├── pravoos-cloud/             # Eureka-клиент + Config-клиент + lb:// RestClient
+├── discovery-server/          # Eureka Server                   :8761
+├── config-server/             # Spring Cloud Config Server      :8888
 ├── api-gateway/               # Spring Cloud Gateway            :8080
 ├── user-service/              # auth, заявки, орги, 2FA         :8081
 ├── ai-service/                # RAG, дела, клиенты, документы   :8082

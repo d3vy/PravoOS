@@ -67,10 +67,10 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
+        <h2 className="text-sm font-semibold text-fg">
           {t('tasks.title')}{' '}
           {tasks.length > 0 && (
-            <span className="font-normal text-light-secondary dark:text-dark-secondary">
+            <span className="font-normal text-fg-muted">
               {t('tasks.countSummary', { open: openCount, total: tasks.length })}
             </span>
           )}
@@ -95,23 +95,23 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
           }}
           maxLength={1000}
           placeholder={t('tasks.newTaskPlaceholder')}
-          className="flex-1 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+          className="flex-1 px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
         />
         <input
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className="px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+          className="px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         />
         <Button variant="primary" disabled={!text.trim()} loading={createMutation.isPending} onClick={handleAdd}>
           {t('common.add')}
         </Button>
       </div>
 
-      {generateError && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{generateError}</p>}
+      {generateError && <p className="text-sm text-danger mb-3">{generateError}</p>}
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <p className="text-sm text-fg-muted">
           {t('tasks.emptyTasks')}
         </p>
       ) : (
@@ -119,27 +119,27 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+              className="flex items-center gap-3 p-3 rounded-lg bg-surface border border-line"
             >
               <input
                 type="checkbox"
                 checked={task.done}
                 disabled={toggleMutation.isPending}
                 onChange={() => toggleMutation.mutate(task)}
-                className="h-4 w-4 shrink-0 accent-light-accent dark:accent-dark-accent cursor-pointer"
+                className="h-4 w-4 shrink-0 accent-accent cursor-pointer"
               />
               <div className="flex-1 min-w-0">
                 <p
                   className={`text-sm ${
                     task.done
-                      ? 'line-through text-light-secondary dark:text-dark-secondary'
-                      : 'text-light-text dark:text-dark-text'
+                      ? 'line-through text-fg-muted'
+                      : 'text-fg'
                   }`}
                 >
                   {task.text}
                 </p>
                 {task.dueDate && (
-                  <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                  <span className="text-xs text-fg-muted">
                     {t('tasks.dueBy', { date: new Date(task.dueDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US') })}
                   </span>
                 )}
@@ -149,7 +149,7 @@ export function CaseTasksSection({ caseId }: { caseId: string }): JSX.Element {
                 title={t('tasks.deleteTaskTitle')}
                 disabled={deleteMutation.isPending}
                 onClick={() => deleteMutation.mutate(task.id)}
-                className="shrink-0 text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                className="shrink-0 text-fg-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="3 6 5 6 21 6" />

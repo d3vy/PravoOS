@@ -45,13 +45,13 @@ export function LawyerLayout(): JSX.Element {
   }))
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
+    <div className="min-h-screen bg-bg">
       <CommandPalette />
       <Navbar />
 
       <div className="flex min-h-[calc(100vh-64px)]">
         <aside
-          className={`hidden md:flex flex-col shrink-0 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto scrollbar-thin border-r border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface transition-[width] duration-200 ease-out ${
+          className={`hidden md:flex flex-col shrink-0 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto scrollbar-thin border-r border-line bg-surface transition-[width] duration-200 ease-out ${
             collapsed ? 'w-16' : 'w-56'
           }`}
         >
@@ -75,7 +75,7 @@ export function LawyerLayout(): JSX.Element {
               onClick={() => setCollapsedByUser((current) => !current)}
               aria-label={collapsed ? t('nav.expandMenu') : t('nav.collapseMenu')}
               title={collapsed ? t('nav.expandMenu') : t('nav.collapseMenu')}
-              className={`sticky bottom-0 flex items-center gap-2.5 m-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg ${
+              className={`sticky bottom-0 flex items-center gap-2.5 m-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-fg-muted hover:text-fg hover:bg-bg ${
                 collapsed ? 'justify-center' : ''
               }`}
             >

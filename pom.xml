@@ -21,6 +21,9 @@
         <module>pravoos-common</module>
         <module>pravoos-common-web</module>
         <module>pravoos-observability</module>
+        <module>pravoos-cloud</module>
+        <module>discovery-server</module>
+        <module>config-server</module>
         <module>api-gateway</module>
         <module>user-service</module>
         <module>llm-service</module>
@@ -85,6 +88,16 @@
                 <groupId>org.apache.pdfbox</groupId>
                 <artifactId>pdfbox</artifactId>
                 <version>${pdfbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.poi</groupId>

@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: config-server
+  profiles:
+    include: native
+  config:
+    import: "classpath:config/pravoos-observability.yml"
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: ${CONFIG_REPO_LOCATION:classpath:/config-repo}
+        accept-empty: true
+
+server:
+  port: ${CONFIG_SERVER_PORT:8888}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+logging:
+  config: classpath:logback-spring.xml

@@ -38,7 +38,7 @@ loki.source.docker "containers" {
 
 loki.process "pravoos" {
   stage.match {
-    selector = "{app=~\"api-gateway|user-service|ai-service|llm-service|notification-service\"}"
+    selector = "{app=~\"api-gateway|user-service|ai-service|llm-service|notification-service|discovery-server|config-server\"}"
 
     stage.json {
       expressions = {

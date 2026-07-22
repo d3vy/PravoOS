@@ -286,6 +286,8 @@ public class CaseService {
                 caseEntity.setExpiresAt(date);
                 yield true;
             }
+            case TASK -> throw new IllegalArgumentException(
+                    "DeadlineType.TASK belongs to a task, not to a case: " + caseId);
         };
         if (applied) {
             log.info("Deadline {} set to {} on case {} by lawyer {}", type, date, caseId, lawyerId);

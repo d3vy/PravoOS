@@ -40,7 +40,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }): JS
         aria-expanded={open}
         aria-label={t('language.switchTo')}
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
+        className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-fg-muted hover:text-fg hover:bg-bg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <GlobeIcon />
         <span className="text-sm font-medium uppercase">{language}</span>
@@ -49,7 +49,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }): JS
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-40 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg py-2 z-50"
+          className="absolute right-0 mt-2 w-40 rounded-xl border border-line bg-surface shadow-lg py-2 z-50"
         >
           {supportedLanguages.map((code) => (
             <button
@@ -60,8 +60,8 @@ export function LanguageSwitcher({ className = '' }: { className?: string }): JS
               onClick={() => select(code)}
               className={`flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors ${
                 code === language
-                  ? 'text-light-accent dark:text-dark-accent'
-                  : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
+                  ? 'text-accent'
+                  : 'text-fg hover:bg-bg'
               }`}
             >
               {LANGUAGE_LABELS[code]}

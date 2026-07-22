@@ -1,0 +1,4 @@
+# Централизованные настройки api-gateway. Секреты — только через env контейнера.
+logging:
+  level:
+    com.pravoos.gateway: INFO

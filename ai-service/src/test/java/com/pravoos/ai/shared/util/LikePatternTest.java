@@ -13,11 +13,11 @@ class LikePatternTest {
 
     @Test
     void escapesLikeSpecialCharacters() {
-        assertThat(LikePattern.contains("50%_off")).isEqualTo("%50\\%\\_off%");
+        assertThat(LikePattern.contains("50%_off")).isEqualTo("%50!%!_off%");
     }
 
     @Test
-    void escapesBackslashFirstToAvoidDoubleEscaping() {
-        assertThat(LikePattern.contains("a\\b")).isEqualTo("%a\\\\b%");
+    void escapesEscapeCharFirstToAvoidDoubleEscaping() {
+        assertThat(LikePattern.contains("a!b")).isEqualTo("%a!!b%");
     }
 }

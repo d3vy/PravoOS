@@ -26,14 +26,14 @@ export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+    <div className="min-h-screen bg-bg flex flex-col">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
         <Link to="/portal" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
         <div className="flex items-center gap-3">
           {user?.email && (
-            <span className="hidden sm:inline text-sm text-light-secondary dark:text-dark-secondary">
+            <span className="hidden sm:inline text-sm text-fg-muted">
               {user.email}
             </span>
           )}

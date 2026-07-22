@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { clientsApi } from '../../api/clients'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
@@ -10,10 +10,13 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Modal } from '../../components/ui/Modal'
 import { ClientForm } from '../../components/clients/ClientForm'
+import { useToast } from '../../hooks/useToast'
 
 export default function ClientsPage(): JSX.Element {
   const { t } = useTranslation()
+  const toast = useToast()
   const [showForm, setShowForm] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
@@ -38,46 +41,39 @@ export default function ClientsPage(): JSX.Element {
 
   const createMutation = useMutation({
     mutationFn: clientsApi.create,
-    onSuccess: () => {
+    onSuccess: (client) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
       setShowForm(false)
       setFormError(null)
+      toast.success(t('clients.createSuccess', { name: client.name }))
     },
     onError: () => setFormError(t('clients.createError')),
+    meta: { suppressErrorToast: true },
   })
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('clients.title')}</h1>
-            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            <h1 className="text-3xl font-semibold text-fg mb-1">{t('clients.title')}</h1>
+            <p className="text-sm text-fg-muted">
               {t('clients.subtitle')}
             </p>
           </div>
-          <Button variant="primary" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? t('clients.cancel') : t('clients.newClient')}
+          <Button variant="primary" onClick={() => setShowForm(true)}>
+            {t('clients.newClient')}
           </Button>
         </div>
 
-        <AnimatePresence>
-          {showForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-8 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border overflow-hidden"
-            >
-              <ClientForm
-                submitLabel={t('clients.createSubmit')}
-                isSubmitting={createMutation.isPending}
-                error={formError}
-                onSubmit={(data) => createMutation.mutate(data)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <Modal open={showForm} onClose={() => setShowForm(false)} title={t('clients.newClient')}>
+          <ClientForm
+            submitLabel={t('clients.createSubmit')}
+            isSubmitting={createMutation.isPending}
+            error={formError}
+            onSubmit={(data) => createMutation.mutate(data)}
+          />
+        </Modal>
 
         {isLoading ? (
           <div className="flex justify-center py-16">
@@ -100,21 +96,21 @@ export default function ClientsPage(): JSX.Element {
               >
                 <Link
                   to={`/clients/${client.id}`}
-                  className="block h-full p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+                  className="block h-full p-5 rounded-xl bg-surface border border-line hover:border-accent/50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-medium text-light-text dark:text-dark-text line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{client.name}</h3>
-                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                    <h3 className="font-medium text-fg line-clamp-2 min-w-0 [overflow-wrap:anywhere]">{client.name}</h3>
+                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-bg border border-line text-fg-muted">
                       {client.typeName}
                     </span>
                   </div>
                   {client.phone && (
-                    <p className="text-sm text-light-secondary dark:text-dark-secondary">{client.phone}</p>
+                    <p className="text-sm text-fg-muted">{client.phone}</p>
                   )}
                   {client.email && (
-                    <p className="text-sm text-light-secondary dark:text-dark-secondary truncate">{client.email}</p>
+                    <p className="text-sm text-fg-muted truncate">{client.email}</p>
                   )}
-                  <p className="text-xs text-light-secondary dark:text-dark-secondary mt-3">
+                  <p className="text-xs text-fg-muted mt-3">
                     {client.caseCount > 0 ? t('clients.caseCount', { count: client.caseCount }) : t('clients.noCases')}
                   </p>
                 </Link>

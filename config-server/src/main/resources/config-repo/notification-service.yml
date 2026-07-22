@@ -1,0 +1,4 @@
+# Централизованные настройки notification-service. Секреты — только через env контейнера.
+logging:
+  level:
+    com.pravoos.notification: INFO

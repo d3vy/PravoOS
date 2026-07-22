@@ -20,7 +20,15 @@ public record SignatureRequestResponse(
         LocalDateTime signedAt,
         String declineReason,
         LocalDateTime expiresAt,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String certificateSubject,
+        String certificateIssuer,
+        String certificateSerial,
+        LocalDateTime certificateValidFrom,
+        LocalDateTime certificateValidTo,
+        String signatureAlgorithm,
+        LocalDateTime declaredSigningTime,
+        boolean hasSignatureFile
 ) {
     public static SignatureRequestResponse from(SignatureRequest request, LocalDateTime now) {
         return new SignatureRequestResponse(
@@ -36,7 +44,15 @@ public record SignatureRequestResponse(
                 request.getSignedAt(),
                 request.getDeclineReason(),
                 request.getExpiresAt(),
-                request.getCreatedAt());
+                request.getCreatedAt(),
+                request.getCertificateSubject(),
+                request.getCertificateIssuer(),
+                request.getCertificateSerial(),
+                request.getCertificateValidFrom(),
+                request.getCertificateValidTo(),
+                request.getSignatureAlgorithm(),
+                request.getDeclaredSigningTime(),
+                request.getSignatureData() != null);
     }
 
     private static SignatureStatus effectiveStatus(SignatureRequest request, LocalDateTime now) {

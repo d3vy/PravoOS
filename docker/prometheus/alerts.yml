@@ -48,6 +48,33 @@ groups:
           summary: "Документы не проходят обработку (embedding pipeline)"
           description: "За 15 минут были провалы обработки загруженных документов — они остаются в статусе FAILED и не попадают в RAG. Проверь OpenAI embeddings и парсинг файлов."
 
+      - alert: MalwareScannerDegraded
+        expr: increase(pravoos_document_malware_total{result=~"error|stale-signatures"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Антивирус не сканирует загрузки ({{ $labels.result }})"
+          description: "За 15 минут clamd был недоступен, вернул ошибку или работал на устаревших базах. При fail-closed юристы не могут загружать документы. Проверь контейнер clamav и freshclam."
+
+      - alert: MalwareSignaturesStale
+        expr: pravoos_document_malware_signature_age_days > 3
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Базы ClamAV не обновлялись {{ $value }} дней"
+          description: "freshclam не приносит свежие сигнатуры. На 7 днях загрузки начнут отклоняться (CLAMAV_MAX_SIGNATURE_AGE_DAYS)."
+
+      - alert: MalwareDetectedInUploads
+        expr: increase(pravoos_document_malware_total{result="infected"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Антивирус заблокировал заражённую загрузку"
+          description: "За час clamd нашёл вредоносное содержимое в загружаемом документе — файл отклонён. Стоит посмотреть, чей аккаунт и что грузил."
+
       - alert: LoginFailureSpike
         expr: sum(rate(pravoos_login_total{result="failure"}[5m])) > 1
         for: 10m

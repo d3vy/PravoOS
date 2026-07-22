@@ -39,17 +39,17 @@ export function NavTabs({
   const tabClass = ({ isActive }: { isActive: boolean }): string =>
     [
       'relative flex items-center gap-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
-      'focus:outline-none focus-visible:ring-2 focus-visible:ring-light-text/30 dark:focus-visible:ring-dark-text/30',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/30',
       isHorizontal ? 'shrink-0 px-3 py-2' : 'px-3 py-2.5',
       iconsOnly ? 'justify-center' : '',
       isActive
-        ? 'text-light-accent dark:text-dark-accent'
-        : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text',
+        ? 'text-accent'
+        : 'text-fg-muted hover:text-fg',
     ].join(' ')
 
   const indicatorClass = isHorizontal
-    ? 'absolute left-2 right-2 bottom-0 h-0.5 rounded-full bg-light-accent dark:bg-dark-accent'
-    : 'absolute inset-0 rounded-lg bg-light-accent/10 dark:bg-dark-accent/10'
+    ? 'absolute left-2 right-2 bottom-0 h-0.5 rounded-full bg-accent-solid'
+    : 'absolute inset-0 rounded-lg bg-accent/10'
 
   return (
     <div className={`flex ${isHorizontal ? 'items-center gap-1' : 'flex-col gap-1'} ${className}`}>
@@ -77,13 +77,13 @@ export function NavTabs({
                 <span className="relative z-10 shrink-0" aria-hidden="true">
                   {item.icon}
                   {iconsOnly && item.badge !== undefined && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-light-accent dark:bg-dark-accent" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent-solid" />
                   )}
                 </span>
               )}
               {!iconsOnly && <span className="relative z-10">{item.label}</span>}
               {!iconsOnly && item.badge !== undefined && item.badge > 0 && (
-                <span className="relative z-10 ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-xs font-semibold flex items-center justify-center">
+                <span className="relative z-10 ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-accent-solid text-accent-fg text-xs font-semibold flex items-center justify-center">
                   {item.badge}
                 </span>
               )}

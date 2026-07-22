@@ -9,8 +9,10 @@ import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
 import com.pravoos.ai.shared.config.LlmServiceProperties;
 import com.pravoos.ai.shared.exception.LlmException;
+import com.pravoos.cloud.DiscoveryAwareRestClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -40,18 +42,20 @@ public class RemoteLlmClient implements LlmClient {
     private final String internalSecret;
     private final ObjectMapper objectMapper;
 
-    public RemoteLlmClient(LlmServiceProperties properties, ObjectMapper objectMapper) {
-        this.restClient = buildClient(properties.baseUrl(), READ_TIMEOUT);
-        this.guardRestClient = buildClient(properties.baseUrl(), GUARD_READ_TIMEOUT);
+    public RemoteLlmClient(LlmServiceProperties properties,
+                           @LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
+                           ObjectMapper objectMapper) {
+        this.restClient = buildClient(properties.baseUrl(), READ_TIMEOUT, loadBalancedRestClientBuilder);
+        this.guardRestClient = buildClient(properties.baseUrl(), GUARD_READ_TIMEOUT, loadBalancedRestClientBuilder);
         this.internalSecret = properties.internalSecret();
         this.objectMapper = objectMapper;
     }
 
-    private static RestClient buildClient(String baseUrl, Duration readTimeout) {
+    private static RestClient buildClient(String baseUrl, Duration readTimeout, RestClient.Builder loadBalancedBuilder) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
         requestFactory.setReadTimeout(readTimeout);
-        return RestClient.builder()
+        return DiscoveryAwareRestClients.builderFor(baseUrl, loadBalancedBuilder)
                 .baseUrl(baseUrl)
                 .requestFactory(requestFactory)
                 .build();

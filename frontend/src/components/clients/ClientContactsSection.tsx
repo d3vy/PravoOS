@@ -66,22 +66,22 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
 
   return (
     <section className="mb-10">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">
+      <h2 className="text-sm font-semibold text-fg mb-3">
         {t('clientContacts.title')}
         {contacts && contacts.length > 0 && (
-          <span className="font-normal text-light-secondary dark:text-dark-secondary"> ({contacts.length})</span>
+          <span className="font-normal text-fg-muted"> ({contacts.length})</span>
         )}
       </h2>
 
       <form
         onSubmit={handleAdd}
-        className="mb-4 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border flex flex-col gap-3"
+        className="mb-4 p-4 rounded-xl bg-surface border border-line flex flex-col gap-3"
       >
         <div className="flex flex-col sm:flex-row gap-3">
           <select
             value={type}
             onChange={(e) => setType(e.target.value as ContactType)}
-            className="px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+            className="px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           >
             {contactTypes.map((option) => (
               <option key={option.value} value={option.value}>
@@ -93,7 +93,7 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
             type="date"
             value={contactDate}
             onChange={(e) => setContactDate(e.target.value)}
-            className="px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+            className="px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
         <textarea
@@ -101,9 +101,9 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
           onChange={(e) => setNotes(e.target.value)}
           placeholder={t('clientContacts.notesPlaceholder')}
           rows={2}
-          className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
+          className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
         />
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
         <div>
           <Button type="submit" size="sm" loading={createMutation.isPending}>
             {t('clientContacts.addSubmit')}
@@ -116,31 +116,31 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
           <Spinner />
         </div>
       ) : !contacts || contacts.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('clientContacts.empty')}</p>
+        <p className="text-sm text-fg-muted">{t('clientContacts.empty')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {contacts.map((contact) => (
             <li
               key={contact.id}
-              className="p-4 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+              className="p-4 rounded-lg bg-surface border border-line"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-bg border border-line text-fg-muted">
                       {contact.typeName}
                     </span>
-                    <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                    <span className="text-xs text-fg-muted">
                       {new Date(contact.contactDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                     </span>
                   </div>
                   {contact.notes && (
-                    <p className="text-sm text-light-text dark:text-dark-text whitespace-pre-wrap">{contact.notes}</p>
+                    <p className="text-sm text-fg whitespace-pre-wrap">{contact.notes}</p>
                   )}
                 </div>
                 <button
                   onClick={() => deleteMutation.mutate(contact.id)}
-                  className="shrink-0 text-xs text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400"
+                  className="shrink-0 text-xs text-fg-muted hover:text-red-600 dark:hover:text-red-400"
                 >
                   {t('clientContacts.delete')}
                 </button>

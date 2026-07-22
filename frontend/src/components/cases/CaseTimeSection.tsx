@@ -115,10 +115,10 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
+        <h2 className="text-sm font-semibold text-fg">
           {t('timeTracking.title')}
           {summary && summary.uninvoicedBillableMinutes > 0 && (
-            <span className="font-normal text-light-secondary dark:text-dark-secondary">
+            <span className="font-normal text-fg-muted">
               {t('timeTracking.toInvoice', {
                 duration: formatDuration(summary.uninvoicedBillableMinutes),
                 amount: formatMoney(summary.uninvoicedBillableAmount),
@@ -141,7 +141,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
       {runningHere ? (
         <RunningTimer entry={runningHere} onStop={() => stopTimer.mutate()} stopping={stopTimer.isPending} />
       ) : (
-        <div className="flex flex-col gap-2 p-4 mb-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+        <div className="flex flex-col gap-2 p-4 mb-3 rounded-lg bg-surface border border-line">
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               value={description}
@@ -172,12 +172,12 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
               placeholder={t('timeTracking.ratePlaceholder')}
               className={fieldClass + ' sm:w-40'}
             />
-            <label className="flex items-center gap-2 text-sm text-light-text dark:text-dark-text select-none">
+            <label className="flex items-center gap-2 text-sm text-fg select-none">
               <input
                 type="checkbox"
                 checked={billable}
                 onChange={(e) => setBillable(e.target.checked)}
-                className="h-4 w-4 accent-light-accent dark:accent-dark-accent"
+                className="h-4 w-4 accent-accent"
               />
               {t('timeTracking.billable')}
             </label>
@@ -199,10 +199,10 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
+      {error && <p className="text-sm text-danger mb-3">{error}</p>}
 
       {entries.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <p className="text-sm text-fg-muted">
           {t('timeTracking.emptyEntries')}
         </p>
       ) : (
@@ -210,14 +210,14 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
           {entries.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+              className="flex items-center gap-3 p-3 rounded-lg bg-surface border border-line"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-light-text dark:text-dark-text truncate">
+                <p className="text-sm text-fg truncate">
                   {entry.running ? '⏱ ' : ''}
                   {entry.description}
                 </p>
-                <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                <span className="text-xs text-fg-muted">
                   {new Date(entry.activityDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')} · {formatDuration(entry.minutes)}
                   {entry.billable ? ` · ${formatMoney(entry.amount)}` : t('timeTracking.notBillable')}
                   {entry.invoiced ? t('timeTracking.invoiced') : ''}
@@ -229,7 +229,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
                   title={t('timeTracking.deleteEntryTitle')}
                   disabled={deleteEntry.isPending}
                   onClick={() => deleteEntry.mutate(entry.id)}
-                  className="shrink-0 text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                  className="shrink-0 text-fg-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="3 6 5 6 21 6" />
@@ -246,7 +246,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
 }
 
 const fieldClass =
-  'px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent'
+  'px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent'
 
 function RunningTimer({
   entry,
@@ -275,9 +275,9 @@ function RunningTimer({
   }, [entry.startedAt])
 
   return (
-    <div className="flex items-center gap-3 p-4 mb-3 rounded-lg border border-light-accent/40 dark:border-dark-accent/40 bg-light-accent/5 dark:bg-dark-accent/10">
-      <span className="text-lg font-mono tabular-nums text-light-text dark:text-dark-text">{elapsed}</span>
-      <span className="flex-1 min-w-0 text-sm text-light-text dark:text-dark-text truncate">
+    <div className="flex items-center gap-3 p-4 mb-3 rounded-lg border border-accent/40 bg-accent/5">
+      <span className="text-lg font-mono tabular-nums text-fg">{elapsed}</span>
+      <span className="flex-1 min-w-0 text-sm text-fg truncate">
         {entry.description}
       </span>
       <Button variant="danger" size="sm" loading={stopping} onClick={onStop}>

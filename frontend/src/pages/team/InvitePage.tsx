@@ -25,15 +25,15 @@ export default function InvitePage(): JSX.Element {
   })
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-16 max-w-md">
-        <div className="p-8 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-center">
+        <div className="p-8 rounded-xl bg-surface border border-line text-center">
           {joined ? (
             <>
-              <h1 className="text-xl font-semibold text-light-text dark:text-dark-text mb-2">
+              <h1 className="text-xl font-semibold text-fg mb-2">
                 {t('invite.joinedTitle', { name: joined.name })}
               </h1>
-              <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
+              <p className="text-sm text-fg-muted mb-6">
                 {t('invite.joinedText')}
               </p>
               <Link to="/team">
@@ -41,17 +41,17 @@ export default function InvitePage(): JSX.Element {
               </Link>
             </>
           ) : !token ? (
-            <p className="text-sm text-red-600 dark:text-red-400">{t('invite.badLink')}</p>
+            <p className="text-sm text-danger">{t('invite.badLink')}</p>
           ) : (
             <>
-              <h1 className="text-xl font-semibold text-light-text dark:text-dark-text mb-2">
+              <h1 className="text-xl font-semibold text-fg mb-2">
                 {t('invite.title')}
               </h1>
-              <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
+              <p className="text-sm text-fg-muted mb-6">
                 {t('invite.text')}
               </p>
               {acceptMutation.isError && (
-                <p className="mb-4 text-sm text-red-600 dark:text-red-400">
+                <p className="mb-4 text-sm text-danger">
                   {t('invite.error')}
                 </p>
               )}

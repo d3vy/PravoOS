@@ -61,11 +61,11 @@ export default function InvoiceDetailPage(): JSX.Element {
   const actions = NEXT_STATUS[invoice.status] ?? []
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-3xl">
         <button
           onClick={() => navigate('/invoices')}
-          className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-accent dark:hover:text-dark-accent mb-4"
+          className="text-sm text-fg-muted hover:text-accent mb-4"
         >
           {t('invoices.backToAll')}
         </button>
@@ -73,12 +73,12 @@ export default function InvoiceDetailPage(): JSX.Element {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-semibold text-light-text dark:text-dark-text">
+              <h1 className="text-2xl font-semibold text-fg">
                 {t('invoices.invoiceNumber', { number: invoice.number })}
               </h1>
               <InvoiceStatusBadge status={invoice.status} />
             </div>
-            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            <p className="text-sm text-fg-muted">
               {invoice.clientName ?? t('invoices.clientDeleted')} ·{' '}
               {new Date(invoice.issueDate).toLocaleDateString(locale)}
               {invoice.dueDate && ` · ${t('invoices.dueBy', { date: new Date(invoice.dueDate).toLocaleDateString(locale) })}`}
@@ -89,10 +89,10 @@ export default function InvoiceDetailPage(): JSX.Element {
           </Button>
         </div>
 
-        <div className="rounded-xl border border-light-border dark:border-dark-border overflow-hidden mb-6">
+        <div className="rounded-xl border border-line overflow-hidden mb-6">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-light-surface dark:bg-dark-surface text-left text-light-secondary dark:text-dark-secondary">
+              <tr className="bg-surface text-left text-fg-muted">
                 <th className="px-4 py-2.5 font-medium">{t('invoices.colDescription')}</th>
                 <th className="px-4 py-2.5 font-medium text-right">{t('invoices.colTime')}</th>
                 <th className="px-4 py-2.5 font-medium text-right">{t('invoices.colRate')}</th>
@@ -101,26 +101,26 @@ export default function InvoiceDetailPage(): JSX.Element {
             </thead>
             <tbody>
               {invoice.lines.map((line) => (
-                <tr key={line.id} className="border-t border-light-border dark:border-dark-border">
-                  <td className="px-4 py-2.5 text-light-text dark:text-dark-text">{line.description}</td>
-                  <td className="px-4 py-2.5 text-right text-light-secondary dark:text-dark-secondary tabular-nums">
+                <tr key={line.id} className="border-t border-line">
+                  <td className="px-4 py-2.5 text-fg">{line.description}</td>
+                  <td className="px-4 py-2.5 text-right text-fg-muted tabular-nums">
                     {formatDuration(line.minutes)}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-light-secondary dark:text-dark-secondary tabular-nums">
+                  <td className="px-4 py-2.5 text-right text-fg-muted tabular-nums">
                     {formatMoney(line.hourlyRate, invoice.currency)}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-light-text dark:text-dark-text tabular-nums">
+                  <td className="px-4 py-2.5 text-right text-fg tabular-nums">
                     {formatMoney(line.amount, invoice.currency)}
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
-                <td className="px-4 py-3 font-semibold text-light-text dark:text-dark-text" colSpan={3}>
+              <tr className="border-t border-line bg-surface">
+                <td className="px-4 py-3 font-semibold text-fg" colSpan={3}>
                   {t('invoices.totalDue')}
                 </td>
-                <td className="px-4 py-3 text-right font-semibold text-light-text dark:text-dark-text tabular-nums">
+                <td className="px-4 py-3 text-right font-semibold text-fg tabular-nums">
                   {formatMoney(invoice.total, invoice.currency)}
                 </td>
               </tr>
@@ -129,7 +129,7 @@ export default function InvoiceDetailPage(): JSX.Element {
         </div>
 
         {invoice.notes && (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6 whitespace-pre-wrap">
+          <p className="text-sm text-fg-muted mb-6 whitespace-pre-wrap">
             {invoice.notes}
           </p>
         )}

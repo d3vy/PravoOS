@@ -29,11 +29,11 @@ export default function MessagesPage(): JSX.Element {
   })
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-3xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('messages.title')}</h1>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <h1 className="text-3xl font-semibold text-fg mb-1">{t('messages.title')}</h1>
+          <p className="text-sm text-fg-muted">
             {t('messages.subtitle')}
           </p>
         </div>
@@ -44,12 +44,12 @@ export default function MessagesPage(): JSX.Element {
           </div>
         ) : threads.length === 0 ? (
           <div className="card-elevated rounded-xl p-10 text-center">
-            <p className="text-light-secondary dark:text-dark-secondary text-sm">
+            <p className="text-fg-muted text-sm">
               {t('messages.empty')}
             </p>
             <Link
               to="/cases"
-              className="inline-block mt-4 text-sm text-light-accent dark:text-dark-accent hover:underline"
+              className="inline-block mt-4 text-sm text-accent hover:underline"
             >
               {t('messages.goToCases')}
             </Link>
@@ -65,30 +65,30 @@ export default function MessagesPage(): JSX.Element {
               >
                 <Link
                   to={`/cases/${thread.caseId}#messages`}
-                  className="card-elevated rounded-xl p-4 flex items-start gap-3 hover:border-light-accent/40 dark:hover:border-dark-accent/40 transition-colors"
+                  className="card-elevated rounded-xl p-4 flex items-start gap-3 hover:border-accent/40 transition-colors"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-medium text-light-text dark:text-dark-text truncate">
+                      <span className="font-medium text-fg truncate">
                         {thread.caseTitle}
                       </span>
                       {thread.unreadCount > 0 && (
-                        <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-xs font-semibold flex items-center justify-center">
+                        <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-accent-solid text-accent-fg text-xs font-semibold flex items-center justify-center">
                           {thread.unreadCount}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1.5 truncate">
+                    <p className="text-xs text-fg-muted mb-1.5 truncate">
                       {thread.clientName ?? t('messages.noClient')}
                     </p>
-                    <p className="text-sm text-light-secondary dark:text-dark-secondary truncate">
+                    <p className="text-sm text-fg-muted truncate">
                       <span className="opacity-70">
                         {thread.lastAuthorRole === 'LAWYER' ? t('messages.youPrefix') : ''}
                       </span>
                       {thread.lastMessagePreview}
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs text-light-secondary dark:text-dark-secondary">
+                  <span className="shrink-0 text-xs text-fg-muted">
                     {formatTimestamp(thread.lastMessageAt)}
                   </span>
                 </Link>

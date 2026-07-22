@@ -36,10 +36,10 @@ export default function SearchPage(): JSX.Element {
   const totalHits = data ? data.cases.length + data.conversations.length + data.documents.length : 0
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-3xl">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('search.title')}</h1>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
+        <h1 className="text-3xl font-semibold text-fg mb-1">{t('search.title')}</h1>
+        <p className="text-sm text-fg-muted mb-6">
           {t('search.subtitle')}
         </p>
 
@@ -49,22 +49,22 @@ export default function SearchPage(): JSX.Element {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t('search.placeholder')}
-          className="w-full px-4 py-3 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+          className="w-full px-4 py-3 rounded-xl border border-line bg-surface text-fg text-sm placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
         />
 
-        <label className="mt-3 flex items-center gap-2 text-sm text-light-secondary dark:text-dark-secondary cursor-pointer w-fit">
+        <label className="mt-3 flex items-center gap-2 text-sm text-fg-muted cursor-pointer w-fit">
           <input
             type="checkbox"
             checked={searchContent}
             onChange={(e) => setSearchContent(e.target.checked)}
-            className="h-4 w-4 accent-light-accent dark:accent-dark-accent cursor-pointer"
+            className="h-4 w-4 accent-accent cursor-pointer"
           />
           {t('search.searchInFiles')}
         </label>
 
         <div className="mt-6">
           {!enabled ? (
-            <p className="text-sm text-light-secondary dark:text-dark-secondary text-center py-12">
+            <p className="text-sm text-fg-muted text-center py-12">
               {t('search.minChars', { count: MIN_QUERY_LENGTH })}
             </p>
           ) : isFetching ? (
@@ -72,7 +72,7 @@ export default function SearchPage(): JSX.Element {
               <Spinner size="lg" />
             </div>
           ) : totalHits === 0 ? (
-            <p className="text-sm text-light-secondary dark:text-dark-secondary text-center py-12">
+            <p className="text-sm text-fg-muted text-center py-12">
               {t('search.noResults', { query: debouncedSearch })}
             </p>
           ) : (
@@ -83,12 +83,12 @@ export default function SearchPage(): JSX.Element {
                     <Link
                       key={hit.id}
                       to={`/cases/${hit.id}`}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-surface border border-line hover:border-accent/50 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-light-text dark:text-dark-text truncate">{hit.title}</p>
+                        <p className="text-sm text-fg truncate">{hit.title}</p>
                         {hit.clientName && (
-                          <p className="text-xs text-light-accent dark:text-dark-accent truncate">{hit.clientName}</p>
+                          <p className="text-xs text-accent truncate">{hit.clientName}</p>
                         )}
                       </div>
                       <CaseStatusBadge status={hit.status} />
@@ -103,9 +103,9 @@ export default function SearchPage(): JSX.Element {
                     <Link
                       key={hit.id}
                       to={`/chat?conversation=${hit.id}`}
-                      className="block p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+                      className="block p-3 rounded-lg bg-surface border border-line hover:border-accent/50 transition-colors"
                     >
-                      <p className="text-sm text-light-text dark:text-dark-text truncate">{hit.title}</p>
+                      <p className="text-sm text-fg truncate">{hit.title}</p>
                     </Link>
                   ))}
                 </ResultGroup>
@@ -117,15 +117,15 @@ export default function SearchPage(): JSX.Element {
                     <Link
                       key={hit.id}
                       to={hit.caseId ? `/cases/${hit.caseId}` : '#'}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+                      className="flex items-start gap-3 p-3 rounded-lg bg-surface border border-line hover:border-accent/50 transition-colors"
                     >
-                      <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-9 shrink-0 mt-0.5">
+                      <span className="text-xs font-bold uppercase text-fg-muted w-9 shrink-0 mt-0.5">
                         {hit.fileName.split('.').pop()}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-light-text dark:text-dark-text truncate">{hit.title}</p>
+                        <p className="text-sm text-fg truncate">{hit.title}</p>
                         {hit.snippet && (
-                          <p className="text-xs text-light-secondary dark:text-dark-secondary mt-0.5 line-clamp-2">
+                          <p className="text-xs text-fg-muted mt-0.5 line-clamp-2">
                             {hit.snippet}
                           </p>
                         )}
@@ -153,8 +153,8 @@ function ResultGroup({
 }): JSX.Element {
   return (
     <section>
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">
-        {title} <span className="font-normal text-light-secondary dark:text-dark-secondary">({count})</span>
+      <h2 className="text-sm font-semibold text-fg mb-3">
+        {title} <span className="font-normal text-fg-muted">({count})</span>
       </h2>
       <div className="flex flex-col gap-2">{children}</div>
     </section>

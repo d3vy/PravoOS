@@ -51,7 +51,7 @@ export function Navbar(): JSX.Element {
   return (
     <header
       ref={mobileMenuRef}
-      className="sticky top-0 z-50 bg-light-bg/90 dark:bg-dark-bg/90 backdrop-blur-md border-b border-light-border dark:border-dark-border"
+      className="sticky top-0 z-50 bg-bg/90 backdrop-blur-md border-b border-line"
     >
       <div className="page-container">
         <nav className="flex items-center justify-between h-16">
@@ -95,7 +95,7 @@ export function Navbar(): JSX.Element {
                   aria-label={t('nav.menu')}
                   aria-expanded={mobileMenuOpen}
                   onClick={() => setMobileMenuOpen((open) => !open)}
-                  className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+                  className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-fg-muted hover:text-fg hover:bg-surface transition-colors"
                 >
                   <HamburgerIcon open={mobileMenuOpen} />
                 </button>
@@ -119,7 +119,7 @@ export function Navbar(): JSX.Element {
       </div>
 
       {authenticated && mobileMenuOpen && (
-        <div className="md:hidden border-t border-light-border dark:border-dark-border bg-light-bg/95 dark:bg-dark-bg/95 backdrop-blur-md">
+        <div className="md:hidden border-t border-line bg-bg/95 backdrop-blur-md">
           <div className="page-container py-3 flex flex-col gap-1">
             {role === 'LAWYER' && (
               <>
@@ -130,7 +130,7 @@ export function Navbar(): JSX.Element {
                       key={action.to}
                       to={action.to}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+                      className="block px-4 py-3 rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
                     >
                       {t(action.labelKey)}
                     </Link>
@@ -162,14 +162,14 @@ export function Navbar(): JSX.Element {
               <Link
                 to={dashboardPath}
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+                className="px-4 py-3 rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
               >
                 {t('nav.workspace')}
               </Link>
             )}
             <button
               onClick={() => void handleLogout()}
-              className="text-left px-4 py-3 rounded-lg text-sm font-medium text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
+              className="text-left px-4 py-3 rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
             >
               {t('nav.logout')}
             </button>
@@ -216,7 +216,7 @@ function CreateMenu(): JSX.Element {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-lg bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg text-sm font-medium hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
+        className="inline-flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-lg bg-accent-solid text-accent-fg text-sm font-medium hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
           <line x1="12" y1="5" x2="12" y2="19" />
@@ -228,7 +228,7 @@ function CreateMenu(): JSX.Element {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-52 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg py-2 z-50"
+          className="absolute right-0 mt-2 w-52 rounded-xl border border-line bg-surface shadow-lg py-2 z-50"
         >
           {CREATE_ACTIONS.map((action) => (
             <Link
@@ -236,7 +236,7 @@ function CreateMenu(): JSX.Element {
               to={action.to}
               role="menuitem"
               onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-sm text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
+              className="block px-4 py-2.5 text-sm text-fg hover:bg-bg transition-colors"
             >
               {t(action.labelKey)}
             </Link>
@@ -280,7 +280,7 @@ function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }):
         aria-expanded={open}
         aria-label={t('nav.userMenu')}
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center justify-center w-9 h-9 rounded-full bg-light-accent/10 dark:bg-dark-accent/15 text-light-accent dark:text-dark-accent text-sm font-semibold hover:bg-light-accent/20 dark:hover:bg-dark-accent/25 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
+        className="flex items-center justify-center w-9 h-9 rounded-full bg-accent/10 text-accent text-sm font-semibold hover:bg-accent/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         {initial}
       </button>
@@ -288,10 +288,10 @@ function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }):
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-56 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface shadow-lg py-2 z-50"
+          className="absolute right-0 mt-2 w-56 rounded-xl border border-line bg-surface shadow-lg py-2 z-50"
         >
           {email && (
-            <p className="px-4 pt-1 pb-2 text-xs text-light-secondary dark:text-dark-secondary truncate border-b border-light-border dark:border-dark-border mb-1">
+            <p className="px-4 pt-1 pb-2 text-xs text-fg-muted truncate border-b border-line mb-1">
               {email}
             </p>
           )}
@@ -304,8 +304,8 @@ function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }):
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
                   isActive
-                    ? 'text-light-accent dark:text-dark-accent'
-                    : 'text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg'
+                    ? 'text-accent'
+                    : 'text-fg hover:bg-bg'
                 }`
               }
             >
@@ -320,7 +320,7 @@ function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }):
               setOpen(false)
               onLogout()
             }}
-            className="w-full text-left px-4 py-2.5 mt-1 border-t border-light-border dark:border-dark-border text-sm text-light-text dark:text-dark-text hover:bg-light-bg dark:hover:bg-dark-bg transition-colors"
+            className="w-full text-left px-4 py-2.5 mt-1 border-t border-line text-sm text-fg hover:bg-bg transition-colors"
           >
             {t('nav.logout')}
           </button>
@@ -340,14 +340,14 @@ function CommandTrigger(): JSX.Element {
       type="button"
       onClick={toggle}
       aria-label={t('nav.commandPalette')}
-      className="hidden md:inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:border-light-text/30 dark:hover:border-dark-text/30 transition-colors"
+      className="hidden md:inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border border-line text-fg-muted hover:text-fg hover:border-fg/30 transition-colors"
     >
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="7" />
         <line x1="16.5" y1="16.5" x2="21" y2="21" />
       </svg>
       <span className="text-sm">{t('nav.search')}</span>
-      <kbd className="inline-flex items-center rounded border border-light-border dark:border-dark-border px-1.5 py-0.5 text-[11px] font-medium">
+      <kbd className="inline-flex items-center rounded border border-line px-1.5 py-0.5 text-[11px] font-medium">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
     </button>

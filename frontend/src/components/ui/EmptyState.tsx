@@ -15,11 +15,11 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action }: EmptyStateProps): JSX.Element {
   return (
-    <div className="text-center py-16 px-6 rounded-xl border border-dashed border-light-border dark:border-dark-border">
+    <div className="text-center py-16 px-6 rounded-xl border border-dashed border-line">
       {title && (
-        <p className="text-base font-medium text-light-text dark:text-dark-text mb-1">{title}</p>
+        <p className="text-base font-medium text-fg mb-1">{title}</p>
       )}
-      <p className="text-sm text-light-secondary dark:text-dark-secondary max-w-md mx-auto">{description}</p>
+      <p className="text-sm text-fg-muted max-w-md mx-auto">{description}</p>
       {action && (
         <div className="mt-4">
           {action.to ? (

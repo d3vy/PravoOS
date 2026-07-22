@@ -31,7 +31,7 @@ export function CaseTabsNav({ tabs, activeTab, onSelect }: CaseTabsNavProps): JS
     <div
       role="tablist"
       aria-label={t('cases.tabsAria')}
-      className="flex gap-1 overflow-x-auto scrollbar-thin border-b border-light-border dark:border-dark-border mb-6 -mx-1 px-1"
+      className="flex gap-1 overflow-x-auto scrollbar-thin border-b border-line mb-6 -mx-1 px-1"
     >
       {tabs.map((tab, index) => {
         const isActive = tab.id === activeTab
@@ -49,8 +49,8 @@ export function CaseTabsNav({ tabs, activeTab, onSelect }: CaseTabsNavProps): JS
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={`shrink-0 flex items-center gap-2 px-3.5 py-2.5 -mb-px border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${
               isActive
-                ? 'border-light-accent dark:border-dark-accent text-light-text dark:text-dark-text'
-                : 'border-transparent text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+                ? 'border-accent text-fg'
+                : 'border-transparent text-fg-muted hover:text-fg'
             }`}
           >
             {tab.label}
@@ -58,8 +58,8 @@ export function CaseTabsNav({ tabs, activeTab, onSelect }: CaseTabsNavProps): JS
               <span
                 className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-xs font-medium ${
                   isActive
-                    ? 'bg-light-accent/15 dark:bg-dark-accent/20 text-light-accent dark:text-dark-accent'
-                    : 'bg-light-bg dark:bg-dark-bg text-light-secondary dark:text-dark-secondary'
+                    ? 'bg-accent/15 text-accent'
+                    : 'bg-bg text-fg-muted'
                 }`}
               >
                 {tab.badge}

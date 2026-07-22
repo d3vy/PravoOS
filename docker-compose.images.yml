@@ -8,6 +8,12 @@
 # Keep this service list in sync with docker-bake.hcl and
 # scripts/cicd/lib/registry.sh (guarded by scripts/cicd/tests/consistency.sh).
 services:
+  discovery-server:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/discovery-server:${IMAGE_TAG:-latest}
+
+  config-server:
+    image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/config-server:${IMAGE_TAG:-latest}
+
   user-service:
     image: ${IMAGE_REGISTRY:-ghcr.io/d3vy/pravoos}/user-service:${IMAGE_TAG:-latest}
 

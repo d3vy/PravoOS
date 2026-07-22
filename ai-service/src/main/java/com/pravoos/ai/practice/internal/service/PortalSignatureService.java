@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.service;
 import com.pravoos.ai.practice.internal.dto.SignatureRequestResponse;
 import com.pravoos.ai.practice.internal.dto.SignDocumentRequest;
 import com.pravoos.ai.practice.internal.dto.SignerContext;
+import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.SignatureRequest;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
 import com.pravoos.ai.shared.exception.PravoosException;
@@ -56,22 +57,34 @@ public class PortalSignatureService {
     @Transactional
     public SignatureRequestResponse sign(UUID signatureId, SignDocumentRequest request,
                                          List<UUID> clientIds, SignerContext signer) {
-        UUID caseId = requireClientSignatureCase(signatureId, clientIds);
-        return signatureService.sign(caseId, signatureId, request, signer);
+        Case caseEntity = requireClientSignatureCase(signatureId, clientIds);
+        return signatureService.sign(caseEntity, signatureId, request, signer);
+    }
+
+    @Transactional
+    public SignatureRequestResponse signWithCms(UUID signatureId, byte[] signatureFile, String signatureFileName,
+                                                List<UUID> clientIds, SignerContext signer) {
+        Case caseEntity = requireClientSignatureCase(signatureId, clientIds);
+        return signatureService.signWithCms(caseEntity, signatureId, signatureFile, signatureFileName, signer);
     }
 
     @Transactional
     public SignatureRequestResponse decline(UUID signatureId, String reason,
                                             List<UUID> clientIds, SignerContext signer) {
-        UUID caseId = requireClientSignatureCase(signatureId, clientIds);
-        return signatureService.decline(caseId, signatureId, reason, signer);
+        Case caseEntity = requireClientSignatureCase(signatureId, clientIds);
+        return signatureService.decline(caseEntity, signatureId, reason, signer);
     }
 
-    private UUID requireClientSignatureCase(UUID signatureId, List<UUID> clientIds) {
+    @Transactional(readOnly = true)
+    public byte[] exportProtocol(UUID signatureId, List<UUID> clientIds) {
+        Case caseEntity = requireClientSignatureCase(signatureId, clientIds);
+        return signatureService.exportProtocol(caseEntity, signatureId);
+    }
+
+    private Case requireClientSignatureCase(UUID signatureId, List<UUID> clientIds) {
         SignatureRequest signatureRequest = signatureRequestRepository.findById(signatureId)
                 .orElseThrow(() -> new PravoosException("Запрос на подпись не найден",
                         HttpStatus.NOT_FOUND, "SIGNATURE_NOT_FOUND"));
-        portalCaseService.requireClientCase(signatureRequest.getCaseId(), clientIds);
-        return signatureRequest.getCaseId();
+        return portalCaseService.requireClientCase(signatureRequest.getCaseId(), clientIds);
     }
 }

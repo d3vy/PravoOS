@@ -28,7 +28,7 @@ export function Logo({ className = '', withWordmark = true }: LogoProps): JSX.El
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <PravoIcon className="w-[28px] h-[28px] rounded-sm" />
       {withWordmark && (
-        <span className="font-sans text-base font-semibold tracking-tight text-light-text dark:text-dark-text">
+        <span className="font-sans text-base font-semibold tracking-tight text-fg">
           Pravo<span className="font-light">OS</span>
         </span>
       )}

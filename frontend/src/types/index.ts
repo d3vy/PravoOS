@@ -940,7 +940,7 @@ export interface CheckoutResponse {
 
 export type SignatureStatus = 'PENDING' | 'SIGNED' | 'DECLINED' | 'CANCELED' | 'EXPIRED'
 
-export type SignatureProviderType = 'SIMPLE' | 'DIADOC'
+export type SignatureProviderType = 'SIMPLE' | 'DETACHED_CMS' | 'DIADOC'
 
 export interface SignatureRequestResponse {
   id: string
@@ -956,4 +956,12 @@ export interface SignatureRequestResponse {
   declineReason: string | null
   expiresAt: string | null
   createdAt: string
+  certificateSubject: string | null
+  certificateIssuer: string | null
+  certificateSerial: string | null
+  certificateValidFrom: string | null
+  certificateValidTo: string | null
+  signatureAlgorithm: string | null
+  declaredSigningTime: string | null
+  hasSignatureFile: boolean
 }

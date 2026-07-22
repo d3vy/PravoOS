@@ -26,6 +26,11 @@
         </dependency>
         <dependency>
             <groupId>com.pravoos</groupId>
+            <artifactId>pravoos-cloud</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
             <artifactId>pravoos-common-web</artifactId>
             <version>${project.version}</version>
         </dependency>

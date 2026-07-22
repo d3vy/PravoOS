@@ -13,11 +13,11 @@ interface ButtonProps extends Omit<ComponentPropsWithoutRef<'button'>, 'children
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-light-accent hover:bg-light-accent-hover dark:bg-dark-accent dark:hover:bg-dark-accent-hover text-white dark:text-dark-bg shadow-sm',
+    'bg-accent-solid hover:bg-accent-solid-hover text-accent-fg shadow-sm',
   secondary:
-    'bg-transparent border border-light-border dark:border-dark-border text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface',
+    'bg-transparent border border-line text-fg hover:bg-surface',
   ghost:
-    'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface',
+    'text-fg-muted hover:text-fg hover:bg-surface',
   danger:
     'bg-red-600 hover:bg-red-700 text-white shadow-sm',
 }
@@ -47,8 +47,8 @@ export function Button({
       className={`
         relative inline-flex items-center justify-center gap-2 rounded-lg font-medium
         transition-colors duration-150 focus:outline-none focus-visible:ring-2
-        focus-visible:ring-light-text/30 dark:focus-visible:ring-dark-text/30 focus-visible:ring-offset-2
-        focus-visible:ring-offset-light-bg dark:focus-visible:ring-offset-dark-bg
+        focus-visible:ring-fg/30 focus-visible:ring-offset-2
+        focus-visible:ring-offset-bg
         disabled:opacity-40 disabled:cursor-not-allowed
         ${variantClasses[variant]}
         ${sizeClasses[size]}
