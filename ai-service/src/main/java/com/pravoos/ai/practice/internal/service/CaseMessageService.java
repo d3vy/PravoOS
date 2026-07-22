@@ -92,6 +92,13 @@ public class CaseMessageService {
         return CaseMessageResponse.from(message);
     }
 
+    @Transactional
+    public void postSystemMessage(Case caseEntity, MessageAuthorRole authorRole, UUID authorUserId, String body) {
+        CaseMessage message = save(caseEntity.getId(), authorUserId, authorRole, body);
+        enqueueNotification(caseEntity, message, authorRole);
+        log.info("System case message posted on case {} as {}", caseEntity.getId(), authorRole);
+    }
+
     private List<CaseMessageResponse> toResponses(UUID caseId) {
         return caseMessageRepository.findByCaseIdOrderByCreatedAtAsc(caseId).stream()
                 .map(CaseMessageResponse::from)

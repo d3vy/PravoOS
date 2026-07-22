@@ -43,7 +43,7 @@ export function PortalSignatureSection({ caseId }: { caseId: string }): JSX.Elem
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-3">{t('portalSignature.title')}</h2>
+      <h2 className="text-lg font-semibold text-fg mb-3">{t('portalSignature.title')}</h2>
       <div className="flex flex-col gap-3">
         {signatures.map((signature) => (
           <SignatureCard
@@ -76,10 +76,17 @@ function SignatureCard({
   const [declining, setDeclining] = useState(false)
   const [reason, setReason] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [signatureFile, setSignatureFile] = useState<File | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const signMutation = useMutation({
     mutationFn: () => portalApi.signDocument(signature.id, signerName.trim()),
+    onSuccess: onChanged,
+    onError: (error) => setActionError(errorMessage(error)),
+  })
+
+  const cmsMutation = useMutation({
+    mutationFn: () => portalApi.signDocumentWithCms(signature.id, signatureFile as File),
     onSuccess: onChanged,
     onError: (error) => setActionError(errorMessage(error)),
   })
@@ -104,18 +111,25 @@ function SignatureCard({
   }
 
   const canSign = signerName.trim().length > 0 && consent
+  const requiresCms = signature.provider === 'DETACHED_CMS'
+
+  const handleProtocolDownload = (): void => {
+    portalApi
+      .downloadSignatureProtocol(signature.id)
+      .catch((error: unknown) => setActionError(errorMessage(error)))
+  }
 
   return (
     <div className="card-elevated rounded-xl p-4">
       <div className="flex items-center gap-3 mb-2">
-        <span className="flex-1 min-w-0 text-sm font-medium text-light-text dark:text-dark-text truncate">
+        <span className="flex-1 min-w-0 text-sm font-medium text-fg truncate">
           {document?.title ?? t('portalSignature.documentFallback')}
         </span>
         <SignatureStatusBadge status={signature.status} />
       </div>
 
       {signature.message && (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mb-2">{signature.message}</p>
+        <p className="text-sm text-fg-muted mb-2">{signature.message}</p>
       )}
 
       {document && (
@@ -123,15 +137,53 @@ function SignatureCard({
           type="button"
           onClick={() => void handleDownload()}
           disabled={downloading}
-          className="text-sm text-light-accent dark:text-dark-accent hover:underline disabled:opacity-60 mb-3 inline-flex items-center gap-1"
+          className="text-sm text-accent hover:underline disabled:opacity-60 mb-3 inline-flex items-center gap-1"
         >
           {downloading ? <Spinner size="sm" /> : t('portalSignature.downloadCheck')}
         </button>
       )}
 
-      {signature.status === 'PENDING' && !declining && (
+      {signature.status === 'PENDING' && !declining && requiresCms && (
         <div className="flex flex-col gap-2 mt-1">
-          <label className="block text-xs text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm font-medium text-fg">{t('portalSignature.cmsTitle')}</p>
+          <p className="text-xs text-fg-muted">{t('portalSignature.cmsHint')}</p>
+          <label className="text-xs text-fg-muted">
+            <span className="block mb-1">{t('portalSignature.cmsChooseFile')}</span>
+            <input
+              type="file"
+              accept=".sig,.p7s,.sgn,application/pkcs7-signature"
+              onChange={(e) => setSignatureFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-fg"
+            />
+          </label>
+          {signatureFile && (
+            <p className="text-xs text-fg-muted">
+              {t('portalSignature.cmsSelected', { name: signatureFile.name })}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              disabled={signatureFile === null}
+              loading={cmsMutation.isPending}
+              onClick={() => cmsMutation.mutate()}
+            >
+              {t('portalSignature.cmsUpload')}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setDeclining(true)}
+              className="text-sm px-3 py-2 rounded-lg border border-line text-fg-muted hover:text-red-600 dark:hover:text-red-400"
+            >
+              {t('portalSignature.decline')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {signature.status === 'PENDING' && !declining && !requiresCms && (
+        <div className="flex flex-col gap-2 mt-1">
+          <label className="block text-xs text-fg-muted">
             {t('portalSignature.signerName')}
             <input
               type="text"
@@ -139,10 +191,10 @@ function SignatureCard({
               maxLength={300}
               onChange={(e) => setSignerName(e.target.value)}
               placeholder={t('portalSignature.signerPlaceholder')}
-              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              className="mt-1 w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </label>
-          <label className="flex items-start gap-2 text-xs text-light-secondary dark:text-dark-secondary">
+          <label className="flex items-start gap-2 text-xs text-fg-muted">
             <input
               type="checkbox"
               checked={consent}
@@ -165,7 +217,7 @@ function SignatureCard({
             <button
               type="button"
               onClick={() => setDeclining(true)}
-              className="text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400"
+              className="text-sm px-3 py-2 rounded-lg border border-line text-fg-muted hover:text-red-600 dark:hover:text-red-400"
             >
               {t('portalSignature.decline')}
             </button>
@@ -181,7 +233,7 @@ function SignatureCard({
             onChange={(e) => setReason(e.target.value)}
             placeholder={t('portalSignature.declineReasonPlaceholder')}
             rows={2}
-            className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+            className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
           <div className="flex gap-2">
             <Button
@@ -194,7 +246,7 @@ function SignatureCard({
             <button
               type="button"
               onClick={() => setDeclining(false)}
-              className="text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary"
+              className="text-sm px-3 py-2 rounded-lg border border-line text-fg-muted"
             >
               {t('portalSignature.back')}
             </button>
@@ -203,20 +255,34 @@ function SignatureCard({
       )}
 
       {signature.status === 'SIGNED' && (
-        <p className="text-xs text-emerald-600 dark:text-emerald-400">
-          {t('portalSignature.signedPrefix', { name: signature.signerName })}
-          {signature.signedAt && ` · ${new Date(signature.signedAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}`}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-success">
+            {t('portalSignature.signedPrefix', { name: signature.signerName })}
+            {signature.signedAt && ` · ${new Date(signature.signedAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}`}
+          </p>
+          {signature.certificateSubject && (
+            <p className="text-xs text-fg-muted [overflow-wrap:anywhere]">
+              {t('portalSignature.signedWithCertificate', { subject: signature.certificateSubject })}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleProtocolDownload}
+            className="self-start text-xs text-accent hover:underline"
+          >
+            {t('portalSignature.downloadProtocol')}
+          </button>
+        </div>
       )}
       {signature.status === 'DECLINED' && (
-        <p className="text-xs text-red-600 dark:text-red-400">
+        <p className="text-xs text-danger">
           {signature.declineReason
             ? t('portalSignature.declinedWithReason', { reason: signature.declineReason })
             : t('portalSignature.declined')}
         </p>
       )}
 
-      {actionError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{actionError}</p>}
+      {actionError && <p className="text-sm text-danger mt-2">{actionError}</p>}
     </div>
   )
 }

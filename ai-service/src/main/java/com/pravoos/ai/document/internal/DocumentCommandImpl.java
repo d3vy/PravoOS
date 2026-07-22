@@ -2,6 +2,7 @@ package com.pravoos.ai.document.internal;
 
 import com.pravoos.ai.document.api.DocumentCommand;
 import com.pravoos.ai.document.api.DocumentContent;
+import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.document.internal.service.DocumentService;
@@ -48,6 +49,11 @@ public class DocumentCommandImpl implements DocumentCommand {
     @Override
     public DocumentContent loadClientContent(UUID documentId, UUID caseId) {
         return documentService.loadClientContent(documentId, caseId);
+    }
+
+    @Override
+    public DocumentRef clientVisibleRef(UUID documentId, UUID caseId) {
+        return documentService.clientVisibleRef(documentId, caseId);
     }
 
     @Override

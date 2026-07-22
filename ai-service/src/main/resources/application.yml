@@ -151,6 +151,8 @@ arbitr:
 
 signature:
   default-expiry-days: ${SIGNATURE_EXPIRY_DAYS:30}
+  expiry:
+    cron: ${SIGNATURE_EXPIRY_CRON:0 25 3 * * *}
   diadoc:
     base-url: ${DIADOC_API_BASE_URL:https://diadoc-api.kontur.ru}
     api-key: ${DIADOC_API_KEY:}

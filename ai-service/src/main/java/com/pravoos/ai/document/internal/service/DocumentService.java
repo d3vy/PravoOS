@@ -1,6 +1,7 @@
 package com.pravoos.ai.document.internal.service;
 
 import com.pravoos.ai.document.api.DocumentContent;
+import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.document.internal.dto.LegislationResponse;
@@ -309,6 +310,12 @@ public class DocumentService {
     public DocumentContent loadClientContent(UUID documentId, UUID caseId) {
         Document document = requireClientVisibleDocument(documentId, caseId);
         return buildContent(document);
+    }
+
+    @Transactional(readOnly = true)
+    public DocumentRef clientVisibleRef(UUID documentId, UUID caseId) {
+        Document document = requireClientVisibleDocument(documentId, caseId);
+        return new DocumentRef(document.getId(), document.getCaseId(), document.getUploadedBy(), document.getTitle());
     }
 
     @Transactional(readOnly = true)

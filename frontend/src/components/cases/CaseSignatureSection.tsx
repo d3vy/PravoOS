@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '../../i18n'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { signaturesApi } from '../../api/signatures'
-import type { DocumentResponse, SignatureRequestResponse } from '../../types'
+import type { DocumentResponse, SignatureProviderType, SignatureRequestResponse } from '../../types'
 import { Button } from '../ui/Button'
 import { SignatureStatusBadge } from '../ui/SignatureStatusBadge'
 
@@ -23,6 +23,7 @@ export function CaseSignatureSection({
   const queryClient = useQueryClient()
   const [documentId, setDocumentId] = useState('')
   const [message, setMessage] = useState('')
+  const [provider, setProvider] = useState<SignatureProviderType>('SIMPLE')
   const [actionError, setActionError] = useState<string | null>(null)
 
   const signableDocuments = documents.filter((doc) => doc.status === 'READY' && doc.visibleToClient)
@@ -39,7 +40,7 @@ export function CaseSignatureSection({
 
   const createMutation = useMutation({
     mutationFn: () =>
-      signaturesApi.create(caseId, { documentId, message: message.trim() || undefined }),
+      signaturesApi.create(caseId, { documentId, provider, message: message.trim() || undefined }),
     onSuccess: () => {
       invalidate()
       setDocumentId('')
@@ -55,28 +56,40 @@ export function CaseSignatureSection({
     onError: (error) => setActionError(errorMessage(error)),
   })
 
+  const downloadProtocol = (signatureId: string): void => {
+    signaturesApi
+      .downloadProtocol(caseId, signatureId)
+      .catch((error: unknown) => setActionError(errorMessage(error)))
+  }
+
+  const downloadSignatureFile = (signatureId: string): void => {
+    signaturesApi
+      .downloadSignatureFile(caseId, signatureId)
+      .catch((error: unknown) => setActionError(errorMessage(error)))
+  }
+
   const documentTitle = (id: string): string =>
     documents.find((doc) => doc.id === id)?.title ?? t('signature.documentFallback')
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">{t('signature.title')}</h2>
-      <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
+    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+      <h2 className="text-sm font-semibold text-fg mb-1">{t('signature.title')}</h2>
+      <p className="text-xs text-fg-muted mb-3">
         {t('signature.hint')}
       </p>
 
       {signableDocuments.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <p className="text-sm text-fg-muted">
           {t('signature.noDocsHint')}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs text-light-secondary dark:text-dark-secondary mb-1">{t('signature.documentLabel')}</label>
+            <label className="block text-xs text-fg-muted mb-1">{t('signature.documentLabel')}</label>
             <select
               value={documentId}
               onChange={(e) => setDocumentId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{t('signature.selectDocument')}</option>
               {signableDocuments.map((doc) => (
@@ -85,7 +98,7 @@ export function CaseSignatureSection({
             </select>
           </div>
           <div>
-            <label className="block text-xs text-light-secondary dark:text-dark-secondary mb-1">
+            <label className="block text-xs text-fg-muted mb-1">
               {t('signature.messageLabel')}
             </label>
             <input
@@ -94,8 +107,26 @@ export function CaseSignatureSection({
               maxLength={1000}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={t('signature.messagePlaceholder')}
-              className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             />
+          </div>
+          <div>
+            <label className="block text-xs text-fg-muted mb-1">
+              {t('signature.providerLabel')}
+            </label>
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as SignatureProviderType)}
+              className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <option value="SIMPLE">{t('signature.providerSimple')}</option>
+              <option value="DETACHED_CMS">{t('signature.providerCms')}</option>
+            </select>
+            {provider === 'DETACHED_CMS' && (
+              <p className="text-xs text-fg-muted mt-1">
+                {t('signature.providerCmsHint')}
+              </p>
+            )}
           </div>
           <div>
             <Button
@@ -110,17 +141,17 @@ export function CaseSignatureSection({
         </div>
       )}
 
-      {actionError && <p className="text-sm text-red-600 dark:text-red-400 mt-3">{actionError}</p>}
+      {actionError && <p className="text-sm text-danger mt-3">{actionError}</p>}
 
       {signatures.length > 0 && (
         <div className="flex flex-col gap-3 mt-5">
           {signatures.map((signature) => (
             <div
               key={signature.id}
-              className="p-4 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg"
+              className="p-4 rounded-lg border border-line bg-bg"
             >
               <div className="flex items-center gap-3 mb-2">
-                <p className="flex-1 min-w-0 text-sm font-medium text-light-text dark:text-dark-text truncate">
+                <p className="flex-1 min-w-0 text-sm font-medium text-fg truncate">
                   {documentTitle(signature.documentId)}
                 </p>
                 <SignatureStatusBadge status={signature.status} />
@@ -129,26 +160,63 @@ export function CaseSignatureSection({
                     type="button"
                     onClick={() => cancelMutation.mutate(signature.id)}
                     disabled={cancelMutation.isPending}
-                    className="text-xs px-2 py-1 rounded-md border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-red-600 dark:hover:text-red-400 disabled:opacity-60"
+                    className="text-xs px-2 py-1 rounded-md border border-line text-fg-muted hover:text-red-600 dark:hover:text-red-400 disabled:opacity-60"
                   >
                     {t('signature.cancel')}
                   </button>
                 )}
               </div>
               {signature.message && (
-                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">{signature.message}</p>
+                <p className="text-xs text-fg-muted mb-1">{signature.message}</p>
               )}
               {signature.status === 'SIGNED' && (
-                <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                <p className="text-xs text-success">
                   {t('signature.signedBy', { name: signature.signerName })}
                   {signature.signedAt && ` · ${new Date(signature.signedAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}`}
                   {signature.signerIp && ` · IP ${signature.signerIp}`}
                 </p>
               )}
-              {signature.status === 'DECLINED' && signature.declineReason && (
-                <p className="text-xs text-red-600 dark:text-red-400">{t('signature.declineReason', { reason: signature.declineReason })}</p>
+              {signature.status === 'SIGNED' && signature.certificateSubject && (
+                <div className="text-xs text-fg-muted mt-1 [overflow-wrap:anywhere]">
+                  <p>{t('signature.certificate', { subject: signature.certificateSubject })}</p>
+                  {signature.certificateSerial && (
+                    <p>{t('signature.certificateSerial', { serial: signature.certificateSerial })}</p>
+                  )}
+                  {signature.certificateValidTo && (
+                    <p>
+                      {t('signature.certificateValidTo', {
+                        date: new Date(signature.certificateValidTo).toLocaleDateString(
+                          i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+                        ),
+                      })}
+                    </p>
+                  )}
+                </div>
               )}
-              <p className="text-[11px] font-mono text-light-secondary dark:text-dark-secondary mt-1 [overflow-wrap:anywhere]">
+              {signature.status === 'SIGNED' && (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => downloadProtocol(signature.id)}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    {t('signature.downloadProtocol')}
+                  </button>
+                  {signature.hasSignatureFile && (
+                    <button
+                      type="button"
+                      onClick={() => downloadSignatureFile(signature.id)}
+                      className="text-xs text-accent hover:underline"
+                    >
+                      {t('signature.downloadSignatureFile')}
+                    </button>
+                  )}
+                </div>
+              )}
+              {signature.status === 'DECLINED' && signature.declineReason && (
+                <p className="text-xs text-danger">{t('signature.declineReason', { reason: signature.declineReason })}</p>
+              )}
+              <p className="text-[11px] font-mono text-fg-muted mt-1 [overflow-wrap:anywhere]">
                 SHA-256: {signature.documentHash}
               </p>
             </div>
