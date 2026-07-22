@@ -424,12 +424,45 @@ export interface DashboardRecentCase {
   createdAt: string
 }
 
+export interface DashboardMoneyOnTable {
+  uninvoicedMinutes: number
+  uninvoicedAmount: number
+}
+
+export interface DashboardTodayTask {
+  id: string
+  caseId: string
+  caseTitle: string
+  text: string
+  dueDate: string
+  daysOverdue: number
+}
+
+export interface DashboardUnpaidInvoiceItem {
+  id: string
+  number: string
+  clientName: string | null
+  total: number
+  currency: string
+  dueDate: string | null
+  daysOverdue: number
+}
+
+export interface DashboardUnpaidInvoices {
+  count: number
+  totalAmount: number
+  items: DashboardUnpaidInvoiceItem[]
+}
+
 export interface DashboardResponse {
   pipeline: DashboardStatusCount[]
   activeCases: number
   openTasks: number
   upcomingDeadlines: DashboardDeadline[]
   recentCases: DashboardRecentCase[]
+  moneyOnTable: DashboardMoneyOnTable
+  tasksToday: DashboardTodayTask[]
+  unpaidInvoices: DashboardUnpaidInvoices
 }
 
 export type CalendarEventType = 'DEADLINE' | 'HEARING' | 'TASK'

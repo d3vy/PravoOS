@@ -20,6 +20,14 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, UUID> {
         LocalDate getDueDate();
     }
 
+    interface TodayTaskView {
+        UUID getId();
+        UUID getCaseId();
+        String getCaseTitle();
+        String getText();
+        LocalDate getDueDate();
+    }
+
     List<CaseTask> findByCaseIdOrderByDoneAscCreatedAtAsc(UUID caseId);
 
     List<CaseTask> findByCaseIdInAndDoneFalseAndDueDateBetween(Collection<UUID> caseIds,
@@ -43,6 +51,20 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, UUID> {
                                                   @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
                                                   @Param("today") LocalDate today,
                                                   @Param("horizon") LocalDate horizon);
+
+    @Query("""
+            SELECT t.id AS id, c.id AS caseId, c.title AS caseTitle, t.text AS text, t.dueDate AS dueDate
+            FROM CaseTask t, Case c
+            WHERE t.caseId = c.id
+              AND t.done = false
+              AND c.lawyerId = :lawyerId
+              AND c.status NOT IN :closedStatuses
+              AND t.dueDate <= :today
+            ORDER BY t.dueDate ASC
+            """)
+    List<TodayTaskView> findDueTodayOrOverdueByLawyerId(@Param("lawyerId") UUID lawyerId,
+                                                        @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
+                                                        @Param("today") LocalDate today);
 
     @Modifying
     @Query("DELETE FROM CaseTask t WHERE t.caseId IN (SELECT c.id FROM Case c WHERE c.lawyerId = :lawyerId)")

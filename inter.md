@@ -90,7 +90,30 @@
 
 ---
 
-## 4. Рабочий стол вместо витрины: плотность и настраиваемый дашборд
+## 4. Рабочий стол вместо витрины: плотность и настраиваемый дашборд · ✅ СДЕЛАНО
+
+**Итог.** `DashboardPage.tsx` разобран на `widgets/{PipelineWidget,DeadlinesWidget,RecentCasesWidget,MoneyOnTableWidget,TasksTodayWidget,UnpaidInvoicesWidget}.tsx` + `widgets/{registry,types,WidgetGrid,WidgetPickerModal}.tsx`. Дублирующие статкарты убраны — остался только дайджест-баннер с пилюлями.
+
+Сетка виджетов — `Reorder.Group`/`Reorder.Item` из **framer-motion** (уже была зависимостью, новый пакет не добавлял), перетаскивание только за ручку в углу карточки (`useDragControls`, `dragListener={false}`), а не за всю карточку — иначе конфликтует со ссылками/кликами внутри виджета. Порядок и видимость — `store/dashboardLayoutStore.ts` (zustand + `persist`, паттерн взят из `authStore.ts`), редактируются через `WidgetPickerModal` (переиспользует `ui/Modal` из п.2). Плотность — `hooks/useDensity.ts`, `compact`/`comfortable` в `localStorage`, штатное состояние — `comfortable`.
+
+**«Деньги на столе» — с реальными данными, не моком.** На бэке (`ai-service`) это оказалось агрегатом, которого не было: `CaseTimeSummary` считает несписанное только по одному делу. Добавлено:
+- `TimeEntryRepository.findByLawyerIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalse` — все неинвойсированные billable-записи юриста;
+- `DashboardService.buildMoneyOnTable` суммирует их через `BillingAmounts.lineAmount` (сумма считается на лету, `amount` в `TimeEntry` не хранится).
+
+Заодно данными закрыты два виджета из списка, для которых бэк уже позволял это сделать честно:
+- **«Задачи на сегодня»** — `CaseTaskRepository.findDueTodayOrOverdueByLawyerId` (незакрытые задачи с `dueDate <= today`, включая просроченные, statuses ≠ CLOSED_*).
+- **«Неоплаченные счета»** — `InvoiceRepository.findByLawyerIdAndStatusOrderByDueDateAsc(ISSUED)`, имена клиентов резолвятся через `ClientRepository` (он локален для `ai-service`, без похода в `user-service`).
+
+`DashboardResponse` расширен полями `moneyOnTable`, `tasksToday`, `unpaidInvoices` — обратно совместимо, старые поля не тронуты.
+
+⚠️ **«Последние ответы AI» и «Обновления КАД» — не сделаны.** Для КАД в системе есть только ссылка на карточку (`ArbitrSection`/`KAD_CARD_BASE_URL`), нет отслеживания изменений на стороне арбитр.ru — нужен отдельный поллинг-сервис, это не рефакторинг дашборда, а новая интеграция. Для «последних ответов AI» агрегации по всем делам юриста через чат/сообщения нет — потребует отдельного запроса дизайна (что считать «ответом», как коротко его показать). Оба вынесены за скобки, чтобы не тащить в виджет фиктивные данные.
+
+**Файлы.** `src/pages/dashboard/{DashboardPage.tsx,widgets/*}`, `src/store/dashboardLayoutStore.ts`, `src/hooks/useDensity.ts`; бэк: `DashboardResponse`, `DashboardService`, `TimeEntryRepository`, `CaseTaskRepository`, `InvoiceRepository`.
+**Проверено:** `mvn compile` и юнит-тесты `ai-service` зелёные, `tsc --noEmit` и `vite build` фронта — без ошибок.
+
+---
+
+### Исходная постановка
 
 **Суть.** Сейчас `DashboardPage` — фиксированная лента: дайджест → быстрый вопрос → 3 статкарты → пайплайн + дедлайны → недавние дела. Статкарты дублируют «фокус-пилюли» из дайджест-баннера (те же три числа дважды на одном экране).
 

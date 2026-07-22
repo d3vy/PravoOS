@@ -19,6 +19,8 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, UUID> {
 
     Optional<TimeEntry> findByLawyerIdAndRunningTrue(UUID lawyerId);
 
+    List<TimeEntry> findByLawyerIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalse(UUID lawyerId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM TimeEntry t WHERE t.clientId = :clientId "
             + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "

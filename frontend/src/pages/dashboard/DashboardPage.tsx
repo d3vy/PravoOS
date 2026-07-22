@@ -5,28 +5,11 @@ import { Trans, useTranslation } from 'react-i18next'
 import { dashboardApi } from '../../api/dashboard'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
-import { Badge, CaseStatusBadge, caseStatusLabel, CASE_STATUS_ORDER } from '../../components/ui/Badge'
-import type { CaseStatus, DashboardDeadline, DashboardResponse } from '../../types'
+import { useDensity } from '../../hooks/useDensity'
+import type { DashboardResponse } from '../../types'
 import type { TFunction } from 'i18next'
-
-const STATUS_BAR_COLOR: Record<CaseStatus, string> = {
-  INTAKE: 'bg-zinc-400 dark:bg-zinc-500',
-  IN_PROGRESS: 'bg-blue-500',
-  SUBMITTED: 'bg-amber-500',
-  CLOSED_WON: 'bg-emerald-500',
-  CLOSED_LOST: 'bg-red-500',
-}
-
-function formatDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-')
-  return `${day}.${month}.${year}`
-}
-
-function daysLeftLabel(daysLeft: number, t: TFunction): string {
-  if (daysLeft <= 0) return t('dashboard.today')
-  if (daysLeft === 1) return t('dashboard.tomorrow')
-  return t('dashboard.inDays', { count: daysLeft })
-}
+import { WidgetGrid } from './widgets/WidgetGrid'
+import { WidgetPickerModal } from './widgets/WidgetPickerModal'
 
 function greeting(hour: number, t: TFunction): string {
   if (hour >= 5 && hour < 12) return t('dashboard.greetingMorning')
@@ -41,13 +24,27 @@ export default function DashboardPage(): JSX.Element {
     queryKey: ['dashboard'],
     queryFn: dashboardApi.get,
   })
+  const [density, toggleDensity] = useDensity()
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
-        <div className="mb-8">
-          <p className="eyebrow mb-1">{t('dashboard.eyebrow')}</p>
-          <h1 className="text-3xl font-semibold text-fg">{t('dashboard.title')}</h1>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="eyebrow mb-1">{t('dashboard.eyebrow')}</p>
+            <h1 className="text-3xl font-semibold text-fg">{t('dashboard.title')}</h1>
+          </div>
+          {!isLoading && !isError && (
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={toggleDensity}>
+                {density === 'compact' ? t('dashboard.densityComfortable') : t('dashboard.densityCompact')}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+                {t('dashboard.widgetsCustomize')}
+              </Button>
+            </div>
+          )}
         </div>
 
         {isLoading && <DashboardSkeleton />}
@@ -58,7 +55,9 @@ export default function DashboardPage(): JSX.Element {
           </div>
         )}
 
-        {data && <DashboardContent data={data} />}
+        {data && <DashboardContent data={data} density={density} />}
+
+        <WidgetPickerModal open={pickerOpen} onClose={() => setPickerOpen(false)} />
       </div>
     </div>
   )
@@ -84,68 +83,38 @@ function DashboardSkeleton(): JSX.Element {
         <Skeleton className="h-11 w-full rounded-lg" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[0, 1, 2].map((i) => (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[0, 1, 2, 3].map((i) => (
           <div key={i} className="card-elevated p-5">
-            <Skeleton className="h-4 w-24 mb-2" />
-            <Skeleton className="h-8 w-12" />
+            <Skeleton className="h-5 w-32 mb-4" />
+            <div className="space-y-3">
+              {[0, 1, 2].map((j) => (
+                <Skeleton key={j} className="h-8 w-full" />
+              ))}
+            </div>
           </div>
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card-elevated p-5">
-          <Skeleton className="h-5 w-32 mb-4" />
-          <div className="space-y-3">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-6 w-full" />
-            ))}
-          </div>
-        </div>
-        <div className="card-elevated p-5">
-          <Skeleton className="h-5 w-32 mb-4" />
-          <div className="space-y-2">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="card-elevated p-5">
-        <Skeleton className="h-5 w-32 mb-4" />
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-8 w-full" />
-          ))}
-        </div>
       </div>
     </div>
   )
 }
 
-function DashboardContent({ data }: { data: DashboardResponse }): JSX.Element {
-  const { t } = useTranslation()
+function DashboardContent({
+  data,
+  density,
+}: {
+  data: DashboardResponse
+  density: 'comfortable' | 'compact'
+}): JSX.Element {
   return (
-    <div className="space-y-6">
+    <div className={density === 'compact' ? 'space-y-3' : 'space-y-6'}>
       <DigestBanner data={data} />
 
       {data.activeCases === 0 && data.recentCases.length === 0 && <QuickStartCard />}
 
       <QuickAskWidget />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label={t('dashboard.statActiveCases')} value={data.activeCases} to="/cases" />
-        <StatCard label={t('dashboard.statOpenTasks')} value={data.openTasks} />
-        <StatCard label={t('dashboard.statWeekDeadlines')} value={data.upcomingDeadlines.length} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PipelineWidget data={data} />
-        <DeadlinesWidget deadlines={data.upcomingDeadlines} />
-      </div>
-
-      <RecentCasesWidget cases={data.recentCases} />
+      <WidgetGrid data={data} density={density} />
     </div>
   )
 }
@@ -320,122 +289,5 @@ function FocusPill({
     </Link>
   ) : (
     content
-  )
-}
-
-function StatCard({ label, value, to }: { label: string; value: number; to?: string }): JSX.Element {
-  const content = (
-    <div className="card-elevated p-5 h-full">
-      <p className="text-sm text-fg-muted mb-1">{label}</p>
-      <p className="text-3xl font-semibold text-fg">{value}</p>
-    </div>
-  )
-  return to ? (
-    <Link to={to} className="block hover:opacity-90 transition-opacity">
-      {content}
-    </Link>
-  ) : (
-    content
-  )
-}
-
-function PipelineWidget({ data }: { data: DashboardResponse }): JSX.Element {
-  const { t } = useTranslation()
-  const maxCount = Math.max(1, ...data.pipeline.map((item) => item.count))
-  const total = data.pipeline.reduce((sum, item) => sum + item.count, 0)
-
-  return (
-    <div className="card-elevated p-5">
-      <h2 className="text-lg font-semibold text-fg mb-4">{t('dashboard.pipelineTitle')}</h2>
-      {total === 0 ? (
-        <p className="text-sm text-fg-muted">{t('dashboard.noCases')}</p>
-      ) : (
-        <div className="space-y-3">
-          {CASE_STATUS_ORDER.map((status) => {
-            const item = data.pipeline.find((entry) => entry.status === status)
-            const count = item?.count ?? 0
-            return (
-              <div key={status}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-fg">
-                    {caseStatusLabel(status)}
-                  </span>
-                  <span className="text-sm font-medium text-fg-muted">{count}</span>
-                </div>
-                <div className="h-2 rounded-full bg-bg overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${STATUS_BAR_COLOR[status]}`}
-                    style={{ width: `${(count / maxCount) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DeadlinesWidget({ deadlines }: { deadlines: DashboardDeadline[] }): JSX.Element {
-  const { t } = useTranslation()
-  return (
-    <div className="card-elevated p-5">
-      <h2 className="text-lg font-semibold text-fg mb-4">{t('dashboard.deadlinesTitle')}</h2>
-      {deadlines.length === 0 ? (
-        <p className="text-sm text-fg-muted">{t('dashboard.noDeadlines')}</p>
-      ) : (
-        <ul className="space-y-2">
-          {deadlines.map((deadline, index) => (
-            <li key={`${deadline.caseId}-${deadline.type}-${index}`}>
-              <Link
-                to={`/cases/${deadline.caseId}`}
-                className="flex items-center justify-between gap-3 p-3 rounded-lg border border-line hover:bg-bg transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-fg truncate">
-                    {deadline.caseTitle}
-                  </p>
-                  <p className="text-xs text-fg-muted">
-                    {deadline.typeName} · {formatDate(deadline.date)}
-                  </p>
-                </div>
-                <Badge variant={deadline.daysLeft <= 3 ? 'danger' : 'warning'}>
-                  {daysLeftLabel(deadline.daysLeft, t)}
-                </Badge>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-function RecentCasesWidget({ cases }: { cases: DashboardResponse['recentCases'] }): JSX.Element {
-  const { t } = useTranslation()
-  return (
-    <div className="card-elevated p-5">
-      <h2 className="text-lg font-semibold text-fg mb-4">{t('dashboard.recentTitle')}</h2>
-      {cases.length === 0 ? (
-        <p className="text-sm text-fg-muted">{t('dashboard.noCases')}</p>
-      ) : (
-        <ul className="divide-y divide-line">
-          {cases.map((caseItem) => (
-            <li key={caseItem.id}>
-              <Link
-                to={`/cases/${caseItem.id}`}
-                className="flex items-center justify-between gap-3 py-3 hover:opacity-80 transition-opacity"
-              >
-                <span className="min-w-0 text-sm font-medium text-fg truncate">
-                  {caseItem.title}
-                </span>
-                <CaseStatusBadge status={caseItem.status} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   )
 }
