@@ -4,6 +4,7 @@ import { Link, useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, DocumentResponse } from '../../types'
+import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
 import { Spinner } from '../../components/ui/Spinner'
 import { CaseHeaderSection } from '../../components/cases/CaseHeaderSection'
 import { CaseTabsNav, type CaseTabDescriptor } from '../../components/cases/CaseTabsNav'
@@ -64,6 +65,17 @@ export default function CaseDetailPage(): JSX.Element {
     queryFn: () => casesApi.get(caseId),
     enabled: caseId !== '',
   })
+
+  const recordRecentEntity = useRecentEntitiesStore((state) => state.record)
+  useEffect(() => {
+    if (!caseItem) return
+    recordRecentEntity({
+      type: 'case',
+      id: caseItem.id,
+      label: caseItem.title,
+      subtitle: caseItem.clientName,
+    })
+  }, [caseItem, recordRecentEntity])
 
   const { data: documents = [] } = useQuery<DocumentResponse[]>({
     queryKey: ['case-documents', caseId],

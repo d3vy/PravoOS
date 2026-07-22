@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { searchApi } from '../../api/search'
+import { timeApi } from '../../api/time'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
+import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
 import { useTheme } from '../../hooks/useTheme'
+import { useToast } from '../../hooks/useToast'
 import { useLawyerAccountLinks, useLawyerNavSections } from '../layout/lawyerNav'
 import { CaseStatusBadge } from '../ui/Badge'
 import type { GlobalSearchResponse } from '../../types'
@@ -21,6 +24,11 @@ interface CommandItem {
   keywords?: string
   badge?: ReactNode
   perform: () => void
+  secondaryAction?: {
+    label: string
+    icon: ReactNode
+    perform: () => void
+  }
 }
 
 interface CommandGroup {
@@ -45,6 +53,16 @@ export function CommandPalette(): JSX.Element | null {
   const { toggleTheme } = useTheme()
   const lawyerNavSections = useLawyerNavSections()
   const lawyerAccountLinks = useLawyerAccountLinks()
+  const recentEntities = useRecentEntitiesStore((state) => state.entries)
+  const queryClient = useQueryClient()
+  const toast = useToast()
+
+  const startTimer = useMutation({
+    mutationFn: (caseId: string) =>
+      timeApi.startTimer(caseId, { description: t('timeTracking.defaultDescription'), hourlyRate: 0, billable: true }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['active-timer'] }),
+    onError: () => toast.error(t('timeTracking.startError')),
+  })
 
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -160,12 +178,27 @@ export function CommandPalette(): JSX.Element | null {
     return { title: t('command.actions'), items: [...quickItems, ...navItems] }
   }, [navigate, toggleTheme, lawyerNavSections, lawyerAccountLinks, t])
 
+  const recentGroup = useMemo<CommandGroup | null>(() => {
+    if (debouncedQuery.length >= MIN_SEARCH_LENGTH || recentEntities.length === 0) return null
+    const items: CommandItem[] = recentEntities.slice(0, 5).map((entity) => ({
+      id: `recent:${entity.type}:${entity.id}`,
+      label: entity.label,
+      hint: entity.subtitle ?? undefined,
+      icon: entity.type === 'case' ? <CaseIcon /> : <ClientIcon />,
+      perform: () =>
+        run(() => navigate(entity.type === 'case' ? `/cases/${entity.id}` : `/clients/${entity.id}`)),
+    }))
+    return { title: t('command.recent'), items }
+  }, [debouncedQuery, recentEntities, navigate, t])
+
   const groups = useMemo<CommandGroup[]>(() => {
     const filteredActions: CommandGroup = {
       title: actionGroup.title,
       items: actionGroup.items.filter((item) => matches(debouncedQuery, item)),
     }
-    const result: CommandGroup[] = filteredActions.items.length > 0 ? [filteredActions] : []
+    const result: CommandGroup[] = []
+    if (recentGroup) result.push(recentGroup)
+    if (filteredActions.items.length > 0) result.push(filteredActions)
 
     if (searchEnabled && searchResults) {
       if (searchResults.cases.length > 0) {
@@ -178,6 +211,14 @@ export function CommandPalette(): JSX.Element | null {
             icon: <CaseIcon />,
             badge: <CaseStatusBadge status={hit.status} />,
             perform: () => run(() => navigate(`/cases/${hit.id}`)),
+            secondaryAction: {
+              label: t('command.startTimerFor', { title: hit.title }),
+              icon: <ClockIcon />,
+              perform: () =>
+                run(() => {
+                  startTimer.mutate(hit.id)
+                }),
+            },
           })),
         })
       }
@@ -206,7 +247,7 @@ export function CommandPalette(): JSX.Element | null {
       }
     }
     return result
-  }, [actionGroup, debouncedQuery, searchEnabled, searchResults, navigate, t])
+  }, [actionGroup, debouncedQuery, searchEnabled, searchResults, recentGroup, navigate, startTimer, t])
 
   const flatItems = useMemo(() => groups.flatMap((group) => group.items), [groups])
 
@@ -323,6 +364,20 @@ export function CommandPalette(): JSX.Element | null {
                               {item.hint}
                             </span>
                           )}
+                          {item.secondaryAction && (
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              title={item.secondaryAction.label}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                item.secondaryAction?.perform()
+                              }}
+                              className="shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-md text-fg-muted hover:text-fg hover:bg-bg transition-colors"
+                            >
+                              {item.secondaryAction.icon}
+                            </span>
+                          )}
                         </button>
                       )
                     })}
@@ -419,6 +474,24 @@ function DocIcon(): JSX.Element {
     <IconWrapper>
       <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
       <path d="M14 3v5h5" />
+    </IconWrapper>
+  )
+}
+
+function ClientIcon(): JSX.Element {
+  return (
+    <IconWrapper>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+    </IconWrapper>
+  )
+}
+
+function ClockIcon(): JSX.Element {
+  return (
+    <IconWrapper>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 14" />
     </IconWrapper>
   )
 }

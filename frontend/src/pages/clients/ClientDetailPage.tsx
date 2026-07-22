@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '../../i18n'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -10,6 +10,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { ClientForm } from '../../components/clients/ClientForm'
 import { ClientContactsSection } from '../../components/clients/ClientContactsSection'
 import { ClientPortalSection } from '../../components/clients/ClientPortalSection'
+import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
 
 export default function ClientDetailPage(): JSX.Element {
   const { t } = useTranslation()
@@ -26,6 +27,17 @@ export default function ClientDetailPage(): JSX.Element {
     queryFn: () => clientsApi.get(clientId),
     enabled: clientId !== '',
   })
+
+  const recordRecentEntity = useRecentEntitiesStore((state) => state.record)
+  useEffect(() => {
+    if (!data) return
+    recordRecentEntity({
+      type: 'client',
+      id: data.client.id,
+      label: data.client.name,
+      subtitle: null,
+    })
+  }, [data, recordRecentEntity])
 
   const updateMutation = useMutation({
     mutationFn: (payload: Parameters<typeof clientsApi.update>[1]) => clientsApi.update(clientId, payload),
