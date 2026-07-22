@@ -12,10 +12,12 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { CaseStatusSelect } from './CaseStatusSelect'
 import { DateField } from './DateField'
+import { useConfirm } from '../../hooks/useConfirm'
 
 export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX.Element {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(caseItem.title)
   const [description, setDescription] = useState(caseItem.description ?? '')
@@ -93,11 +95,17 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
     onError: () => setError(t('cases.transferError')),
   })
 
-  const handleTransfer = (): void => {
+  const handleTransfer = async (): Promise<void> => {
     if (!transferTo) return
     const member = orgMembers.find((m) => m.userId === transferTo)
     const name = member?.fullName || member?.email || t('cases.selectedMemberFallback')
-    if (!window.confirm(t('cases.transferConfirm', { name }))) return
+    const confirmed = await confirm({
+      title: t('cases.transferOwner'),
+      description: t('cases.transferConfirm', { name }),
+      confirmLabel: t('cases.transfer'),
+      danger: true,
+    })
+    if (!confirmed) return
     transferMutation.mutate(transferTo)
   }
 
@@ -143,25 +151,25 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
 
   if (isEditing) {
     return (
-      <section className="mb-6 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+      <section className="mb-6 p-6 rounded-xl bg-surface border border-line">
         <div className="flex flex-col gap-4">
           <Input label={t('cases.titleLabel')} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={500} />
           <div>
-            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">{t('common.description')}</label>
+            <label className="block text-sm font-medium text-fg mb-1.5">{t('common.description')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               maxLength={5000}
-              className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
+              className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">{t('cases.clientLabel')}</label>
+            <label className="block text-sm font-medium text-fg mb-1.5">{t('cases.clientLabel')}</label>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+              className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{t('cases.noClient')}</option>
               {clients.map((client) => (
@@ -184,16 +192,16 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             placeholder={t('cases.arbitrPlaceholder')}
           />
           {isOwner && (
-            <div className="flex flex-col gap-4 pt-4 border-t border-light-border dark:border-dark-border">
+            <div className="flex flex-col gap-4 pt-4 border-t border-line">
               <div>
-                <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
+                <label className="block text-sm font-medium text-fg mb-1.5">
                   {t('cases.orgLabel')}
                 </label>
                 <select
                   value={caseItem.orgId ?? ''}
                   disabled={changeOrgMutation.isPending}
                   onChange={(e) => changeOrgMutation.mutate(e.target.value || null)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent disabled:opacity-60"
+                  className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
                 >
                   <option value="">{t('cases.personalCase')}</option>
                   {organizations.map((org) => (
@@ -202,20 +210,20 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-light-secondary dark:text-dark-secondary">
+                <p className="mt-1 text-xs text-fg-muted">
                   {t('cases.orgHintEdit')}
                 </p>
               </div>
               {caseItem.orgId && (
                 <div>
-                  <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">
+                  <label className="block text-sm font-medium text-fg mb-1.5">
                     {t('cases.transferOwner')}
                   </label>
                   <div className="flex gap-2">
                     <select
                       value={transferTo}
                       onChange={(e) => setTransferTo(e.target.value)}
-                      className="flex-1 px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                      className="flex-1 px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                     >
                       <option value="">{t('cases.selectMember')}</option>
                       {orgMembers
@@ -239,7 +247,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
               )}
             </div>
           )}
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex gap-2">
             <Button variant="primary" loading={updateMutation.isPending} onClick={handleSave}>
               {t('common.save')}
@@ -256,7 +264,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
   return (
     <div className="mb-6">
       <div className="flex items-start justify-between gap-4 mb-2">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{caseItem.title}</h1>
+        <h1 className="text-3xl font-semibold text-fg">{caseItem.title}</h1>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
             {t('common.edit')}
@@ -290,7 +298,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
         {caseItem.clientId && caseItem.clientName && (
           <Link
             to={`/clients/${caseItem.clientId}`}
-            className="text-sm text-light-accent dark:text-dark-accent hover:underline"
+            className="text-sm text-accent hover:underline"
           >
             {t('cases.clientPrefix', { name: caseItem.clientName })}
           </Link>
@@ -298,9 +306,9 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
       </div>
       <DeadlineList caseItem={caseItem} />
       {caseItem.description && (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">{caseItem.description}</p>
+        <p className="text-sm text-fg-muted">{caseItem.description}</p>
       )}
-      {exportError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{exportError}</p>}
+      {exportError && <p className="text-sm text-danger mt-2">{exportError}</p>}
     </div>
   )
 }
@@ -337,7 +345,7 @@ function DeadlineBadge({ label, value }: { label: string; value: string }): JSX.
   const overdue = daysLeft < 0
   const tone = overdue || urgent
     ? 'border-red-300 text-red-700 dark:border-red-500/40 dark:text-red-400'
-    : 'border-light-border text-light-secondary dark:border-dark-border dark:text-dark-secondary'
+    : 'border-line text-fg-muted'
 
   const formatted = target.toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')
   const suffix = overdue

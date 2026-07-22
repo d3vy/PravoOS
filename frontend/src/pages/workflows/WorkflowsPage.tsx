@@ -6,6 +6,7 @@ import { casesApi } from '../../api/cases'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
+import { useConfirm } from '../../hooks/useConfirm'
 import type {
   DraftTypeInfo,
   SaveWorkflowDefinitionRequest,
@@ -36,7 +37,7 @@ const DEADLINE_OPTIONS = [
 ]
 
 const SELECT_CLASS =
-  'w-full px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent'
+  'w-full px-3 py-2 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent'
 const TEXTAREA_CLASS = `${SELECT_CLASS} resize-none`
 
 type EditorState = { mode: 'new' } | { mode: 'edit'; definition: WorkflowDefinitionDto } | null
@@ -44,6 +45,7 @@ type EditorState = { mode: 'new' } | { mode: 'edit'; definition: WorkflowDefinit
 export default function WorkflowsPage(): JSX.Element {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
   const [editor, setEditor] = useState<EditorState>(null)
 
   const { data: definitions = [], isLoading, isError } = useQuery<WorkflowDefinitionDto[]>({
@@ -57,13 +59,13 @@ export default function WorkflowsPage(): JSX.Element {
   })
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
             <p className="eyebrow mb-1">{t('workflowBuilder.eyebrow')}</p>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{t('workflowBuilder.title')}</h1>
-            <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+            <h1 className="text-3xl font-semibold text-fg">{t('workflowBuilder.title')}</h1>
+            <p className="text-sm text-fg-muted mt-1">
               {t('workflowBuilder.subtitle')}
             </p>
           </div>
@@ -87,31 +89,31 @@ export default function WorkflowsPage(): JSX.Element {
             <Spinner size="lg" />
           </div>
         )}
-        {isError && <p className="text-sm text-red-600 dark:text-red-400">{t('workflowBuilder.loadError')}</p>}
+        {isError && <p className="text-sm text-danger">{t('workflowBuilder.loadError')}</p>}
 
         <div className="space-y-3 mt-2">
           {definitions.map((definition) => (
             <div
               key={definition.id}
-              className="p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+              className="p-4 rounded-xl bg-surface border border-line"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold text-light-text dark:text-dark-text">{definition.name}</h3>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                    <h3 className="text-sm font-semibold text-fg">{definition.name}</h3>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-bg border border-line text-fg-muted">
                       {definition.categoryName}
                     </span>
                     {definition.system && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-bg border border-line text-fg-muted">
                         {t('workflowBuilder.system')}
                       </span>
                     )}
                   </div>
                   {definition.description && (
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">{definition.description}</p>
+                    <p className="text-xs text-fg-muted mt-1">{definition.description}</p>
                   )}
-                  <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1">
+                  <p className="text-xs text-fg-muted mt-1">
                     {t('workflowBuilder.stepsSummary', { count: definition.steps.length, titles: definition.steps.map((s) => s.title).join(' → ') })}
                   </p>
                 </div>
@@ -124,8 +126,13 @@ export default function WorkflowsPage(): JSX.Element {
                       size="sm"
                       variant="ghost"
                       loading={deleteMutation.isPending && deleteMutation.variables === definition.id}
-                      onClick={() => {
-                        if (window.confirm(t('workflowBuilder.deleteConfirm'))) deleteMutation.mutate(definition.id)
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: t('workflowBuilder.delete'),
+                          description: t('workflowBuilder.deleteConfirm'),
+                          danger: true,
+                        })
+                        if (confirmed) deleteMutation.mutate(definition.id)
                       }}
                     >
                       {t('workflowBuilder.delete')}
@@ -223,8 +230,8 @@ function WorkflowEditor({
   }
 
   return (
-    <div className="mb-8 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-4">
+    <div className="mb-8 p-5 rounded-xl bg-surface border border-line">
+      <h2 className="text-sm font-semibold text-fg mb-4">
         {initial ? (readOnly ? t('workflowBuilder.editorViewTitle') : t('workflowBuilder.editorEditTitle')) : t('workflowBuilder.editorNewTitle')}
       </h2>
 
@@ -254,16 +261,16 @@ function WorkflowEditor({
       </div>
 
       <div className="mt-5 space-y-3">
-        <h3 className="text-xs font-semibold text-light-secondary dark:text-dark-secondary uppercase tracking-wide">
+        <h3 className="text-xs font-semibold text-fg-muted uppercase tracking-wide">
           {t('workflowBuilder.stepsHeader')}
         </h3>
         {steps.map((step, index) => (
           <div
             key={index}
-            className="p-3 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg space-y-2"
+            className="p-3 rounded-lg border border-line bg-bg space-y-2"
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs text-light-secondary dark:text-dark-secondary w-5">{index + 1}.</span>
+              <span className="text-xs text-fg-muted w-5">{index + 1}.</span>
               <select
                 value={step.type}
                 onChange={(e) => updateStep(index, { type: e.target.value as WorkflowStepType })}
@@ -278,9 +285,9 @@ function WorkflowEditor({
               </select>
               {!readOnly && (
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => moveStep(index, -1)} className="px-2 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text" aria-label={t('workflowBuilder.moveUp')}>↑</button>
-                  <button type="button" onClick={() => moveStep(index, 1)} className="px-2 text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text" aria-label={t('workflowBuilder.moveDown')}>↓</button>
-                  <button type="button" onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))} className="px-2 text-red-600 dark:text-red-400" aria-label={t('workflowBuilder.deleteStep')}>✕</button>
+                  <button type="button" onClick={() => moveStep(index, -1)} className="px-2 text-fg-muted hover:text-fg" aria-label={t('workflowBuilder.moveUp')}>↑</button>
+                  <button type="button" onClick={() => moveStep(index, 1)} className="px-2 text-fg-muted hover:text-fg" aria-label={t('workflowBuilder.moveDown')}>↓</button>
+                  <button type="button" onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))} className="px-2 text-danger" aria-label={t('workflowBuilder.deleteStep')}>✕</button>
                 </div>
               )}
             </div>
@@ -358,7 +365,7 @@ function WorkflowEditor({
       </div>
 
       {saveMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400 mt-3">{t('workflowBuilder.saveError')}</p>
+        <p className="text-sm text-danger mt-3">{t('workflowBuilder.saveError')}</p>
       )}
 
       <div className="flex gap-2 mt-5">

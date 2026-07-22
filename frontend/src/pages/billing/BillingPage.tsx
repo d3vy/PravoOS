@@ -7,6 +7,7 @@ import { refreshSession } from '../../api/client'
 import type { BillingPlan, BillingStatus, PaymentRecord, PaymentStatus, SubscriptionStatus } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { useConfirm } from '../../hooks/useConfirm'
 
 const STATUS_LABEL_KEY: Record<SubscriptionStatus, string> = {
   TRIALING: 'billing.statusTrialing',
@@ -43,6 +44,7 @@ function formatTokens(tokens: number): string {
 export default function BillingPage(): JSX.Element {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
   const [error, setError] = useState<string | null>(null)
 
   const { data: status, isLoading: statusLoading } = useQuery<BillingStatus>({
@@ -87,10 +89,13 @@ export default function BillingPage(): JSX.Element {
     onError: () => setError(t('billing.cancelError')),
   })
 
-  const handleCancel = (): void => {
-    if (window.confirm(t('billing.cancelConfirm'))) {
-      cancelMutation.mutate()
-    }
+  const handleCancel = async (): Promise<void> => {
+    const confirmed = await confirm({
+      title: t('billing.cancelSubscription'),
+      description: t('billing.cancelConfirm'),
+      danger: true,
+    })
+    if (confirmed) cancelMutation.mutate()
   }
 
   if (statusLoading || plansLoading) {
@@ -105,26 +110,26 @@ export default function BillingPage(): JSX.Element {
     && (status.status === 'ACTIVE' || status.status === 'TRIALING')
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('billing.title')}</h1>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <h1 className="text-3xl font-semibold text-fg mb-1">{t('billing.title')}</h1>
+          <p className="text-sm text-fg-muted">
             {t('billing.subtitle')}
           </p>
         </div>
 
-        {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
         {status && (
-          <div className="mb-8 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+          <div className="mb-8 p-6 rounded-xl bg-surface border border-line">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">{t('billing.currentPlan')}</p>
-                <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">
+                <p className="text-xs text-fg-muted mb-1">{t('billing.currentPlan')}</p>
+                <h2 className="text-xl font-semibold text-fg">
                   {status.planName} · {t(STATUS_LABEL_KEY[status.status])}
                 </h2>
-                <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+                <p className="text-sm text-fg-muted mt-1">
                   {t('billing.statusMeta', { requests: status.dailyRequests, tokens: formatTokens(status.dailyTokens), seats: status.seats })}
                 </p>
               </div>
@@ -136,22 +141,22 @@ export default function BillingPage(): JSX.Element {
             </div>
 
             {status.status === 'TRIALING' && (
-              <p className="mt-4 text-sm text-light-text dark:text-dark-text">
+              <p className="mt-4 text-sm text-fg">
                 {t('billing.trialUntil', { date: formatDate(status.trialEnd) })}
               </p>
             )}
             {status.status === 'PAST_DUE' && (
-              <p className="mt-4 text-sm text-red-600 dark:text-red-400">
+              <p className="mt-4 text-sm text-danger">
                 {t('billing.pastDueMsg')}
               </p>
             )}
             {status.cancelAtPeriodEnd && (
-              <p className="mt-4 text-sm text-light-text dark:text-dark-text">
+              <p className="mt-4 text-sm text-fg">
                 {t('billing.canceledMsg', { date: formatDate(status.currentPeriodEnd) })}
               </p>
             )}
             {status.status === 'ACTIVE' && !status.cancelAtPeriodEnd && status.currentPeriodEnd && (
-              <p className="mt-4 text-sm text-light-secondary dark:text-dark-secondary">
+              <p className="mt-4 text-sm text-fg-muted">
                 {t('billing.nextCharge', { date: formatDate(status.currentPeriodEnd) })}
               </p>
             )}
@@ -167,24 +172,24 @@ export default function BillingPage(): JSX.Element {
                 key={plan.code}
                 className={`flex flex-col gap-3 p-5 rounded-xl border ${
                   isCurrent
-                    ? 'border-light-text dark:border-dark-text bg-light-surface dark:bg-dark-surface'
-                    : 'border-light-border dark:border-dark-border'
+                    ? 'border-fg bg-surface'
+                    : 'border-line'
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="text-lg font-semibold text-light-text dark:text-dark-text">{plan.name}</h3>
-                  <span className="text-sm text-light-text dark:text-dark-text">
+                  <h3 className="text-lg font-semibold text-fg">{plan.name}</h3>
+                  <span className="text-sm text-fg">
                     {isFree ? t('billing.free') : t('billing.pricePerMonth', { price: formatPrice(plan.priceKopecks) })}
                   </span>
                 </div>
-                <ul className="text-sm text-light-secondary dark:text-dark-secondary flex flex-col gap-1">
+                <ul className="text-sm text-fg-muted flex flex-col gap-1">
                   <li>{t('billing.planRequests', { count: plan.dailyRequests })}</li>
                   <li>{formatTokens(plan.dailyTokens)}</li>
                   <li>{t('billing.planSeats', { count: plan.seats })}</li>
                 </ul>
                 <div className="mt-auto pt-2">
                   {isCurrent ? (
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('billing.currentPlanBadge')}</p>
+                    <p className="text-xs text-fg-muted">{t('billing.currentPlanBadge')}</p>
                   ) : (
                     <Button
                       size="sm"
@@ -203,26 +208,26 @@ export default function BillingPage(): JSX.Element {
 
         {payments.length > 0 && (
           <div>
-            <h2 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('billing.paymentsHistory')}</h2>
-            <div className="flex flex-col divide-y divide-light-border dark:divide-dark-border">
+            <h2 className="text-sm font-medium text-fg mb-2">{t('billing.paymentsHistory')}</h2>
+            <div className="flex flex-col divide-y divide-line">
               {payments.map((payment) => (
                 <div key={payment.id} className="flex items-center justify-between gap-3 py-3 min-w-0">
                   <div className="min-w-0">
-                    <p className="text-sm text-light-text dark:text-dark-text truncate">
+                    <p className="text-sm text-fg truncate">
                       {payment.planCode ?? '—'} · {formatPrice(payment.amountKopecks)}
                     </p>
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary">
+                    <p className="text-xs text-fg-muted">
                       {formatDate(payment.paidAt ?? payment.createdAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                    <span className="text-xs text-fg-muted">
                       {t(PAYMENT_STATUS_LABEL_KEY[payment.status])}
                     </span>
                     {payment.status === 'PENDING' && payment.confirmationUrl && (
                       <a
                         href={payment.confirmationUrl}
-                        className="text-xs text-light-text dark:text-dark-text underline"
+                        className="text-xs text-fg underline"
                       >
                         {t('billing.pay')}
                       </a>

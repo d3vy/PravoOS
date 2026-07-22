@@ -5,6 +5,7 @@ import { clientsApi } from '../../api/clients'
 import type { PortalInviteStatusResponse } from '../../types'
 import { Button } from '../ui/Button'
 import { Spinner } from '../ui/Spinner'
+import { useConfirm } from '../../hooks/useConfirm'
 import i18n from '../../i18n'
 
 interface ClientPortalSectionProps {
@@ -15,6 +16,7 @@ interface ClientPortalSectionProps {
 export function ClientPortalSection({ clientId, email }: ClientPortalSectionProps): JSX.Element {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
   const [actionError, setActionError] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery<PortalInviteStatusResponse>({
@@ -49,9 +51,9 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
   const hasEmail = email !== null && email.trim() !== ''
 
   return (
-    <section className="mb-10 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+    <section className="mb-10 p-6 rounded-xl bg-surface border border-line">
       <div className="flex items-center justify-between gap-4 mb-2">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('clientPortal.title')}</h2>
+        <h2 className="text-sm font-semibold text-fg">{t('clientPortal.title')}</h2>
         {!isLoading && data && <StatusBadge status={data.status} />}
       </div>
 
@@ -61,11 +63,11 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
         </div>
       ) : (
         <>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary mb-4">
+          <p className="text-sm text-fg-muted mb-4">
             {renderDescription(data?.status ?? 'NONE', data?.expiresAt ?? null, hasEmail)}
           </p>
 
-          {actionError && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{actionError}</p>}
+          {actionError && <p className="text-sm text-danger mb-3">{actionError}</p>}
 
           <div className="flex flex-wrap gap-2">
             {data?.status === 'ACCEPTED' ? (
@@ -74,10 +76,14 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
                 size="sm"
                 loading={revokeMutation.isPending}
                 disabled={isBusy}
-                onClick={() => {
-                  if (window.confirm(t('clientPortal.revokeConfirm'))) {
-                    revokeMutation.mutate()
-                  }
+                onClick={async () => {
+                  const confirmed = await confirm({
+                    title: t('clientPortal.revokeAccess'),
+                    description: t('clientPortal.revokeConfirm'),
+                    confirmLabel: t('clientPortal.revokeAccess'),
+                    danger: true,
+                  })
+                  if (confirmed) revokeMutation.mutate()
                 }}
               >
                 {t('clientPortal.revokeAccess')}
@@ -125,14 +131,14 @@ function StatusBadge({ status }: { status: PortalInviteStatusResponse['status'] 
   const { t } = useTranslation()
   if (status === 'ACCEPTED') {
     return (
-      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400">
+      <span className="text-xs px-2 py-0.5 rounded-full bg-success-soft text-success">
         {t('clientPortal.badgeAccepted')}
       </span>
     )
   }
   if (status === 'PENDING') {
     return (
-      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
+      <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning">
         {t('clientPortal.badgePending')}
       </span>
     )
