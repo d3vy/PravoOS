@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,6 +10,11 @@ import { ApplicationStatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
+import { TableToolbar } from '../../components/ui/TableToolbar'
+import { useDensity } from '../../hooks/useDensity'
+import { useTablePreferences } from '../../hooks/useTablePreferences'
 
 type Tab = 'all' | 'pending'
 
@@ -20,6 +25,12 @@ export default function ApplicationsPage(): JSX.Element {
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [approveError, setApproveError] = useState<{ id: string; message: string } | null>(null)
   const queryClient = useQueryClient()
+  const [density, toggleDensity] = useDensity()
+  const { preferences, setSort, setGroupBy, toggleColumn } = useTablePreferences('admin-applications', {
+    visibleColumnIds: ['fullName', 'email', 'specialization', 'status', 'submittedAt'],
+    sort: [],
+    groupBy: null,
+  })
 
   const { data: allData, isLoading: allLoading } = useQuery<Page<ApplicationResponse>>({
     queryKey: ['applications', 'all', page],
@@ -124,6 +135,76 @@ export default function ApplicationsPage(): JSX.Element {
   const displayedTotal = activeTab === 'pending' ? pendingTotal : allTotal
   const pendingCount = pendingTotal
 
+  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
+
+  const columns = useMemo<DataTableColumn<ApplicationResponse>[]>(
+    () => [
+      {
+        id: 'fullName',
+        header: t('adminApplications.columnName'),
+        alwaysVisible: true,
+        sortable: true,
+        width: 'minmax(0, 1.5fr)',
+        value: (row) => row.fullName,
+      },
+      {
+        id: 'email',
+        header: t('adminApplications.email'),
+        sortable: true,
+        value: (row) => row.email,
+        render: (row) => (
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span className="truncate">{row.email}</span>
+            {row.emailVerified ? (
+              <span className="text-xs text-success shrink-0">✓</span>
+            ) : (
+              <span
+                className="text-xs text-warning shrink-0"
+                title={t('adminApplications.emailNotVerified')}
+              >
+                !
+              </span>
+            )}
+          </span>
+        ),
+      },
+      { id: 'phone', header: t('adminApplications.phone'), width: '11rem', value: (row) => row.phone },
+      {
+        id: 'specialization',
+        header: t('adminApplications.specialization'),
+        sortable: true,
+        groupable: true,
+        value: (row) => row.specialization,
+      },
+      {
+        id: 'status',
+        header: t('adminApplications.columnStatus'),
+        sortable: true,
+        groupable: true,
+        width: '9rem',
+        value: (row) => row.status,
+        render: (row) => <ApplicationStatusBadge status={row.status} />,
+      },
+      {
+        id: 'submittedAt',
+        header: t('adminApplications.columnSubmitted'),
+        sortable: true,
+        width: '11rem',
+        value: (row) => row.submittedAt,
+        render: (row) => new Date(row.submittedAt).toLocaleString(dateLocale),
+      },
+      {
+        id: 'reviewedAt',
+        header: t('adminApplications.columnReviewed'),
+        sortable: true,
+        width: '11rem',
+        value: (row) => row.reviewedAt,
+        render: (row) => (row.reviewedAt ? new Date(row.reviewedAt).toLocaleString(dateLocale) : '—'),
+      },
+    ],
+    [t, dateLocale]
+  )
+
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
@@ -162,163 +243,91 @@ export default function ApplicationsPage(): JSX.Element {
         </button>
       </div>
 
-      {/* Content */}
+      <div className="flex justify-end mb-3">
+        <TableToolbar
+          columns={columns}
+          visibleColumnIds={preferences.visibleColumnIds}
+          onToggleColumn={toggleColumn}
+          groupBy={preferences.groupBy}
+          onGroupByChange={setGroupBy}
+          density={density}
+          onDensityToggle={toggleDensity}
+        />
+      </div>
+
+      <AnimatePresence>
+        {approveError && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="mb-3 text-sm text-warning"
+          >
+            {approveError.message}
+          </motion.p>
+        )}
+      </AnimatePresence>
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Spinner size="lg" />
         </div>
-      ) : displayedApplications.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-fg-muted">
-            {activeTab === 'pending' ? t('adminApplications.emptyPending') : t('adminApplications.emptyAll')}
-          </p>
-        </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          <AnimatePresence>
-            {displayedApplications.map((app, index) => (
-              <ApplicationCard
-                key={app.id}
-                application={app}
-                index={index}
-                onApprove={() => approveMutation.mutate(app.id)}
-                onApproveForce={() => forceApproveMutation.mutate(app.id)}
-                onReject={() => rejectMutation.mutate(app.id)}
-                isProcessing={processingId === app.id}
-                approveErrorMessage={approveError?.id === app.id ? approveError.message : null}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
+        <DataTable
+          rows={displayedApplications}
+          columns={columns}
+          rowId={(row) => row.id}
+          sort={preferences.sort}
+          onSortChange={setSort}
+          visibleColumnIds={preferences.visibleColumnIds}
+          groupBy={preferences.groupBy}
+          density={density}
+          rowActions={(application) =>
+            application.status === 'PENDING' ? (
+              <>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => approveMutation.mutate(application.id)}
+                  loading={processingId === application.id}
+                  disabled={processingId === application.id}
+                >
+                  {t('adminApplications.approve')}
+                </Button>
+                {!application.emailVerified && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => forceApproveMutation.mutate(application.id)}
+                    disabled={processingId === application.id}
+                    title={t('adminApplications.approveForceTitle')}
+                  >
+                    {t('adminApplications.approveForce')}
+                  </Button>
+                )}
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => rejectMutation.mutate(application.id)}
+                  disabled={processingId === application.id}
+                >
+                  {t('adminApplications.reject')}
+                </Button>
+              </>
+            ) : null
+          }
+          emptyState={
+            <EmptyState
+              description={
+                activeTab === 'pending' ? t('adminApplications.emptyPending') : t('adminApplications.emptyAll')
+              }
+            />
+          }
+        />
       )}
 
       <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={displayedTotal} onPageChange={setPage} />
-    </div>
-  )
-}
-
-interface ApplicationCardProps {
-  application: ApplicationResponse
-  index: number
-  onApprove: () => void
-  onApproveForce: () => void
-  onReject: () => void
-  isProcessing: boolean
-  approveErrorMessage: string | null
-}
-
-function ApplicationCard({
-  application,
-  index,
-  onApprove,
-  onApproveForce,
-  onReject,
-  isProcessing,
-  approveErrorMessage,
-}: ApplicationCardProps): JSX.Element {
-  const { t } = useTranslation()
-  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ duration: 0.2, delay: index * 0.04 }}
-      className="bg-surface rounded-xl border border-line p-5"
-    >
-      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-3 mb-1">
-            <h3 className="font-semibold text-fg">
-              {application.fullName}
-            </h3>
-            <ApplicationStatusBadge status={application.status} />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1 mt-3">
-            <div>
-              <span className="text-xs text-fg-muted">{t('adminApplications.email')}</span>
-              <div className="flex items-center gap-1.5">
-                <p className="min-w-0 text-sm text-fg truncate">{application.email}</p>
-                {application.emailVerified ? (
-                  <span className="text-xs text-success shrink-0">✓</span>
-                ) : (
-                  <span className="text-xs text-amber-500 dark:text-amber-400 shrink-0" title={t('adminApplications.emailNotVerified')}>!</span>
-                )}
-              </div>
-            </div>
-            <InfoField label={t('adminApplications.phone')} value={application.phone} />
-            <InfoField label={t('adminApplications.specialization')} value={application.specialization} />
-          </div>
-
-          <p className="text-xs text-fg-muted mt-3">
-            {t('adminApplications.submitted', { date: new Date(application.submittedAt).toLocaleString(dateLocale) })}
-            {application.reviewedAt && (
-              <>{t('adminApplications.reviewed', { date: new Date(application.reviewedAt).toLocaleString(dateLocale) })}</>
-            )}
-          </p>
-
-          <AnimatePresence>
-            {approveErrorMessage && (
-              <motion.p
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="mt-2 text-xs text-warning"
-              >
-                {approveErrorMessage}
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {application.status === 'PENDING' && (
-          <div className="flex flex-col items-stretch gap-2 shrink-0">
-            <div className="flex gap-2">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onApprove}
-                loading={isProcessing}
-                disabled={isProcessing}
-              >
-                {t('adminApplications.approve')}
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={onReject}
-                loading={isProcessing}
-                disabled={isProcessing}
-              >
-                {t('adminApplications.reject')}
-              </Button>
-            </div>
-            {!application.emailVerified && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onApproveForce}
-                loading={isProcessing}
-                disabled={isProcessing}
-                title={t('adminApplications.approveForceTitle')}
-              >
-                {t('adminApplications.approveForce')}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  )
-}
-
-function InfoField({ label, value }: { label: string; value: string }): JSX.Element {
-  return (
-    <div className="min-w-0">
-      <span className="text-xs text-fg-muted">{label}</span>
-      <p className="text-sm text-fg truncate">{value}</p>
     </div>
   )
 }

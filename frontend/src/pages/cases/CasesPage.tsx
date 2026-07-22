@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '../../i18n'
 import { DateField } from '../../components/cases/DateField'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { casesApi } from '../../api/cases'
 import { clientsApi } from '../../api/clients'
 import { organizationsApi } from '../../api/organizations'
+import { savedViewsApi } from '../../api/savedViews'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type Page } from '../../api/pagination'
 import type { CaseResponse, CaseStatus, ClientResponse, Organization } from '../../types'
 import { Button } from '../../components/ui/Button'
@@ -16,15 +17,31 @@ import { SkeletonCardGrid } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Modal } from '../../components/ui/Modal'
+import { DataTable, type DataTableColumn, type SortRule } from '../../components/ui/DataTable'
+import { TableToolbar } from '../../components/ui/TableToolbar'
+import { SavedViewBar } from '../../components/ui/SavedViewBar'
 import { CaseStatusBadge, caseStatusLabel, CASE_STATUS_ORDER } from '../../components/ui/Badge'
 import { CaseStatusSelect } from '../../components/cases/CaseStatusSelect'
 import { useToast } from '../../hooks/useToast'
+import { useDensity } from '../../hooks/useDensity'
+import { useSavedViews, type SavedView } from '../../hooks/useSavedViews'
+import { useTablePreferences } from '../../hooks/useTablePreferences'
 
-type ViewMode = 'list' | 'board'
+type ViewMode = 'table' | 'cards' | 'board'
 
 type StatusFilter = CaseStatus | 'ALL'
 
-interface SavedCaseView {
+interface CasesViewConfig {
+  view: ViewMode
+  status: StatusFilter
+  search: string
+  orgFilter: string
+  sort: SortRule[]
+  groupBy: string | null
+  visibleColumnIds: string[]
+}
+
+interface LegacySavedCaseView {
   id: string
   name: string
   status: StatusFilter
@@ -32,24 +49,19 @@ interface SavedCaseView {
   orgFilter: string
 }
 
-const SAVED_VIEWS_KEY = 'pravoos.cases.views'
+const LEGACY_VIEWS_KEY = 'pravoos.cases.views'
+const TABLE_KEY = 'cases'
+const DEFAULT_COLUMN_IDS = ['title', 'client', 'status', 'filingDeadline', 'createdAt']
 
-function loadSavedViews(): SavedCaseView[] {
-  try {
-    const raw = localStorage.getItem(SAVED_VIEWS_KEY)
-    return raw ? (JSON.parse(raw) as SavedCaseView[]) : []
-  } catch {
-    return []
-  }
-}
-
-function persistSavedViews(views: SavedCaseView[]): void {
-  localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(views))
+function formatDate(value: string | null): string {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')
 }
 
 export default function CasesPage(): JSX.Element {
   const { t } = useTranslation()
   const toast = useToast()
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -61,24 +73,32 @@ export default function CasesPage(): JSX.Element {
   const [expiresAt, setExpiresAt] = useState('')
   const [arbitrCaseNumber, setArbitrCaseNumber] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
-  const [view, setView] = useState<ViewMode>('list')
-  const [statusFilter, setStatusFilter] = useState<CaseStatus | 'ALL'>('ALL')
+  const [view, setView] = useState<ViewMode>('table')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [savedViews, setSavedViews] = useState<SavedCaseView[]>(loadSavedViews)
-  const [namingView, setNamingView] = useState(false)
-  const [viewName, setViewName] = useState('')
+  const [activeViewId, setActiveViewId] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
+  const [density, toggleDensity] = useDensity()
+  const { preferences, setSort, setGroupBy, toggleColumn, applyPreferences } = useTablePreferences(TABLE_KEY, {
+    visibleColumnIds: DEFAULT_COLUMN_IDS,
+    sort: [],
+    groupBy: null,
+  })
+  const savedViews = useSavedViews<CasesViewConfig>('CASES')
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300)
     return () => clearTimeout(timer)
   }, [search])
 
-  const serverStatus = view === 'list' && statusFilter !== 'ALL' ? statusFilter : undefined
+  const isBoard = view === 'board'
+  const isTable = view === 'table'
+  const pageSize = isTable ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE
+  const serverStatus = !isBoard && statusFilter !== 'ALL' ? statusFilter : undefined
 
   useEffect(() => {
     setPage(0)
@@ -96,15 +116,14 @@ export default function CasesPage(): JSX.Element {
     }
   }, [searchParams, setSearchParams])
 
-  const isBoard = view === 'board'
   const { data: casesPage, isLoading } = useQuery<Page<CaseResponse>>({
-    queryKey: ['cases', view, serverStatus ?? 'all', debouncedSearch, orgFilter || 'all-orgs', page],
+    queryKey: ['cases', view, serverStatus ?? 'all', debouncedSearch, orgFilter || 'all-orgs', page, pageSize],
     queryFn: () =>
       casesApi.list(
         serverStatus,
         debouncedSearch || undefined,
         isBoard ? 0 : page,
-        isBoard ? MAX_PAGE_SIZE : DEFAULT_PAGE_SIZE,
+        isBoard ? MAX_PAGE_SIZE : pageSize,
         orgFilter || undefined
       ),
     placeholderData: keepPreviousData,
@@ -121,7 +140,41 @@ export default function CasesPage(): JSX.Element {
     queryKey: ['organizations'],
     queryFn: organizationsApi.list,
   })
-  const orgNameById = new Map(organizations.map((org) => [org.id, org.name]))
+  const orgNameById = useMemo(
+    () => new Map(organizations.map((org) => [org.id, org.name])),
+    [organizations]
+  )
+
+  useEffect(() => {
+    const raw = localStorage.getItem(LEGACY_VIEWS_KEY)
+    if (!raw) return
+    localStorage.removeItem(LEGACY_VIEWS_KEY)
+    let legacyViews: LegacySavedCaseView[] = []
+    try {
+      legacyViews = JSON.parse(raw) as LegacySavedCaseView[]
+    } catch {
+      return
+    }
+    legacyViews.forEach((legacy) => {
+      savedViewsApi
+        .create({
+          scope: 'CASES',
+          name: legacy.name.slice(0, 80),
+          config: JSON.stringify({
+            view: 'table',
+            status: legacy.status,
+            search: legacy.search,
+            orgFilter: legacy.orgFilter,
+            sort: [],
+            groupBy: null,
+            visibleColumnIds: DEFAULT_COLUMN_IDS,
+          } satisfies CasesViewConfig),
+          sharedWithTeam: false,
+        })
+        .catch(() => undefined)
+        .finally(() => queryClient.invalidateQueries({ queryKey: ['saved-views', 'CASES'] }))
+    })
+  }, [queryClient])
 
   const createMutation = useMutation({
     mutationFn: casesApi.create,
@@ -192,34 +245,124 @@ export default function CasesPage(): JSX.Element {
     })
   }
 
-  const activeView = savedViews.find(
-    (v) => v.status === statusFilter && v.search === debouncedSearch && v.orgFilter === orgFilter
+  const columns = useMemo<DataTableColumn<CaseResponse>[]>(
+    () => [
+      {
+        id: 'title',
+        header: t('cases.columnTitle'),
+        alwaysVisible: true,
+        sortable: true,
+        width: 'minmax(0, 2.2fr)',
+        value: (row) => row.title,
+      },
+      {
+        id: 'client',
+        header: t('cases.columnClient'),
+        sortable: true,
+        groupable: true,
+        value: (row) => row.clientName,
+        groupLabel: (row) => row.clientName ?? t('cases.noClient'),
+      },
+      {
+        id: 'status',
+        header: t('cases.columnStatus'),
+        sortable: true,
+        groupable: true,
+        width: '11rem',
+        value: (row) => CASE_STATUS_ORDER.indexOf(row.status),
+        groupLabel: (row) => caseStatusLabel(row.status),
+        render: (row) => (
+          <CaseStatusSelect
+            value={row.status}
+            disabled={statusMutation.isPending}
+            onChange={(status) => statusMutation.mutate({ caseId: row.id, status })}
+          />
+        ),
+      },
+      {
+        id: 'org',
+        header: t('cases.columnOrg'),
+        groupable: true,
+        value: (row) => (row.orgId ? orgNameById.get(row.orgId) ?? t('cases.orgFallback') : t('cases.personalCase')),
+      },
+      {
+        id: 'filingDeadline',
+        header: t('cases.columnDeadline'),
+        sortable: true,
+        groupable: true,
+        width: '9rem',
+        value: (row) => row.filingDeadline,
+        render: (row) => formatDate(row.filingDeadline),
+        groupLabel: (row) => formatDate(row.filingDeadline),
+      },
+      {
+        id: 'nextHearingDate',
+        header: t('cases.columnHearing'),
+        sortable: true,
+        width: '9rem',
+        value: (row) => row.nextHearingDate,
+        render: (row) => formatDate(row.nextHearingDate),
+      },
+      {
+        id: 'arbitrCaseNumber',
+        header: t('cases.columnArbitr'),
+        sortable: true,
+        width: '10rem',
+        value: (row) => row.arbitrCaseNumber,
+      },
+      {
+        id: 'createdAt',
+        header: t('cases.columnCreated'),
+        sortable: true,
+        width: '9rem',
+        value: (row) => row.createdAt,
+        render: (row) => formatDate(row.createdAt),
+      },
+    ],
+    [t, orgNameById, statusMutation]
   )
 
-  const applyView = (savedView: SavedCaseView): void => {
-    setView('list')
-    setStatusFilter(savedView.status)
-    setSearch(savedView.search)
-    setOrgFilter(savedView.orgFilter)
+  const canShareViews = organizations.length > 0
+  const shareOrgId = orgFilter || (organizations.length === 1 ? organizations[0].id : null)
+
+  const currentConfig: CasesViewConfig = {
+    view,
+    status: statusFilter,
+    search: debouncedSearch,
+    orgFilter,
+    sort: preferences.sort,
+    groupBy: preferences.groupBy,
+    visibleColumnIds: preferences.visibleColumnIds,
   }
 
-  const saveCurrentView = (): void => {
-    const name = viewName.trim()
-    if (!name) return
-    const next = [
-      ...savedViews,
-      { id: crypto.randomUUID(), name, status: statusFilter, search: debouncedSearch, orgFilter },
-    ]
-    setSavedViews(next)
-    persistSavedViews(next)
-    setNamingView(false)
-    setViewName('')
+  const applySavedView = (savedView: SavedView<CasesViewConfig>): void => {
+    const config = savedView.config
+    if (!config) return
+    setView(config.view ?? 'table')
+    setStatusFilter(config.status ?? 'ALL')
+    setSearch(config.search ?? '')
+    setDebouncedSearch(config.search ?? '')
+    setOrgFilter(config.orgFilter ?? '')
+    applyPreferences({
+      sort: config.sort ?? [],
+      groupBy: config.groupBy ?? null,
+      visibleColumnIds: config.visibleColumnIds ?? DEFAULT_COLUMN_IDS,
+    })
+    setActiveViewId(savedView.id)
   }
 
-  const deleteView = (id: string): void => {
-    const next = savedViews.filter((v) => v.id !== id)
-    setSavedViews(next)
-    persistSavedViews(next)
+  const handleSaveView = (name: string, sharedWithTeam: boolean): void => {
+    if (sharedWithTeam && !shareOrgId) {
+      toast.error(t('savedViews.selectOrgFirst'))
+      return
+    }
+    savedViews.saveView({ name, config: currentConfig, sharedWithTeam, orgId: shareOrgId })
+    toast.success(t('savedViews.saved', { name }))
+  }
+
+  const handleDeleteView = (viewId: string): void => {
+    savedViews.deleteView(viewId)
+    setActiveViewId((current) => (current === viewId ? null : current))
   }
 
   const handleSubmit = (e: React.FormEvent): void => {
@@ -240,6 +383,29 @@ export default function CasesPage(): JSX.Element {
     })
   }
 
+  const rowActions = (row: CaseResponse): JSX.Element => (
+    <>
+      <Link
+        to={`/cases/${row.id}?tab=time`}
+        className="px-2 py-1 rounded-md text-xs font-medium border border-line text-fg-muted hover:text-fg transition-colors"
+      >
+        {t('cases.quickTime')}
+      </Link>
+      <Link
+        to={`/cases/${row.id}?tab=tasks`}
+        className="px-2 py-1 rounded-md text-xs font-medium border border-line text-fg-muted hover:text-fg transition-colors"
+      >
+        {t('cases.quickTasks')}
+      </Link>
+      <Link
+        to={`/cases/${row.id}`}
+        className="px-2 py-1 rounded-md text-xs font-medium border border-line text-fg-muted hover:text-fg transition-colors"
+      >
+        {t('cases.quickOpen')}
+      </Link>
+    </>
+  )
+
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
@@ -252,7 +418,7 @@ export default function CasesPage(): JSX.Element {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex p-1 rounded-lg bg-surface border border-line">
-              {(['list', 'board'] as ViewMode[]).map((mode) => (
+              {(['table', 'cards', 'board'] as ViewMode[]).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -263,7 +429,7 @@ export default function CasesPage(): JSX.Element {
                       : 'text-fg-muted hover:text-fg'
                   }`}
                 >
-                  {mode === 'list' ? t('cases.viewList') : t('cases.viewBoard')}
+                  {mode === 'table' ? t('cases.viewTable') : mode === 'cards' ? t('cases.viewList') : t('cases.viewBoard')}
                 </button>
               ))}
             </div>
@@ -382,68 +548,31 @@ export default function CasesPage(): JSX.Element {
           </div>
         )}
 
-        {view === 'list' && (
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {savedViews.map((savedView) => (
-              <span
-                key={savedView.id}
-                className={`inline-flex items-center rounded-full text-xs font-medium border transition-colors ${
-                  activeView?.id === savedView.id
-                    ? 'bg-fg text-bg border-transparent'
-                    : 'border-line text-fg-muted hover:text-fg'
-                }`}
-              >
-                <button type="button" onClick={() => applyView(savedView)} className="pl-3 pr-1.5 py-1.5">
-                  {savedView.name}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteView(savedView.id)}
-                  aria-label={t('cases.deleteViewAria', { name: savedView.name })}
-                  className="pr-2.5 pl-0.5 py-1.5 opacity-60 hover:opacity-100"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            {namingView ? (
-              <span className="inline-flex items-center gap-1.5">
-                <input
-                  autoFocus
-                  value={viewName}
-                  onChange={(e) => setViewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveCurrentView()
-                    if (e.key === 'Escape') {
-                      setNamingView(false)
-                      setViewName('')
-                    }
-                  }}
-                  maxLength={40}
-                  placeholder={t('cases.viewNamePlaceholder')}
-                  className="px-3 py-1.5 rounded-full text-xs border border-line bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-                <button
-                  type="button"
-                  onClick={saveCurrentView}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-fg text-bg"
-                >
-                  {t('common.save')}
-                </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setNamingView(true)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-line text-fg-muted hover:text-fg transition-colors"
-              >
-                {t('cases.saveView')}
-              </button>
+        {!isBoard && (
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <SavedViewBar
+              views={savedViews.views}
+              activeViewId={activeViewId}
+              canShare={canShareViews}
+              onApply={applySavedView}
+              onSave={handleSaveView}
+              onDelete={handleDeleteView}
+            />
+            {isTable && (
+              <TableToolbar
+                columns={columns}
+                visibleColumnIds={preferences.visibleColumnIds}
+                onToggleColumn={toggleColumn}
+                groupBy={preferences.groupBy}
+                onGroupByChange={setGroupBy}
+                density={density}
+                onDensityToggle={toggleDensity}
+              />
             )}
           </div>
         )}
 
-        {view === 'list' && (
+        {!isBoard && (
           <div className="flex flex-wrap gap-2 mb-4">
             <FilterChip label={t('common.all')} active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
             {CASE_STATUS_ORDER.map((status) => (
@@ -457,7 +586,7 @@ export default function CasesPage(): JSX.Element {
           </div>
         )}
 
-        {view === 'list' && cases.length > 0 && (
+        {view === 'cards' && cases.length > 0 && (
           <div className="mb-4">
             <label className="inline-flex items-center gap-2 text-xs text-fg-muted cursor-pointer select-none">
               <input
@@ -477,6 +606,37 @@ export default function CasesPage(): JSX.Element {
           <BoardView
             cases={cases}
             onMove={(caseId, status) => statusMutation.mutate({ caseId, status })}
+          />
+        ) : isTable ? (
+          <DataTable
+            rows={cases}
+            columns={columns}
+            rowId={(row) => row.id}
+            rowHref={(row) => `/cases/${row.id}`}
+            onRowClick={(row) => navigate(`/cases/${row.id}`)}
+            rowActions={rowActions}
+            sort={preferences.sort}
+            onSortChange={setSort}
+            visibleColumnIds={preferences.visibleColumnIds}
+            groupBy={preferences.groupBy}
+            selectedIds={selectedIds}
+            onToggleRow={toggleSelected}
+            onToggleAll={toggleSelectAll}
+            selectionLabel={(row) => t('cases.selectCaseAria', { title: row.title })}
+            density={density}
+            emptyState={
+              debouncedSearch ? (
+                <EmptyState description={t('cases.notFound')} />
+              ) : statusFilter === 'ALL' ? (
+                <EmptyState
+                  title={t('cases.emptyTitle')}
+                  description={t('cases.emptyDescription')}
+                  action={{ label: t('cases.createCase'), onClick: () => setShowForm(true) }}
+                />
+              ) : (
+                <EmptyState description={t('cases.noStatusCases')} />
+              )
+            }
           />
         ) : cases.length === 0 ? (
           debouncedSearch ? (
@@ -539,7 +699,7 @@ export default function CasesPage(): JSX.Element {
                     onChange={(status) => statusMutation.mutate({ caseId: caseItem.id, status })}
                   />
                   <span className="text-xs text-fg-muted">
-                    {new Date(caseItem.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
+                    {formatDate(caseItem.createdAt)}
                   </span>
                 </div>
               </motion.div>
@@ -548,7 +708,7 @@ export default function CasesPage(): JSX.Element {
         )}
 
         {!isBoard && !isLoading && (
-          <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
+          <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         )}
 
         <AnimatePresence>

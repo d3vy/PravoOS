@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -8,15 +8,25 @@ import type { LawyerProfileResponse } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
+import { TableToolbar } from '../../components/ui/TableToolbar'
+import { useDensity } from '../../hooks/useDensity'
+import { useTablePreferences } from '../../hooks/useTablePreferences'
 
 export default function UsersPage(): JSX.Element {
   const { t } = useTranslation()
-  const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const queryClient = useQueryClient()
+  const [density, toggleDensity] = useDensity()
+  const { preferences, setSort, setGroupBy, toggleColumn } = useTablePreferences('admin-lawyers', {
+    visibleColumnIds: ['fullName', 'email', 'specialization', 'phone'],
+    sort: [],
+    groupBy: null,
+  })
 
   const { data, isLoading } = useQuery<Page<LawyerProfileResponse>>({
     queryKey: ['admin-lawyers', page],
@@ -53,7 +63,6 @@ export default function UsersPage(): JSX.Element {
   })
 
   const exitSelectionMode = (): void => {
-    setSelectionMode(false)
     setSelectedIds(new Set())
   }
 
@@ -74,40 +83,85 @@ export default function UsersPage(): JSX.Element {
     .filter((lawyer) => selectedIds.has(lawyer.userId))
     .map((lawyer) => lawyer.fullName ?? lawyer.email)
 
+  const allOnPageSelected = lawyers.length > 0 && lawyers.every((lawyer) => selectedIds.has(lawyer.userId))
+
+  const toggleSelectAll = (): void => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allOnPageSelected) lawyers.forEach((lawyer) => next.delete(lawyer.userId))
+      else lawyers.forEach((lawyer) => next.add(lawyer.userId))
+      return next
+    })
+  }
+
+  const columns = useMemo<DataTableColumn<LawyerProfileResponse>[]>(
+    () => [
+      {
+        id: 'fullName',
+        header: t('adminUsers.columnName'),
+        alwaysVisible: true,
+        sortable: true,
+        width: 'minmax(0, 1.6fr)',
+        value: (row) => row.fullName,
+      },
+      { id: 'email', header: t('adminUsers.columnEmail'), sortable: true, value: (row) => row.email },
+      {
+        id: 'specialization',
+        header: t('adminUsers.fieldSpecialization'),
+        sortable: true,
+        groupable: true,
+        value: (row) => row.specialization,
+      },
+      { id: 'phone', header: t('adminUsers.fieldPhone'), width: '11rem', value: (row) => row.phone },
+      {
+        id: 'telegramLinked',
+        header: t('adminUsers.columnTelegram'),
+        sortable: true,
+        groupable: true,
+        width: '8rem',
+        value: (row) => row.telegramLinked,
+        groupLabel: (row) => (row.telegramLinked ? t('common.yes') : t('common.no')),
+      },
+    ],
+    [t]
+  )
+
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-fg mb-1">{t('adminUsers.title')}</h1>
           <p className="text-sm text-fg-muted">
-            {selectionMode ? t('adminUsers.selectPrompt') : t('adminUsers.subtitle')}
+            {selectedCount > 0 ? t('adminUsers.selectPrompt') : t('adminUsers.subtitle')}
           </p>
         </div>
 
-        {lawyers.length > 0 && (
-          <div className="flex items-center gap-2 shrink-0">
-            {selectionMode ? (
-              <>
-                <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
-                  {t('adminUsers.cancel')}
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  disabled={selectedCount === 0}
-                  loading={deleteMutation.isPending}
-                  onClick={() => setConfirmOpen(true)}
-                >
-                  {t('adminUsers.delete')}{selectedCount > 0 ? ` (${selectedCount})` : ''}
-                </Button>
-              </>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>
-                {t('adminUsers.select')}
+        <div className="flex items-center gap-2 shrink-0">
+          <TableToolbar
+            columns={columns}
+            visibleColumnIds={preferences.visibleColumnIds}
+            onToggleColumn={toggleColumn}
+            groupBy={preferences.groupBy}
+            onGroupByChange={setGroupBy}
+            density={density}
+            onDensityToggle={toggleDensity}
+          />
+          {selectedCount > 0 && (
+            <>
+              <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
+                {t('adminUsers.cancel')}
               </Button>
-            )}
-          </div>
-        )}
+              <Button
+                variant="danger"
+                size="sm"
+                loading={deleteMutation.isPending}
+                onClick={() => setConfirmOpen(true)}
+              >
+                {t('adminUsers.delete')} ({selectedCount})
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -127,25 +181,22 @@ export default function UsersPage(): JSX.Element {
         <div className="flex justify-center py-16">
           <Spinner size="lg" />
         </div>
-      ) : lawyers.length === 0 ? (
-        <div className="text-center py-16 rounded-xl border border-dashed border-line">
-          <p className="text-fg-muted text-sm">
-            {t('adminUsers.empty')}
-          </p>
-        </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {lawyers.map((lawyer, index) => (
-            <LawyerCard
-              key={lawyer.userId}
-              lawyer={lawyer}
-              index={index}
-              selectionMode={selectionMode}
-              selected={selectedIds.has(lawyer.userId)}
-              onToggle={() => toggleSelected(lawyer.userId)}
-            />
-          ))}
-        </div>
+        <DataTable
+          rows={lawyers}
+          columns={columns}
+          rowId={(row) => row.userId}
+          sort={preferences.sort}
+          onSortChange={setSort}
+          visibleColumnIds={preferences.visibleColumnIds}
+          groupBy={preferences.groupBy}
+          selectedIds={selectedIds}
+          onToggleRow={toggleSelected}
+          onToggleAll={toggleSelectAll}
+          selectionLabel={(row) => row.fullName ?? row.email}
+          density={density}
+          emptyState={<EmptyState description={t('adminUsers.empty')} />}
+        />
       )}
 
       <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
@@ -161,87 +212,6 @@ export default function UsersPage(): JSX.Element {
           />
         )}
       </AnimatePresence>
-    </div>
-  )
-}
-
-function LawyerCard({
-  lawyer,
-  index,
-  selectionMode,
-  selected,
-  onToggle,
-}: {
-  lawyer: LawyerProfileResponse
-  index: number
-  selectionMode: boolean
-  selected: boolean
-  onToggle: () => void
-}): JSX.Element {
-  const { t } = useTranslation()
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: index * 0.04 }}
-      onClick={selectionMode ? onToggle : undefined}
-      className={`bg-surface rounded-xl border p-5 transition-colors ${
-        selectionMode ? 'cursor-pointer' : ''
-      } ${
-        selected
-          ? 'border-accent ring-1 ring-accent'
-          : 'border-line'
-      }`}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        {selectionMode && (
-          <div
-            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
-              selected
-                ? 'bg-accent-solid border-accent'
-                : 'border-line'
-            }`}
-            aria-hidden="true"
-          >
-            {selected && (
-              <svg className="w-3 h-3 text-accent-fg" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </div>
-        )}
-
-        <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-          <span className="text-sm font-semibold text-accent">
-            {(lawyer.fullName ?? lawyer.email).charAt(0).toUpperCase()}
-          </span>
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-fg">
-            {lawyer.fullName ?? '—'}
-          </p>
-          <p className="text-sm text-fg-muted">{lawyer.email}</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm">
-          <InfoField label={t('adminUsers.fieldSpecialization')} value={lawyer.specialization} />
-          <InfoField label={t('adminUsers.fieldPhone')} value={lawyer.phone} />
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-function InfoField({ label, value }: { label: string; value: string | null }): JSX.Element {
-  return (
-    <div className="min-w-0">
-      <span className="text-xs text-fg-muted">{label}</span>
-      <p className="text-fg truncate">{value ?? '—'}</p>
     </div>
   )
 }

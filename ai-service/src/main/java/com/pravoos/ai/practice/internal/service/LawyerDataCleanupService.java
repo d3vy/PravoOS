@@ -32,6 +32,7 @@ public class LawyerDataCleanupService {
     private final ClientRepository clientRepository;
     private final ClientContactRepository clientContactRepository;
     private final DocumentTemplateRepository documentTemplateRepository;
+    private final SavedViewRepository savedViewRepository;
     private final SignatureRequestRepository signatureRequestRepository;
     private final TimeEntryRepository timeEntryRepository;
     private final InvoiceRepository invoiceRepository;
@@ -49,6 +50,7 @@ public class LawyerDataCleanupService {
                                     ClientRepository clientRepository,
                                     ClientContactRepository clientContactRepository,
                                     DocumentTemplateRepository documentTemplateRepository,
+                                    SavedViewRepository savedViewRepository,
                                     SignatureRequestRepository signatureRequestRepository,
                                     TimeEntryRepository timeEntryRepository,
                                     InvoiceRepository invoiceRepository,
@@ -65,6 +67,7 @@ public class LawyerDataCleanupService {
         this.clientRepository = clientRepository;
         this.clientContactRepository = clientContactRepository;
         this.documentTemplateRepository = documentTemplateRepository;
+        this.savedViewRepository = savedViewRepository;
         this.signatureRequestRepository = signatureRequestRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.invoiceRepository = invoiceRepository;
@@ -148,10 +151,11 @@ public class LawyerDataCleanupService {
         int clients = clientRepository.deleteByLawyerId(lawyerId);
         int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
         int signatures = signatureRequestRepository.deleteByRequestedBy(lawyerId);
+        int savedViews = savedViewRepository.deleteByLawyerId(lawyerId);
         log.info("Deleted {} time entries, {} invoices, {} workflow runs, {} analyses, {} tasks, {} drafts, "
                         + "{} parties, {} cases, {} workflow definitions, {} contacts, {} clients, {} templates "
-                        + "and {} signature requests for lawyer {}",
+                        + "{} signature requests and {} saved views for lawyer {}",
                 timeEntries, invoices, workflowRuns, analyses, tasks, drafts, parties, cases, workflowDefinitions,
-                contacts, clients, templates, signatures, lawyerId);
+                contacts, clients, templates, signatures, savedViews, lawyerId);
     }
 }

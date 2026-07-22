@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback, type DragEvent } from 'react'
+import { useMemo, useState, useRef, useCallback, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import i18n from '../../i18n'
 import { documentsApi } from '../../api/documents'
 import { DEFAULT_PAGE_SIZE, type Page } from '../../api/pagination'
@@ -10,6 +10,11 @@ import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
+import { TableToolbar } from '../../components/ui/TableToolbar'
+import { useDensity } from '../../hooks/useDensity'
+import { useTablePreferences } from '../../hooks/useTablePreferences'
 
 const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
@@ -30,6 +35,45 @@ export default function DocumentsPage(): JSX.Element {
   const dragCounterRef = useRef(0)
   const [page, setPage] = useState(0)
   const queryClient = useQueryClient()
+  const [density, toggleDensity] = useDensity()
+  const { preferences, setSort, setGroupBy, toggleColumn } = useTablePreferences('admin-documents', {
+    visibleColumnIds: ['title', 'fileName', 'status', 'uploadedAt'],
+    sort: [],
+    groupBy: null,
+  })
+
+  const documentColumns = useMemo<DataTableColumn<DocumentResponse>[]>(
+    () => [
+      {
+        id: 'title',
+        header: t('documents.columnTitle'),
+        alwaysVisible: true,
+        sortable: true,
+        width: 'minmax(0, 2fr)',
+        value: (row) => row.title,
+      },
+      { id: 'fileName', header: t('documents.columnFile'), sortable: true, value: (row) => row.fileName },
+      {
+        id: 'status',
+        header: t('documents.columnStatus'),
+        sortable: true,
+        groupable: true,
+        width: '9rem',
+        value: (row) => row.status,
+        render: (row) => <DocumentStatusBadge status={row.status} />,
+      },
+      {
+        id: 'uploadedAt',
+        header: t('documents.columnUploaded'),
+        sortable: true,
+        width: '10rem',
+        value: (row) => row.uploadedAt,
+        render: (row) =>
+          new Date(row.uploadedAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'),
+      },
+    ],
+    [t]
+  )
 
   const { data: documentsPage, isLoading } = useQuery<Page<DocumentResponse>>({
     queryKey: ['documents', page],
@@ -213,26 +257,38 @@ export default function DocumentsPage(): JSX.Element {
           <div className="flex justify-center py-16">
             <Spinner size="lg" />
           </div>
-        ) : documents.length === 0 ? (
-          <div className="text-center py-16 rounded-xl border border-dashed border-line">
-            <p className="text-fg-muted text-sm">
-              {t('documents.empty')}
-            </p>
-          </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            <AnimatePresence>
-              {documents.map((doc, index) => (
-                <DocumentRow
-                  key={doc.id}
+          <>
+            <div className="flex justify-end mb-3">
+              <TableToolbar
+                columns={documentColumns}
+                visibleColumnIds={preferences.visibleColumnIds}
+                onToggleColumn={toggleColumn}
+                groupBy={preferences.groupBy}
+                onGroupByChange={setGroupBy}
+                density={density}
+                onDensityToggle={toggleDensity}
+              />
+            </div>
+            <DataTable
+              rows={documents}
+              columns={documentColumns}
+              rowId={(row) => row.id}
+              sort={preferences.sort}
+              onSortChange={setSort}
+              visibleColumnIds={preferences.visibleColumnIds}
+              groupBy={preferences.groupBy}
+              density={density}
+              rowActions={(doc) => (
+                <DocumentRowActions
                   doc={doc}
-                  index={index}
                   onDelete={() => deleteMutation.mutate(doc.id)}
                   isDeleting={deleteMutation.isPending && deleteMutation.variables === doc.id}
                 />
-              ))}
-            </AnimatePresence>
-          </div>
+              )}
+              emptyState={<EmptyState description={t('documents.empty')} />}
+            />
+          </>
         )}
 
         {!isLoading && (
@@ -368,16 +424,14 @@ function LegislationSection(): JSX.Element {
   )
 }
 
-interface DocumentRowProps {
+interface DocumentRowActionsProps {
   doc: DocumentResponse
-  index: number
   onDelete: () => void
   isDeleting: boolean
 }
 
-function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JSX.Element {
+function DocumentRowActions({ doc, onDelete, isDeleting }: DocumentRowActionsProps): JSX.Element {
   const { t } = useTranslation()
-  const dateLocale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
 
@@ -410,58 +464,20 @@ function DocumentRow({ doc, index, onDelete, isDeleting }: DocumentRowProps): JS
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ duration: 0.2, delay: index * 0.03 }}
-      className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-line"
-    >
-      <div className="w-9 h-9 rounded-lg bg-bg border border-line flex items-center justify-center text-fg-muted shrink-0">
-        <FileIcon fileName={doc.fileName} />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-fg text-sm truncate">
-          {doc.title}
-        </p>
-        <p className="text-xs text-fg-muted truncate mt-0.5">
-          {doc.fileName} · {new Date(doc.uploadedAt).toLocaleDateString(dateLocale)}
-        </p>
-      </div>
-
-      <DocumentStatusBadge status={doc.status} />
-
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => void handleOpen()}
-        loading={isOpening}
-        disabled={isOpening}
-        className="shrink-0"
-      >
+    <>
+      <Button variant="ghost" size="sm" onClick={() => void handleOpen()} loading={isOpening} disabled={isOpening}>
         {t('documents.open')}
       </Button>
-
       <Button
         variant={confirmDelete ? 'danger' : 'ghost'}
         size="sm"
         onClick={handleDeleteClick}
         loading={isDeleting}
         disabled={isDeleting}
-        className="shrink-0"
       >
         {confirmDelete ? t('documents.confirm') : t('documents.delete')}
       </Button>
-    </motion.div>
+    </>
   )
 }
 
-function FileIcon({ fileName }: { fileName: string }): JSX.Element {
-  const ext = fileName.split('.').pop()?.toLowerCase()
-  return (
-    <span className="text-xs font-bold uppercase">
-      {ext === 'pdf' ? 'PDF' : 'DOC'}
-    </span>
-  )
-}

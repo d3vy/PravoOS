@@ -1,10 +1,16 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import i18n from '../../i18n'
 import { templatesApi } from '../../api/templates'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
+import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
+import { TableToolbar } from '../../components/ui/TableToolbar'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { useDensity } from '../../hooks/useDensity'
+import { useTablePreferences } from '../../hooks/useTablePreferences'
 import type { TemplateResponse } from '../../types'
 
 const PLACEHOLDERS = [
@@ -26,6 +32,12 @@ export default function TemplatesPage(): JSX.Element {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [editor, setEditor] = useState<EditorState>(null)
+  const [density, toggleDensity] = useDensity()
+  const { preferences, setSort, toggleColumn } = useTablePreferences('templates', {
+    visibleColumnIds: ['name', 'length', 'createdAt'],
+    sort: [],
+    groupBy: null,
+  })
 
   const { data: templates, isLoading, isError } = useQuery({
     queryKey: ['templates'],
@@ -36,6 +48,37 @@ export default function TemplatesPage(): JSX.Element {
     mutationFn: (templateId: string) => templatesApi.delete(templateId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['templates'] }),
   })
+
+  const columns = useMemo<DataTableColumn<TemplateResponse>[]>(
+    () => [
+      {
+        id: 'name',
+        header: t('templates.columnName'),
+        alwaysVisible: true,
+        sortable: true,
+        width: 'minmax(0, 2fr)',
+        value: (row) => row.name,
+      },
+      {
+        id: 'length',
+        header: t('templates.columnLength'),
+        sortable: true,
+        align: 'right',
+        width: '8rem',
+        value: (row) => row.content.length,
+      },
+      {
+        id: 'createdAt',
+        header: t('templates.columnCreated'),
+        sortable: true,
+        width: '9rem',
+        value: (row) => row.createdAt,
+        render: (row) =>
+          new Date(row.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'),
+      },
+    ],
+    [t]
+  )
 
   return (
     <div className="bg-bg">
@@ -72,43 +115,44 @@ export default function TemplatesPage(): JSX.Element {
           </p>
         )}
 
-        {templates && templates.length === 0 && editor === null && (
-          <p className="text-sm text-fg-muted">
-            {t('templates.empty')}
-          </p>
-        )}
-
-        {templates && templates.length > 0 && (
-          <div className="flex flex-col gap-2 mt-2">
-            {templates.map((template) => (
-              <div
-                key={template.id}
-                className="p-4 rounded-lg bg-surface border border-line"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-fg">{template.name}</p>
-                    <p className="text-xs text-fg-muted mt-1 line-clamp-2 whitespace-pre-wrap">
-                      {template.content}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button variant="secondary" size="sm" onClick={() => setEditor({ mode: 'edit', template })}>
-                      {t('templates.edit')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      loading={deleteMutation.isPending && deleteMutation.variables === template.id}
-                      onClick={() => deleteMutation.mutate(template.id)}
-                    >
-                      {t('templates.delete')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        {templates && (
+          <>
+            <div className="flex justify-end mb-3">
+              <TableToolbar
+                columns={columns}
+                visibleColumnIds={preferences.visibleColumnIds}
+                onToggleColumn={toggleColumn}
+                density={density}
+                onDensityToggle={toggleDensity}
+              />
+            </div>
+            <DataTable
+              rows={templates}
+              columns={columns}
+              rowId={(row) => row.id}
+              onRowClick={(template) => setEditor({ mode: 'edit', template })}
+              sort={preferences.sort}
+              onSortChange={setSort}
+              visibleColumnIds={preferences.visibleColumnIds}
+              density={density}
+              rowActions={(template) => (
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => setEditor({ mode: 'edit', template })}>
+                    {t('templates.edit')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={deleteMutation.isPending && deleteMutation.variables === template.id}
+                    onClick={() => deleteMutation.mutate(template.id)}
+                  >
+                    {t('templates.delete')}
+                  </Button>
+                </>
+              )}
+              emptyState={<EmptyState description={t('templates.empty')} />}
+            />
+          </>
         )}
       </div>
     </div>
