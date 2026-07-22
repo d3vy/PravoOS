@@ -137,6 +137,6 @@ class HybridSearchServiceTest {
     }
 
     private ChunkCandidate candidate(UUID id) {
-        return new ChunkCandidate(id, "content-" + id, "doc", false, null, null, null, 0.5);
+        return new ChunkCandidate(id, 0, "content-" + id, "doc", false, null, null, null, 0.5);
     }
 }

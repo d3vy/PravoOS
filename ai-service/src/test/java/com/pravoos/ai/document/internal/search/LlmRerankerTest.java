@@ -124,6 +124,6 @@ class LlmRerankerTest {
     }
 
     private ChunkCandidate candidate(UUID id) {
-        return new ChunkCandidate(id, "content-" + id, "doc", false, null, null, null, 0.01);
+        return new ChunkCandidate(id, 0, "content-" + id, "doc", false, null, null, null, 0.01);
     }
 }

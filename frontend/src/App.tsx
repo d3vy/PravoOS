@@ -28,6 +28,7 @@ import MessagesPage from './pages/messages/MessagesPage'
 import ClientsPage from './pages/clients/ClientsPage'
 import ClientDetailPage from './pages/clients/ClientDetailPage'
 import SearchPage from './pages/search/SearchPage'
+import TabularReviewPage from './pages/review/TabularReviewPage'
 import TemplatesPage from './pages/templates/TemplatesPage'
 import WorkflowsPage from './pages/workflows/WorkflowsPage'
 import TeamPage from './pages/team/TeamPage'
@@ -101,6 +102,8 @@ export default function App(): JSX.Element {
         <Route path="/cases/:caseId" element={<CaseDetailPage />} />
         <Route path="/cases/:caseId/drafts/:draftId" element={<DraftEditorPage />} />
         <Route path="/messages" element={<MessagesPage />} />
+        <Route path="/review" element={<TabularReviewPage />} />
+        <Route path="/review/:reviewId" element={<TabularReviewPage />} />
         <Route path="/templates" element={<TemplatesPage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/clients" element={<ClientsPage />} />

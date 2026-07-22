@@ -109,6 +109,6 @@ class ReciprocalRankFusionTest {
     }
 
     private ChunkCandidate candidate(UUID id, boolean legislation) {
-        return new ChunkCandidate(id, "content-" + id, "doc", legislation, null, null, null, 0.0);
+        return new ChunkCandidate(id, 0, "content-" + id, "doc", legislation, null, null, null, 0.0);
     }
 }

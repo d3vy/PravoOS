@@ -9,6 +9,7 @@ import {
   DashboardIcon,
   InvoiceIcon,
   ProfileIcon,
+  ReviewIcon,
   SettingsIcon,
   TeamIcon,
   TemplatesIcon,
@@ -40,6 +41,7 @@ export function useLawyerNavSections(): LawyerNavSection[] {
       id: 'tools',
       title: t('nav.sectionTools'),
       items: [
+        { to: '/review', label: t('nav.review'), icon: <ReviewIcon /> },
         { to: '/templates', label: t('nav.templates'), icon: <TemplatesIcon /> },
         { to: '/workflows', label: t('nav.workflows'), icon: <WorkflowsIcon /> },
       ],

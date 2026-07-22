@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record ChunkCandidate(
         UUID chunkId,
+        int chunkIndex,
         String content,
         String documentTitle,
         boolean legislation,
@@ -15,7 +16,7 @@ public record ChunkCandidate(
 ) {
 
     public ChunkCandidate withScore(double newScore) {
-        return new ChunkCandidate(
-                chunkId, content, documentTitle, legislation, actCanonical, articleNumber, editionDate, newScore);
+        return new ChunkCandidate(chunkId, chunkIndex, content, documentTitle, legislation,
+                actCanonical, articleNumber, editionDate, newScore);
     }
 }

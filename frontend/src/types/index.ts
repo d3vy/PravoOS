@@ -998,3 +998,89 @@ export interface SignatureRequestResponse {
   declaredSigningTime: string | null
   hasSignatureFile: boolean
 }
+
+export type TabularReviewStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'
+
+export type ReviewAnswerConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'NOT_FOUND'
+
+export interface ReviewCitation {
+  chunkIndex: number
+  quote: string
+}
+
+export interface TabularReviewDocumentDto {
+  documentId: string
+  documentTitle: string
+  position: number
+  status: TabularReviewStatus
+  errorMessage: string | null
+}
+
+export interface TabularReviewCellDto {
+  documentId: string
+  questionIndex: number
+  answer: string
+  confidence: ReviewAnswerConfidence
+  citations: ReviewCitation[]
+}
+
+export interface TabularReviewDto {
+  id: string
+  caseId: string
+  title: string
+  status: TabularReviewStatus
+  questions: string[]
+  documents: TabularReviewDocumentDto[]
+  cells: TabularReviewCellDto[]
+  filledCells: number
+  totalCells: number
+  errorMessage: string | null
+  createdAt: string
+  completedAt: string | null
+}
+
+export interface TabularReviewSummaryDto {
+  id: string
+  caseId: string
+  title: string
+  status: TabularReviewStatus
+  documentCount: number
+  questionCount: number
+  createdAt: string
+  completedAt: string | null
+}
+
+export interface CreateTabularReviewRequest {
+  caseId: string
+  title?: string
+  documentIds: string[]
+  questions: string[]
+}
+
+export type SavedViewScope = 'CASES' | 'CLIENTS' | 'INVOICES' | 'TEMPLATES'
+
+export interface SavedViewResponse {
+  id: string
+  scope: SavedViewScope
+  name: string
+  config: string
+  sharedWithTeam: boolean
+  orgId: string | null
+  owned: boolean
+  updatedAt: string
+}
+
+export interface CreateSavedViewRequest {
+  scope: SavedViewScope
+  name: string
+  config: string
+  sharedWithTeam: boolean
+  orgId?: string | null
+}
+
+export interface UpdateSavedViewRequest {
+  name: string
+  config: string
+  sharedWithTeam: boolean
+  orgId?: string | null
+}

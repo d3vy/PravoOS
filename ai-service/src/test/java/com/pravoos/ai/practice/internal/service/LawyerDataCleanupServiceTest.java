@@ -26,6 +26,7 @@ class LawyerDataCleanupServiceTest {
     @Mock private ClientRepository clientRepository;
     @Mock private ClientContactRepository clientContactRepository;
     @Mock private DocumentTemplateRepository documentTemplateRepository;
+    @Mock private SavedViewRepository savedViewRepository;
     @Mock private SignatureRequestRepository signatureRequestRepository;
     @Mock private TimeEntryRepository timeEntryRepository;
     @Mock private InvoiceRepository invoiceRepository;
@@ -36,7 +37,7 @@ class LawyerDataCleanupServiceTest {
         return new LawyerDataCleanupService(caseRepository, casePartyRepository, caseAnalysisRepository,
                 caseTaskRepository, caseDraftRepository, workflowRunRepository, workflowDefinitionRepository,
                 clientRepository, clientContactRepository, documentTemplateRepository,
-                signatureRequestRepository, timeEntryRepository, invoiceRepository, aiDataCleanup,
+                savedViewRepository, signatureRequestRepository, timeEntryRepository, invoiceRepository, aiDataCleanup,
                 pendingLawyerPurgeRepository, self);
     }
 

@@ -1,5 +1,6 @@
 package com.pravoos.ai.document.internal;
 
+import com.pravoos.ai.document.api.DocumentChunkMatch;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.RetrievedChunk;
 import com.pravoos.ai.document.internal.search.ChunkCandidate;
@@ -27,6 +28,17 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
     @Override
     public List<RetrievedChunk> retrieveForCase(String query, int topK, UUID caseId) {
         return toRetrievedChunks(hybridSearchService.search(query, topK, ChunkSearchScope.forCase(caseId)));
+    }
+
+    @Override
+    public List<DocumentChunkMatch> retrieveInDocument(String query, int topK, UUID documentId) {
+        return hybridSearchService.search(query, topK, ChunkSearchScope.forDocument(documentId)).stream()
+                .map(candidate -> new DocumentChunkMatch(
+                        candidate.chunkId(),
+                        candidate.chunkIndex(),
+                        candidate.content(),
+                        candidate.score()))
+                .toList();
     }
 
     private List<RetrievedChunk> toRetrievedChunks(List<ChunkCandidate> candidates) {

@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/workflow-definitions/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/contract-reviews/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/document-comparisons/**").hasRole("LAWYER")
+                        .requestMatchers("/api/ai/tabular-reviews/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/citation-checks/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/responses/**").hasRole("LAWYER")
                         .requestMatchers("/api/ai/messages/**").hasRole("LAWYER")

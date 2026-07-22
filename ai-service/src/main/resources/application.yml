@@ -92,6 +92,14 @@ document-comparison:
   max-changes: ${DOCUMENT_COMPARISON_MAX_CHANGES:40}
   change-max-chars: ${DOCUMENT_COMPARISON_CHANGE_MAX_CHARS:1500}
 
+tabular-review:
+  max-documents: ${TABULAR_REVIEW_MAX_DOCUMENTS:15}
+  max-questions: ${TABULAR_REVIEW_MAX_QUESTIONS:8}
+  top-k-per-question: ${TABULAR_REVIEW_TOP_K:4}
+  context-max-chars: ${TABULAR_REVIEW_CONTEXT_MAX_CHARS:20000}
+  answer-max-chars: ${TABULAR_REVIEW_ANSWER_MAX_CHARS:600}
+  quote-max-chars: ${TABULAR_REVIEW_QUOTE_MAX_CHARS:1200}
+
 citation-check:
   max-citations: ${CITATION_CHECK_MAX_CITATIONS:100}
   max-court-case-lookups: ${CITATION_CHECK_MAX_COURT_LOOKUPS:25}
