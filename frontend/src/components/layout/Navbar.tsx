@@ -3,12 +3,14 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/authStore'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
+import { useShortcutsDialogStore } from '../../store/shortcutsDialogStore'
 import { authApi } from '../../api/auth'
 import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
 import { NavTabs } from '../ui/NavTabs'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { LanguageSwitcher } from '../ui/LanguageSwitcher'
+import { GlobalTimer } from '../time/GlobalTimer'
 import { useLawyerAccountLinks, useLawyerNavSections } from './lawyerNav'
 
 const LAWYER_MOBILE_NAV_INDICATOR_ID = 'lawyer-mobile-nav-indicator'
@@ -60,12 +62,14 @@ export function Navbar(): JSX.Element {
           </Link>
 
           <div className="flex items-center gap-3">
+            {authenticated && role === 'LAWYER' && <GlobalTimer />}
             {authenticated && role === 'LAWYER' && (
               <div className="hidden md:block">
                 <CreateMenu />
               </div>
             )}
             {authenticated && role === 'LAWYER' && <CommandTrigger />}
+            {authenticated && role === 'LAWYER' && <ShortcutsTrigger />}
             <LanguageSwitcher />
             <ThemeToggle />
 
@@ -350,6 +354,23 @@ function CommandTrigger(): JSX.Element {
       <kbd className="inline-flex items-center rounded border border-line px-1.5 py-0.5 text-[11px] font-medium">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
+    </button>
+  )
+}
+
+function ShortcutsTrigger(): JSX.Element {
+  const { t } = useTranslation()
+  const toggle = useShortcutsDialogStore((state) => state.toggle)
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={t('hotkeys.dialogTitle')}
+      title={t('hotkeys.dialogTitle')}
+      className="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-lg border border-line text-fg-muted hover:text-fg hover:border-fg/30 transition-colors text-sm font-medium"
+    >
+      ?
     </button>
   )
 }

@@ -5,12 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { casesApi } from '../../api/cases'
 import type { CaseThreadResponse } from '../../types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { usePassiveTimeCapture } from '../../hooks/usePassiveTimeCapture'
 import { NavTabs } from '../ui/NavTabs'
 import { LAWYER_NAV_INDICATOR_ID, useLawyerNavSections } from './lawyerNav'
 import { CollapseIcon } from './navIcons'
 import { Navbar } from './Navbar'
 import { CommandPalette } from '../command/CommandPalette'
+import { ShortcutsDialog } from '../command/ShortcutsDialog'
 import { GlobalProgressBar } from '../ui/GlobalProgressBar'
+import { useHotkeys } from '../../hooks/useHotkeys'
 
 const SIDEBAR_COLLAPSED_KEY = 'pravoos.sidebar.collapsed'
 const WIDE_SCREEN_QUERY = '(min-width: 1024px)'
@@ -24,12 +27,15 @@ export function LawyerLayout(): JSX.Element {
   const lawyerNavSections = useLawyerNavSections()
   const isWideScreen = useMediaQuery(WIDE_SCREEN_QUERY)
   const [collapsedByUser, setCollapsedByUser] = useState(readCollapsedPreference)
+  usePassiveTimeCapture()
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsedByUser))
   }, [collapsedByUser])
 
   const collapsed = !isWideScreen || collapsedByUser
+
+  useHotkeys()
 
   const { data: threads = [] } = useQuery<CaseThreadResponse[]>({
     queryKey: ['messageThreads'],
@@ -49,6 +55,7 @@ export function LawyerLayout(): JSX.Element {
     <div className="min-h-screen bg-bg">
       <GlobalProgressBar />
       <CommandPalette />
+      <ShortcutsDialog />
       <Navbar />
 
       <div className="flex min-h-[calc(100vh-64px)]">
