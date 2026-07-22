@@ -259,10 +259,10 @@ export function CommandPalette(): JSX.Element | null {
             transition={{ duration: 0.15, ease: 'easeOut' }}
             onMouseDown={(event) => event.stopPropagation()}
             onKeyDown={handleKeyDown}
-            className="w-full max-w-xl overflow-hidden rounded-2xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-surface shadow-card dark:shadow-card-dark"
+            className="w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-overlay shadow-card"
           >
-            <div className="flex items-center gap-3 px-4 border-b border-light-border dark:border-dark-border">
-              <span className="text-light-secondary dark:text-dark-secondary">
+            <div className="flex items-center gap-3 px-4 border-b border-line">
+              <span className="text-fg-muted">
                 <SearchIcon />
               </span>
               <input
@@ -273,17 +273,17 @@ export function CommandPalette(): JSX.Element | null {
                   setActiveIndex(0)
                 }}
                 placeholder={t('command.placeholder')}
-                className="flex-1 bg-transparent py-4 text-sm text-light-text dark:text-dark-text placeholder:text-light-secondary/70 dark:placeholder:text-dark-secondary/70 focus:outline-none"
+                className="flex-1 bg-transparent py-4 text-sm text-fg placeholder:text-fg-muted/70 focus:outline-none"
                 aria-label={t('command.inputAria')}
               />
-              <kbd className="hidden sm:inline-flex items-center rounded-md border border-light-border dark:border-dark-border px-1.5 py-0.5 text-[11px] font-medium text-light-secondary dark:text-dark-secondary">
+              <kbd className="hidden sm:inline-flex items-center rounded-md border border-line px-1.5 py-0.5 text-[11px] font-medium text-fg-muted">
                 ESC
               </kbd>
             </div>
 
             <div className="max-h-[52vh] overflow-y-auto scrollbar-thin p-2">
               {flatItems.length === 0 ? (
-                <p className="px-3 py-10 text-center text-sm text-light-secondary dark:text-dark-secondary">
+                <p className="px-3 py-10 text-center text-sm text-fg-muted">
                   {debouncedQuery.length >= MIN_SEARCH_LENGTH
                     ? t('command.nothingFound', { query: debouncedQuery })
                     : t('command.startTyping')}
@@ -305,21 +305,21 @@ export function CommandPalette(): JSX.Element | null {
                           onClick={item.perform}
                           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
                             isActive
-                              ? 'bg-light-surface dark:bg-dark-surface-elevated'
-                              : 'hover:bg-light-surface dark:hover:bg-dark-surface-elevated'
+                              ? 'bg-surface-2'
+                              : 'hover:bg-surface-2'
                           }`}
                         >
                           {item.icon && (
-                            <span className="shrink-0 text-light-secondary dark:text-dark-secondary">
+                            <span className="shrink-0 text-fg-muted">
                               {item.icon}
                             </span>
                           )}
-                          <span className="min-w-0 flex-1 truncate text-sm text-light-text dark:text-dark-text">
+                          <span className="min-w-0 flex-1 truncate text-sm text-fg">
                             {item.label}
                           </span>
                           {item.badge}
                           {item.hint && !item.badge && (
-                            <span className="shrink-0 truncate text-xs text-light-secondary dark:text-dark-secondary max-w-[45%]">
+                            <span className="shrink-0 truncate text-xs text-fg-muted max-w-[45%]">
                               {item.hint}
                             </span>
                           )}
@@ -331,7 +331,7 @@ export function CommandPalette(): JSX.Element | null {
               )}
             </div>
 
-            <div className="hidden sm:flex items-center gap-4 border-t border-light-border dark:border-dark-border px-4 py-2.5 text-[11px] text-light-secondary dark:text-dark-secondary">
+            <div className="hidden sm:flex items-center gap-4 border-t border-line px-4 py-2.5 text-[11px] text-fg-muted">
               <HintKey combo="↑↓" label={t('command.hintNavigate')} />
               <HintKey combo="↵" label={t('command.hintSelect')} />
               <HintKey combo="esc" label={t('command.hintClose')} />
@@ -347,7 +347,7 @@ export function CommandPalette(): JSX.Element | null {
 function HintKey({ combo, label }: { combo: string; label: string }): JSX.Element {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <kbd className="inline-flex items-center rounded border border-light-border dark:border-dark-border px-1.5 py-0.5 font-medium">
+      <kbd className="inline-flex items-center rounded border border-line px-1.5 py-0.5 font-medium">
         {combo}
       </kbd>
       {label}

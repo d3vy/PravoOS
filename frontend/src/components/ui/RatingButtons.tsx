@@ -19,7 +19,7 @@ export function RatingButtons({ rating, onRate, disabled = false }: RatingButton
         className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
           rating === 1
             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-            : 'text-light-secondary dark:text-dark-secondary hover:bg-light-bg dark:hover:bg-dark-bg'
+            : 'text-fg-muted hover:bg-bg'
         }`}
       >
         <ThumbIcon direction="up" />
@@ -33,7 +33,7 @@ export function RatingButtons({ rating, onRate, disabled = false }: RatingButton
         className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
           rating === -1
             ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-            : 'text-light-secondary dark:text-dark-secondary hover:bg-light-bg dark:hover:bg-dark-bg'
+            : 'text-fg-muted hover:bg-bg'
         }`}
       >
         <ThumbIcon direction="down" />

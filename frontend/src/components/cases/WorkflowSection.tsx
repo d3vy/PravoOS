@@ -42,10 +42,10 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
   }
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('workflow.runTitle')}</h2>
+    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+      <h2 className="text-sm font-semibold text-fg mb-3">{t('workflow.runTitle')}</h2>
 
-      <div className="flex gap-1 mb-4 p-1 rounded-lg bg-light-bg dark:bg-dark-bg">
+      <div className="flex gap-1 mb-4 p-1 rounded-lg bg-bg">
         {WORKFLOW_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -53,8 +53,8 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
             onClick={() => handleTabChange(tab.id)}
             className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               activeTab === tab.id
-                ? 'bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text shadow-sm'
-                : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+                ? 'bg-surface text-fg shadow-sm'
+                : 'text-fg-muted hover:text-fg'
             }`}
           >
             {t(tab.labelKey)}
@@ -71,8 +71,8 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
               onClick={() => setSelectedId(workflow.id)}
               className={`text-left p-3 rounded-lg border text-sm transition-colors ${
                 selectedId === workflow.id
-                  ? 'border-light-accent dark:border-dark-accent bg-light-accent/5 dark:bg-dark-accent/10 text-light-text dark:text-dark-text'
-                  : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:border-light-accent/50 dark:hover:border-dark-accent/50'
+                  ? 'border-accent bg-accent/5 text-fg'
+                  : 'border-line text-fg-muted hover:border-accent/50'
               }`}
             >
               {workflow.displayName}
@@ -81,7 +81,7 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
         </div>
 
         {selectedWorkflow && (
-          <p className="text-xs text-light-secondary dark:text-dark-secondary">{selectedWorkflow.instruction}</p>
+          <p className="text-xs text-fg-muted">{selectedWorkflow.instruction}</p>
         )}
 
         <textarea
@@ -90,11 +90,11 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
           rows={2}
           maxLength={2000}
           placeholder={t('workflow.extraQuestion')}
-          className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
+          className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent resize-none"
         />
 
         {runMutation.isError && (
-          <p className="text-sm text-red-600 dark:text-red-400">{t('workflow.runError')}</p>
+          <p className="text-sm text-danger">{t('workflow.runError')}</p>
         )}
 
         <div>

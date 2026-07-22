@@ -78,8 +78,8 @@ export default function UsersPage(): JSX.Element {
     <div className="p-6 lg:p-8">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('adminUsers.title')}</h1>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <h1 className="text-3xl font-semibold text-fg mb-1">{t('adminUsers.title')}</h1>
+          <p className="text-sm text-fg-muted">
             {selectionMode ? t('adminUsers.selectPrompt') : t('adminUsers.subtitle')}
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function UsersPage(): JSX.Element {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400"
+            className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-danger"
           >
             {deleteError}
           </motion.div>
@@ -128,8 +128,8 @@ export default function UsersPage(): JSX.Element {
           <Spinner size="lg" />
         </div>
       ) : lawyers.length === 0 ? (
-        <div className="text-center py-16 rounded-xl border border-dashed border-light-border dark:border-dark-border">
-          <p className="text-light-secondary dark:text-dark-secondary text-sm">
+        <div className="text-center py-16 rounded-xl border border-dashed border-line">
+          <p className="text-fg-muted text-sm">
             {t('adminUsers.empty')}
           </p>
         </div>
@@ -185,12 +185,12 @@ function LawyerCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, delay: index * 0.04 }}
       onClick={selectionMode ? onToggle : undefined}
-      className={`bg-light-surface dark:bg-dark-surface rounded-xl border p-5 transition-colors ${
+      className={`bg-surface rounded-xl border p-5 transition-colors ${
         selectionMode ? 'cursor-pointer' : ''
       } ${
         selected
-          ? 'border-light-accent dark:border-dark-accent ring-1 ring-light-accent dark:ring-dark-accent'
-          : 'border-light-border dark:border-dark-border'
+          ? 'border-accent ring-1 ring-accent'
+          : 'border-line'
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -198,13 +198,13 @@ function LawyerCard({
           <div
             className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
               selected
-                ? 'bg-light-accent dark:bg-dark-accent border-light-accent dark:border-dark-accent'
-                : 'border-light-border dark:border-dark-border'
+                ? 'bg-accent-solid border-accent'
+                : 'border-line'
             }`}
             aria-hidden="true"
           >
             {selected && (
-              <svg className="w-3 h-3 text-white dark:text-dark-bg" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="w-3 h-3 text-accent-fg" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z"
@@ -215,17 +215,17 @@ function LawyerCard({
           </div>
         )}
 
-        <div className="w-10 h-10 rounded-full bg-light-accent/10 dark:bg-dark-accent/10 flex items-center justify-center shrink-0">
-          <span className="text-sm font-semibold text-light-accent dark:text-dark-accent">
+        <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+          <span className="text-sm font-semibold text-accent">
             {(lawyer.fullName ?? lawyer.email).charAt(0).toUpperCase()}
           </span>
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-light-text dark:text-dark-text">
+          <p className="font-semibold text-fg">
             {lawyer.fullName ?? '—'}
           </p>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">{lawyer.email}</p>
+          <p className="text-sm text-fg-muted">{lawyer.email}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm">
@@ -240,8 +240,8 @@ function LawyerCard({
 function InfoField({ label, value }: { label: string; value: string | null }): JSX.Element {
   return (
     <div className="min-w-0">
-      <span className="text-xs text-light-secondary dark:text-dark-secondary">{label}</span>
-      <p className="text-light-text dark:text-dark-text truncate">{value ?? '—'}</p>
+      <span className="text-xs text-fg-muted">{label}</span>
+      <p className="text-fg truncate">{value ?? '—'}</p>
     </div>
   )
 }
@@ -274,19 +274,19 @@ function ConfirmDeleteModal({
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ duration: 0.15 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg p-6 shadow-xl"
+        className="w-full max-w-md rounded-xl border border-line bg-bg p-6 shadow-xl"
       >
-        <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-2">
+        <h2 className="text-lg font-semibold text-fg mb-2">
           {count === 1 ? t('adminUsers.confirmTitleOne') : t('adminUsers.confirmTitleMany', { count })}
         </h2>
-        <ul className="mb-4 max-h-40 overflow-y-auto rounded-lg border border-light-border dark:border-dark-border divide-y divide-light-border dark:divide-dark-border text-sm">
+        <ul className="mb-4 max-h-40 overflow-y-auto rounded-lg border border-line divide-y divide-line text-sm">
           {names.map((name, i) => (
-            <li key={`${name}-${i}`} className="px-3 py-2 text-light-text dark:text-dark-text truncate">
+            <li key={`${name}-${i}`} className="px-3 py-2 text-fg truncate">
               {name}
             </li>
           ))}
         </ul>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mb-6">
+        <p className="text-sm text-fg-muted mb-6">
           {t('adminUsers.confirmWarning')}
         </p>
         <div className="flex justify-end gap-2">

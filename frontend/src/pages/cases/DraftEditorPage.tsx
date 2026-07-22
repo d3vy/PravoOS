@@ -119,7 +119,7 @@ export default function DraftEditorPage(): JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="bg-light-bg dark:bg-dark-bg">
+      <div className="bg-bg">
         <div className="flex justify-center py-24">
           <Spinner size="lg" />
         </div>
@@ -129,10 +129,10 @@ export default function DraftEditorPage(): JSX.Element {
 
   if (!draft) {
     return (
-      <div className="bg-light-bg dark:bg-dark-bg">
+      <div className="bg-bg">
         <div className="page-container py-16 text-center">
-          <p className="text-light-secondary dark:text-dark-secondary mb-4">{t('draftEditor.notFound')}</p>
-          <Link to={`/cases/${caseId}`} className="text-light-accent dark:text-dark-accent text-sm">
+          <p className="text-fg-muted mb-4">{t('draftEditor.notFound')}</p>
+          <Link to={`/cases/${caseId}`} className="text-accent text-sm">
             {t('draftEditor.backToCase')}
           </Link>
         </div>
@@ -143,15 +143,15 @@ export default function DraftEditorPage(): JSX.Element {
   const hasSelection = selection != null && selection.end > selection.start
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-6xl">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
-            <Link to={`/cases/${caseId}`} className="text-xs text-light-accent dark:text-dark-accent">
+            <Link to={`/cases/${caseId}`} className="text-xs text-accent">
               {t('draftEditor.backToCase')}
             </Link>
-            <h1 className="text-lg font-semibold text-light-text dark:text-dark-text mt-1">{draft.title}</h1>
-            <p className="text-xs text-light-secondary dark:text-dark-secondary">
+            <h1 className="text-lg font-semibold text-fg mt-1">{draft.title}</h1>
+            <p className="text-xs text-fg-muted">
               {draft.draftTypeName}
               {draft.updatedAt && t('draftEditor.changedAt', { date: new Date(draft.updatedAt).toLocaleString(locale()) })}
             </p>
@@ -174,7 +174,7 @@ export default function DraftEditorPage(): JSX.Element {
               onChange={(e) => setContent(e.target.value)}
               onSelect={captureSelection}
               spellCheck={false}
-              className="w-full min-h-[60vh] px-4 py-3 rounded-xl border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-y"
+              className="w-full min-h-[60vh] px-4 py-3 rounded-xl border border-line bg-surface text-fg text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent resize-y"
             />
             <div className="flex items-center gap-3 flex-wrap">
               <input
@@ -182,7 +182,7 @@ export default function DraftEditorPage(): JSX.Element {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={t('draftEditor.notePlaceholder')}
-                className="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+                className="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
               <Button
                 variant="primary"
@@ -194,10 +194,10 @@ export default function DraftEditorPage(): JSX.Element {
               </Button>
             </div>
             {saveMutation.isError && (
-              <p className="text-sm text-red-600 dark:text-red-400">{t('draftEditor.saveError')}</p>
+              <p className="text-sm text-danger">{t('draftEditor.saveError')}</p>
             )}
             {isDirty && !saveMutation.isPending && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">{t('draftEditor.unsavedChanges')}</p>
+              <p className="text-xs text-warning">{t('draftEditor.unsavedChanges')}</p>
             )}
           </div>
 
@@ -211,9 +211,9 @@ export default function DraftEditorPage(): JSX.Element {
                 queryClient.invalidateQueries({ queryKey: ['case-drafts', caseId] })
               }} />
             ) : (
-              <section className="p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-                <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">{t('draftEditor.aiAssistant')}</h2>
-                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
+              <section className="p-4 rounded-xl bg-surface border border-line">
+                <h2 className="text-sm font-semibold text-fg mb-1">{t('draftEditor.aiAssistant')}</h2>
+                <p className="text-xs text-fg-muted mb-3">
                   {hasSelection ? t('draftEditor.appliesToSelection') : t('draftEditor.appliesToDocument')}
                 </p>
 
@@ -237,7 +237,7 @@ export default function DraftEditorPage(): JSX.Element {
                     onChange={(e) => setCustomInstruction(e.target.value)}
                     placeholder={t('draftEditor.customPlaceholder')}
                     rows={3}
-                    className="w-full px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-y"
+                    className="w-full px-3 py-2 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-y"
                   />
                   <Button
                     variant="primary"
@@ -250,20 +250,20 @@ export default function DraftEditorPage(): JSX.Element {
                 </div>
 
                 {refineMutation.isPending && (
-                  <div className="flex items-center gap-2 mt-3 text-xs text-light-secondary dark:text-dark-secondary">
+                  <div className="flex items-center gap-2 mt-3 text-xs text-fg-muted">
                     <Spinner size="sm" /> {t('draftEditor.refining')}
                   </div>
                 )}
                 {refineMutation.isError && (
-                  <p className="text-sm text-red-600 dark:text-red-400 mt-3">{t('draftEditor.refineError')}</p>
+                  <p className="text-sm text-danger mt-3">{t('draftEditor.refineError')}</p>
                 )}
 
                 {suggestion && (
-                  <div className="mt-4 pt-3 border-t border-light-border dark:border-dark-border">
-                    <h3 className="text-xs font-semibold text-light-text dark:text-dark-text mb-2">
+                  <div className="mt-4 pt-3 border-t border-line">
+                    <h3 className="text-xs font-semibold text-fg mb-2">
                       {t('draftEditor.suggestionTitle')} {suggestion.selection ? t('draftEditor.forFragment') : t('draftEditor.wholeDocument')}
                     </h3>
-                    <div className="max-h-72 overflow-y-auto p-3 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border text-xs whitespace-pre-wrap text-light-text dark:text-dark-text">
+                    <div className="max-h-72 overflow-y-auto p-3 rounded-lg bg-bg border border-line text-xs whitespace-pre-wrap text-fg">
                       {suggestion.text}
                     </div>
                     <div className="flex items-center gap-2 mt-2">
@@ -306,10 +306,10 @@ function VersionsPanel({
   })
 
   return (
-    <section className="p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+    <section className="p-4 rounded-xl bg-surface border border-line">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('draftEditor.versionHistory')}</h2>
-        <button onClick={onClose} className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text">
+        <h2 className="text-sm font-semibold text-fg">{t('draftEditor.versionHistory')}</h2>
+        <button onClick={onClose} className="text-xs text-fg-muted hover:text-fg">
           {t('draftEditor.close')}
         </button>
       </div>
@@ -317,21 +317,21 @@ function VersionsPanel({
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner size="sm" /></div>
       ) : versions.length === 0 ? (
-        <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('draftEditor.noVersions')}</p>
+        <p className="text-xs text-fg-muted">{t('draftEditor.noVersions')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {versions.map((version) => (
-            <div key={version.id} className="p-3 rounded-lg border border-light-border dark:border-dark-border">
+            <div key={version.id} className="p-3 rounded-lg border border-line">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-light-text dark:text-dark-text">
+                <span className="text-xs font-medium text-fg">
                   {t('draftEditor.versionNo', { no: version.versionNo })}
                 </span>
-                <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                <span className="text-xs text-fg-muted">
                   {new Date(version.createdAt).toLocaleString(locale())}
                 </span>
               </div>
               {version.note && (
-                <p className="text-xs text-light-secondary dark:text-dark-secondary mb-2">{version.note}</p>
+                <p className="text-xs text-fg-muted mb-2">{version.note}</p>
               )}
               <Button
                 variant="secondary"

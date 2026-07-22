@@ -25,11 +25,11 @@ export default function InvoicesPage(): JSX.Element {
   const total = data?.total ?? 0
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('invoices.title')}</h1>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <h1 className="text-3xl font-semibold text-fg mb-1">{t('invoices.title')}</h1>
+          <p className="text-sm text-fg-muted">
             {t('invoices.subtitle')}
           </p>
         </div>
@@ -39,7 +39,7 @@ export default function InvoicesPage(): JSX.Element {
             <Spinner />
           </div>
         ) : invoices.length === 0 ? (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm text-fg-muted">
             {t('invoices.emptyHint')}
           </p>
         ) : (
@@ -48,19 +48,19 @@ export default function InvoicesPage(): JSX.Element {
               <Link
                 key={invoice.id}
                 to={`/invoices/${invoice.id}`}
-                className="flex items-center gap-4 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent dark:hover:border-dark-accent transition-colors"
+                className="flex items-center gap-4 p-4 rounded-xl bg-surface border border-line hover:border-accent transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-light-text dark:text-dark-text">
+                  <p className="text-sm font-medium text-fg">
                     {invoice.number}
                   </p>
-                  <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                  <span className="text-xs text-fg-muted">
                     {invoice.clientName ?? t('invoices.clientDeleted')} ·{' '}
                     {new Date(invoice.issueDate).toLocaleDateString(locale)}
                   </span>
                 </div>
                 <InvoiceStatusBadge status={invoice.status as InvoiceStatus} />
-                <span className="text-sm font-semibold text-light-text dark:text-dark-text tabular-nums">
+                <span className="text-sm font-semibold text-fg tabular-nums">
                   {formatMoney(invoice.total, invoice.currency)}
                 </span>
               </Link>

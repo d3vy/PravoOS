@@ -22,7 +22,7 @@ export default function PortalCasesPage(): JSX.Element {
 
   return (
     <PortalLayout>
-      <h1 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-6">{t('portalCases.title')}</h1>
+      <h1 className="text-2xl font-semibold text-fg mb-6">{t('portalCases.title')}</h1>
 
       {isLoading && (
         <div className="flex justify-center py-16">
@@ -31,13 +31,13 @@ export default function PortalCasesPage(): JSX.Element {
       )}
 
       {isError && (
-        <div className="card-elevated rounded-xl p-8 text-center text-light-secondary dark:text-dark-secondary">
+        <div className="card-elevated rounded-xl p-8 text-center text-fg-muted">
           {t('portalCases.loadError')}
         </div>
       )}
 
       {!isLoading && !isError && cases.length === 0 && (
-        <div className="card-elevated rounded-xl p-10 text-center text-light-secondary dark:text-dark-secondary">
+        <div className="card-elevated rounded-xl p-10 text-center text-fg-muted">
           {t('portalCases.empty')}
         </div>
       )}
@@ -51,11 +51,11 @@ export default function PortalCasesPage(): JSX.Element {
                 className="card-elevated rounded-xl p-5 flex items-start justify-between gap-4 hover:shadow-md transition-shadow"
               >
                 <div className="min-w-0">
-                  <p className="font-medium text-light-text dark:text-dark-text truncate">
+                  <p className="font-medium text-fg truncate">
                     {caseItem.title}
                   </p>
                   {caseItem.nextHearingDate && (
-                    <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+                    <p className="text-sm text-fg-muted mt-1">
                       {t('portalCases.nextHearing', { date: formatDate(caseItem.nextHearingDate) })}
                     </p>
                   )}

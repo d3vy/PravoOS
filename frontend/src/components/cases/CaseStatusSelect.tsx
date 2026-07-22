@@ -16,7 +16,7 @@ export function CaseStatusSelect({ value, onChange, disabled }: CaseStatusSelect
       disabled={disabled}
       onClick={(e) => e.stopPropagation()}
       onChange={(e) => onChange(e.target.value as CaseStatus)}
-      className="px-2.5 py-1 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-xs focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent disabled:opacity-60"
+      className="px-2.5 py-1 rounded-lg border border-line bg-bg text-fg text-xs focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
     >
       {CASE_STATUS_ORDER.map((status) => (
         <option key={status} value={status}>

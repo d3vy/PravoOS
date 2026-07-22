@@ -22,11 +22,11 @@ export default function SettingsPage(): JSX.Element {
   ]
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-lg">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-6">{t('settings.title')}</h1>
+        <h1 className="text-3xl font-semibold text-fg mb-6">{t('settings.title')}</h1>
 
-        <div className="flex gap-1 border-b border-light-border dark:border-dark-border mb-8">
+        <div className="flex gap-1 border-b border-line mb-8">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -34,8 +34,8 @@ export default function SettingsPage(): JSX.Element {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-light-accent dark:border-dark-accent text-light-text dark:text-dark-text'
-                  : 'border-transparent text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+                  ? 'border-accent text-fg'
+                  : 'border-transparent text-fg-muted hover:text-fg'
               }`}
             >
               {tab.label}
@@ -60,8 +60,8 @@ function LanguageTab(): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('settings.languageTitle')}</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">{t('settings.languageDesc')}</p>
+        <h2 className="text-xl font-semibold text-fg">{t('settings.languageTitle')}</h2>
+        <p className="text-sm text-fg-muted mt-1">{t('settings.languageDesc')}</p>
       </div>
       <div className="flex flex-col gap-2 max-w-xs">
         {supportedLanguages.map((code) => (
@@ -71,13 +71,13 @@ function LanguageTab(): JSX.Element {
             onClick={() => setLanguage(code)}
             className={`flex items-center justify-between px-4 py-3 rounded-lg border text-sm transition-colors ${
               code === language
-                ? 'border-light-accent dark:border-dark-accent text-light-text dark:text-dark-text bg-light-accent/5 dark:bg-dark-accent/10'
-                : 'border-light-border dark:border-dark-border text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-surface'
+                ? 'border-accent text-fg bg-accent/5'
+                : 'border-line text-fg hover:bg-surface'
             }`}
           >
             {LANGUAGE_LABELS[code]}
             {code === language && (
-              <svg className="w-4 h-4 text-light-accent dark:text-dark-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4 h-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             )}
@@ -147,8 +147,8 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
       <PushDeviceCard pushSelected={settings.loginAlertPush || settings.caseMessagePush} />
 
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('settings.loginTitle')}</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+        <h2 className="text-xl font-semibold text-fg">{t('settings.loginTitle')}</h2>
+        <p className="text-sm text-fg-muted mt-1">
           {t('settings.loginDesc')}
         </p>
       </div>
@@ -164,8 +164,8 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
       />
 
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('settings.caseMsgTitle')}</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+        <h2 className="text-xl font-semibold text-fg">{t('settings.caseMsgTitle')}</h2>
+        <p className="text-sm text-fg-muted mt-1">
           {t('settings.caseMsgDesc')}
         </p>
       </div>
@@ -182,7 +182,7 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
 
       {telegramSelectedButNotLinked && (
         <div className="rounded-lg border border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 p-3">
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+          <p className="text-sm text-warning">
             {t('settings.telegramNotLinked')}{' '}
             <button
               type="button"
@@ -196,9 +196,9 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
       )}
 
       {updateMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{t('settings.saveFailed')}</p>
+        <p className="text-sm text-danger">{t('settings.saveFailed')}</p>
       )}
-      {saved && <p className="text-sm text-green-600 dark:text-green-400">{t('settings.saved')}</p>}
+      {saved && <p className="text-sm text-success">{t('settings.saved')}</p>}
     </div>
   )
 }
@@ -220,16 +220,16 @@ function PushDeviceCard({ pushSelected }: { pushSelected: boolean }): JSX.Elemen
   }
 
   return (
-    <div className="rounded-lg border border-light-border dark:border-dark-border p-4 flex flex-col gap-3">
+    <div className="rounded-lg border border-line p-4 flex flex-col gap-3">
       <div>
-        <h2 className="text-base font-semibold text-light-text dark:text-dark-text">{t('settings.pushDeviceTitle')}</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+        <h2 className="text-base font-semibold text-fg">{t('settings.pushDeviceTitle')}</h2>
+        <p className="text-sm text-fg-muted mt-1">
           {state === 'subscribed' ? t('settings.pushSubscribedDesc') : t('settings.pushEnableDesc')}
         </p>
       </div>
 
       {state === 'blocked' ? (
-        <p className="text-sm text-amber-600 dark:text-amber-400">
+        <p className="text-sm text-warning">
           {t('settings.pushBlocked')}
         </p>
       ) : (
@@ -245,12 +245,12 @@ function PushDeviceCard({ pushSelected }: { pushSelected: boolean }): JSX.Elemen
       )}
 
       {state !== 'subscribed' && pushSelected && state !== 'blocked' && (
-        <p className="text-sm text-amber-600 dark:text-amber-400">
+        <p className="text-sm text-warning">
           {t('settings.pushChannelSelectedNotSubscribed')}
         </p>
       )}
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   )
 }
@@ -289,29 +289,29 @@ function ChannelSelect({
         onClick={() => setOpen((value) => !value)}
         className="input-base w-full flex items-center justify-between gap-2 text-left"
       >
-        <span className="text-light-text dark:text-dark-text">{summary}</span>
+        <span className="text-fg">{summary}</span>
         <ChevronIcon open={open} />
       </button>
 
       {open && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-surface shadow-lg py-1">
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-line bg-overlay shadow-lg py-1">
           {options.map((option) => (
             <button
               key={option.key}
               type="button"
               disabled={disabled}
               onClick={() => onToggle(option.key)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left text-light-text dark:text-dark-text hover:bg-light-surface dark:hover:bg-dark-bg disabled:opacity-50 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left text-fg hover:bg-surface-2 disabled:opacity-50 transition-colors"
             >
               <span
                 className={`flex items-center justify-center w-4 h-4 rounded border ${
                   option.checked
-                    ? 'bg-light-accent dark:bg-dark-accent border-light-accent dark:border-dark-accent'
-                    : 'border-light-border dark:border-dark-border'
+                    ? 'bg-accent-solid border-accent'
+                    : 'border-line'
                 }`}
               >
                 {option.checked && (
-                  <svg className="w-3 h-3 text-white dark:text-dark-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-3 h-3 text-accent-fg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 )}
@@ -328,7 +328,7 @@ function ChannelSelect({
 function ChevronIcon({ open }: { open: boolean }): JSX.Element {
   return (
     <svg
-      className={`w-4 h-4 text-light-secondary dark:text-dark-secondary transition-transform ${open ? 'rotate-180' : ''}`}
+      className={`w-4 h-4 text-fg-muted transition-transform ${open ? 'rotate-180' : ''}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -372,15 +372,15 @@ function IntegrationsTab(): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">Telegram</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+        <h2 className="text-xl font-semibold text-fg">Telegram</h2>
+        <p className="text-sm text-fg-muted mt-1">
           {t('settings.telegramDesc')}
         </p>
       </div>
 
       {settings.telegramLinked ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-green-600 dark:text-green-400">{t('settings.telegramLinked')}</p>
+          <p className="text-sm text-success">{t('settings.telegramLinked')}</p>
           <div>
             <Button
               variant="secondary"
@@ -391,7 +391,7 @@ function IntegrationsTab(): JSX.Element {
             </Button>
           </div>
           {unlinkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.unlinkFailed')}</p>
+            <p className="text-sm text-danger">{t('settings.unlinkFailed')}</p>
           )}
         </div>
       ) : (
@@ -405,12 +405,12 @@ function IntegrationsTab(): JSX.Element {
           )}
 
           {linkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.linkCreateFailed')}</p>
+            <p className="text-sm text-danger">{t('settings.linkCreateFailed')}</p>
           )}
 
           {link && (
-            <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4">
-              <p className="text-sm text-light-text dark:text-dark-text">
+            <div className="flex flex-col gap-3 rounded-lg border border-line p-4">
+              <p className="text-sm text-fg">
                 {t('settings.botInstruction')}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -424,7 +424,7 @@ function IntegrationsTab(): JSX.Element {
                   {t('settings.iLinkedRefresh')}
                 </Button>
               </div>
-              <p className="text-xs text-light-secondary dark:text-dark-secondary">
+              <p className="text-xs text-fg-muted">
                 {t('settings.botCommandHint')}{' '}
                 <code className="font-mono">/start {link.code}</code>
               </p>

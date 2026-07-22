@@ -64,7 +64,7 @@ export function CaseMessageThread({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-light-text dark:text-dark-text mb-3">{t('messageThread.title')}</h2>
+      <h2 className="text-lg font-semibold text-fg mb-3">{t('messageThread.title')}</h2>
 
       <div className="card-elevated rounded-xl p-4">
         {isLoading ? (
@@ -74,7 +74,7 @@ export function CaseMessageThread({
         ) : (
           <div className="max-h-96 overflow-y-auto flex flex-col gap-3 mb-4">
             {messages.length === 0 ? (
-              <p className="text-light-secondary dark:text-dark-secondary text-sm text-center py-6">
+              <p className="text-fg-muted text-sm text-center py-6">
                 {t('messageThread.empty')}
               </p>
             ) : (
@@ -85,8 +85,8 @@ export function CaseMessageThread({
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
                         mine
-                          ? 'bg-light-accent dark:bg-dark-accent text-white dark:text-dark-bg'
-                          : 'bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text dark:text-dark-text'
+                          ? 'bg-accent-solid text-accent-fg'
+                          : 'bg-surface border border-line text-fg'
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-0.5">
@@ -119,9 +119,9 @@ export function CaseMessageThread({
           />
           <div className="flex items-center justify-between gap-3">
             {sendMutation.isError ? (
-              <p className="text-sm text-red-600 dark:text-red-400">{t('messageThread.sendError')}</p>
+              <p className="text-sm text-danger">{t('messageThread.sendError')}</p>
             ) : (
-              <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('messageThread.sendHint')}</span>
+              <span className="text-xs text-fg-muted">{t('messageThread.sendHint')}</span>
             )}
             <Button
               type="submit"

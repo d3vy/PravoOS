@@ -106,16 +106,16 @@ export default function TeamPage(): JSX.Element {
   })
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('team.title')}</h1>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <h1 className="text-3xl font-semibold text-fg mb-1">{t('team.title')}</h1>
+          <p className="text-sm text-fg-muted">
             {t('team.subtitle')}
           </p>
         </div>
 
-        {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
         {isLoading ? (
           <div className="flex justify-center py-16"><Spinner size="lg" /></div>
@@ -130,8 +130,8 @@ export default function TeamPage(): JSX.Element {
                     onClick={() => setSelectedOrgId(org.id)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                       org.id === selectedOrgId
-                        ? 'bg-light-text dark:bg-dark-text text-light-bg dark:text-dark-bg border-transparent'
-                        : 'border-light-border dark:border-dark-border text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+                        ? 'bg-fg text-bg border-transparent'
+                        : 'border-line text-fg-muted hover:text-fg'
                     }`}
                   >
                     {org.name} · {ROLE_LABEL[org.myRole]}
@@ -141,11 +141,11 @@ export default function TeamPage(): JSX.Element {
             )}
 
             {selectedOrg && (
-              <div className="flex flex-col gap-6 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+              <div className="flex flex-col gap-6 p-6 rounded-xl bg-surface border border-line">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
-                    <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{selectedOrg.name}</h2>
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary">
+                    <h2 className="text-xl font-semibold text-fg">{selectedOrg.name}</h2>
+                    <p className="text-xs text-fg-muted">
                       {t('team.membersCount', { count: selectedOrg.memberCount, role: ROLE_LABEL[selectedOrg.myRole] })}
                     </p>
                   </div>
@@ -157,20 +157,20 @@ export default function TeamPage(): JSX.Element {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('team.membersTitle')}</h3>
-                  <div className="flex flex-col divide-y divide-light-border dark:divide-dark-border">
+                  <h3 className="text-sm font-medium text-fg mb-2">{t('team.membersTitle')}</h3>
+                  <div className="flex flex-col divide-y divide-line">
                     {members.map((member) => {
                       const isOrgOwner = member.userId === selectedOrg.ownerId
                       const isSelf = member.userId === currentUserId
                       return (
                         <div key={member.userId} className="flex items-center justify-between gap-3 py-3 min-w-0">
                           <div className="min-w-0">
-                            <p className="text-sm text-light-text dark:text-dark-text truncate">
+                            <p className="text-sm text-fg truncate">
                               {member.fullName || member.email || member.userId}
-                              {isSelf && <span className="text-light-secondary dark:text-dark-secondary">{t('team.you')}</span>}
+                              {isSelf && <span className="text-fg-muted">{t('team.you')}</span>}
                             </p>
                             {member.email && (
-                              <p className="text-xs text-light-secondary dark:text-dark-secondary truncate">{member.email}</p>
+                              <p className="text-xs text-fg-muted truncate">{member.email}</p>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -178,19 +178,19 @@ export default function TeamPage(): JSX.Element {
                               <select
                                 value={member.orgRole}
                                 onChange={(e) => changeRoleMutation.mutate({ userId: member.userId, role: e.target.value as OrgRole })}
-                                className="px-2 py-1 rounded-md border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-xs"
+                                className="px-2 py-1 rounded-md border border-line bg-bg text-fg text-xs"
                               >
                                 <option value="MEMBER">{ROLE_LABEL.MEMBER}</option>
                                 <option value="MANAGER">{ROLE_LABEL.MANAGER}</option>
                               </select>
                             ) : (
-                              <span className="text-xs text-light-secondary dark:text-dark-secondary">{ROLE_LABEL[member.orgRole]}</span>
+                              <span className="text-xs text-fg-muted">{ROLE_LABEL[member.orgRole]}</span>
                             )}
                             {canManage && !isOrgOwner && !isSelf && (
                               <button
                                 type="button"
                                 onClick={() => removeMemberMutation.mutate(member.userId)}
-                                className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                                className="text-xs text-danger hover:underline"
                               >
                                 {t('team.delete')}
                               </button>
@@ -204,7 +204,7 @@ export default function TeamPage(): JSX.Element {
 
                 {canManage && (
                   <div>
-                    <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('team.inviteTitle')}</h3>
+                    <h3 className="text-sm font-medium text-fg mb-2">{t('team.inviteTitle')}</h3>
                     <div className="flex gap-2 flex-wrap items-end">
                       <div className="flex-1 min-w-[200px]">
                         <Input
@@ -217,7 +217,7 @@ export default function TeamPage(): JSX.Element {
                       <select
                         value={inviteRole}
                         onChange={(e) => setInviteRole(e.target.value as OrgRole)}
-                        className="px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm"
+                        className="px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm"
                       >
                         <option value="MEMBER">{ROLE_LABEL.MEMBER}</option>
                         {isOwner && <option value="MANAGER">{ROLE_LABEL.MANAGER}</option>}
@@ -233,16 +233,16 @@ export default function TeamPage(): JSX.Element {
                     </div>
 
                     {invites.length > 0 && (
-                      <div className="mt-4 flex flex-col divide-y divide-light-border dark:divide-dark-border">
+                      <div className="mt-4 flex flex-col divide-y divide-line">
                         {invites.map((invite) => (
                           <div key={invite.id} className="flex items-center justify-between gap-3 py-2 min-w-0">
-                            <p className="text-sm text-light-secondary dark:text-dark-secondary truncate">
+                            <p className="text-sm text-fg-muted truncate">
                               {invite.email} · {ROLE_LABEL[invite.orgRole]}
                             </p>
                             <button
                               type="button"
                               onClick={() => revokeInviteMutation.mutate(invite.id)}
-                              className="text-xs text-red-600 dark:text-red-400 hover:underline shrink-0"
+                              className="text-xs text-danger hover:underline shrink-0"
                             >
                               {t('team.revoke')}
                             </button>
@@ -255,8 +255,8 @@ export default function TeamPage(): JSX.Element {
               </div>
             )}
 
-            <div className="p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-              <h3 className="text-sm font-medium text-light-text dark:text-dark-text mb-2">{t('team.createOrgTitle')}</h3>
+            <div className="p-6 rounded-xl bg-surface border border-line">
+              <h3 className="text-sm font-medium text-fg mb-2">{t('team.createOrgTitle')}</h3>
               <div className="flex gap-2 flex-wrap items-end">
                 <div className="flex-1 min-w-[200px]">
                   <Input

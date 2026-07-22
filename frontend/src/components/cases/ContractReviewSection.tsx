@@ -28,14 +28,14 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
   })
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-1">{t('contractReview.title')}</h2>
-      <p className="text-xs text-light-secondary dark:text-dark-secondary mb-3">
+    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+      <h2 className="text-sm font-semibold text-fg mb-1">{t('contractReview.title')}</h2>
+      <p className="text-xs text-fg-muted mb-3">
         {t('contractReview.hint')}
       </p>
 
       {readyDocuments.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <p className="text-sm text-fg-muted">
           {t('contractReview.uploadHint')}
         </p>
       ) : (
@@ -43,7 +43,7 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
           <select
             value={selectedDocId}
             onChange={(e) => setSelectedDocId(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+            className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">{t('contractReview.selectContract')}</option>
             {readyDocuments.map((doc) => (
@@ -54,7 +54,7 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
           </select>
 
           {reviewMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{t('contractReview.reviewError')}</p>
+            <p className="text-sm text-danger">{t('contractReview.reviewError')}</p>
           )}
 
           <div>
@@ -84,27 +84,27 @@ export function ContractReviewSection({ caseId, documents }: { caseId: string; d
 function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Element {
   const { t } = useTranslation()
   return (
-    <div className="p-4 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg">
+    <div className="p-4 rounded-lg border border-line bg-bg">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-light-text dark:text-dark-text truncate">{review.documentTitle}</p>
-          <p className="text-xs text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm font-medium text-fg truncate">{review.documentTitle}</p>
+          <p className="text-xs text-fg-muted">
             {new Date(review.createdAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
           </p>
         </div>
         <div className="text-right shrink-0">
           <span className={`text-lg font-semibold ${riskScoreTone(review.riskScore)}`}>{review.riskScore}</span>
-          <span className="text-xs text-light-secondary dark:text-dark-secondary">/100</span>
+          <span className="text-xs text-fg-muted">/100</span>
           {review.highRiskCount > 0 && (
-            <p className="text-xs text-red-600 dark:text-red-400">{t('contractReview.highRiskCount', { count: review.highRiskCount })}</p>
+            <p className="text-xs text-danger">{t('contractReview.highRiskCount', { count: review.highRiskCount })}</p>
           )}
         </div>
       </div>
 
-      <p className="text-sm text-light-text dark:text-dark-text whitespace-pre-wrap mb-3">{review.summary}</p>
+      <p className="text-sm text-fg whitespace-pre-wrap mb-3">{review.summary}</p>
 
       {review.findings.length === 0 ? (
-        <p className="text-xs text-light-secondary dark:text-dark-secondary">{t('contractReview.noRisks')}</p>
+        <p className="text-xs text-fg-muted">{t('contractReview.noRisks')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {review.findings.map((risk, i) => {
@@ -114,12 +114,12 @@ function ContractReviewCard({ review }: { review: ContractReviewDto }): JSX.Elem
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-xs font-semibold uppercase tracking-wide">{t(meta.labelKey)} · {risk.category}</span>
                 </div>
-                <p className="text-sm font-medium text-light-text dark:text-dark-text mb-1">{risk.clause}</p>
+                <p className="text-sm font-medium text-fg mb-1">{risk.clause}</p>
                 {risk.explanation && (
-                  <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">{risk.explanation}</p>
+                  <p className="text-xs text-fg-muted mb-1">{risk.explanation}</p>
                 )}
                 {risk.recommendation && (
-                  <p className="text-xs text-light-text dark:text-dark-text">
+                  <p className="text-xs text-fg">
                     <span className="font-semibold">{t('contractReview.recommendation')}</span> {risk.recommendation}
                   </p>
                 )}

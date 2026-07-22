@@ -16,7 +16,7 @@ export function Input({ label, error, id, className = '', rightElement, ...props
       {label && (
         <label
           htmlFor={inputId}
-          className="text-sm font-medium text-light-text dark:text-dark-text"
+          className="text-sm font-medium text-fg"
         >
           {label}
         </label>

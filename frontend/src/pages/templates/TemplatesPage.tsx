@@ -38,12 +38,12 @@ export default function TemplatesPage(): JSX.Element {
   })
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
             <p className="eyebrow mb-1">{t('templates.eyebrow')}</p>
-            <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text">{t('templates.title')}</h1>
+            <h1 className="text-3xl font-semibold text-fg">{t('templates.title')}</h1>
           </div>
           {editor === null && (
             <Button size="sm" onClick={() => setEditor({ mode: 'new' })}>
@@ -67,13 +67,13 @@ export default function TemplatesPage(): JSX.Element {
         )}
 
         {isError && (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm text-fg-muted">
             {t('templates.loadError')}
           </p>
         )}
 
         {templates && templates.length === 0 && editor === null && (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm text-fg-muted">
             {t('templates.empty')}
           </p>
         )}
@@ -83,12 +83,12 @@ export default function TemplatesPage(): JSX.Element {
             {templates.map((template) => (
               <div
                 key={template.id}
-                className="p-4 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+                className="p-4 rounded-lg bg-surface border border-line"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-light-text dark:text-dark-text">{template.name}</p>
-                    <p className="text-xs text-light-secondary dark:text-dark-secondary mt-1 line-clamp-2 whitespace-pre-wrap">
+                    <p className="text-sm font-medium text-fg">{template.name}</p>
+                    <p className="text-xs text-fg-muted mt-1 line-clamp-2 whitespace-pre-wrap">
                       {template.content}
                     </p>
                   </div>
@@ -175,16 +175,16 @@ function TemplateEditor({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-6 p-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border flex flex-col gap-4"
+      className="mb-6 p-6 rounded-xl bg-surface border border-line flex flex-col gap-4"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">
+        <h2 className="text-sm font-semibold text-fg">
           {initial ? t('templates.editTitle') : t('templates.newTemplate')}
         </h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text"
+          className="text-xs text-fg-muted hover:text-fg"
         >
           {t('templates.cancel')}
         </button>
@@ -193,19 +193,19 @@ function TemplateEditor({
       <Input label={t('templates.nameLabel')} value={name} onChange={(e) => setName(e.target.value)} maxLength={300} />
 
       <div>
-        <label className="block text-sm font-medium text-light-text dark:text-dark-text mb-1.5">{t('templates.contentLabel')}</label>
+        <label className="block text-sm font-medium text-fg mb-1.5">{t('templates.contentLabel')}</label>
         <textarea
           ref={contentRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={10}
-          className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent font-mono"
+          className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
         />
       </div>
 
-      <div className="text-xs text-light-secondary dark:text-dark-secondary">
+      <div className="text-xs text-fg-muted">
         <p className="mb-1.5">
-          {t('templates.helpTextBefore')} <code className="px-1 rounded bg-light-bg dark:bg-dark-bg">{'{{client_name}}'}</code>.{' '}
+          {t('templates.helpTextBefore')} <code className="px-1 rounded bg-bg">{'{{client_name}}'}</code>.{' '}
           {t('templates.helpTextAfter')}
         </p>
         <div className="flex flex-wrap gap-1.5 mt-2">
@@ -214,7 +214,7 @@ function TemplateEditor({
               key={placeholder}
               type="button"
               onClick={() => insertPlaceholder(placeholder)}
-              className="px-1.5 py-0.5 rounded bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border font-mono hover:border-light-accent dark:hover:border-dark-accent hover:text-light-text dark:hover:text-dark-text transition-colors"
+              className="px-1.5 py-0.5 rounded bg-bg border border-line font-mono hover:border-accent hover:text-fg transition-colors"
             >
               {placeholder}
             </button>
@@ -222,7 +222,7 @@ function TemplateEditor({
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       <div>
         <Button type="submit" size="sm" loading={saveMutation.isPending}>

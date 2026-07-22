@@ -15,16 +15,16 @@ export function Pagination({ page, pageSize, total, onPageChange }: PaginationPr
   }
 
   const buttonClass =
-    'px-3 py-1.5 rounded-lg text-sm font-medium border border-light-border dark:border-dark-border ' +
-    'text-light-text dark:text-dark-text disabled:opacity-40 disabled:cursor-not-allowed ' +
-    'hover:bg-light-bg dark:hover:bg-dark-bg transition-colors'
+    'px-3 py-1.5 rounded-lg text-sm font-medium border border-line ' +
+    'text-fg disabled:opacity-40 disabled:cursor-not-allowed ' +
+    'hover:bg-bg transition-colors'
 
   return (
     <div className="flex items-center justify-center gap-3 mt-6">
       <button className={buttonClass} disabled={page <= 0} onClick={() => onPageChange(page - 1)}>
         {t('pagination.prev')}
       </button>
-      <span className="text-sm text-light-secondary dark:text-dark-secondary">
+      <span className="text-sm text-fg-muted">
         {t('pagination.info', { page: page + 1, total: totalPages, count: total })}
       </span>
       <button

@@ -18,8 +18,8 @@ export function Spinner({ size = 'md', className = '' }: SpinnerProps): JSX.Elem
       className={`
         ${sizeClasses[size]}
         rounded-full
-        border-light-border dark:border-dark-border
-        border-t-light-accent dark:border-t-dark-accent
+        border-line
+        border-t-accent
         animate-spin
         ${className}
       `}

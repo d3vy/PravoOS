@@ -24,7 +24,7 @@ export default function ProfilePage(): JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="bg-light-bg dark:bg-dark-bg">
+      <div className="bg-bg">
         <div className="flex justify-center py-24">
           <Spinner size="lg" />
         </div>
@@ -34,28 +34,28 @@ export default function ProfilePage(): JSX.Element {
 
   if (!profile) {
     return (
-      <div className="bg-light-bg dark:bg-dark-bg">
+      <div className="bg-bg">
         <div className="page-container py-16 text-center">
-          <p className="text-light-secondary dark:text-dark-secondary">{t('profile.notFound')}</p>
+          <p className="text-fg-muted">{t('profile.notFound')}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-light-bg dark:bg-dark-bg">
+    <div className="bg-bg">
       <div className="page-container py-8 max-w-lg">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-8">
+        <h1 className="text-3xl font-semibold text-fg mb-8">
           {t('profile.title')}
         </h1>
         <ProfileForm profile={profile} queryClient={queryClient} />
-        <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
+        <div className="mt-10 pt-8 border-t border-line">
           <TelegramSection profile={profile} queryClient={queryClient} />
         </div>
-        <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
+        <div className="mt-10 pt-8 border-t border-line">
           <MfaSection queryClient={queryClient} />
         </div>
-        <div className="mt-10 pt-8 border-t border-light-border dark:border-dark-border">
+        <div className="mt-10 pt-8 border-t border-line">
           <SessionsSection />
         </div>
       </div>
@@ -117,10 +117,10 @@ function MfaSection({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">
+        <h2 className="text-xl font-semibold text-fg">
           {t('profile.mfaTitle')}
         </h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+        <p className="text-sm text-fg-muted mt-1">
           {t('profile.mfaDesc')}
           {status.mandatory && t('profile.mfaMandatory')}
         </p>
@@ -128,9 +128,9 @@ function MfaSection({
 
       {status.enabled ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-green-600 dark:text-green-400">{t('profile.mfaEnabled')}</p>
+          <p className="text-sm text-success">{t('profile.mfaEnabled')}</p>
           {status.mandatory ? (
-            <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            <p className="text-sm text-fg-muted">
               {t('profile.mfaDisableUnavailable')}
             </p>
           ) : (
@@ -156,13 +156,13 @@ function MfaSection({
           )}
         </div>
       ) : setup ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4 max-w-md">
-          <p className="text-sm text-light-text dark:text-dark-text">
+        <div className="flex flex-col gap-3 rounded-lg border border-line p-4 max-w-md">
+          <p className="text-sm text-fg">
             {t('profile.mfaSetupInstruction')}
           </p>
           <div>
-            <p className="text-xs text-light-secondary dark:text-dark-secondary mb-1">{t('profile.mfaSecretKey')}</p>
-            <code className="font-mono text-sm break-all text-light-text dark:text-dark-text">{setup.secret}</code>
+            <p className="text-xs text-fg-muted mb-1">{t('profile.mfaSecretKey')}</p>
+            <code className="font-mono text-sm break-all text-fg">{setup.secret}</code>
           </div>
           <Input
             label={t('profile.mfaConfirmCode')}
@@ -197,7 +197,7 @@ function MfaSection({
         </div>
       )}
 
-      {actionError && <p className="text-sm text-red-600 dark:text-red-400">{actionError}</p>}
+      {actionError && <p className="text-sm text-danger">{actionError}</p>}
     </div>
   )
 }
@@ -219,8 +219,8 @@ function SessionsSection(): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('profile.sessionsTitle')}</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+        <h2 className="text-xl font-semibold text-fg">{t('profile.sessionsTitle')}</h2>
+        <p className="text-sm text-fg-muted mt-1">
           {t('profile.sessionsDesc')}
         </p>
       </div>
@@ -228,7 +228,7 @@ function SessionsSection(): JSX.Element {
       {isLoading ? (
         <Spinner size="sm" />
       ) : !sessions || sessions.length === 0 ? (
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">{t('profile.noSessions')}</p>
+        <p className="text-sm text-fg-muted">{t('profile.noSessions')}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {sessions.map((session) => (
@@ -257,12 +257,12 @@ function SessionRow({
   const { t, i18n } = useTranslation()
   const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border border-light-border dark:border-dark-border p-3">
+    <li className="flex items-center justify-between gap-3 rounded-lg border border-line p-3">
       <div className="min-w-0">
-        <p className="text-sm text-light-text dark:text-dark-text truncate">
+        <p className="text-sm text-fg truncate">
           {session.userAgent ?? t('profile.unknownDevice')}
         </p>
-        <p className="text-xs text-light-secondary dark:text-dark-secondary truncate">
+        <p className="text-xs text-fg-muted truncate">
           IP: {session.ipAddress ?? '—'} · {t('profile.loginAt')} {new Date(session.createdAt).toLocaleString(locale)}
         </p>
       </div>
@@ -299,15 +299,15 @@ function TelegramSection({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-light-text dark:text-dark-text">{t('profile.telegramTitle')}</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary mt-1">
+        <h2 className="text-xl font-semibold text-fg">{t('profile.telegramTitle')}</h2>
+        <p className="text-sm text-fg-muted mt-1">
           {t('profile.telegramDesc')}
         </p>
       </div>
 
       {profile.telegramLinked ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-green-600 dark:text-green-400">{t('settings.telegramLinked')}</p>
+          <p className="text-sm text-success">{t('settings.telegramLinked')}</p>
           <div>
             <Button
               variant="secondary"
@@ -318,7 +318,7 @@ function TelegramSection({
             </Button>
           </div>
           {unlinkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.unlinkFailed')}</p>
+            <p className="text-sm text-danger">{t('settings.unlinkFailed')}</p>
           )}
         </div>
       ) : (
@@ -336,12 +336,12 @@ function TelegramSection({
           )}
 
           {linkMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{t('settings.linkCreateFailed')}</p>
+            <p className="text-sm text-danger">{t('settings.linkCreateFailed')}</p>
           )}
 
           {link && (
-            <div className="flex flex-col gap-3 rounded-lg border border-light-border dark:border-dark-border p-4">
-              <p className="text-sm text-light-text dark:text-dark-text">
+            <div className="flex flex-col gap-3 rounded-lg border border-line p-4">
+              <p className="text-sm text-fg">
                 {t('settings.botInstruction')}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -355,7 +355,7 @@ function TelegramSection({
                   {t('settings.iLinkedRefresh')}
                 </Button>
               </div>
-              <p className="text-xs text-light-secondary dark:text-dark-secondary">
+              <p className="text-xs text-fg-muted">
                 {t('settings.botCommandHint')}{' '}
                 <code className="font-mono">/start {link.code}</code>
               </p>
@@ -401,7 +401,7 @@ function ProfileForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="text-sm font-medium text-light-text dark:text-dark-text block mb-1.5">{t('common.email')}</label>
+        <label className="text-sm font-medium text-fg block mb-1.5">{t('common.email')}</label>
         <input
           type="email"
           value={profile.email}
@@ -436,11 +436,11 @@ function ProfileForm({
       />
 
       {updateMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{t('profile.saveError')}</p>
+        <p className="text-sm text-danger">{t('profile.saveError')}</p>
       )}
 
       {success && (
-        <p className="text-sm text-green-600 dark:text-green-400">{t('profile.saved')}</p>
+        <p className="text-sm text-success">{t('profile.saved')}</p>
       )}
 
       <div className="pt-2">

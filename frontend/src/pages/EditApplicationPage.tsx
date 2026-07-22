@@ -82,8 +82,8 @@ export default function EditApplicationPage(): JSX.Element {
     if (state === 'loading') {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
-          <div className="w-10 h-10 mx-auto mb-6 border-2 border-light-border dark:border-dark-border border-t-light-text dark:border-t-dark-text rounded-full animate-spin" />
-          <p className="text-light-secondary dark:text-dark-secondary">{t('editApplication.loading')}</p>
+          <div className="w-10 h-10 mx-auto mb-6 border-2 border-line border-t-fg rounded-full animate-spin" />
+          <p className="text-fg-muted">{t('editApplication.loading')}</p>
         </div>
       )
     }
@@ -91,8 +91,8 @@ export default function EditApplicationPage(): JSX.Element {
     if (state === 'notFound') {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('editApplication.notFoundTitle')}</h2>
-          <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
+          <h2 className="text-2xl font-semibold text-fg mb-4">{t('editApplication.notFoundTitle')}</h2>
+          <p className="text-fg-muted leading-relaxed mb-8">
             {t('editApplication.notFoundText')}
           </p>
           <Link to="/apply">
@@ -105,8 +105,8 @@ export default function EditApplicationPage(): JSX.Element {
     if (state === 'locked') {
       return (
         <div className="card-elevated rounded-2xl p-10 text-center">
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('editApplication.lockedTitle')}</h2>
-          <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
+          <h2 className="text-2xl font-semibold text-fg mb-4">{t('editApplication.lockedTitle')}</h2>
+          <p className="text-fg-muted leading-relaxed mb-8">
             {t('editApplication.lockedText')}
           </p>
           <Link to={`/application/${token}`}>
@@ -119,10 +119,10 @@ export default function EditApplicationPage(): JSX.Element {
     return (
       <div className="card-elevated rounded-2xl p-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
+          <h1 className="text-2xl font-bold text-fg mb-2 tracking-tight">
             {t('editApplication.title')}
           </h1>
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm text-fg-muted">
             {t('editApplication.subtitle')}
           </p>
         </div>
@@ -135,10 +135,10 @@ export default function EditApplicationPage(): JSX.Element {
           onSubmit={handleSubmit}
         />
 
-        <div className="mt-6 pt-6 border-t border-light-border dark:border-dark-border text-center">
+        <div className="mt-6 pt-6 border-t border-line text-center">
           <Link
             to={`/application/${token}`}
-            className="text-sm text-light-secondary dark:text-dark-secondary hover:underline"
+            className="text-sm text-fg-muted hover:underline"
           >
             {t('editApplication.cancel')}
           </Link>
@@ -148,8 +148,8 @@ export default function EditApplicationPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85 flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+    <div className="auth-shell flex flex-col">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>

@@ -28,8 +28,8 @@ export function CitationRow({ citation }: { citation: CitationCheck }): JSX.Elem
         {t(`status.citation.${citation.status}`)}
       </span>
       <div className="min-w-0">
-        <span className="font-medium text-light-text dark:text-dark-text">{typeLabel}: {citation.raw}</span>
-        <span className="block text-light-secondary dark:text-dark-secondary">{citation.detail}</span>
+        <span className="font-medium text-fg">{typeLabel}: {citation.raw}</span>
+        <span className="block text-fg-muted">{citation.detail}</span>
       </div>
     </div>
   )

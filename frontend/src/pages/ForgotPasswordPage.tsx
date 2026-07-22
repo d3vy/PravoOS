@@ -38,8 +38,8 @@ export default function ForgotPasswordPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85 flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+    <div className="auth-shell flex flex-col">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
@@ -58,17 +58,17 @@ export default function ForgotPasswordPage(): JSX.Element {
             className="w-full max-w-md text-center"
           >
             <div className="card-elevated rounded-2xl p-10">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto mb-6">
+              <div className="w-16 h-16 rounded-full bg-success-soft flex items-center justify-center text-success mx-auto mb-6">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 4h16v16H4z" opacity="0" />
                   <polyline points="22 6 12 13 2 6" />
                   <path d="M2 6h20v12H2z" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">
+              <h2 className="text-2xl font-semibold text-fg mb-4">
                 {t('auth.checkEmail')}
               </h2>
-              <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
+              <p className="text-fg-muted leading-relaxed mb-8">
                 {t('auth.resetLinkSent', { email: email.trim() })}
               </p>
               <Link to="/login">
@@ -87,10 +87,10 @@ export default function ForgotPasswordPage(): JSX.Element {
           >
             <div className="card-elevated rounded-2xl p-8">
               <div className="mb-8">
-                <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
+                <h1 className="font-sans text-2xl font-bold text-fg mb-2 tracking-tight">
                   {t('auth.forgotTitle')}
                 </h1>
-                <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
+                <p className="text-sm text-fg-muted font-light">
                   {t('auth.forgotSubtitle')}
                 </p>
               </div>
@@ -116,10 +116,10 @@ export default function ForgotPasswordPage(): JSX.Element {
                 </Button>
               </form>
 
-              <div className="mt-6 pt-6 border-t border-light-border dark:border-dark-border text-center">
-                <p className="text-sm text-light-secondary dark:text-dark-secondary">
+              <div className="mt-6 pt-6 border-t border-line text-center">
+                <p className="text-sm text-fg-muted">
                   {t('auth.rememberedPassword')}{' '}
-                  <Link to="/login" className="text-light-text dark:text-dark-text hover:underline font-medium">
+                  <Link to="/login" className="text-fg hover:underline font-medium">
                     {t('auth.loginSubmit')}
                   </Link>
                 </p>

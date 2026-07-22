@@ -35,8 +35,8 @@ export function CalendarMockup(): JSX.Element {
     <AppWindow title="app.pravoos.ru/calendar">
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-light-text dark:text-dark-text">{t('landing.calMonth')}</h3>
-          <div className="flex items-center gap-3 text-[11px] text-light-secondary dark:text-dark-secondary">
+          <h3 className="text-base font-semibold text-fg">{t('landing.calMonth')}</h3>
+          <div className="flex items-center gap-3 text-[11px] text-fg-muted">
             <Legend tone="bg-red-500" label={t('landing.calLegendHearings')} />
             <Legend tone="bg-amber-500" label={t('landing.calLegendDeadlines')} />
             <Legend tone="bg-blue-500" label={t('landing.calLegendTasks')} />
@@ -45,7 +45,7 @@ export function CalendarMockup(): JSX.Element {
 
         <div className="grid grid-cols-7 gap-1 mb-1">
           {weekdays.map((day) => (
-            <div key={day} className="text-center text-[10px] text-light-secondary dark:text-dark-secondary py-1">
+            <div key={day} className="text-center text-[10px] text-fg-muted py-1">
               {day}
             </div>
           ))}
@@ -60,13 +60,13 @@ export function CalendarMockup(): JSX.Element {
                 key={index}
                 className={`aspect-square rounded-lg border flex flex-col items-center justify-center gap-1 ${
                   valid
-                    ? 'border-light-border dark:border-dark-border'
+                    ? 'border-line'
                     : 'border-transparent'
                 }`}
               >
                 {valid && (
                   <>
-                    <span className="text-[11px] text-light-text dark:text-dark-text">{day}</span>
+                    <span className="text-[11px] text-fg">{day}</span>
                     {event && <span className={`w-1.5 h-1.5 rounded-full ${DOT_TONE[event]}`} />}
                   </>
                 )}

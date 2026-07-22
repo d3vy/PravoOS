@@ -31,11 +31,11 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-  warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  danger: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  neutral: 'bg-light-bg text-light-secondary dark:bg-dark-bg dark:text-dark-secondary',
-  info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  success: 'bg-success-soft text-success',
+  warning: 'bg-warning-soft text-warning',
+  danger: 'bg-danger-soft text-danger',
+  neutral: 'bg-bg text-fg-muted',
+  info: 'bg-info-soft text-info',
 }
 
 export function Badge({ variant, children }: BadgeProps): JSX.Element {

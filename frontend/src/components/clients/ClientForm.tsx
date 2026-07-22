@@ -58,11 +58,11 @@ export function ClientForm({ initial, submitLabel, isSubmitting, error, onSubmit
       />
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-light-text dark:text-dark-text">{t('clientForm.typeLabel')}</label>
+        <label className="text-sm font-medium text-fg">{t('clientForm.typeLabel')}</label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value as ClientType)}
-          className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent"
+          className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         >
           {clientTypes.map((option) => (
             <option key={option.value} value={option.value}>
@@ -99,8 +99,8 @@ export function ClientForm({ initial, submitLabel, isSubmitting, error, onSubmit
       />
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-light-text dark:text-dark-text">
-          {t('clientForm.notesLabel')} <span className="text-light-secondary dark:text-dark-secondary font-normal">{t('clientForm.notesOptional')}</span>
+        <label className="text-sm font-medium text-fg">
+          {t('clientForm.notesLabel')} <span className="text-fg-muted font-normal">{t('clientForm.notesOptional')}</span>
         </label>
         <textarea
           value={notes}
@@ -108,11 +108,11 @@ export function ClientForm({ initial, submitLabel, isSubmitting, error, onSubmit
           rows={3}
           maxLength={5000}
           placeholder={t('clientForm.notesPlaceholder')}
-          className="w-full px-3 py-2.5 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text text-sm placeholder:text-light-secondary/60 dark:placeholder:text-dark-secondary/60 focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent resize-none"
+          className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent resize-none"
         />
       </div>
 
-      {(fieldError || error) && <p className="text-sm text-red-600 dark:text-red-400">{fieldError ?? error}</p>}
+      {(fieldError || error) && <p className="text-sm text-danger">{fieldError ?? error}</p>}
 
       <div>
         <Button type="submit" variant="primary" loading={isSubmitting}>

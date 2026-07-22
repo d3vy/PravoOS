@@ -127,20 +127,20 @@ export default function ApplicationsPage(): JSX.Element {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-light-text dark:text-dark-text mb-1">{t('adminApplications.title')}</h1>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <h1 className="text-3xl font-semibold text-fg mb-1">{t('adminApplications.title')}</h1>
+        <p className="text-sm text-fg-muted">
           {t('adminApplications.subtitle')}
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-light-bg dark:bg-dark-bg rounded-lg w-fit mb-6 border border-light-border dark:border-dark-border">
+      <div className="flex gap-1 p-1 bg-bg rounded-lg w-fit mb-6 border border-line">
         <button
           onClick={() => changeTab('all')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'all'
-              ? 'bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text shadow-sm'
-              : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+              ? 'bg-surface text-fg shadow-sm'
+              : 'text-fg-muted hover:text-fg'
           }`}
         >
           {t('adminApplications.tabAll')}
@@ -149,8 +149,8 @@ export default function ApplicationsPage(): JSX.Element {
           onClick={() => changeTab('pending')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'pending'
-              ? 'bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text shadow-sm'
-              : 'text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text'
+              ? 'bg-surface text-fg shadow-sm'
+              : 'text-fg-muted hover:text-fg'
           }`}
         >
           {t('adminApplications.tabPending')}
@@ -169,7 +169,7 @@ export default function ApplicationsPage(): JSX.Element {
         </div>
       ) : displayedApplications.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-light-secondary dark:text-dark-secondary">
+          <p className="text-fg-muted">
             {activeTab === 'pending' ? t('adminApplications.emptyPending') : t('adminApplications.emptyAll')}
           </p>
         </div>
@@ -224,12 +224,12 @@ function ApplicationCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.2, delay: index * 0.04 }}
-      className="bg-light-surface dark:bg-dark-surface rounded-xl border border-light-border dark:border-dark-border p-5"
+      className="bg-surface rounded-xl border border-line p-5"
     >
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-3 mb-1">
-            <h3 className="font-semibold text-light-text dark:text-dark-text">
+            <h3 className="font-semibold text-fg">
               {application.fullName}
             </h3>
             <ApplicationStatusBadge status={application.status} />
@@ -237,11 +237,11 @@ function ApplicationCard({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1 mt-3">
             <div>
-              <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('adminApplications.email')}</span>
+              <span className="text-xs text-fg-muted">{t('adminApplications.email')}</span>
               <div className="flex items-center gap-1.5">
-                <p className="min-w-0 text-sm text-light-text dark:text-dark-text truncate">{application.email}</p>
+                <p className="min-w-0 text-sm text-fg truncate">{application.email}</p>
                 {application.emailVerified ? (
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>
+                  <span className="text-xs text-success shrink-0">✓</span>
                 ) : (
                   <span className="text-xs text-amber-500 dark:text-amber-400 shrink-0" title={t('adminApplications.emailNotVerified')}>!</span>
                 )}
@@ -251,7 +251,7 @@ function ApplicationCard({
             <InfoField label={t('adminApplications.specialization')} value={application.specialization} />
           </div>
 
-          <p className="text-xs text-light-secondary dark:text-dark-secondary mt-3">
+          <p className="text-xs text-fg-muted mt-3">
             {t('adminApplications.submitted', { date: new Date(application.submittedAt).toLocaleString(dateLocale) })}
             {application.reviewedAt && (
               <>{t('adminApplications.reviewed', { date: new Date(application.reviewedAt).toLocaleString(dateLocale) })}</>
@@ -265,7 +265,7 @@ function ApplicationCard({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="mt-2 text-xs text-amber-600 dark:text-amber-400"
+                className="mt-2 text-xs text-warning"
               >
                 {approveErrorMessage}
               </motion.p>
@@ -317,8 +317,8 @@ function ApplicationCard({
 function InfoField({ label, value }: { label: string; value: string }): JSX.Element {
   return (
     <div className="min-w-0">
-      <span className="text-xs text-light-secondary dark:text-dark-secondary">{label}</span>
-      <p className="text-sm text-light-text dark:text-dark-text truncate">{value}</p>
+      <span className="text-xs text-fg-muted">{label}</span>
+      <p className="text-sm text-fg truncate">{value}</p>
     </div>
   )
 }

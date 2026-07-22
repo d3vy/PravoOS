@@ -67,7 +67,7 @@ export default function VerifyEmailPage(): JSX.Element {
   )
 
   const successIcon = (
-    <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto mb-6">
+    <div className="w-16 h-16 rounded-full bg-success-soft flex items-center justify-center text-success mx-auto mb-6">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12" />
       </svg>
@@ -75,7 +75,7 @@ export default function VerifyEmailPage(): JSX.Element {
   )
 
   const warningIcon = (
-    <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 mx-auto mb-6">
+    <div className="w-16 h-16 rounded-full bg-warning-soft flex items-center justify-center text-warning mx-auto mb-6">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="12" />
@@ -88,9 +88,9 @@ export default function VerifyEmailPage(): JSX.Element {
     if (status === 'verifying') {
       return card(
         <>
-          <div className="w-10 h-10 mx-auto mb-6 border-2 border-light-border dark:border-dark-border border-t-light-text dark:border-t-dark-text rounded-full animate-spin" />
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-2">{t('verify.verifying')}</h2>
-          <p className="text-light-secondary dark:text-dark-secondary">{t('verify.pleaseWait')}</p>
+          <div className="w-10 h-10 mx-auto mb-6 border-2 border-line border-t-fg rounded-full animate-spin" />
+          <h2 className="text-2xl font-semibold text-fg mb-2">{t('verify.verifying')}</h2>
+          <p className="text-fg-muted">{t('verify.pleaseWait')}</p>
         </>,
       )
     }
@@ -99,8 +99,8 @@ export default function VerifyEmailPage(): JSX.Element {
       return card(
         <>
           {successIcon}
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('verify.successTitle')}</h2>
-          <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
+          <h2 className="text-2xl font-semibold text-fg mb-4">{t('verify.successTitle')}</h2>
+          <p className="text-fg-muted leading-relaxed mb-8">
             {t('verify.successText')}
           </p>
           <Button variant="primary" size="md" onClick={() => navigate('/login', { replace: true })}>
@@ -114,8 +114,8 @@ export default function VerifyEmailPage(): JSX.Element {
       return card(
         <>
           {successIcon}
-          <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('verify.resendDoneTitle')}</h2>
-          <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
+          <h2 className="text-2xl font-semibold text-fg mb-4">{t('verify.resendDoneTitle')}</h2>
+          <p className="text-fg-muted leading-relaxed mb-8">
             {t('verify.resendDoneText')}
           </p>
           <Link to="/login">
@@ -128,8 +128,8 @@ export default function VerifyEmailPage(): JSX.Element {
     return card(
       <>
         {warningIcon}
-        <h2 className="text-2xl font-semibold text-light-text dark:text-dark-text mb-4">{t('verify.invalidTitle')}</h2>
-        <p className="text-light-secondary dark:text-dark-secondary leading-relaxed mb-8">
+        <h2 className="text-2xl font-semibold text-fg mb-4">{t('verify.invalidTitle')}</h2>
+        <p className="text-fg-muted leading-relaxed mb-8">
           {status === 'missing' ? t('verify.missingText') : t('verify.expiredText')}
         </p>
         <form onSubmit={handleResend} className="flex flex-col gap-4 text-left" noValidate>
@@ -151,8 +151,8 @@ export default function VerifyEmailPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85 flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+    <div className="auth-shell flex flex-col">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>

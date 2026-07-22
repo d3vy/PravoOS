@@ -1,5 +1,9 @@
 import type { Config } from 'tailwindcss'
 
+function token(name: string): string {
+  return `rgb(var(--${name}) / <alpha-value>)`
+}
+
 const config: Config = {
   darkMode: 'class',
   content: [
@@ -9,25 +13,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        light: {
-          bg: '#ffffff',
-          surface: '#fafafa',
-          'surface-elevated': '#f4f4f5',
-          border: '#e4e4e7',
-          text: '#09090b',
-          secondary: '#71717a',
-          accent: '#09090b',
-          'accent-hover': '#27272a',
+        bg: token('bg'),
+        surface: {
+          DEFAULT: token('surface'),
+          2: token('surface-2'),
         },
-        dark: {
-          bg: '#09090b',
-          surface: '#111113',
-          'surface-elevated': '#1c1c1f',
-          border: '#27272a',
-          text: '#fafafa',
-          secondary: '#a1a1aa',
-          accent: '#fafafa',
-          'accent-hover': '#e4e4e7',
+        overlay: token('overlay'),
+        line: token('line'),
+        fg: {
+          DEFAULT: token('fg'),
+          muted: token('fg-muted'),
+        },
+        accent: {
+          DEFAULT: token('accent'),
+          solid: token('accent-solid'),
+          'solid-hover': token('accent-solid-hover'),
+          fg: token('accent-fg'),
+        },
+        success: {
+          DEFAULT: token('success'),
+          soft: token('success-soft'),
+        },
+        warning: {
+          DEFAULT: token('warning'),
+          soft: token('warning-soft'),
+        },
+        danger: {
+          DEFAULT: token('danger'),
+          soft: token('danger-soft'),
+        },
+        info: {
+          DEFAULT: token('info'),
+          soft: token('info-soft'),
         },
       },
       fontFamily: {
@@ -37,9 +54,7 @@ const config: Config = {
         '3': '3px',
       },
       boxShadow: {
-        card: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px -4px rgba(0,0,0,0.08)',
-        'card-dark': '0 1px 3px rgba(0,0,0,0.5), 0 8px 24px -8px rgba(0,0,0,0.7)',
-        'sm-dark': '0 1px 2px rgba(0,0,0,0.4)',
+        card: 'var(--shadow-card)',
       },
       animation: {
         'spin-slow': 'spin 3s linear infinite',

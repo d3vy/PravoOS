@@ -38,10 +38,10 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
             key={stat.label}
             type="button"
             onClick={() => onNavigate(stat.tab)}
-            className="text-left p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+            className="text-left p-4 rounded-xl bg-surface border border-line hover:border-accent/50 transition-colors"
           >
-            <span className="block text-2xl font-semibold text-light-text dark:text-dark-text">{stat.value}</span>
-            <span className="block text-xs text-light-secondary dark:text-dark-secondary mt-0.5">{stat.label}</span>
+            <span className="block text-2xl font-semibold text-fg">{stat.value}</span>
+            <span className="block text-xs text-fg-muted mt-0.5">{stat.label}</span>
           </button>
         ))}
       </div>
@@ -49,11 +49,11 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
       {hasDeadlines && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('overview.upcomingDeadlines')}</h2>
+            <h2 className="text-sm font-semibold text-fg">{t('overview.upcomingDeadlines')}</h2>
             <button
               type="button"
               onClick={() => onNavigate('tasks')}
-              className="text-xs text-light-accent dark:text-dark-accent hover:underline"
+              className="text-xs text-accent hover:underline"
             >
               {t('overview.tasksAndDeadlines')}
             </button>
@@ -64,17 +64,17 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
 
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('overview.caseDocuments')}</h2>
+          <h2 className="text-sm font-semibold text-fg">{t('overview.caseDocuments')}</h2>
           <button
             type="button"
             onClick={() => onNavigate('documents')}
-            className="text-xs text-light-accent dark:text-dark-accent hover:underline"
+            className="text-xs text-accent hover:underline"
           >
             {t('overview.allDocuments')}
           </button>
         </div>
         {recentDocuments.length === 0 ? (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm text-fg-muted">
             {t('overview.noDocuments')}
           </p>
         ) : (
@@ -82,12 +82,12 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
             {recentDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+                className="flex items-center gap-3 p-3 rounded-lg bg-surface border border-line"
               >
-                <span className="text-xs font-bold uppercase text-light-secondary dark:text-dark-secondary w-9 shrink-0">
+                <span className="text-xs font-bold uppercase text-fg-muted w-9 shrink-0">
                   {doc.fileName.split('.').pop()}
                 </span>
-                <p className="flex-1 min-w-0 text-sm text-light-text dark:text-dark-text truncate">{doc.title}</p>
+                <p className="flex-1 min-w-0 text-sm text-fg truncate">{doc.title}</p>
                 <DocumentStatusBadge status={doc.status} />
               </div>
             ))}
@@ -97,34 +97,34 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
 
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-light-text dark:text-dark-text">{t('overview.latestResponse')}</h2>
+          <h2 className="text-sm font-semibold text-fg">{t('overview.latestResponse')}</h2>
           <button
             type="button"
             onClick={() => onNavigate('analysis')}
-            className="text-xs text-light-accent dark:text-dark-accent hover:underline"
+            className="text-xs text-accent hover:underline"
           >
             {t('overview.aiAnalysisLink')}
           </button>
         </div>
         {!latestResponse ? (
-          <p className="text-sm text-light-secondary dark:text-dark-secondary">
+          <p className="text-sm text-fg-muted">
             {t('overview.noResponses')}
           </p>
         ) : (
           <button
             type="button"
             onClick={() => onNavigate('analysis')}
-            className="block w-full text-left p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors"
+            className="block w-full text-left p-4 rounded-xl bg-surface border border-line hover:border-accent/50 transition-colors"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent">
+              <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-accent/10 text-accent">
                 {latestResponse.workflowName}
               </span>
-              <span className="text-xs text-light-secondary dark:text-dark-secondary">
+              <span className="text-xs text-fg-muted">
                 {new Date(latestResponse.createdAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
               </span>
             </div>
-            <p className="text-sm text-light-secondary dark:text-dark-secondary line-clamp-3">{latestResponse.result}</p>
+            <p className="text-sm text-fg-muted line-clamp-3">{latestResponse.result}</p>
           </button>
         )}
       </section>

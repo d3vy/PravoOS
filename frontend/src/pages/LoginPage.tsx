@@ -121,8 +121,8 @@ export default function LoginPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-white/80 dark:bg-dark-bg/85 flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-surface">
+    <div className="auth-shell flex flex-col">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
@@ -143,10 +143,10 @@ export default function LoginPage(): JSX.Element {
             {mfaToken ? (
               <>
                 <div className="mb-8">
-                  <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
+                  <h1 className="font-sans text-2xl font-bold text-fg mb-2 tracking-tight">
                     {t('auth.mfaTitle')}
                   </h1>
-                  <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
+                  <p className="text-sm text-fg-muted font-light">
                     {t('auth.mfaSubtitle')}
                   </p>
                 </div>
@@ -169,9 +169,9 @@ export default function LoginPage(): JSX.Element {
                     <motion.div
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                      className="p-3 rounded-lg bg-danger-soft border border-danger/30"
                     >
-                      <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                      <p className="text-sm text-danger">{error}</p>
                     </motion.div>
                   )}
 
@@ -189,7 +189,7 @@ export default function LoginPage(): JSX.Element {
                   <button
                     type="button"
                     onClick={cancelMfa}
-                    className="text-sm text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:underline"
+                    className="text-sm text-fg-muted hover:text-fg hover:underline"
                   >
                     {t('auth.backToLogin')}
                   </button>
@@ -198,10 +198,10 @@ export default function LoginPage(): JSX.Element {
             ) : (
             <>
             <div className="mb-8">
-              <h1 className="font-sans text-2xl font-bold text-light-text dark:text-dark-text mb-2 tracking-tight">
+              <h1 className="font-sans text-2xl font-bold text-fg mb-2 tracking-tight">
                 {t('auth.loginTitle')}
               </h1>
-              <p className="text-sm text-light-secondary dark:text-dark-secondary font-light">
+              <p className="text-sm text-fg-muted font-light">
                 {t('auth.loginSubtitle')}
               </p>
             </div>
@@ -236,7 +236,7 @@ export default function LoginPage(): JSX.Element {
                       aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                       aria-pressed={showPassword}
                       tabIndex={-1}
-                      className="w-8 h-8 flex items-center justify-center rounded-md text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-light-accent dark:focus-visible:ring-dark-accent"
+                      className="w-8 h-8 flex items-center justify-center rounded-md text-fg-muted hover:text-fg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {showPassword ? <EyeIcon /> : <EyeOffIcon />}
                     </button>
@@ -245,7 +245,7 @@ export default function LoginPage(): JSX.Element {
                 <div className="text-right">
                   <Link
                     to="/forgot-password"
-                    className="text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text hover:underline"
+                    className="text-xs text-fg-muted hover:text-fg hover:underline"
                   >
                     {t('auth.forgotPassword')}
                   </Link>
@@ -256,9 +256,9 @@ export default function LoginPage(): JSX.Element {
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                  className="p-3 rounded-lg bg-warning-soft border border-warning/30"
                 >
-                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <p className="text-sm text-warning">
                     {t('auth.tooManyAttempts', { time: formatLockTime(lockSeconds) })}
                   </p>
                 </motion.div>
@@ -268,9 +268,9 @@ export default function LoginPage(): JSX.Element {
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                  className="p-3 rounded-lg bg-danger-soft border border-danger/30"
                 >
-                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                  <p className="text-sm text-danger">{error}</p>
                 </motion.div>
               )}
 
@@ -286,12 +286,12 @@ export default function LoginPage(): JSX.Element {
               </Button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-light-border dark:border-dark-border text-center">
-              <p className="text-sm text-light-secondary dark:text-dark-secondary">
+            <div className="mt-6 pt-6 border-t border-line text-center">
+              <p className="text-sm text-fg-muted">
                 {t('auth.noAccess')}{' '}
                 <Link
                   to="/apply"
-                  className="text-light-text dark:text-dark-text hover:underline font-medium"
+                  className="text-fg hover:underline font-medium"
                 >
                   {t('auth.apply')}
                 </Link>

@@ -22,8 +22,8 @@ export function ResponsesSection({ caseId, responses }: { caseId: string; respon
   if (responses.length === 0) {
     return (
       <section>
-        <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">{t('responses.title')}</h2>
-        <p className="text-sm text-light-secondary dark:text-dark-secondary">
+        <h2 className="text-sm font-semibold text-fg mb-3">{t('responses.title')}</h2>
+        <p className="text-sm text-fg-muted">
           {t('responses.emptyHint')}
         </p>
       </section>
@@ -32,8 +32,8 @@ export function ResponsesSection({ caseId, responses }: { caseId: string; respon
 
   return (
     <section>
-      <h2 className="text-sm font-semibold text-light-text dark:text-dark-text mb-3">
-        {t('responses.title')} <span className="font-normal text-light-secondary dark:text-dark-secondary">({responses.length})</span>
+      <h2 className="text-sm font-semibold text-fg mb-3">
+        {t('responses.title')} <span className="font-normal text-fg-muted">({responses.length})</span>
       </h2>
       <div className="flex flex-col gap-4">
         <AnimatePresence>
@@ -42,30 +42,30 @@ export function ResponsesSection({ caseId, responses }: { caseId: string; respon
               key={response.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
+              className="p-5 rounded-xl bg-surface border border-line"
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent">
+                <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-accent/10 text-accent">
                   {response.workflowName}
                 </span>
-                <span className="text-xs text-light-secondary dark:text-dark-secondary">
+                <span className="text-xs text-fg-muted">
                   {new Date(response.createdAt).toLocaleString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US')}
                 </span>
               </div>
 
-              <p className="text-sm text-light-text dark:text-dark-text whitespace-pre-wrap mb-4">
+              <p className="text-sm text-fg whitespace-pre-wrap mb-4">
                 {response.result}
               </p>
 
               {response.sources.length > 0 && (
-                <div className="mb-4 pt-3 border-t border-light-border dark:border-dark-border">
-                  <p className="text-xs font-semibold text-light-secondary dark:text-dark-secondary mb-2">
+                <div className="mb-4 pt-3 border-t border-line">
+                  <p className="text-xs font-semibold text-fg-muted mb-2">
                     {t('responses.sources', { count: response.sources.length })}
                   </p>
                   <div className="flex flex-col gap-2">
                     {response.sources.map((source, i) => (
-                      <div key={i} className="text-xs text-light-secondary dark:text-dark-secondary">
-                        <span className="font-medium text-light-text dark:text-dark-text">{source.title}</span>
+                      <div key={i} className="text-xs text-fg-muted">
+                        <span className="font-medium text-fg">{source.title}</span>
                         {source.fragment && <span className="block mt-0.5 opacity-80">{source.fragment}</span>}
                       </div>
                     ))}
@@ -74,13 +74,13 @@ export function ResponsesSection({ caseId, responses }: { caseId: string; respon
               )}
 
               {response.followUps && response.followUps.length > 0 && (
-                <div className="mb-4 pt-3 border-t border-light-border dark:border-dark-border">
-                  <p className="text-xs font-semibold text-light-secondary dark:text-dark-secondary mb-2">
+                <div className="mb-4 pt-3 border-t border-line">
+                  <p className="text-xs font-semibold text-fg-muted mb-2">
                     {t('responses.followUps')}
                   </p>
                   <div className="flex flex-col gap-1.5">
                     {response.followUps.map((q, i) => (
-                      <p key={i} className="text-xs text-light-secondary dark:text-dark-secondary pl-2 border-l-2 border-light-border dark:border-dark-border">
+                      <p key={i} className="text-xs text-fg-muted pl-2 border-l-2 border-line">
                         {q}
                       </p>
                     ))}
@@ -90,10 +90,10 @@ export function ResponsesSection({ caseId, responses }: { caseId: string; respon
 
               <CitationCheckPanel responseId={response.id} />
 
-              <div className="flex items-center gap-4 pt-3 border-t border-light-border dark:border-dark-border">
+              <div className="flex items-center gap-4 pt-3 border-t border-line">
                 <CopyButton text={response.result} />
                 <div className="flex items-center gap-2 ml-auto">
-                  <span className="text-xs text-light-secondary dark:text-dark-secondary">{t('responses.ratingLabel')}</span>
+                  <span className="text-xs text-fg-muted">{t('responses.ratingLabel')}</span>
                   <RatingButtons
                     rating={response.rating}
                     onRate={(rating) => rateMutation.mutate({ responseId: response.id, rating })}
@@ -117,7 +117,7 @@ function CitationCheckPanel({ responseId }: { responseId: string }): JSX.Element
   const result = checkMutation.data
 
   return (
-    <div className="mb-4 pt-3 border-t border-light-border dark:border-dark-border">
+    <div className="mb-4 pt-3 border-t border-line">
       <div className="flex items-center gap-3 mb-2">
         <Button
           variant="ghost"
@@ -128,14 +128,14 @@ function CitationCheckPanel({ responseId }: { responseId: string }): JSX.Element
           {t('responses.checkCitations')}
         </Button>
         {result && (
-          <span className="text-xs text-light-secondary dark:text-dark-secondary">
+          <span className="text-xs text-fg-muted">
             {citationSummary(result)}
           </span>
         )}
       </div>
 
       {checkMutation.isError && (
-        <p className="text-sm text-red-600 dark:text-red-400">{t('responses.checkError')}</p>
+        <p className="text-sm text-danger">{t('responses.checkError')}</p>
       )}
 
       {result && <CitationList result={result} />}
@@ -156,7 +156,7 @@ function CopyButton({ text }: { text: string }): JSX.Element {
     <button
       onClick={handleCopy}
       title={t('common.copy')}
-      className="inline-flex items-center gap-1 text-xs text-light-secondary dark:text-dark-secondary hover:text-light-text dark:hover:text-dark-text transition-colors"
+      className="inline-flex items-center gap-1 text-xs text-fg-muted hover:text-fg transition-colors"
     >
       {copied ? (
         <>
