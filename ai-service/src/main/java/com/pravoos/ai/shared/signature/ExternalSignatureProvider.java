@@ -4,7 +4,7 @@ import com.pravoos.ai.shared.model.enums.SignatureProviderType;
 
 public interface ExternalSignatureProvider {
 
-    SignatureProviderType type();
+  SignatureProviderType type();
 
-    boolean isEnabled();
+  boolean isEnabled();
 }

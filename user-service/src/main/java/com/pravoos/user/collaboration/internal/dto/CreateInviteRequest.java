@@ -7,12 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CreateInviteRequest(
-        @NotBlank(message = "Email обязателен")
+    @NotBlank(message = "Email обязателен")
         @Email(message = "Некорректный email")
         @Size(max = 320, message = "Email слишком длинный")
         String email,
-
-        @NotNull(message = "Роль обязательна")
-        OrgRole orgRole
-) {
-}
+    @NotNull(message = "Роль обязательна") OrgRole orgRole) {}

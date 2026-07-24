@@ -7,17 +7,17 @@ import java.util.UUID;
 
 public interface DocumentAccess {
 
-    List<DocumentRef> findByIds(Collection<UUID> ids);
+  List<DocumentRef> findByIds(Collection<UUID> ids);
 
-    List<DocumentResponse> findChatAttachments(UUID lawyerId);
+  List<DocumentResponse> findChatAttachments(UUID lawyerId);
 
-    List<String> chunkContentsForDocuments(Collection<UUID> ids);
+  List<String> chunkContentsForDocuments(Collection<UUID> ids);
 
-    DocumentRef findForReview(UUID id);
+  DocumentRef findForReview(UUID id);
 
-    String extractText(UUID id);
+  String extractText(UUID id);
 
-    boolean knowledgeBaseMentions(String needle);
+  boolean knowledgeBaseMentions(String needle);
 
-    Optional<LegislationRef> currentLegislation(String articleNumber, String actCanonical);
+  Optional<LegislationRef> currentLegislation(String articleNumber, String actCanonical);
 }

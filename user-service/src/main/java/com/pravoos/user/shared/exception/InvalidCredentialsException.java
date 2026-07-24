@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class InvalidCredentialsException extends PravoosException {
 
-    public InvalidCredentialsException() {
-        super("Invalid email or password", HttpStatus.UNAUTHORIZED);
-    }
+  public InvalidCredentialsException() {
+    super("Invalid email or password", HttpStatus.UNAUTHORIZED);
+  }
 }

@@ -17,29 +17,32 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/billing")
 public class BillingWebhookController {
 
-    private static final Logger log = LoggerFactory.getLogger(BillingWebhookController.class);
+  private static final Logger log = LoggerFactory.getLogger(BillingWebhookController.class);
 
-    private final PaymentService paymentService;
-    private final WebhookIpAllowlist webhookIpAllowlist;
+  private final PaymentService paymentService;
+  private final WebhookIpAllowlist webhookIpAllowlist;
 
-    public BillingWebhookController(PaymentService paymentService, WebhookIpAllowlist webhookIpAllowlist) {
-        this.paymentService = paymentService;
-        this.webhookIpAllowlist = webhookIpAllowlist;
+  public BillingWebhookController(
+      PaymentService paymentService, WebhookIpAllowlist webhookIpAllowlist) {
+    this.paymentService = paymentService;
+    this.webhookIpAllowlist = webhookIpAllowlist;
+  }
+
+  @PostMapping("/webhook")
+  public ResponseEntity<Void> handleWebhook(
+      @RequestBody JsonNode notification, HttpServletRequest request) {
+    if (!webhookIpAllowlist.permits(request)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    @PostMapping("/webhook")
-    public ResponseEntity<Void> handleWebhook(@RequestBody JsonNode notification, HttpServletRequest request) {
-        if (!webhookIpAllowlist.permits(request)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        String providerPaymentId = notification.path("object").path("id").asText(null);
-        if (providerPaymentId == null || providerPaymentId.isBlank()) {
-            log.warn("Webhook without payment id ignored: event={}", notification.path("event").asText(""));
-            return ResponseEntity.ok().build();
-        }
-
-        paymentService.handleNotification(providerPaymentId);
-        return ResponseEntity.ok().build();
+    String providerPaymentId = notification.path("object").path("id").asText(null);
+    if (providerPaymentId == null || providerPaymentId.isBlank()) {
+      log.warn(
+          "Webhook without payment id ignored: event={}", notification.path("event").asText(""));
+      return ResponseEntity.ok().build();
     }
+
+    paymentService.handleNotification(providerPaymentId);
+    return ResponseEntity.ok().build();
+  }
 }

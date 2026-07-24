@@ -1,7 +1,7 @@
 package com.pravoos.ai.shared.model.enums;
 
 public enum DocumentKind {
-    GENERAL,
-    LEGISLATION,
-    CHAT_ATTACHMENT
+  GENERAL,
+  LEGISLATION,
+  CHAT_ATTACHMENT
 }

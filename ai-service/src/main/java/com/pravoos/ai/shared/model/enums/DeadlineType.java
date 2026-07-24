@@ -1,19 +1,18 @@
 package com.pravoos.ai.shared.model.enums;
 
 public enum DeadlineType {
+  FILING_DEADLINE("Срок подачи"),
+  NEXT_HEARING("Судебное заседание"),
+  EXPIRY("Истечение срока"),
+  TASK("Задача");
 
-    FILING_DEADLINE("Срок подачи"),
-    NEXT_HEARING("Судебное заседание"),
-    EXPIRY("Истечение срока"),
-    TASK("Задача");
+  private final String displayName;
 
-    private final String displayName;
+  DeadlineType(String displayName) {
+    this.displayName = displayName;
+  }
 
-    DeadlineType(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
+  public String getDisplayName() {
+    return displayName;
+  }
 }

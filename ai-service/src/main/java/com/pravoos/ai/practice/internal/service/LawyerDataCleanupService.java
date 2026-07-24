@@ -3,6 +3,9 @@ package com.pravoos.ai.practice.internal.service;
 import com.pravoos.ai.core.api.AiDataCleanup;
 import com.pravoos.ai.practice.internal.model.entity.PendingLawyerPurge;
 import com.pravoos.ai.practice.internal.repository.jpa.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,150 +15,167 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 @Service
 public class LawyerDataCleanupService {
 
-    private static final Logger log = LoggerFactory.getLogger(LawyerDataCleanupService.class);
-    private static final int RETRY_BATCH_SIZE = 50;
+  private static final Logger log = LoggerFactory.getLogger(LawyerDataCleanupService.class);
+  private static final int RETRY_BATCH_SIZE = 50;
 
-    private final CaseRepository caseRepository;
-    private final CasePartyRepository casePartyRepository;
-    private final CaseAnalysisRepository caseAnalysisRepository;
-    private final CaseTaskRepository caseTaskRepository;
-    private final CaseDraftRepository caseDraftRepository;
-    private final WorkflowRunRepository workflowRunRepository;
-    private final WorkflowDefinitionRepository workflowDefinitionRepository;
-    private final ClientRepository clientRepository;
-    private final ClientContactRepository clientContactRepository;
-    private final DocumentTemplateRepository documentTemplateRepository;
-    private final SavedViewRepository savedViewRepository;
-    private final SignatureRequestRepository signatureRequestRepository;
-    private final TimeEntryRepository timeEntryRepository;
-    private final InvoiceRepository invoiceRepository;
-    private final AiDataCleanup aiDataCleanup;
-    private final PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
-    private final LawyerDataCleanupService self;
+  private final CaseRepository caseRepository;
+  private final CasePartyRepository casePartyRepository;
+  private final CaseAnalysisRepository caseAnalysisRepository;
+  private final CaseTaskRepository caseTaskRepository;
+  private final CaseDraftRepository caseDraftRepository;
+  private final WorkflowRunRepository workflowRunRepository;
+  private final WorkflowDefinitionRepository workflowDefinitionRepository;
+  private final ClientRepository clientRepository;
+  private final ClientContactRepository clientContactRepository;
+  private final DocumentTemplateRepository documentTemplateRepository;
+  private final SavedViewRepository savedViewRepository;
+  private final SignatureRequestRepository signatureRequestRepository;
+  private final TimeEntryRepository timeEntryRepository;
+  private final InvoiceRepository invoiceRepository;
+  private final AiDataCleanup aiDataCleanup;
+  private final PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
+  private final LawyerDataCleanupService self;
 
-    public LawyerDataCleanupService(CaseRepository caseRepository,
-                                    CasePartyRepository casePartyRepository,
-                                    CaseAnalysisRepository caseAnalysisRepository,
-                                    CaseTaskRepository caseTaskRepository,
-                                    CaseDraftRepository caseDraftRepository,
-                                    WorkflowRunRepository workflowRunRepository,
-                                    WorkflowDefinitionRepository workflowDefinitionRepository,
-                                    ClientRepository clientRepository,
-                                    ClientContactRepository clientContactRepository,
-                                    DocumentTemplateRepository documentTemplateRepository,
-                                    SavedViewRepository savedViewRepository,
-                                    SignatureRequestRepository signatureRequestRepository,
-                                    TimeEntryRepository timeEntryRepository,
-                                    InvoiceRepository invoiceRepository,
-                                    AiDataCleanup aiDataCleanup,
-                                    PendingLawyerPurgeRepository pendingLawyerPurgeRepository,
-                                    @Lazy LawyerDataCleanupService self) {
-        this.caseRepository = caseRepository;
-        this.casePartyRepository = casePartyRepository;
-        this.caseAnalysisRepository = caseAnalysisRepository;
-        this.caseTaskRepository = caseTaskRepository;
-        this.caseDraftRepository = caseDraftRepository;
-        this.workflowRunRepository = workflowRunRepository;
-        this.workflowDefinitionRepository = workflowDefinitionRepository;
-        this.clientRepository = clientRepository;
-        this.clientContactRepository = clientContactRepository;
-        this.documentTemplateRepository = documentTemplateRepository;
-        this.savedViewRepository = savedViewRepository;
-        this.signatureRequestRepository = signatureRequestRepository;
-        this.timeEntryRepository = timeEntryRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.aiDataCleanup = aiDataCleanup;
-        this.pendingLawyerPurgeRepository = pendingLawyerPurgeRepository;
-        this.self = self;
+  public LawyerDataCleanupService(
+      CaseRepository caseRepository,
+      CasePartyRepository casePartyRepository,
+      CaseAnalysisRepository caseAnalysisRepository,
+      CaseTaskRepository caseTaskRepository,
+      CaseDraftRepository caseDraftRepository,
+      WorkflowRunRepository workflowRunRepository,
+      WorkflowDefinitionRepository workflowDefinitionRepository,
+      ClientRepository clientRepository,
+      ClientContactRepository clientContactRepository,
+      DocumentTemplateRepository documentTemplateRepository,
+      SavedViewRepository savedViewRepository,
+      SignatureRequestRepository signatureRequestRepository,
+      TimeEntryRepository timeEntryRepository,
+      InvoiceRepository invoiceRepository,
+      AiDataCleanup aiDataCleanup,
+      PendingLawyerPurgeRepository pendingLawyerPurgeRepository,
+      @Lazy LawyerDataCleanupService self) {
+    this.caseRepository = caseRepository;
+    this.casePartyRepository = casePartyRepository;
+    this.caseAnalysisRepository = caseAnalysisRepository;
+    this.caseTaskRepository = caseTaskRepository;
+    this.caseDraftRepository = caseDraftRepository;
+    this.workflowRunRepository = workflowRunRepository;
+    this.workflowDefinitionRepository = workflowDefinitionRepository;
+    this.clientRepository = clientRepository;
+    this.clientContactRepository = clientContactRepository;
+    this.documentTemplateRepository = documentTemplateRepository;
+    this.savedViewRepository = savedViewRepository;
+    this.signatureRequestRepository = signatureRequestRepository;
+    this.timeEntryRepository = timeEntryRepository;
+    this.invoiceRepository = invoiceRepository;
+    this.aiDataCleanup = aiDataCleanup;
+    this.pendingLawyerPurgeRepository = pendingLawyerPurgeRepository;
+    this.self = self;
+  }
+
+  public void purgeLawyerData(UUID lawyerId, Map<UUID, UUID> orgCaseOwners) {
+    self.reassignOrgCases(lawyerId, orgCaseOwners);
+    self.recordPurgeIntent(lawyerId);
+    attemptPurge(lawyerId);
+  }
+
+  @Transactional
+  public void reassignOrgCases(UUID lawyerId, Map<UUID, UUID> orgCaseOwners) {
+    if (orgCaseOwners == null || orgCaseOwners.isEmpty()) {
+      return;
     }
-
-    public void purgeLawyerData(UUID lawyerId, Map<UUID, UUID> orgCaseOwners) {
-        self.reassignOrgCases(lawyerId, orgCaseOwners);
-        self.recordPurgeIntent(lawyerId);
-        attemptPurge(lawyerId);
+    int reassigned = 0;
+    for (Map.Entry<UUID, UUID> entry : orgCaseOwners.entrySet()) {
+      UUID orgId = entry.getKey();
+      UUID newOwnerId = entry.getValue();
+      if (orgId == null || newOwnerId == null || newOwnerId.equals(lawyerId)) {
+        continue;
+      }
+      caseDraftRepository.reassignForOrgCases(lawyerId, orgId, newOwnerId);
+      reassigned += caseRepository.reassignOrgCasesToOwner(lawyerId, orgId, newOwnerId);
     }
+    log.info(
+        "Reassigned {} org case(s) of deleted lawyer {} to their organization owners",
+        reassigned,
+        lawyerId);
+  }
 
-    @Transactional
-    public void reassignOrgCases(UUID lawyerId, Map<UUID, UUID> orgCaseOwners) {
-        if (orgCaseOwners == null || orgCaseOwners.isEmpty()) {
-            return;
-        }
-        int reassigned = 0;
-        for (Map.Entry<UUID, UUID> entry : orgCaseOwners.entrySet()) {
-            UUID orgId = entry.getKey();
-            UUID newOwnerId = entry.getValue();
-            if (orgId == null || newOwnerId == null || newOwnerId.equals(lawyerId)) {
-                continue;
-            }
-            caseDraftRepository.reassignForOrgCases(lawyerId, orgId, newOwnerId);
-            reassigned += caseRepository.reassignOrgCasesToOwner(lawyerId, orgId, newOwnerId);
-        }
-        log.info("Reassigned {} org case(s) of deleted lawyer {} to their organization owners", reassigned, lawyerId);
+  @Transactional
+  public void recordPurgeIntent(UUID lawyerId) {
+    if (!pendingLawyerPurgeRepository.existsById(lawyerId)) {
+      pendingLawyerPurgeRepository.save(new PendingLawyerPurge(lawyerId));
     }
+  }
 
-    @Transactional
-    public void recordPurgeIntent(UUID lawyerId) {
-        if (!pendingLawyerPurgeRepository.existsById(lawyerId)) {
-            pendingLawyerPurgeRepository.save(new PendingLawyerPurge(lawyerId));
-        }
+  @Scheduled(fixedDelayString = "${app.lawyer-purge.retry-interval-ms:300000}")
+  @SchedulerLock(
+      name = "LawyerDataCleanupService_retryPending",
+      lockAtLeastFor = "PT10S",
+      lockAtMostFor = "PT10M")
+  public void retryPendingPurges() {
+    List<PendingLawyerPurge> pending =
+        pendingLawyerPurgeRepository.findOldestBatch(PageRequest.of(0, RETRY_BATCH_SIZE));
+    for (PendingLawyerPurge entry : pending) {
+      attemptPurge(entry.getLawyerId());
     }
+  }
 
-    @Scheduled(fixedDelayString = "${app.lawyer-purge.retry-interval-ms:300000}")
-    @SchedulerLock(name = "LawyerDataCleanupService_retryPending",
-            lockAtLeastFor = "PT10S", lockAtMostFor = "PT10M")
-    public void retryPendingPurges() {
-        List<PendingLawyerPurge> pending =
-                pendingLawyerPurgeRepository.findOldestBatch(PageRequest.of(0, RETRY_BATCH_SIZE));
-        for (PendingLawyerPurge entry : pending) {
-            attemptPurge(entry.getLawyerId());
-        }
+  private void attemptPurge(UUID lawyerId) {
+    try {
+      self.purgeRelationalData(lawyerId);
+      aiDataCleanup.purgeChatData(lawyerId);
+      pendingLawyerPurgeRepository.deleteById(lawyerId);
+      log.info("Purged AI data for deleted lawyer {}", lawyerId);
+    } catch (Exception e) {
+      self.markPurgeFailed(lawyerId, e.getMessage());
+      log.error("Failed to purge AI data for lawyer {}, will retry later", lawyerId, e);
     }
+  }
 
-    private void attemptPurge(UUID lawyerId) {
-        try {
-            self.purgeRelationalData(lawyerId);
-            aiDataCleanup.purgeChatData(lawyerId);
-            pendingLawyerPurgeRepository.deleteById(lawyerId);
-            log.info("Purged AI data for deleted lawyer {}", lawyerId);
-        } catch (Exception e) {
-            self.markPurgeFailed(lawyerId, e.getMessage());
-            log.error("Failed to purge AI data for lawyer {}, will retry later", lawyerId, e);
-        }
-    }
+  @Transactional
+  public void markPurgeFailed(UUID lawyerId, String error) {
+    pendingLawyerPurgeRepository
+        .findById(lawyerId)
+        .ifPresent(entry -> entry.recordFailedAttempt(error));
+  }
 
-    @Transactional
-    public void markPurgeFailed(UUID lawyerId, String error) {
-        pendingLawyerPurgeRepository.findById(lawyerId)
-                .ifPresent(entry -> entry.recordFailedAttempt(error));
-    }
-
-    @Transactional
-    public void purgeRelationalData(UUID lawyerId) {
-        int timeEntries = timeEntryRepository.deleteByLawyerId(lawyerId);
-        int invoices = invoiceRepository.deleteByLawyerId(lawyerId);
-        int workflowRuns = workflowRunRepository.deleteByLawyerCases(lawyerId);
-        int analyses = caseAnalysisRepository.deleteByLawyerCases(lawyerId);
-        int tasks = caseTaskRepository.deleteByLawyerId(lawyerId);
-        int drafts = caseDraftRepository.deleteByLawyerId(lawyerId);
-        int parties = casePartyRepository.deleteByLawyerId(lawyerId);
-        int cases = caseRepository.deleteByLawyerId(lawyerId);
-        int workflowDefinitions = workflowDefinitionRepository.deleteByCreatedByLawyer(lawyerId);
-        int contacts = clientContactRepository.deleteByLawyerId(lawyerId);
-        int clients = clientRepository.deleteByLawyerId(lawyerId);
-        int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
-        int signatures = signatureRequestRepository.deleteByRequestedBy(lawyerId);
-        int savedViews = savedViewRepository.deleteByLawyerId(lawyerId);
-        log.info("Deleted {} time entries, {} invoices, {} workflow runs, {} analyses, {} tasks, {} drafts, "
-                        + "{} parties, {} cases, {} workflow definitions, {} contacts, {} clients, {} templates "
-                        + "{} signature requests and {} saved views for lawyer {}",
-                timeEntries, invoices, workflowRuns, analyses, tasks, drafts, parties, cases, workflowDefinitions,
-                contacts, clients, templates, signatures, savedViews, lawyerId);
-    }
+  @Transactional
+  public void purgeRelationalData(UUID lawyerId) {
+    int timeEntries = timeEntryRepository.deleteByLawyerId(lawyerId);
+    int invoices = invoiceRepository.deleteByLawyerId(lawyerId);
+    int workflowRuns = workflowRunRepository.deleteByLawyerCases(lawyerId);
+    int analyses = caseAnalysisRepository.deleteByLawyerCases(lawyerId);
+    int tasks = caseTaskRepository.deleteByLawyerId(lawyerId);
+    int drafts = caseDraftRepository.deleteByLawyerId(lawyerId);
+    int parties = casePartyRepository.deleteByLawyerId(lawyerId);
+    int cases = caseRepository.deleteByLawyerId(lawyerId);
+    int workflowDefinitions = workflowDefinitionRepository.deleteByCreatedByLawyer(lawyerId);
+    int contacts = clientContactRepository.deleteByLawyerId(lawyerId);
+    int clients = clientRepository.deleteByLawyerId(lawyerId);
+    int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
+    int signatures = signatureRequestRepository.deleteByRequestedBy(lawyerId);
+    int savedViews = savedViewRepository.deleteByLawyerId(lawyerId);
+    log.info(
+        "Deleted {} time entries, {} invoices, {} workflow runs, {} analyses, {} tasks, {} drafts, "
+            + "{} parties, {} cases, {} workflow definitions, {} contacts, {} clients, {} templates "
+            + "{} signature requests and {} saved views for lawyer {}",
+        timeEntries,
+        invoices,
+        workflowRuns,
+        analyses,
+        tasks,
+        drafts,
+        parties,
+        cases,
+        workflowDefinitions,
+        contacts,
+        clients,
+        templates,
+        signatures,
+        savedViews,
+        lawyerId);
+  }
 }

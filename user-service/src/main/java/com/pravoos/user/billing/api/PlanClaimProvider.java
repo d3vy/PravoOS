@@ -5,5 +5,5 @@ import java.util.UUID;
 
 public interface PlanClaimProvider {
 
-    Optional<PlanClaim> effectivePlanFor(UUID userId);
+  Optional<PlanClaim> effectivePlanFor(UUID userId);
 }

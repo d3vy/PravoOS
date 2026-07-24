@@ -1,18 +1,17 @@
 package com.pravoos.ai.shared.model.enums;
 
 public enum CitationStatus {
+  VERIFIED("Подтверждено"),
+  NOT_FOUND("Не найдено"),
+  UNVERIFIED("Не проверено");
 
-    VERIFIED("Подтверждено"),
-    NOT_FOUND("Не найдено"),
-    UNVERIFIED("Не проверено");
+  private final String displayName;
 
-    private final String displayName;
+  CitationStatus(String displayName) {
+    this.displayName = displayName;
+  }
 
-    CitationStatus(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public String displayName() {
-        return displayName;
-    }
+  public String displayName() {
+    return displayName;
+  }
 }

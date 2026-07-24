@@ -1,20 +1,20 @@
 package com.pravoos.ai.core.internal.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.regex.Pattern;
+import org.springframework.stereotype.Component;
 
 @Component
 public class CaseAnalyticsPrompt {
 
-    private static final String FENCE_OPEN = "<<<ДАННЫЕ_НАЧАЛО>>>";
-    private static final String FENCE_CLOSE = "<<<ДАННЫЕ_КОНЕЦ>>>";
-    private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
-    private static final Pattern FENCE_MARKERS = Pattern.compile(
-            Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
+  private static final String FENCE_OPEN = "<<<ДАННЫЕ_НАЧАЛО>>>";
+  private static final String FENCE_CLOSE = "<<<ДАННЫЕ_КОНЕЦ>>>";
+  private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
+  private static final Pattern FENCE_MARKERS =
+      Pattern.compile(Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
 
-    private static final String SYSTEM_PROMPT = """
+  private static final String SYSTEM_PROMPT =
+      """
             Вы — юридический ИИ-аналитик платформы PravoOS. Юрист ведёт судебное дело в российском \
             арбитражном процессе и просит подготовить аналитическую справку по делу.
 
@@ -47,34 +47,32 @@ public class CaseAnalyticsPrompt {
             прямо укажите это. Пишите деловым юридическим языком, без markdown-разметки.
             """;
 
-    public String build(String caseContext, String statistics, String hearingTimeline) {
-        return SYSTEM_PROMPT.formatted(
-                fence(sanitize(caseContext)),
-                sanitize(statistics),
-                fence(sanitize(hearingTimeline)));
-    }
+  public String build(String caseContext, String statistics, String hearingTimeline) {
+    return SYSTEM_PROMPT.formatted(
+        fence(sanitize(caseContext)), sanitize(statistics), fence(sanitize(hearingTimeline)));
+  }
 
-    public String buildContextFromChunks(List<String> chunks) {
-        if (chunks == null || chunks.isEmpty()) {
-            return "";
-        }
-        StringBuilder body = new StringBuilder();
-        for (String chunk : chunks) {
-            body.append("- ").append(sanitize(chunk)).append('\n');
-        }
-        return body.toString().strip();
+  public String buildContextFromChunks(List<String> chunks) {
+    if (chunks == null || chunks.isEmpty()) {
+      return "";
     }
+    StringBuilder body = new StringBuilder();
+    for (String chunk : chunks) {
+      body.append("- ").append(sanitize(chunk)).append('\n');
+    }
+    return body.toString().strip();
+  }
 
-    private String sanitize(String text) {
-        if (text == null || text.isBlank()) {
-            return "—";
-        }
-        String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
-        cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
-        return cleaned.strip();
+  private String sanitize(String text) {
+    if (text == null || text.isBlank()) {
+      return "—";
     }
+    String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
+    cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
+    return cleaned.strip();
+  }
 
-    private String fence(String text) {
-        return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
-    }
+  private String fence(String text) {
+    return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
+  }
 }

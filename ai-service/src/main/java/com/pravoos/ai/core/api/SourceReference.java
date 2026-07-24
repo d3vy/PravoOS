@@ -1,6 +1,3 @@
 package com.pravoos.ai.core.api;
 
-public record SourceReference(
-        String title,
-        String fragment
-) {}
+public record SourceReference(String title, String fragment) {}

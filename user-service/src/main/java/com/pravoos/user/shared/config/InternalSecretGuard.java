@@ -9,19 +9,19 @@ import org.springframework.context.annotation.Profile;
 @Profile("docker")
 public class InternalSecretGuard {
 
-    private final String internalSecret;
+  private final String internalSecret;
 
-    public InternalSecretGuard(@Value("${internal.secret:}") String internalSecret) {
-        this.internalSecret = internalSecret;
-    }
+  public InternalSecretGuard(@Value("${internal.secret:}") String internalSecret) {
+    this.internalSecret = internalSecret;
+  }
 
-    @PostConstruct
-    void verifyInternalSecretPresent() {
-        if (internalSecret == null || internalSecret.isBlank()) {
-            throw new IllegalStateException(
-                    "INTERNAL_SERVICE_SECRET must be set in production (profile 'docker'). "
-                            + "Without it, /internal/** endpoints would accept any request and expose "
-                            + "application and Telegram-binding data.");
-        }
+  @PostConstruct
+  void verifyInternalSecretPresent() {
+    if (internalSecret == null || internalSecret.isBlank()) {
+      throw new IllegalStateException(
+          "INTERNAL_SERVICE_SECRET must be set in production (profile 'docker'). "
+              + "Without it, /internal/** endpoints would accept any request and expose "
+              + "application and Telegram-binding data.");
     }
+  }
 }

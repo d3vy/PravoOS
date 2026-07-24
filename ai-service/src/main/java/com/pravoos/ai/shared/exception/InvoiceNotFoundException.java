@@ -1,12 +1,11 @@
 package com.pravoos.ai.shared.exception;
 
-import org.springframework.http.HttpStatus;
-
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 
 public class InvoiceNotFoundException extends PravoosException {
 
-    public InvoiceNotFoundException(UUID id) {
-        super("Invoice not found: " + id, HttpStatus.NOT_FOUND);
-    }
+  public InvoiceNotFoundException(UUID id) {
+    super("Invoice not found: " + id, HttpStatus.NOT_FOUND);
+  }
 }

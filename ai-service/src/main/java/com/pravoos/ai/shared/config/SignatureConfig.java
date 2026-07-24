@@ -10,16 +10,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SignatureConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(SignatureConfig.class);
+  private static final Logger log = LoggerFactory.getLogger(SignatureConfig.class);
 
-    @Bean
-    public ExternalSignatureProvider diadocSignatureProvider(SignatureProperties properties) {
-        if (properties.diadoc().hasKey()) {
-            log.warn("DIADOC_API_KEY задан, но клиент Контур.Диадок ещё не реализован — "
-                    + "квалифицированная подпись пока недоступна, используется только простая ЭП");
-        } else {
-            log.info("DIADOC_API_KEY не задан — доступна только простая электронная подпись (простая ЭП в портале)");
-        }
-        return new NoopDiadocSignatureProvider();
+  @Bean
+  public ExternalSignatureProvider diadocSignatureProvider(SignatureProperties properties) {
+    if (properties.diadoc().hasKey()) {
+      log.warn(
+          "DIADOC_API_KEY задан, но клиент Контур.Диадок ещё не реализован — "
+              + "квалифицированная подпись пока недоступна, используется только простая ЭП");
+    } else {
+      log.info(
+          "DIADOC_API_KEY не задан — доступна только простая электронная подпись (простая ЭП в портале)");
     }
+    return new NoopDiadocSignatureProvider();
+  }
 }

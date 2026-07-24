@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public interface DocumentQuery {
 
-    List<DocumentResponse> findByCase(UUID caseId);
+  List<DocumentResponse> findByCase(UUID caseId);
 
-    List<DocumentResponse> findClientVisibleByCase(UUID caseId);
+  List<DocumentResponse> findClientVisibleByCase(UUID caseId);
 }

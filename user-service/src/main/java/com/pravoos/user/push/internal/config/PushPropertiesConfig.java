@@ -5,5 +5,4 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(VapidProperties.class)
-public class PushPropertiesConfig {
-}
+public class PushPropertiesConfig {}

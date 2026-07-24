@@ -1,17 +1,16 @@
 package com.pravoos.ai.shared.model.enums;
 
 public enum CitationType {
+  COURT_CASE("Судебное дело"),
+  STATUTE("Норма права");
 
-    COURT_CASE("Судебное дело"),
-    STATUTE("Норма права");
+  private final String displayName;
 
-    private final String displayName;
+  CitationType(String displayName) {
+    this.displayName = displayName;
+  }
 
-    CitationType(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public String displayName() {
-        return displayName;
-    }
+  public String displayName() {
+    return displayName;
+  }
 }

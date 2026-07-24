@@ -1,20 +1,20 @@
 package com.pravoos.ai.core.internal.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.regex.Pattern;
+import org.springframework.stereotype.Component;
 
 @Component
 public class TabularReviewPrompt {
 
-    private static final String FENCE_OPEN = "<<<ДОКУМЕНТ_НАЧАЛО>>>";
-    private static final String FENCE_CLOSE = "<<<ДОКУМЕНТ_КОНЕЦ>>>";
-    private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
-    private static final Pattern FENCE_MARKERS = Pattern.compile(
-            Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
+  private static final String FENCE_OPEN = "<<<ДОКУМЕНТ_НАЧАЛО>>>";
+  private static final String FENCE_CLOSE = "<<<ДОКУМЕНТ_КОНЕЦ>>>";
+  private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
+  private static final Pattern FENCE_MARKERS =
+      Pattern.compile(Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
 
-    private static final String SYSTEM_PROMPT = """
+  private static final String SYSTEM_PROMPT =
+      """
             Вы — юридический ИИ-ассистент платформы PravoOS. Юрист ведёт табличный разбор документов дела: \
             каждая строка таблицы — документ, каждый столбец — вопрос. Вам передан ОДИН документ, \
             разбитый на перенумерованные фрагменты, и список вопросов по нему.
@@ -45,34 +45,36 @@ public class TabularReviewPrompt {
             %s
             """;
 
-    public String buildSystemPrompt(String documentTitle, List<String> fragments, List<String> questions) {
-        StringBuilder body = new StringBuilder();
-        for (int i = 0; i < fragments.size(); i++) {
-            body.append("[Фрагмент ").append(i + 1).append("]\n")
-                    .append(sanitize(fragments.get(i))).append("\n\n");
-        }
-
-        StringBuilder questionList = new StringBuilder();
-        for (int i = 0; i < questions.size(); i++) {
-            questionList.append(i + 1).append(". ").append(sanitize(questions.get(i))).append('\n');
-        }
-
-        return SYSTEM_PROMPT.formatted(
-                sanitize(documentTitle),
-                fence(body.toString().strip()),
-                questionList.toString().strip());
+  public String buildSystemPrompt(
+      String documentTitle, List<String> fragments, List<String> questions) {
+    StringBuilder body = new StringBuilder();
+    for (int i = 0; i < fragments.size(); i++) {
+      body.append("[Фрагмент ")
+          .append(i + 1)
+          .append("]\n")
+          .append(sanitize(fragments.get(i)))
+          .append("\n\n");
     }
 
-    private String sanitize(String text) {
-        if (text == null) {
-            return "";
-        }
-        String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
-        cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
-        return cleaned.strip();
+    StringBuilder questionList = new StringBuilder();
+    for (int i = 0; i < questions.size(); i++) {
+      questionList.append(i + 1).append(". ").append(sanitize(questions.get(i))).append('\n');
     }
 
-    private String fence(String text) {
-        return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
+    return SYSTEM_PROMPT.formatted(
+        sanitize(documentTitle), fence(body.toString().strip()), questionList.toString().strip());
+  }
+
+  private String sanitize(String text) {
+    if (text == null) {
+      return "";
     }
+    String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
+    cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
+    return cleaned.strip();
+  }
+
+  private String fence(String text) {
+    return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
+  }
 }

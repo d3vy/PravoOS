@@ -5,5 +5,5 @@ import java.util.UUID;
 
 public interface LawyerMembershipCleanup {
 
-    Map<UUID, UUID> purgeMembershipsForDeletedLawyer(UUID userId);
+  Map<UUID, UUID> purgeMembershipsForDeletedLawyer(UUID userId);
 }

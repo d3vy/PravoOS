@@ -12,26 +12,42 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-@EnableConfigurationProperties({LlmServiceProperties.class, DocumentProperties.class, JwtProperties.class,
-        ArbitrProperties.class, FileCryptoProperties.class, MalwareScanProperties.class,
-        UploadGuardProperties.class,
-        ContractReviewProperties.class, DocumentComparisonProperties.class,
-        CitationCheckProperties.class, UserServiceProperties.class, DraftEditingProperties.class,
-        HybridSearchProperties.class, SignatureProperties.class, TabularReviewProperties.class,
-        PiiCryptoProperties.class, PersonalDataConsentProperties.class})
-@EnableJpaRepositories(basePackages = {"com.pravoos.ai.shared.repository.jpa",
-        "com.pravoos.ai.core.internal.repository.jpa", "com.pravoos.ai.document.internal.repository.jpa",
-        "com.pravoos.ai.practice.internal.repository.jpa"})
+@EnableConfigurationProperties({
+  LlmServiceProperties.class,
+  DocumentProperties.class,
+  JwtProperties.class,
+  ArbitrProperties.class,
+  FileCryptoProperties.class,
+  MalwareScanProperties.class,
+  UploadGuardProperties.class,
+  ContractReviewProperties.class,
+  DocumentComparisonProperties.class,
+  CitationCheckProperties.class,
+  UserServiceProperties.class,
+  DraftEditingProperties.class,
+  HybridSearchProperties.class,
+  SignatureProperties.class,
+  TabularReviewProperties.class,
+  PiiCryptoProperties.class,
+  PersonalDataConsentProperties.class
+})
+@EnableJpaRepositories(
+    basePackages = {
+      "com.pravoos.ai.shared.repository.jpa",
+      "com.pravoos.ai.core.internal.repository.jpa",
+      "com.pravoos.ai.document.internal.repository.jpa",
+      "com.pravoos.ai.practice.internal.repository.jpa"
+    })
 @EnableMongoRepositories(basePackages = "com.pravoos.ai.core.internal.repository.mongo")
 @EnableScheduling
 public class AiServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(AiServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(AiServiceApplication.class, args);
+  }
 
-    @Bean
-    public RequestIdFilter requestIdFilter() {
-        return new RequestIdFilter();
-    }
+  @Bean
+  public RequestIdFilter requestIdFilter() {
+    return new RequestIdFilter();
+  }
 }

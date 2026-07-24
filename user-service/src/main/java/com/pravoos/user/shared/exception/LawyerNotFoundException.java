@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class LawyerNotFoundException extends PravoosException {
 
-    public LawyerNotFoundException() {
-        super("Юрист не найден", HttpStatus.NOT_FOUND);
-    }
+  public LawyerNotFoundException() {
+    super("Юрист не найден", HttpStatus.NOT_FOUND);
+  }
 }

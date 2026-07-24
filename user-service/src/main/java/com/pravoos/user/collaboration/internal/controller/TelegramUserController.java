@@ -14,20 +14,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user")
 public class TelegramUserController {
 
-    private final TelegramLinkService telegramLinkService;
+  private final TelegramLinkService telegramLinkService;
 
-    public TelegramUserController(TelegramLinkService telegramLinkService) {
-        this.telegramLinkService = telegramLinkService;
-    }
+  public TelegramUserController(TelegramLinkService telegramLinkService) {
+    this.telegramLinkService = telegramLinkService;
+  }
 
-    @PostMapping("/profile/telegram/link-code")
-    public ResponseEntity<TelegramLinkResponse> createTelegramLinkCode(Authentication authentication) {
-        return ResponseEntity.ok(telegramLinkService.createLinkCode(SecurityUtils.currentUserId(authentication)));
-    }
+  @PostMapping("/profile/telegram/link-code")
+  public ResponseEntity<TelegramLinkResponse> createTelegramLinkCode(
+      Authentication authentication) {
+    return ResponseEntity.ok(
+        telegramLinkService.createLinkCode(SecurityUtils.currentUserId(authentication)));
+  }
 
-    @DeleteMapping("/profile/telegram")
-    public ResponseEntity<Void> unlinkTelegram(Authentication authentication) {
-        telegramLinkService.unlink(SecurityUtils.currentUserId(authentication));
-        return ResponseEntity.noContent().build();
-    }
+  @DeleteMapping("/profile/telegram")
+  public ResponseEntity<Void> unlinkTelegram(Authentication authentication) {
+    telegramLinkService.unlink(SecurityUtils.currentUserId(authentication));
+    return ResponseEntity.noContent().build();
+  }
 }

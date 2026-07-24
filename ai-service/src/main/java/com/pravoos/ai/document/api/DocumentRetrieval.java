@@ -5,9 +5,9 @@ import java.util.UUID;
 
 public interface DocumentRetrieval {
 
-    List<RetrievedChunk> retrieveKnowledgeBase(String query, int topK);
+  List<RetrievedChunk> retrieveKnowledgeBase(String query, int topK);
 
-    List<RetrievedChunk> retrieveForCase(String query, int topK, UUID caseId);
+  List<RetrievedChunk> retrieveForCase(String query, int topK, UUID caseId);
 
-    List<DocumentChunkMatch> retrieveInDocument(String query, int topK, UUID documentId);
+  List<DocumentChunkMatch> retrieveInDocument(String query, int topK, UUID documentId);
 }

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface CaseAccessProvider {
 
-    void assertCaseVisible(UUID caseId, UUID lawyerId, List<UUID> orgIds);
+  void assertCaseVisible(UUID caseId, UUID lawyerId, List<UUID> orgIds);
 
-    Set<UUID> retainCasesOwnedBy(Set<UUID> caseIds, UUID lawyerId);
+  Set<UUID> retainCasesOwnedBy(Set<UUID> caseIds, UUID lawyerId);
 }

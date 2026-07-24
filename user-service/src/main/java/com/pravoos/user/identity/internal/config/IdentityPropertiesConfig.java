@@ -5,11 +5,11 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties({
-        JwtProperties.class,
-        RefreshCookieProperties.class,
-        BruteForceProperties.class,
-        TestLawyerProperties.class,
-        PasswordPolicyProperties.class,
-        MfaProperties.class})
-public class IdentityPropertiesConfig {
-}
+  JwtProperties.class,
+  RefreshCookieProperties.class,
+  BruteForceProperties.class,
+  TestLawyerProperties.class,
+  PasswordPolicyProperties.class,
+  MfaProperties.class
+})
+public class IdentityPropertiesConfig {}

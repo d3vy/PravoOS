@@ -5,5 +5,5 @@ import java.util.UUID;
 
 public interface OrgMembershipProvider {
 
-    List<UUID> orgIdsForUser(UUID userId);
+  List<UUID> orgIdsForUser(UUID userId);
 }

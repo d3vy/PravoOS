@@ -10,15 +10,15 @@ import org.springframework.context.annotation.Profile;
 @Profile("docker")
 public class RedisPasswordGuard {
 
-    private final String redisPassword;
+  private final String redisPassword;
 
-    public RedisPasswordGuard(@Value("${spring.data.redis.password:}") String redisPassword) {
-        this.redisPassword = redisPassword;
-    }
+  public RedisPasswordGuard(@Value("${spring.data.redis.password:}") String redisPassword) {
+    this.redisPassword = redisPassword;
+  }
 
-    @PostConstruct
-    void verifyRedisPasswordPresent() {
-        RedisPasswordCheck.requirePassword(redisPassword,
-                "Redis backs the gateway rate limiter and must not run without a password.");
-    }
+  @PostConstruct
+  void verifyRedisPasswordPresent() {
+    RedisPasswordCheck.requirePassword(
+        redisPassword, "Redis backs the gateway rate limiter and must not run without a password.");
+  }
 }

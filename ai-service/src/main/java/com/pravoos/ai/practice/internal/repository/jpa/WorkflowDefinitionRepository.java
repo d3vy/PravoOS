@@ -1,24 +1,25 @@
 package com.pravoos.ai.practice.internal.repository.jpa;
 
 import com.pravoos.ai.practice.internal.model.entity.WorkflowDefinition;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
-import java.util.UUID;
-
 public interface WorkflowDefinitionRepository extends JpaRepository<WorkflowDefinition, UUID> {
 
-    @Modifying
-    @Query("DELETE FROM WorkflowDefinition d WHERE d.createdBy = :lawyerId AND d.system = FALSE")
-    int deleteByCreatedByLawyer(@Param("lawyerId") UUID lawyerId);
+  @Modifying
+  @Query("DELETE FROM WorkflowDefinition d WHERE d.createdBy = :lawyerId AND d.system = FALSE")
+  int deleteByCreatedByLawyer(@Param("lawyerId") UUID lawyerId);
 
-    @Query("""
+  @Query(
+      """
             SELECT d FROM WorkflowDefinition d
             WHERE d.system = TRUE OR d.createdBy = :lawyerId OR d.orgId IN :orgIds
             ORDER BY d.system DESC, d.category ASC, d.name ASC
             """)
-    List<WorkflowDefinition> findVisible(@Param("lawyerId") UUID lawyerId, @Param("orgIds") List<UUID> orgIds);
+  List<WorkflowDefinition> findVisible(
+      @Param("lawyerId") UUID lawyerId, @Param("orgIds") List<UUID> orgIds);
 }

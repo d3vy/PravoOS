@@ -5,5 +5,5 @@ import io.sentry.SentryEvent;
 @FunctionalInterface
 public interface SentryEventPolicy {
 
-    boolean shouldReport(SentryEvent event);
+  boolean shouldReport(SentryEvent event);
 }

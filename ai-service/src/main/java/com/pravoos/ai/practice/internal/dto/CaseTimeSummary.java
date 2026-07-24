@@ -4,10 +4,9 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record CaseTimeSummary(
-        List<TimeEntryResponse> entries,
-        int totalMinutes,
-        int billableMinutes,
-        int uninvoicedBillableMinutes,
-        BigDecimal billableAmount,
-        BigDecimal uninvoicedBillableAmount
-) {}
+    List<TimeEntryResponse> entries,
+    int totalMinutes,
+    int billableMinutes,
+    int uninvoicedBillableMinutes,
+    BigDecimal billableAmount,
+    BigDecimal uninvoicedBillableAmount) {}

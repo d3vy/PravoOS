@@ -11,24 +11,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OutboxEventService {
 
-    private final OutboxEventRepository outboxEventRepository;
-    private final ObjectMapper objectMapper;
+  private final OutboxEventRepository outboxEventRepository;
+  private final ObjectMapper objectMapper;
 
-    public OutboxEventService(OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
-        this.outboxEventRepository = outboxEventRepository;
-        this.objectMapper = objectMapper;
-    }
+  public OutboxEventService(
+      OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
+    this.outboxEventRepository = outboxEventRepository;
+    this.objectMapper = objectMapper;
+  }
 
-    @Transactional(propagation = Propagation.MANDATORY)
-    public void enqueue(String topic, String key, Object payload) {
-        outboxEventRepository.save(new OutboxEvent(topic, key, serialize(payload)));
-    }
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void enqueue(String topic, String key, Object payload) {
+    outboxEventRepository.save(new OutboxEvent(topic, key, serialize(payload)));
+  }
 
-    private String serialize(Object payload) {
-        try {
-            return objectMapper.writeValueAsString(payload);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to serialize outbox payload", e);
-        }
+  private String serialize(Object payload) {
+    try {
+      return objectMapper.writeValueAsString(payload);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("Failed to serialize outbox payload", e);
     }
+  }
 }

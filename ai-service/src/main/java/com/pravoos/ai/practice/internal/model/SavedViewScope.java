@@ -1,8 +1,8 @@
 package com.pravoos.ai.practice.internal.model;
 
 public enum SavedViewScope {
-    CASES,
-    CLIENTS,
-    INVOICES,
-    TEMPLATES
+  CASES,
+  CLIENTS,
+  INVOICES,
+  TEMPLATES
 }

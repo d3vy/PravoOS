@@ -21,6 +21,12 @@ import com.pravoos.user.shared.security.TokenHasher;
 import com.pravoos.user.shared.service.EmailRateLimiter;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,166 +36,174 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
-
 @Service
 public class ClientPortalInviteService {
 
-    private static final Logger log = LoggerFactory.getLogger(ClientPortalInviteService.class);
-    private static final int TOKEN_BYTE_LENGTH = 32;
-    private static final int INVITE_EXPIRY_DAYS = 7;
+  private static final Logger log = LoggerFactory.getLogger(ClientPortalInviteService.class);
+  private static final int TOKEN_BYTE_LENGTH = 32;
+  private static final int INVITE_EXPIRY_DAYS = 7;
 
-    private final ClientPortalInviteRepository inviteRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final PasswordPolicyService passwordPolicyService;
-    private final TokenHasher tokenHasher;
-    private final EmailRateLimiter emailRateLimiter;
-    private final ApplicationEventPublisher eventPublisher;
-    private final TokenDenylistService tokenDenylistService;
-    private final SecureRandom secureRandom = new SecureRandom();
+  private final ClientPortalInviteRepository inviteRepository;
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final PasswordPolicyService passwordPolicyService;
+  private final TokenHasher tokenHasher;
+  private final EmailRateLimiter emailRateLimiter;
+  private final ApplicationEventPublisher eventPublisher;
+  private final TokenDenylistService tokenDenylistService;
+  private final SecureRandom secureRandom = new SecureRandom();
 
-    public ClientPortalInviteService(ClientPortalInviteRepository inviteRepository,
-                                     UserRepository userRepository,
-                                     PasswordEncoder passwordEncoder,
-                                     PasswordPolicyService passwordPolicyService,
-                                     TokenHasher tokenHasher,
-                                     EmailRateLimiter emailRateLimiter,
-                                     ApplicationEventPublisher eventPublisher,
-                                     TokenDenylistService tokenDenylistService) {
-        this.inviteRepository = inviteRepository;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.passwordPolicyService = passwordPolicyService;
-        this.tokenHasher = tokenHasher;
-        this.emailRateLimiter = emailRateLimiter;
-        this.eventPublisher = eventPublisher;
-        this.tokenDenylistService = tokenDenylistService;
+  public ClientPortalInviteService(
+      ClientPortalInviteRepository inviteRepository,
+      UserRepository userRepository,
+      PasswordEncoder passwordEncoder,
+      PasswordPolicyService passwordPolicyService,
+      TokenHasher tokenHasher,
+      EmailRateLimiter emailRateLimiter,
+      ApplicationEventPublisher eventPublisher,
+      TokenDenylistService tokenDenylistService) {
+    this.inviteRepository = inviteRepository;
+    this.userRepository = userRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.passwordPolicyService = passwordPolicyService;
+    this.tokenHasher = tokenHasher;
+    this.emailRateLimiter = emailRateLimiter;
+    this.eventPublisher = eventPublisher;
+    this.tokenDenylistService = tokenDenylistService;
+  }
+
+  @Transactional
+  public void createInvite(CreatePortalInviteRequest request) {
+    String email = EmailNormalizer.normalize(request.email());
+    if (!emailRateLimiter.allow("portal-invite", email)) {
+      throw new TooManyRequestsException();
     }
 
-    @Transactional
-    public void createInvite(CreatePortalInviteRequest request) {
-        String email = EmailNormalizer.normalize(request.email());
-        if (!emailRateLimiter.allow("portal-invite", email)) {
-            throw new TooManyRequestsException();
-        }
+    inviteRepository.revokePendingByClientId(request.clientId());
 
-        inviteRepository.revokePendingByClientId(request.clientId());
+    String rawToken = generateRawToken();
+    ClientPortalInvite invite = new ClientPortalInvite();
+    invite.setClientId(request.clientId());
+    invite.setLawyerId(request.lawyerId());
+    invite.setEmail(email);
+    invite.setTokenHash(tokenHasher.sha256Hex(rawToken));
+    invite.setStatus(InviteStatus.PENDING);
+    invite.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(INVITE_EXPIRY_DAYS));
+    inviteRepository.save(invite);
 
-        String rawToken = generateRawToken();
-        ClientPortalInvite invite = new ClientPortalInvite();
-        invite.setClientId(request.clientId());
-        invite.setLawyerId(request.lawyerId());
-        invite.setEmail(email);
-        invite.setTokenHash(tokenHasher.sha256Hex(rawToken));
-        invite.setStatus(InviteStatus.PENDING);
-        invite.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(INVITE_EXPIRY_DAYS));
-        inviteRepository.save(invite);
+    eventPublisher.publishEvent(
+        new ClientPortalInviteCreatedEvent(email, request.clientName(), rawToken));
+    log.info(
+        "Client portal invite created for client {} ({})",
+        request.clientId(),
+        EmailMasker.mask(email));
+  }
 
-        eventPublisher.publishEvent(new ClientPortalInviteCreatedEvent(email, request.clientName(), rawToken));
-        log.info("Client portal invite created for client {} ({})", request.clientId(), EmailMasker.mask(email));
+  @Transactional(readOnly = true)
+  public PortalInviteStatusResponse status(UUID clientId) {
+    if (inviteRepository.existsByClientIdAndStatus(clientId, InviteStatus.ACCEPTED)) {
+      return PortalInviteStatusResponse.accepted();
+    }
+    return inviteRepository
+        .findFirstByClientIdAndStatusOrderByCreatedAtDesc(clientId, InviteStatus.PENDING)
+        .filter(invite -> invite.getExpiresAt().isAfter(LocalDateTime.now(ZoneOffset.UTC)))
+        .map(invite -> PortalInviteStatusResponse.pending(invite.getEmail(), invite.getExpiresAt()))
+        .orElseGet(PortalInviteStatusResponse::none);
+  }
+
+  @Transactional
+  public void revokeAccess(UUID clientId) {
+    inviteRepository.revokePendingByClientId(clientId);
+
+    List<UUID> affectedUserIds = inviteRepository.findAcceptedUserIdsByClientId(clientId);
+    if (affectedUserIds.isEmpty()) {
+      log.info("Pending portal invites revoked for client {}", clientId);
+      return;
     }
 
-    @Transactional(readOnly = true)
-    public PortalInviteStatusResponse status(UUID clientId) {
-        if (inviteRepository.existsByClientIdAndStatus(clientId, InviteStatus.ACCEPTED)) {
-            return PortalInviteStatusResponse.accepted();
-        }
-        return inviteRepository.findFirstByClientIdAndStatusOrderByCreatedAtDesc(clientId, InviteStatus.PENDING)
-                .filter(invite -> invite.getExpiresAt().isAfter(LocalDateTime.now(ZoneOffset.UTC)))
-                .map(invite -> PortalInviteStatusResponse.pending(invite.getEmail(), invite.getExpiresAt()))
-                .orElseGet(PortalInviteStatusResponse::none);
+    inviteRepository.revokeAcceptedByClientId(clientId);
+    affectedUserIds.forEach(tokenDenylistService::revokeAccessTokensFor);
+    log.info(
+        "Portal access revoked for client {} — {} user(s) affected, access tokens denylisted",
+        clientId,
+        affectedUserIds.size());
+  }
+
+  @Transactional(readOnly = true)
+  public PortalInvitePreviewResponse preview(String rawToken) {
+    ClientPortalInvite invite = requirePendingInvite(rawToken);
+    boolean accountExists = userRepository.existsByEmail(invite.getEmail());
+    return new PortalInvitePreviewResponse(invite.getEmail(), null, accountExists);
+  }
+
+  @Transactional
+  public UUID accept(String rawToken, String rawPassword) {
+    ClientPortalInvite invite = requirePendingInvite(rawToken);
+
+    UUID userId =
+        userRepository
+            .findByEmail(invite.getEmail())
+            .map(existing -> linkExistingAccount(existing, rawPassword))
+            .orElseGet(() -> createClientAccount(invite.getEmail(), rawPassword));
+
+    invite.setStatus(InviteStatus.ACCEPTED);
+    invite.setAcceptedAt(LocalDateTime.now(ZoneOffset.UTC));
+    invite.setUserId(userId);
+
+    log.info(
+        "Client portal access granted for {} (client {})",
+        EmailMasker.mask(invite.getEmail()),
+        invite.getClientId());
+    return userId;
+  }
+
+  private UUID createClientAccount(String email, String rawPassword) {
+    passwordPolicyService.validate(rawPassword);
+    User user = new User();
+    user.setEmail(email);
+    user.setPasswordHash(passwordEncoder.encode(rawPassword));
+    user.setRole(UserRole.CLIENT);
+    user.setStatus(UserStatus.ACTIVE);
+    return userRepository.save(user).getId();
+  }
+
+  private UUID linkExistingAccount(User existing, String rawPassword) {
+    if (existing.getRole() != UserRole.CLIENT || existing.getStatus() != UserStatus.ACTIVE) {
+      throw new PortalAccountConflictException();
     }
-
-    @Transactional
-    public void revokeAccess(UUID clientId) {
-        inviteRepository.revokePendingByClientId(clientId);
-
-        List<UUID> affectedUserIds = inviteRepository.findAcceptedUserIdsByClientId(clientId);
-        if (affectedUserIds.isEmpty()) {
-            log.info("Pending portal invites revoked for client {}", clientId);
-            return;
-        }
-
-        inviteRepository.revokeAcceptedByClientId(clientId);
-        affectedUserIds.forEach(tokenDenylistService::revokeAccessTokensFor);
-        log.info("Portal access revoked for client {} — {} user(s) affected, access tokens denylisted",
-                clientId, affectedUserIds.size());
+    if (!passwordEncoder.matches(rawPassword, existing.getPasswordHash())) {
+      throw new InvalidCredentialsException();
     }
+    return existing.getId();
+  }
 
-    @Transactional(readOnly = true)
-    public PortalInvitePreviewResponse preview(String rawToken) {
-        ClientPortalInvite invite = requirePendingInvite(rawToken);
-        boolean accountExists = userRepository.existsByEmail(invite.getEmail());
-        return new PortalInvitePreviewResponse(invite.getEmail(), null, accountExists);
+  private ClientPortalInvite requirePendingInvite(String rawToken) {
+    ClientPortalInvite invite =
+        inviteRepository
+            .findByTokenHash(tokenHasher.sha256Hex(rawToken))
+            .orElseThrow(InvalidInviteException::new);
+    if (invite.getStatus() != InviteStatus.PENDING
+        || invite.getExpiresAt().isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
+      throw new InvalidInviteException();
     }
+    return invite;
+  }
 
-    @Transactional
-    public UUID accept(String rawToken, String rawPassword) {
-        ClientPortalInvite invite = requirePendingInvite(rawToken);
-
-        UUID userId = userRepository.findByEmail(invite.getEmail())
-                .map(existing -> linkExistingAccount(existing, rawPassword))
-                .orElseGet(() -> createClientAccount(invite.getEmail(), rawPassword));
-
-        invite.setStatus(InviteStatus.ACCEPTED);
-        invite.setAcceptedAt(LocalDateTime.now(ZoneOffset.UTC));
-        invite.setUserId(userId);
-
-        log.info("Client portal access granted for {} (client {})",
-                EmailMasker.mask(invite.getEmail()), invite.getClientId());
-        return userId;
+  @Scheduled(cron = "0 50 3 * * *")
+  @SchedulerLock(name = "ClientPortalInviteService_purgeExpired", lockAtMostFor = "PT10M")
+  @Transactional
+  public void purgeExpiredInvites() {
+    int deleted =
+        inviteRepository.deleteByStatusNotAndExpiresAtBefore(
+            InviteStatus.ACCEPTED, LocalDateTime.now(ZoneOffset.UTC).minusDays(INVITE_EXPIRY_DAYS));
+    if (deleted > 0) {
+      log.info("Purged {} expired client portal invites", deleted);
     }
+  }
 
-    private UUID createClientAccount(String email, String rawPassword) {
-        passwordPolicyService.validate(rawPassword);
-        User user = new User();
-        user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(rawPassword));
-        user.setRole(UserRole.CLIENT);
-        user.setStatus(UserStatus.ACTIVE);
-        return userRepository.save(user).getId();
-    }
-
-    private UUID linkExistingAccount(User existing, String rawPassword) {
-        if (existing.getRole() != UserRole.CLIENT || existing.getStatus() != UserStatus.ACTIVE) {
-            throw new PortalAccountConflictException();
-        }
-        if (!passwordEncoder.matches(rawPassword, existing.getPasswordHash())) {
-            throw new InvalidCredentialsException();
-        }
-        return existing.getId();
-    }
-
-    private ClientPortalInvite requirePendingInvite(String rawToken) {
-        ClientPortalInvite invite = inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken))
-                .orElseThrow(InvalidInviteException::new);
-        if (invite.getStatus() != InviteStatus.PENDING
-                || invite.getExpiresAt().isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
-            throw new InvalidInviteException();
-        }
-        return invite;
-    }
-
-    @Scheduled(cron = "0 50 3 * * *")
-    @SchedulerLock(name = "ClientPortalInviteService_purgeExpired", lockAtMostFor = "PT10M")
-    @Transactional
-    public void purgeExpiredInvites() {
-        int deleted = inviteRepository.deleteByStatusNotAndExpiresAtBefore(
-                InviteStatus.ACCEPTED, LocalDateTime.now(ZoneOffset.UTC).minusDays(INVITE_EXPIRY_DAYS));
-        if (deleted > 0) {
-            log.info("Purged {} expired client portal invites", deleted);
-        }
-    }
-
-    private String generateRawToken() {
-        byte[] randomBytes = new byte[TOKEN_BYTE_LENGTH];
-        secureRandom.nextBytes(randomBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
-    }
+  private String generateRawToken() {
+    byte[] randomBytes = new byte[TOKEN_BYTE_LENGTH];
+    secureRandom.nextBytes(randomBytes);
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+  }
 }

@@ -13,12 +13,12 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties({OpenAiProperties.class, InternalSecretProperties.class})
 public class LlmServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(LlmServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(LlmServiceApplication.class, args);
+  }
 
-    @Bean
-    public RequestIdFilter requestIdFilter() {
-        return new RequestIdFilter();
-    }
+  @Bean
+  public RequestIdFilter requestIdFilter() {
+    return new RequestIdFilter();
+  }
 }

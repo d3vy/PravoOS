@@ -1,16 +1,16 @@
 package com.pravoos.ai.shared.util;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 class ChecklistTableParserTest {
 
-    @Test
-    void extractsTasksOnlyForMissingOrPartialDocuments() {
-        String markdown = """
+  @Test
+  void extractsTasksOnlyForMissingOrPartialDocuments() {
+    String markdown =
+        """
                 | Документ | Статус | Примечание |
                 | --- | --- | --- |
                 | Паспорт | Есть | |
@@ -18,33 +18,36 @@ class ChecklistTableParserTest {
                 | Выписка ЕГРН | Частично | только копия |
                 """;
 
-        List<String> tasks = ChecklistTableParser.extractMissingDocumentTasks(markdown);
+    List<String> tasks = ChecklistTableParser.extractMissingDocumentTasks(markdown);
 
-        assertThat(tasks).containsExactly(
-                "Подготовить документ: Договор аренды (нужен оригинал)",
-                "Подготовить документ: Выписка ЕГРН (только копия)");
-    }
+    assertThat(tasks)
+        .containsExactly(
+            "Подготовить документ: Договор аренды (нужен оригинал)",
+            "Подготовить документ: Выписка ЕГРН (только копия)");
+  }
 
-    @Test
-    void omitsNoteWhenAbsent() {
-        String markdown = """
+  @Test
+  void omitsNoteWhenAbsent() {
+    String markdown =
+        """
                 | Документ | Статус |
                 | --- | --- |
                 | Доверенность | Отсутствует |
                 """;
 
-        assertThat(ChecklistTableParser.extractMissingDocumentTasks(markdown))
-                .containsExactly("Подготовить документ: Доверенность");
-    }
+    assertThat(ChecklistTableParser.extractMissingDocumentTasks(markdown))
+        .containsExactly("Подготовить документ: Доверенность");
+  }
 
-    @Test
-    void nonTableInputReturnsEmptyList() {
-        assertThat(ChecklistTableParser.extractMissingDocumentTasks("просто текст без таблицы")).isEmpty();
-    }
+  @Test
+  void nonTableInputReturnsEmptyList() {
+    assertThat(ChecklistTableParser.extractMissingDocumentTasks("просто текст без таблицы"))
+        .isEmpty();
+  }
 
-    @Test
-    void blankInputReturnsEmptyList() {
-        assertThat(ChecklistTableParser.extractMissingDocumentTasks("  ")).isEmpty();
-        assertThat(ChecklistTableParser.extractMissingDocumentTasks(null)).isEmpty();
-    }
+  @Test
+  void blankInputReturnsEmptyList() {
+    assertThat(ChecklistTableParser.extractMissingDocumentTasks("  ")).isEmpty();
+    assertThat(ChecklistTableParser.extractMissingDocumentTasks(null)).isEmpty();
+  }
 }

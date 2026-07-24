@@ -7,6 +7,12 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.shared.event.CaseDeadlineKafkaPayload;
 import com.pravoos.ai.shared.model.enums.DeadlineType;
 import com.pravoos.ai.shared.service.OutboxEventService;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.function.Function;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,97 +21,107 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.function.Function;
-
 @Service
 public class DeadlineReminderService {
 
-    private static final Logger log = LoggerFactory.getLogger(DeadlineReminderService.class);
-    private static final String TOPIC = "case.deadline.approaching";
-    private static final int[] THRESHOLDS_DAYS = {7, 3, 1};
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+  private static final Logger log = LoggerFactory.getLogger(DeadlineReminderService.class);
+  private static final String TOPIC = "case.deadline.approaching";
+  private static final int[] THRESHOLDS_DAYS = {7, 3, 1};
+  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
-    private final CaseRepository caseRepository;
-    private final CaseDeadlineReminderRepository reminderRepository;
-    private final OutboxEventService outboxEventService;
-    private final DeadlineReminderService self;
+  private final CaseRepository caseRepository;
+  private final CaseDeadlineReminderRepository reminderRepository;
+  private final OutboxEventService outboxEventService;
+  private final DeadlineReminderService self;
 
-    public DeadlineReminderService(CaseRepository caseRepository,
-                                   CaseDeadlineReminderRepository reminderRepository,
-                                   OutboxEventService outboxEventService,
-                                   @Lazy DeadlineReminderService self) {
-        this.caseRepository = caseRepository;
-        this.reminderRepository = reminderRepository;
-        this.outboxEventService = outboxEventService;
-        this.self = self;
+  public DeadlineReminderService(
+      CaseRepository caseRepository,
+      CaseDeadlineReminderRepository reminderRepository,
+      OutboxEventService outboxEventService,
+      @Lazy DeadlineReminderService self) {
+    this.caseRepository = caseRepository;
+    this.reminderRepository = reminderRepository;
+    this.outboxEventService = outboxEventService;
+    this.self = self;
+  }
+
+  @Scheduled(cron = "${deadline.reminder.cron:0 0 9 * * *}", zone = "UTC")
+  @SchedulerLock(
+      name = "DeadlineReminderService_sendDueReminders",
+      lockAtLeastFor = "PT1M",
+      lockAtMostFor = "PT30M")
+  public void sendDueReminders() {
+    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+    log.info("Running deadline reminder scan for {}", today);
+    int published = 0;
+    for (int threshold : THRESHOLDS_DAYS) {
+      LocalDate target = today.plusDays(threshold);
+      published +=
+          processType(DeadlineType.FILING_DEADLINE, Case::getFilingDeadline, target, threshold);
+      published +=
+          processType(DeadlineType.NEXT_HEARING, Case::getNextHearingDate, target, threshold);
+      published += processType(DeadlineType.EXPIRY, Case::getExpiresAt, target, threshold);
     }
+    log.info("Deadline reminder scan finished, published {} reminders", published);
+  }
 
-    @Scheduled(cron = "${deadline.reminder.cron:0 0 9 * * *}", zone = "UTC")
-    @SchedulerLock(name = "DeadlineReminderService_sendDueReminders", lockAtLeastFor = "PT1M", lockAtMostFor = "PT30M")
-    public void sendDueReminders() {
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
-        log.info("Running deadline reminder scan for {}", today);
-        int published = 0;
-        for (int threshold : THRESHOLDS_DAYS) {
-            LocalDate target = today.plusDays(threshold);
-            published += processType(DeadlineType.FILING_DEADLINE, Case::getFilingDeadline, target, threshold);
-            published += processType(DeadlineType.NEXT_HEARING, Case::getNextHearingDate, target, threshold);
-            published += processType(DeadlineType.EXPIRY, Case::getExpiresAt, target, threshold);
+  private int processType(
+      DeadlineType type, Function<Case, LocalDate> dateAccessor, LocalDate target, int threshold) {
+    List<Case> cases = casesForType(type, target);
+    int published = 0;
+    for (Case caseEntity : cases) {
+      try {
+        if (self.enqueueReminder(caseEntity, type, dateAccessor.apply(caseEntity), threshold)) {
+          published++;
         }
-        log.info("Deadline reminder scan finished, published {} reminders", published);
+      } catch (Exception e) {
+        log.error(
+            "Failed to enqueue deadline reminder for case {} type {}: {}",
+            caseEntity.getId(),
+            type,
+            e.getMessage(),
+            e);
+      }
+    }
+    return published;
+  }
+
+  private List<Case> casesForType(DeadlineType type, LocalDate target) {
+    return switch (type) {
+      case FILING_DEADLINE -> caseRepository.findByFilingDeadline(target);
+      case NEXT_HEARING -> caseRepository.findByNextHearingDate(target);
+      case EXPIRY -> caseRepository.findByExpiresAt(target);
+      case TASK -> List.of();
+    };
+  }
+
+  @Transactional
+  public boolean enqueueReminder(
+      Case caseEntity, DeadlineType type, LocalDate deadlineDate, int threshold) {
+    if (reminderRepository.existsByCaseIdAndDeadlineTypeAndDeadlineDateAndThresholdDays(
+        caseEntity.getId(), type, deadlineDate, threshold)) {
+      return false;
     }
 
-    private int processType(DeadlineType type, Function<Case, LocalDate> dateAccessor,
-                            LocalDate target, int threshold) {
-        List<Case> cases = casesForType(type, target);
-        int published = 0;
-        for (Case caseEntity : cases) {
-            try {
-                if (self.enqueueReminder(caseEntity, type, dateAccessor.apply(caseEntity), threshold)) {
-                    published++;
-                }
-            } catch (Exception e) {
-                log.error("Failed to enqueue deadline reminder for case {} type {}: {}",
-                        caseEntity.getId(), type, e.getMessage(), e);
-            }
-        }
-        return published;
-    }
+    CaseDeadlineKafkaPayload payload =
+        new CaseDeadlineKafkaPayload(
+            caseEntity.getId(),
+            caseEntity.getLawyerId(),
+            caseEntity.getTitle(),
+            type.getDisplayName(),
+            DATE_FORMATTER.format(deadlineDate),
+            threshold);
 
-    private List<Case> casesForType(DeadlineType type, LocalDate target) {
-        return switch (type) {
-            case FILING_DEADLINE -> caseRepository.findByFilingDeadline(target);
-            case NEXT_HEARING -> caseRepository.findByNextHearingDate(target);
-            case EXPIRY -> caseRepository.findByExpiresAt(target);
-            case TASK -> List.of();
-        };
-    }
-
-    @Transactional
-    public boolean enqueueReminder(Case caseEntity, DeadlineType type, LocalDate deadlineDate, int threshold) {
-        if (reminderRepository.existsByCaseIdAndDeadlineTypeAndDeadlineDateAndThresholdDays(
-                caseEntity.getId(), type, deadlineDate, threshold)) {
-            return false;
-        }
-
-        CaseDeadlineKafkaPayload payload = new CaseDeadlineKafkaPayload(
-                caseEntity.getId(),
-                caseEntity.getLawyerId(),
-                caseEntity.getTitle(),
-                type.getDisplayName(),
-                DATE_FORMATTER.format(deadlineDate),
-                threshold);
-
-        reminderRepository.save(new CaseDeadlineReminder(
-                caseEntity.getId(), type, deadlineDate, threshold, LocalDateTime.now(ZoneOffset.UTC)));
-        outboxEventService.enqueue(TOPIC, caseEntity.getId().toString(), payload);
-        log.info("Enqueued deadline reminder: case={} type={} date={} daysLeft={}",
-                caseEntity.getId(), type, deadlineDate, threshold);
-        return true;
-    }
+    reminderRepository.save(
+        new CaseDeadlineReminder(
+            caseEntity.getId(), type, deadlineDate, threshold, LocalDateTime.now(ZoneOffset.UTC)));
+    outboxEventService.enqueue(TOPIC, caseEntity.getId().toString(), payload);
+    log.info(
+        "Enqueued deadline reminder: case={} type={} date={} daysLeft={}",
+        caseEntity.getId(),
+        type,
+        deadlineDate,
+        threshold);
+    return true;
+  }
 }

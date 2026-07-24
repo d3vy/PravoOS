@@ -11,16 +11,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 class RerankerConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(RerankerConfig.class);
+  private static final Logger log = LoggerFactory.getLogger(RerankerConfig.class);
 
-    @Bean
-    Reranker reranker(HybridSearchProperties properties, LlmClient llmClient, ObjectMapper objectMapper) {
-        HybridSearchProperties.Rerank rerank = properties.rerank();
-        if (!rerank.enabled()) {
-            log.info("LLM reranking disabled — retrieval returns fused hybrid order");
-            return new PassThroughReranker();
-        }
-        return new LlmReranker(
-                llmClient, new RerankScoreParser(objectMapper), new PassThroughReranker(), rerank);
+  @Bean
+  Reranker reranker(
+      HybridSearchProperties properties, LlmClient llmClient, ObjectMapper objectMapper) {
+    HybridSearchProperties.Rerank rerank = properties.rerank();
+    if (!rerank.enabled()) {
+      log.info("LLM reranking disabled — retrieval returns fused hybrid order");
+      return new PassThroughReranker();
     }
+    return new LlmReranker(
+        llmClient, new RerankScoreParser(objectMapper), new PassThroughReranker(), rerank);
+  }
 }

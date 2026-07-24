@@ -4,10 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "tabular-review")
 public record TabularReviewProperties(
-        int maxDocuments,
-        int maxQuestions,
-        int topKPerQuestion,
-        int contextMaxChars,
-        int answerMaxChars,
-        int quoteMaxChars
-) {}
+    int maxDocuments,
+    int maxQuestions,
+    int topKPerQuestion,
+    int contextMaxChars,
+    int answerMaxChars,
+    int quoteMaxChars) {}

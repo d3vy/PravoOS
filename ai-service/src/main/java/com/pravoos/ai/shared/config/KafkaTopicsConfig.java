@@ -9,33 +9,33 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaTopicsConfig {
 
-    @Value("${app.kafka.topic-partitions:3}")
-    private int partitions;
+  @Value("${app.kafka.topic-partitions:3}")
+  private int partitions;
 
-    @Value("${app.kafka.topic-replicas:1}")
-    private short replicas;
+  @Value("${app.kafka.topic-replicas:1}")
+  private short replicas;
 
-    private NewTopic topic(String name) {
-        return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
-    }
+  private NewTopic topic(String name) {
+    return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
+  }
 
-    @Bean
-    public NewTopic caseDeadlineApproachingTopic() {
-        return topic("case.deadline.approaching");
-    }
+  @Bean
+  public NewTopic caseDeadlineApproachingTopic() {
+    return topic("case.deadline.approaching");
+  }
 
-    @Bean
-    public NewTopic caseHearingUpdatedTopic() {
-        return topic("case.hearing.updated");
-    }
+  @Bean
+  public NewTopic caseHearingUpdatedTopic() {
+    return topic("case.hearing.updated");
+  }
 
-    @Bean
-    public NewTopic caseMessageCreatedTopic() {
-        return topic("case.message.created");
-    }
+  @Bean
+  public NewTopic caseMessageCreatedTopic() {
+    return topic("case.message.created");
+  }
 
-    @Bean
-    public NewTopic lawyerDeletedDltTopic() {
-        return topic("lawyer.deleted.DLT");
-    }
+  @Bean
+  public NewTopic lawyerDeletedDltTopic() {
+    return topic("lawyer.deleted.DLT");
+  }
 }

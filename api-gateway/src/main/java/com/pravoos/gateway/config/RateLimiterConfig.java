@@ -9,8 +9,8 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class RateLimiterConfig {
 
-    @Bean
-    public KeyResolver ipKeyResolver(TrustedProxyClientIpResolver clientIpResolver) {
-        return exchange -> Mono.just(clientIpResolver.resolve(exchange.getRequest()));
-    }
+  @Bean
+  public KeyResolver ipKeyResolver(TrustedProxyClientIpResolver clientIpResolver) {
+    return exchange -> Mono.just(clientIpResolver.resolve(exchange.getRequest()));
+  }
 }

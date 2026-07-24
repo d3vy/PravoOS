@@ -11,20 +11,24 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    private static final String BEARER_SCHEME = "bearerAuth";
+  private static final String BEARER_SCHEME = "bearerAuth";
 
-    @Bean
-    public OpenAPI aiServiceOpenApi() {
-        return new OpenAPI()
-                .info(new Info()
-                        .title("PravoOS AI Service API")
-                        .version("v1")
-                        .description("Дела, клиенты, документы, RAG-чат и AI-черновики юриста"))
-                .addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEME))
-                .components(new Components().addSecuritySchemes(BEARER_SCHEME,
-                        new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")));
-    }
+  @Bean
+  public OpenAPI aiServiceOpenApi() {
+    return new OpenAPI()
+        .info(
+            new Info()
+                .title("PravoOS AI Service API")
+                .version("v1")
+                .description("Дела, клиенты, документы, RAG-чат и AI-черновики юриста"))
+        .addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEME))
+        .components(
+            new Components()
+                .addSecuritySchemes(
+                    BEARER_SCHEME,
+                    new SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")));
+  }
 }

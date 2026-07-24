@@ -15,44 +15,52 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApplicationEventConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(ApplicationEventConsumer.class);
-    private static final String EVENT_TYPE = "application.submitted";
+  private static final Logger log = LoggerFactory.getLogger(ApplicationEventConsumer.class);
+  private static final String EVENT_TYPE = "application.submitted";
 
-    private final TelegramNotificationService telegramNotificationService;
-    private final UserServiceClient userServiceClient;
-    private final ProcessedEventGuard processedEventGuard;
+  private final TelegramNotificationService telegramNotificationService;
+  private final UserServiceClient userServiceClient;
+  private final ProcessedEventGuard processedEventGuard;
 
-    public ApplicationEventConsumer(TelegramNotificationService telegramNotificationService,
-                                    UserServiceClient userServiceClient,
-                                    ProcessedEventGuard processedEventGuard) {
-        this.telegramNotificationService = telegramNotificationService;
-        this.userServiceClient = userServiceClient;
-        this.processedEventGuard = processedEventGuard;
+  public ApplicationEventConsumer(
+      TelegramNotificationService telegramNotificationService,
+      UserServiceClient userServiceClient,
+      ProcessedEventGuard processedEventGuard) {
+    this.telegramNotificationService = telegramNotificationService;
+    this.userServiceClient = userServiceClient;
+    this.processedEventGuard = processedEventGuard;
+  }
+
+  @KafkaListener(topics = EVENT_TYPE, groupId = "notification-service-group")
+  public void onApplicationSubmitted(ApplicationSubmittedEvent event) {
+    MDC.put("requestId", String.valueOf(event.applicationId()));
+    try {
+      String dedupKey = String.valueOf(event.applicationId());
+      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+        log.info(
+            "Skipping duplicate application.submitted event: applicationId={}",
+            event.applicationId());
+        return;
+      }
+      log.info("Received application.submitted event: applicationId={}", event.applicationId());
+
+      ApplicationDetailsResponse details =
+          userServiceClient.getApplication(event.applicationId()).orElse(null);
+      if (details == null) {
+        log.warn("Application {} no longer exists, skipping notification", event.applicationId());
+        processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+        return;
+      }
+
+      telegramNotificationService.notifyNewApplication(
+          new ApplicationSubmittedKafkaPayload(
+              event.applicationId(),
+              details.fullName(),
+              details.email(),
+              details.specialization()));
+      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+    } finally {
+      MDC.remove("requestId");
     }
-
-    @KafkaListener(topics = EVENT_TYPE, groupId = "notification-service-group")
-    public void onApplicationSubmitted(ApplicationSubmittedEvent event) {
-        MDC.put("requestId", String.valueOf(event.applicationId()));
-        try {
-            String dedupKey = String.valueOf(event.applicationId());
-            if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
-                log.info("Skipping duplicate application.submitted event: applicationId={}", event.applicationId());
-                return;
-            }
-            log.info("Received application.submitted event: applicationId={}", event.applicationId());
-
-            ApplicationDetailsResponse details = userServiceClient.getApplication(event.applicationId()).orElse(null);
-            if (details == null) {
-                log.warn("Application {} no longer exists, skipping notification", event.applicationId());
-                processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
-                return;
-            }
-
-            telegramNotificationService.notifyNewApplication(new ApplicationSubmittedKafkaPayload(
-                    event.applicationId(), details.fullName(), details.email(), details.specialization()));
-            processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
-        } finally {
-            MDC.remove("requestId");
-        }
-    }
+  }
 }

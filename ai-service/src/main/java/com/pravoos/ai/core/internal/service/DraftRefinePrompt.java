@@ -1,20 +1,20 @@
 package com.pravoos.ai.core.internal.service;
 
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.regex.Pattern;
+import org.springframework.stereotype.Component;
 
 @Component
 public class DraftRefinePrompt {
 
-    private static final String FENCE_OPEN = "<<<ФРАГМЕНТ_НАЧАЛО>>>";
-    private static final String FENCE_CLOSE = "<<<ФРАГМЕНТ_КОНЕЦ>>>";
-    private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
-    private static final Pattern FENCE_MARKERS = Pattern.compile(
-            Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
+  private static final String FENCE_OPEN = "<<<ФРАГМЕНТ_НАЧАЛО>>>";
+  private static final String FENCE_CLOSE = "<<<ФРАГМЕНТ_КОНЕЦ>>>";
+  private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
+  private static final Pattern FENCE_MARKERS =
+      Pattern.compile(Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
 
-    private static final String SYSTEM_PROMPT = """
+  private static final String SYSTEM_PROMPT =
+      """
             Вы — юридический ИИ-редактор платформы PravoOS. Юрист дорабатывает черновик документа \
             в российском правовом поле и просит внести правку.
 
@@ -33,40 +33,39 @@ public class DraftRefinePrompt {
             %s
             """;
 
-    private static final String CONTEXT_TEMPLATE = """
+  private static final String CONTEXT_TEMPLATE =
+      """
 
             Для справки — материалы дела (используйте только если они относятся к правке):
             %s
             """;
 
-    public String build(String instruction, String fragment, List<String> contextChunks) {
-        return SYSTEM_PROMPT.formatted(
-                sanitize(instruction),
-                buildContext(contextChunks),
-                fence(sanitize(fragment)));
-    }
+  public String build(String instruction, String fragment, List<String> contextChunks) {
+    return SYSTEM_PROMPT.formatted(
+        sanitize(instruction), buildContext(contextChunks), fence(sanitize(fragment)));
+  }
 
-    private String buildContext(List<String> contextChunks) {
-        if (contextChunks == null || contextChunks.isEmpty()) {
-            return "";
-        }
-        StringBuilder body = new StringBuilder();
-        for (String chunk : contextChunks) {
-            body.append("- ").append(sanitize(chunk)).append('\n');
-        }
-        return CONTEXT_TEMPLATE.formatted(body.toString().strip());
+  private String buildContext(List<String> contextChunks) {
+    if (contextChunks == null || contextChunks.isEmpty()) {
+      return "";
     }
+    StringBuilder body = new StringBuilder();
+    for (String chunk : contextChunks) {
+      body.append("- ").append(sanitize(chunk)).append('\n');
+    }
+    return CONTEXT_TEMPLATE.formatted(body.toString().strip());
+  }
 
-    private String sanitize(String text) {
-        if (text == null) {
-            return "";
-        }
-        String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
-        cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
-        return cleaned.strip();
+  private String sanitize(String text) {
+    if (text == null) {
+      return "";
     }
+    String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
+    cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
+    return cleaned.strip();
+  }
 
-    private String fence(String text) {
-        return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
-    }
+  private String fence(String text) {
+    return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
+  }
 }

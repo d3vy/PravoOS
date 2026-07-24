@@ -16,49 +16,60 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class OrganizationInviteEmailSender {
 
-    private static final Logger log = LoggerFactory.getLogger(OrganizationInviteEmailSender.class);
-    private static final int MAX_EMAIL_ATTEMPTS = 3;
+  private static final Logger log = LoggerFactory.getLogger(OrganizationInviteEmailSender.class);
+  private static final int MAX_EMAIL_ATTEMPTS = 3;
 
-    private final ResendEmailClient resendEmailClient;
-    private final ResendProperties resendProperties;
-    private final Counter sentCounter;
-    private final Counter failedCounter;
+  private final ResendEmailClient resendEmailClient;
+  private final ResendProperties resendProperties;
+  private final Counter sentCounter;
+  private final Counter failedCounter;
 
-    public OrganizationInviteEmailSender(ResendEmailClient resendEmailClient,
-                                         ResendProperties resendProperties,
-                                         MeterRegistry meterRegistry) {
-        this.resendEmailClient = resendEmailClient;
-        this.resendProperties = resendProperties;
-        this.sentCounter = Counter.builder("pravoos.email.org_invite").tag("result", "sent").register(meterRegistry);
-        this.failedCounter = Counter.builder("pravoos.email.org_invite").tag("result", "failed").register(meterRegistry);
-    }
+  public OrganizationInviteEmailSender(
+      ResendEmailClient resendEmailClient,
+      ResendProperties resendProperties,
+      MeterRegistry meterRegistry) {
+    this.resendEmailClient = resendEmailClient;
+    this.resendProperties = resendProperties;
+    this.sentCounter =
+        Counter.builder("pravoos.email.org_invite").tag("result", "sent").register(meterRegistry);
+    this.failedCounter =
+        Counter.builder("pravoos.email.org_invite").tag("result", "failed").register(meterRegistry);
+  }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onInviteCreated(OrganizationInviteCreatedEvent event) {
-        String inviteLink = resendProperties.frontendBaseUrl() + "/invite?token=" + event.rawToken();
-        for (int attempt = 1; attempt <= MAX_EMAIL_ATTEMPTS; attempt++) {
-            try {
-                resendEmailClient.sendOrgInviteEmail(event.email(), event.organizationName(), event.inviterName(), inviteLink);
-                sentCounter.increment();
-                return;
-            } catch (Exception e) {
-                if (attempt == MAX_EMAIL_ATTEMPTS) {
-                    failedCounter.increment();
-                    log.error("Failed to send org invite email to {} after {} attempts: {}",
-                            EmailMasker.mask(event.email()), MAX_EMAIL_ATTEMPTS, e.getMessage());
-                    return;
-                }
-                log.warn("Org invite email attempt {}/{} failed for {}: {}",
-                        attempt, MAX_EMAIL_ATTEMPTS, EmailMasker.mask(event.email()), e.getMessage());
-                try {
-                    Thread.sleep(1000L * attempt);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    failedCounter.increment();
-                    return;
-                }
-            }
+  @Async
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onInviteCreated(OrganizationInviteCreatedEvent event) {
+    String inviteLink = resendProperties.frontendBaseUrl() + "/invite?token=" + event.rawToken();
+    for (int attempt = 1; attempt <= MAX_EMAIL_ATTEMPTS; attempt++) {
+      try {
+        resendEmailClient.sendOrgInviteEmail(
+            event.email(), event.organizationName(), event.inviterName(), inviteLink);
+        sentCounter.increment();
+        return;
+      } catch (Exception e) {
+        if (attempt == MAX_EMAIL_ATTEMPTS) {
+          failedCounter.increment();
+          log.error(
+              "Failed to send org invite email to {} after {} attempts: {}",
+              EmailMasker.mask(event.email()),
+              MAX_EMAIL_ATTEMPTS,
+              e.getMessage());
+          return;
         }
+        log.warn(
+            "Org invite email attempt {}/{} failed for {}: {}",
+            attempt,
+            MAX_EMAIL_ATTEMPTS,
+            EmailMasker.mask(event.email()),
+            e.getMessage());
+        try {
+          Thread.sleep(1000L * attempt);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          failedCounter.increment();
+          return;
+        }
+      }
     }
+  }
 }

@@ -4,16 +4,17 @@ import java.util.UUID;
 
 public interface LegalAiPort {
 
-    void assertWithinQuota(UUID lawyerId);
+  void assertWithinQuota(UUID lawyerId);
 
-    float[] embed(String text);
+  float[] embed(String text);
 
-    LegalAiAnswer answerForCase(UUID caseId, String instruction, String userMessage, UUID lawyerId);
+  LegalAiAnswer answerForCase(UUID caseId, String instruction, String userMessage, UUID lawyerId);
 
-    LegalAiAnswer refineDraft(UUID caseId, String instruction, String currentText, UUID lawyerId);
+  LegalAiAnswer refineDraft(UUID caseId, String instruction, String currentText, UUID lawyerId);
 
-    LegalAiAnswer analyzeCase(UUID caseId, String caseContext, String hearingTimeline,
-                              String statistics, UUID lawyerId);
+  LegalAiAnswer analyzeCase(
+      UUID caseId, String caseContext, String hearingTimeline, String statistics, UUID lawyerId);
 
-    AiResponseDto runCaseWorkflow(UUID caseId, UUID lawyerId, String workflowId, String query, String instruction);
+  AiResponseDto runCaseWorkflow(
+      UUID caseId, UUID lawyerId, String workflowId, String query, String instruction);
 }

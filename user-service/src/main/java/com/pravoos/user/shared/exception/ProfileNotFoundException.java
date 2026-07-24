@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public class ProfileNotFoundException extends PravoosException {
 
-    public ProfileNotFoundException() {
-        super("Профиль юриста не найден", HttpStatus.NOT_FOUND);
-    }
+  public ProfileNotFoundException() {
+    super("Профиль юриста не найден", HttpStatus.NOT_FOUND);
+  }
 }

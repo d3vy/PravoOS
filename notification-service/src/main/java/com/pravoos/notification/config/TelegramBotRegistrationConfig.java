@@ -12,13 +12,13 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @Configuration
 public class TelegramBotRegistrationConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(TelegramBotRegistrationConfig.class);
+  private static final Logger log = LoggerFactory.getLogger(TelegramBotRegistrationConfig.class);
 
-    @Bean
-    public TelegramBotsApi telegramBotsApi(PravoOsAdminBot bot) throws TelegramApiException {
-        TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
-        telegramBotsApi.registerBot(bot);
-        log.info("Telegram bot [{}] registered for long polling", bot.getBotUsername());
-        return telegramBotsApi;
-    }
+  @Bean
+  public TelegramBotsApi telegramBotsApi(PravoOsAdminBot bot) throws TelegramApiException {
+    TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
+    telegramBotsApi.registerBot(bot);
+    log.info("Telegram bot [{}] registered for long polling", bot.getBotUsername());
+    return telegramBotsApi;
+  }
 }

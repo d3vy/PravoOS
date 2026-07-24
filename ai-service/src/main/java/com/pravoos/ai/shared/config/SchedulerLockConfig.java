@@ -11,10 +11,10 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 @EnableSchedulerLock(defaultLockAtMostFor = "PT30M")
 public class SchedulerLockConfig {
 
-    private static final String ENV = "pravoos-ai";
+  private static final String ENV = "pravoos-ai";
 
-    @Bean
-    public LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
-        return new RedisLockProvider(connectionFactory, ENV);
-    }
+  @Bean
+  public LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
+    return new RedisLockProvider(connectionFactory, ENV);
+  }
 }

@@ -22,45 +22,59 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private static final int BCRYPT_STRENGTH = 12;
+  private static final int BCRYPT_STRENGTH = 12;
 
-    private final TokenDenylistService tokenDenylistService;
-    private final InternalSecretVerifier internalSecretVerifier;
+  private final TokenDenylistService tokenDenylistService;
+  private final InternalSecretVerifier internalSecretVerifier;
 
-    public SecurityConfig(TokenDenylistService tokenDenylistService,
-                          InternalSecretVerifier internalSecretVerifier) {
-        this.tokenDenylistService = tokenDenylistService;
-        this.internalSecretVerifier = internalSecretVerifier;
-    }
+  public SecurityConfig(
+      TokenDenylistService tokenDenylistService, InternalSecretVerifier internalSecretVerifier) {
+    this.tokenDenylistService = tokenDenylistService;
+    this.internalSecretVerifier = internalSecretVerifier;
+  }
 
-    @Bean
-    public JwtVerifier jwtVerifier(JwtProperties jwtProperties) {
-        return new JwtVerifier(jwtProperties.publicKey());
-    }
+  @Bean
+  public JwtVerifier jwtVerifier(JwtProperties jwtProperties) {
+    return new JwtVerifier(jwtProperties.publicKey());
+  }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtVerifier jwtVerifier) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/actuator/health", "/actuator/health/**", "/actuator/prometheus").permitAll()
-                        .requestMatchers("/api/billing/webhook").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/internal/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/user/billing/**").hasAnyRole("LAWYER", "ADMIN")
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(new InternalSecretFilter(internalSecretVerifier),
-                        UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JwtAuthenticationFilter(jwtVerifier, tokenDenylistService),
-                        UsernamePasswordAuthenticationFilter.class)
-                .build();
-    }
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtVerifier jwtVerifier)
+      throws Exception {
+    return http.csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(
+            auth ->
+                auth.requestMatchers(
+                        "/api/auth/**",
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/actuator/prometheus")
+                    .permitAll()
+                    .requestMatchers("/api/billing/webhook")
+                    .permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                    .permitAll()
+                    .requestMatchers("/internal/**")
+                    .permitAll()
+                    .requestMatchers("/api/admin/**")
+                    .hasRole("ADMIN")
+                    .requestMatchers("/api/user/billing/**")
+                    .hasAnyRole("LAWYER", "ADMIN")
+                    .anyRequest()
+                    .authenticated())
+        .addFilterBefore(
+            new InternalSecretFilter(internalSecretVerifier),
+            UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(
+            new JwtAuthenticationFilter(jwtVerifier, tokenDenylistService),
+            UsernamePasswordAuthenticationFilter.class)
+        .build();
+  }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
-    }
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
+  }
 }

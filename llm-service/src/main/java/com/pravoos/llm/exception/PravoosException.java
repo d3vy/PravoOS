@@ -5,29 +5,29 @@ import org.springframework.http.HttpStatus;
 
 public class PravoosException extends RuntimeException implements HttpStatusCarrier {
 
-    private final HttpStatus status;
-    private final String code;
+  private final HttpStatus status;
+  private final String code;
 
-    public PravoosException(String message, HttpStatus status) {
-        this(message, status, null);
-    }
+  public PravoosException(String message, HttpStatus status) {
+    this(message, status, null);
+  }
 
-    public PravoosException(String message, HttpStatus status, String code) {
-        super(message);
-        this.status = status;
-        this.code = code;
-    }
+  public PravoosException(String message, HttpStatus status, String code) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
 
-    public HttpStatus getStatus() {
-        return status;
-    }
+  public HttpStatus getStatus() {
+    return status;
+  }
 
-    public String getCode() {
-        return code;
-    }
+  public String getCode() {
+    return code;
+  }
 
-    @Override
-    public int httpStatusCode() {
-        return status.value();
-    }
+  @Override
+  public int httpStatusCode() {
+    return status.value();
+  }
 }

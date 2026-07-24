@@ -19,52 +19,81 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final AccessTokenDenylist accessTokenDenylist;
+  private final AccessTokenDenylist accessTokenDenylist;
 
-    public SecurityConfig(AccessTokenDenylist accessTokenDenylist) {
-        this.accessTokenDenylist = accessTokenDenylist;
-    }
+  public SecurityConfig(AccessTokenDenylist accessTokenDenylist) {
+    this.accessTokenDenylist = accessTokenDenylist;
+  }
 
-    @Bean
-    public JwtVerifier jwtVerifier(JwtProperties jwtProperties) {
-        return new JwtVerifier(jwtProperties.publicKey());
-    }
+  @Bean
+  public JwtVerifier jwtVerifier(JwtProperties jwtProperties) {
+    return new JwtVerifier(jwtProperties.publicKey());
+  }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtVerifier jwtVerifier) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/prometheus").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/api/ai/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/ai/documents/**").hasRole("ADMIN")
-                        .requestMatchers("/api/ai/portal/**").hasRole("CLIENT")
-                        .requestMatchers("/api/ai/cases/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/dashboard").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/calendar/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/clients/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/templates/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/search/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/drafts/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/draft-types").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/workflows/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/workflow-definitions/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/contract-reviews/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/document-comparisons/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/tabular-reviews/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/citation-checks/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/responses/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/messages/**").hasRole("LAWYER")
-                        .requestMatchers(HttpMethod.GET, "/api/ai/conversations/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/chat/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/invoices/**").hasRole("LAWYER")
-                        .requestMatchers("/api/ai/time/**").hasRole("LAWYER")
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtVerifier, accessTokenDenylist),
-                        UsernamePasswordAuthenticationFilter.class)
-                .build();
-    }
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtVerifier jwtVerifier)
+      throws Exception {
+    return http.csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(
+            auth ->
+                auth.requestMatchers(
+                        "/actuator/health", "/actuator/health/**", "/actuator/prometheus")
+                    .permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                    .permitAll()
+                    .requestMatchers("/api/ai/admin/**")
+                    .hasRole("ADMIN")
+                    .requestMatchers("/api/ai/documents/**")
+                    .hasRole("ADMIN")
+                    .requestMatchers("/api/ai/portal/**")
+                    .hasRole("CLIENT")
+                    .requestMatchers("/api/ai/cases/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/dashboard")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/calendar/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/clients/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/templates/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/search/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/drafts/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/draft-types")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/workflows/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/workflow-definitions/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/contract-reviews/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/document-comparisons/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/tabular-reviews/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/citation-checks/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/responses/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/messages/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers(HttpMethod.GET, "/api/ai/conversations/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/chat/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/invoices/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/time/**")
+                    .hasRole("LAWYER")
+                    .anyRequest()
+                    .authenticated())
+        .addFilterBefore(
+            new JwtAuthenticationFilter(jwtVerifier, accessTokenDenylist),
+            UsernamePasswordAuthenticationFilter.class)
+        .build();
+  }
 }

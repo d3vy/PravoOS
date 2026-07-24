@@ -4,5 +4,5 @@ import java.util.UUID;
 
 public interface SubscriptionProvisioner {
 
-    void startTrial(UUID userId);
+  void startTrial(UUID userId);
 }

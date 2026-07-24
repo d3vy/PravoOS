@@ -13,17 +13,21 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-@EnableConfigurationProperties({AdminProperties.class, InternalSecretProperties.class, ResendProperties.class})
+@EnableConfigurationProperties({
+  AdminProperties.class,
+  InternalSecretProperties.class,
+  ResendProperties.class
+})
 @EnableScheduling
 @EnableAsync
 public class UserServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(UserServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(UserServiceApplication.class, args);
+  }
 
-    @Bean
-    public RequestIdFilter requestIdFilter() {
-        return new RequestIdFilter();
-    }
+  @Bean
+  public RequestIdFilter requestIdFilter() {
+    return new RequestIdFilter();
+  }
 }

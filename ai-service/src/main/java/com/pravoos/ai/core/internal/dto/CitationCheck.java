@@ -4,9 +4,4 @@ import com.pravoos.ai.shared.model.enums.CitationStatus;
 import com.pravoos.ai.shared.model.enums.CitationType;
 
 public record CitationCheck(
-        String raw,
-        CitationType type,
-        String normalized,
-        CitationStatus status,
-        String detail
-) {}
+    String raw, CitationType type, String normalized, CitationStatus status, String detail) {}

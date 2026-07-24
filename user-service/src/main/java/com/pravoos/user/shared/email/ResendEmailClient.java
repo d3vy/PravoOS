@@ -2,6 +2,9 @@ package com.pravoos.user.shared.email;
 
 import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.shared.util.EmailMasker;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -10,164 +13,191 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-
 @Component
 public class ResendEmailClient {
 
-    private static final Logger log = LoggerFactory.getLogger(ResendEmailClient.class);
-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
+  private static final Logger log = LoggerFactory.getLogger(ResendEmailClient.class);
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+  private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
 
-    private final RestClient restClient;
-    private final ResendProperties properties;
+  private final RestClient restClient;
+  private final ResendProperties properties;
 
-    public ResendEmailClient(ResendProperties properties) {
-        this.properties = properties;
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
-        requestFactory.setReadTimeout(READ_TIMEOUT);
-        this.restClient = RestClient.builder()
-                .baseUrl("https://api.resend.com")
-                .requestFactory(requestFactory)
-                .build();
+  public ResendEmailClient(ResendProperties properties) {
+    this.properties = properties;
+    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+    requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+    requestFactory.setReadTimeout(READ_TIMEOUT);
+    this.restClient =
+        RestClient.builder()
+            .baseUrl("https://api.resend.com")
+            .requestFactory(requestFactory)
+            .build();
+  }
+
+  public void sendVerificationEmail(String to, String verificationLink) {
+    send(
+        to,
+        "Подтвердите вашу почту — PravoOS",
+        buildHtml(
+            "Подтвердите вашу электронную почту, чтобы завершить регистрацию.",
+            "Подтвердить почту",
+            verificationLink,
+            "Ссылка действительна 24 часа. Если вы не регистрировались в PravoOS — проигнорируйте это письмо."));
+    log.info("Verification email sent to {}", EmailMasker.mask(to));
+  }
+
+  public void sendApprovalEmail(String to, String fullName, String loginLink) {
+    String greeting =
+        (fullName == null || fullName.isBlank())
+            ? "Ваша заявка одобрена."
+            : fullName + ", ваша заявка одобрена.";
+    send(
+        to,
+        "Заявка одобрена — PravoOS",
+        buildHtml(
+            greeting
+                + " Доступ к системе предоставлен — войдите в личный кабинет, используя email и пароль из заявки.",
+            "Перейти в личный кабинет",
+            loginLink,
+            "Если кнопка не работает, откройте адрес в браузере: " + loginLink));
+    log.info("Approval email sent to {}", EmailMasker.mask(to));
+  }
+
+  public void sendDeadlineEmail(
+      String to,
+      String caseTitle,
+      String deadlineTypeName,
+      String deadlineDate,
+      int daysLeft,
+      String caseLink) {
+    String bodyText =
+        String.format(
+            "Напоминание по делу «%s»: %s — %s. Осталось дней: %d.",
+            caseTitle, deadlineTypeName, deadlineDate, daysLeft);
+    send(
+        to,
+        "Напоминание о дедлайне — PravoOS",
+        buildHtml(
+            bodyText,
+            "Открыть дело",
+            caseLink,
+            "Вы получаете это письмо, так как Telegram-уведомления не подключены. Подключить можно в профиле PravoOS."));
+    log.info("Deadline email sent to {}", EmailMasker.mask(to));
+  }
+
+  public void sendNewLoginEmail(String to, String ipAddress, String device, String when) {
+    String deviceText =
+        (device == null || device.isBlank()) ? "неизвестное устройство" : escapeHtml(device);
+    String bodyText =
+        String.format(
+            "Зафиксирован вход в ваш аккаунт PravoOS с нового устройства.<br><br>"
+                + "Время (UTC): %s<br>IP-адрес: %s<br>Устройство: %s",
+            escapeHtml(when), escapeHtml(ipAddress), deviceText);
+    send(
+        to,
+        "Новый вход в аккаунт — PravoOS",
+        buildHtml(
+            bodyText,
+            "Управление сессиями",
+            properties.frontendBaseUrl() + "/profile",
+            "Если это были вы — ничего делать не нужно. Если нет — немедленно смените пароль и завершите активные сессии в профиле."));
+    log.info("New-login email sent to {}", EmailMasker.mask(to));
+  }
+
+  public void sendOrgInviteEmail(
+      String to, String organizationName, String inviterName, String inviteLink) {
+    String inviter =
+        (inviterName == null || inviterName.isBlank()) ? "Коллега" : escapeHtml(inviterName);
+    String bodyText =
+        String.format(
+            "%s приглашает вас присоединиться к организации «%s» в PravoOS. "
+                + "Войдите в свой аккаунт и примите приглашение по кнопке ниже.",
+            inviter, escapeHtml(organizationName));
+    send(
+        to,
+        "Приглашение в организацию — PravoOS",
+        buildHtml(
+            bodyText,
+            "Принять приглашение",
+            inviteLink,
+            "Приглашение действительно 7 дней. Если вы не ожидали его — просто проигнорируйте это письмо."));
+    log.info("Org invite email sent to {}", EmailMasker.mask(to));
+  }
+
+  public void sendClientPortalInviteEmail(String to, String clientName, String acceptLink) {
+    String greeting =
+        (clientName == null || clientName.isBlank())
+            ? "Ваш юрист приглашает вас в клиентский портал PravoOS."
+            : escapeHtml(clientName) + ", ваш юрист приглашает вас в клиентский портал PravoOS.";
+    send(
+        to,
+        "Приглашение в клиентский портал — PravoOS",
+        buildHtml(
+            greeting
+                + " По кнопке ниже задайте пароль и получите доступ к статусу ваших дел, документам и переписке.",
+            "Создать доступ",
+            acceptLink,
+            "Приглашение действительно 7 дней. Если вы не ожидали его — просто проигнорируйте это письмо."));
+    log.info("Client portal invite email sent to {}", EmailMasker.mask(to));
+  }
+
+  public void sendCaseMessageEmail(
+      String to, String caseTitle, String senderLabel, String preview, String caseLink) {
+    String bodyText =
+        String.format(
+            "%s оставил новое сообщение по делу «%s».<br><br>«%s»",
+            escapeHtml(senderLabel), escapeHtml(caseTitle), escapeHtml(preview));
+    send(
+        to,
+        "Новое сообщение по делу — PravoOS",
+        buildHtml(
+            bodyText,
+            "Открыть переписку",
+            caseLink,
+            "Вы получаете это письмо, так как включены уведомления о сообщениях. Отключить можно в настройках PravoOS."));
+    log.info("Case message email sent to {}", EmailMasker.mask(to));
+  }
+
+  public void sendPasswordResetEmail(String to, String resetLink) {
+    send(
+        to,
+        "Сброс пароля — PravoOS",
+        buildHtml(
+            "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",
+            "Сбросить пароль",
+            resetLink,
+            "Если вы не запрашивали сброс пароля — проигнорируйте это письмо, ваш пароль останется прежним."));
+    log.info("Password reset email sent to {}", EmailMasker.mask(to));
+  }
+
+  private void send(String to, String subject, String html) {
+    Map<String, Object> body =
+        Map.of("from", properties.from(), "to", List.of(to), "subject", subject, "html", html);
+
+    restClient
+        .post()
+        .uri("/emails")
+        .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(body)
+        .retrieve()
+        .toBodilessEntity();
+  }
+
+  private static String escapeHtml(String value) {
+    if (value == null) {
+      return "";
     }
+    return value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;");
+  }
 
-    public void sendVerificationEmail(String to, String verificationLink) {
-        send(to, "Подтвердите вашу почту — PravoOS", buildHtml(
-                "Подтвердите вашу электронную почту, чтобы завершить регистрацию.",
-                "Подтвердить почту",
-                verificationLink,
-                "Ссылка действительна 24 часа. Если вы не регистрировались в PravoOS — проигнорируйте это письмо."
-        ));
-        log.info("Verification email sent to {}", EmailMasker.mask(to));
-    }
-
-    public void sendApprovalEmail(String to, String fullName, String loginLink) {
-        String greeting = (fullName == null || fullName.isBlank())
-                ? "Ваша заявка одобрена."
-                : fullName + ", ваша заявка одобрена.";
-        send(to, "Заявка одобрена — PravoOS", buildHtml(
-                greeting + " Доступ к системе предоставлен — войдите в личный кабинет, используя email и пароль из заявки.",
-                "Перейти в личный кабинет",
-                loginLink,
-                "Если кнопка не работает, откройте адрес в браузере: " + loginLink
-        ));
-        log.info("Approval email sent to {}", EmailMasker.mask(to));
-    }
-
-    public void sendDeadlineEmail(String to, String caseTitle, String deadlineTypeName,
-                                  String deadlineDate, int daysLeft, String caseLink) {
-        String bodyText = String.format(
-                "Напоминание по делу «%s»: %s — %s. Осталось дней: %d.",
-                caseTitle, deadlineTypeName, deadlineDate, daysLeft);
-        send(to, "Напоминание о дедлайне — PravoOS", buildHtml(
-                bodyText,
-                "Открыть дело",
-                caseLink,
-                "Вы получаете это письмо, так как Telegram-уведомления не подключены. Подключить можно в профиле PravoOS."
-        ));
-        log.info("Deadline email sent to {}", EmailMasker.mask(to));
-    }
-
-    public void sendNewLoginEmail(String to, String ipAddress, String device, String when) {
-        String deviceText = (device == null || device.isBlank()) ? "неизвестное устройство" : escapeHtml(device);
-        String bodyText = String.format(
-                "Зафиксирован вход в ваш аккаунт PravoOS с нового устройства.<br><br>"
-                        + "Время (UTC): %s<br>IP-адрес: %s<br>Устройство: %s",
-                escapeHtml(when), escapeHtml(ipAddress), deviceText);
-        send(to, "Новый вход в аккаунт — PravoOS", buildHtml(
-                bodyText,
-                "Управление сессиями",
-                properties.frontendBaseUrl() + "/profile",
-                "Если это были вы — ничего делать не нужно. Если нет — немедленно смените пароль и завершите активные сессии в профиле."
-        ));
-        log.info("New-login email sent to {}", EmailMasker.mask(to));
-    }
-
-    public void sendOrgInviteEmail(String to, String organizationName, String inviterName, String inviteLink) {
-        String inviter = (inviterName == null || inviterName.isBlank()) ? "Коллега" : escapeHtml(inviterName);
-        String bodyText = String.format(
-                "%s приглашает вас присоединиться к организации «%s» в PravoOS. "
-                        + "Войдите в свой аккаунт и примите приглашение по кнопке ниже.",
-                inviter, escapeHtml(organizationName));
-        send(to, "Приглашение в организацию — PravoOS", buildHtml(
-                bodyText,
-                "Принять приглашение",
-                inviteLink,
-                "Приглашение действительно 7 дней. Если вы не ожидали его — просто проигнорируйте это письмо."
-        ));
-        log.info("Org invite email sent to {}", EmailMasker.mask(to));
-    }
-
-    public void sendClientPortalInviteEmail(String to, String clientName, String acceptLink) {
-        String greeting = (clientName == null || clientName.isBlank())
-                ? "Ваш юрист приглашает вас в клиентский портал PravoOS."
-                : escapeHtml(clientName) + ", ваш юрист приглашает вас в клиентский портал PravoOS.";
-        send(to, "Приглашение в клиентский портал — PravoOS", buildHtml(
-                greeting + " По кнопке ниже задайте пароль и получите доступ к статусу ваших дел, документам и переписке.",
-                "Создать доступ",
-                acceptLink,
-                "Приглашение действительно 7 дней. Если вы не ожидали его — просто проигнорируйте это письмо."
-        ));
-        log.info("Client portal invite email sent to {}", EmailMasker.mask(to));
-    }
-
-    public void sendCaseMessageEmail(String to, String caseTitle, String senderLabel,
-                                     String preview, String caseLink) {
-        String bodyText = String.format(
-                "%s оставил новое сообщение по делу «%s».<br><br>«%s»",
-                escapeHtml(senderLabel), escapeHtml(caseTitle), escapeHtml(preview));
-        send(to, "Новое сообщение по делу — PravoOS", buildHtml(
-                bodyText,
-                "Открыть переписку",
-                caseLink,
-                "Вы получаете это письмо, так как включены уведомления о сообщениях. Отключить можно в настройках PravoOS."
-        ));
-        log.info("Case message email sent to {}", EmailMasker.mask(to));
-    }
-
-    public void sendPasswordResetEmail(String to, String resetLink) {
-        send(to, "Сброс пароля — PravoOS", buildHtml(
-                "Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.",
-                "Сбросить пароль",
-                resetLink,
-                "Если вы не запрашивали сброс пароля — проигнорируйте это письмо, ваш пароль останется прежним."
-        ));
-        log.info("Password reset email sent to {}", EmailMasker.mask(to));
-    }
-
-    private void send(String to, String subject, String html) {
-        Map<String, Object> body = Map.of(
-                "from", properties.from(),
-                "to", List.of(to),
-                "subject", subject,
-                "html", html
-        );
-
-        restClient.post()
-                .uri("/emails")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .toBodilessEntity();
-    }
-
-    private static String escapeHtml(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;");
-    }
-
-    private String buildHtml(String bodyText, String buttonText, String link, String footnote) {
-        return """
+  private String buildHtml(String bodyText, String buttonText, String link, String footnote) {
+    return """
                 <!DOCTYPE html>
                 <html>
                 <body style="font-family: Inter, Arial, sans-serif; color: #09090b; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
@@ -180,6 +210,7 @@ public class ResendEmailClient {
                   <p style="margin-top: 24px; font-size: 13px; color: #71717a;">%s</p>
                 </body>
                 </html>
-                """.formatted(bodyText, link, buttonText, footnote);
-    }
+                """
+        .formatted(bodyText, link, buttonText, footnote);
+  }
 }

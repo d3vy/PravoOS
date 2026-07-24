@@ -5,8 +5,7 @@ import java.util.UUID;
 
 public interface ConversationSearchQuery {
 
-    List<ConversationSearchHit> searchConversations(UUID lawyerId, String query, int limit);
+  List<ConversationSearchHit> searchConversations(UUID lawyerId, String query, int limit);
 
-    record ConversationSearchHit(String id, String title) {
-    }
+  record ConversationSearchHit(String id, String title) {}
 }

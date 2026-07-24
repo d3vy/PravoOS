@@ -18,51 +18,52 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class AdminSeeder implements ApplicationRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(AdminSeeder.class);
+  private static final Logger log = LoggerFactory.getLogger(AdminSeeder.class);
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AdminProperties adminProperties;
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final AdminProperties adminProperties;
 
-    public AdminSeeder(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       AdminProperties adminProperties) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.adminProperties = adminProperties;
+  public AdminSeeder(
+      UserRepository userRepository,
+      PasswordEncoder passwordEncoder,
+      AdminProperties adminProperties) {
+    this.userRepository = userRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.adminProperties = adminProperties;
+  }
+
+  @Override
+  @Transactional
+  public void run(ApplicationArguments args) {
+    if (adminProperties.accounts() == null || adminProperties.accounts().isEmpty()) {
+      log.warn("No admin accounts configured (ADMIN_EMAIL/ADMIN_PASSWORD); skipping admin seeding");
+      return;
+    }
+    adminProperties.accounts().forEach(this::seedAdmin);
+  }
+
+  private void seedAdmin(AdminProperties.Account account) {
+    if (isBlank(account.email()) || isBlank(account.password())) {
+      return;
     }
 
-    @Override
-    @Transactional
-    public void run(ApplicationArguments args) {
-        if (adminProperties.accounts() == null || adminProperties.accounts().isEmpty()) {
-            log.warn("No admin accounts configured (ADMIN_EMAIL/ADMIN_PASSWORD); skipping admin seeding");
-            return;
-        }
-        adminProperties.accounts().forEach(this::seedAdmin);
+    String email = EmailNormalizer.normalize(account.email());
+    if (userRepository.existsByEmail(email)) {
+      return;
     }
 
-    private void seedAdmin(AdminProperties.Account account) {
-        if (isBlank(account.email()) || isBlank(account.password())) {
-            return;
-        }
+    User admin = new User();
+    admin.setEmail(email);
+    admin.setPasswordHash(passwordEncoder.encode(account.password()));
+    admin.setRole(UserRole.ADMIN);
+    admin.setStatus(UserStatus.ACTIVE);
+    userRepository.save(admin);
 
-        String email = EmailNormalizer.normalize(account.email());
-        if (userRepository.existsByEmail(email)) {
-            return;
-        }
+    log.info("Admin account created: {}", EmailMasker.mask(email));
+  }
 
-        User admin = new User();
-        admin.setEmail(email);
-        admin.setPasswordHash(passwordEncoder.encode(account.password()));
-        admin.setRole(UserRole.ADMIN);
-        admin.setStatus(UserStatus.ACTIVE);
-        userRepository.save(admin);
-
-        log.info("Admin account created: {}", EmailMasker.mask(email));
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
+  private boolean isBlank(String value) {
+    return value == null || value.isBlank();
+  }
 }

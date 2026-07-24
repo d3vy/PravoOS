@@ -9,33 +9,33 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaTopicsConfig {
 
-    @Value("${app.kafka.topic-partitions:3}")
-    private int partitions;
+  @Value("${app.kafka.topic-partitions:3}")
+  private int partitions;
 
-    @Value("${app.kafka.topic-replicas:1}")
-    private short replicas;
+  @Value("${app.kafka.topic-replicas:1}")
+  private short replicas;
 
-    private NewTopic topic(String name) {
-        return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
-    }
+  private NewTopic topic(String name) {
+    return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
+  }
 
-    @Bean
-    public NewTopic applicationSubmittedDltTopic() {
-        return topic("application.submitted.DLT");
-    }
+  @Bean
+  public NewTopic applicationSubmittedDltTopic() {
+    return topic("application.submitted.DLT");
+  }
 
-    @Bean
-    public NewTopic caseDeadlineApproachingDltTopic() {
-        return topic("case.deadline.approaching.DLT");
-    }
+  @Bean
+  public NewTopic caseDeadlineApproachingDltTopic() {
+    return topic("case.deadline.approaching.DLT");
+  }
 
-    @Bean
-    public NewTopic caseHearingUpdatedDltTopic() {
-        return topic("case.hearing.updated.DLT");
-    }
+  @Bean
+  public NewTopic caseHearingUpdatedDltTopic() {
+    return topic("case.hearing.updated.DLT");
+  }
 
-    @Bean
-    public NewTopic caseMessageCreatedDltTopic() {
-        return topic("case.message.created.DLT");
-    }
+  @Bean
+  public NewTopic caseMessageCreatedDltTopic() {
+    return topic("case.message.created.DLT");
+  }
 }

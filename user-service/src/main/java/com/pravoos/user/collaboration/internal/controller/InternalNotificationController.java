@@ -16,24 +16,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/internal/notifications")
 public class InternalNotificationController {
 
-    private final DeadlineNotificationEmailService deadlineNotificationEmailService;
-    private final CaseMessageNotificationService caseMessageNotificationService;
+  private final DeadlineNotificationEmailService deadlineNotificationEmailService;
+  private final CaseMessageNotificationService caseMessageNotificationService;
 
-    public InternalNotificationController(DeadlineNotificationEmailService deadlineNotificationEmailService,
-                                          CaseMessageNotificationService caseMessageNotificationService) {
-        this.deadlineNotificationEmailService = deadlineNotificationEmailService;
-        this.caseMessageNotificationService = caseMessageNotificationService;
-    }
+  public InternalNotificationController(
+      DeadlineNotificationEmailService deadlineNotificationEmailService,
+      CaseMessageNotificationService caseMessageNotificationService) {
+    this.deadlineNotificationEmailService = deadlineNotificationEmailService;
+    this.caseMessageNotificationService = caseMessageNotificationService;
+  }
 
-    @PostMapping("/deadline-email")
-    public ResponseEntity<Void> deadlineEmail(@Valid @RequestBody DeadlineEmailRequest request) {
-        deadlineNotificationEmailService.sendDeadlineEmail(request);
-        return ResponseEntity.ok().build();
-    }
+  @PostMapping("/deadline-email")
+  public ResponseEntity<Void> deadlineEmail(@Valid @RequestBody DeadlineEmailRequest request) {
+    deadlineNotificationEmailService.sendDeadlineEmail(request);
+    return ResponseEntity.ok().build();
+  }
 
-    @PostMapping("/case-message")
-    public ResponseEntity<CaseMessageNotificationResult> caseMessage(
-            @Valid @RequestBody CaseMessageNotificationRequest request) {
-        return ResponseEntity.ok(caseMessageNotificationService.dispatch(request));
-    }
+  @PostMapping("/case-message")
+  public ResponseEntity<CaseMessageNotificationResult> caseMessage(
+      @Valid @RequestBody CaseMessageNotificationRequest request) {
+    return ResponseEntity.ok(caseMessageNotificationService.dispatch(request));
+  }
 }

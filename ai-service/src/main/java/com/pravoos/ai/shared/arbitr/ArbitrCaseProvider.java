@@ -4,7 +4,7 @@ import java.util.Optional;
 
 public interface ArbitrCaseProvider {
 
-    boolean isEnabled();
+  boolean isEnabled();
 
-    Optional<ArbitrCaseData> fetchCase(String arbitrCaseNumber);
+  Optional<ArbitrCaseData> fetchCase(String arbitrCaseNumber);
 }

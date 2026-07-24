@@ -1,29 +1,36 @@
 package com.pravoos.ai.practice.internal.repository.jpa;
 
 import com.pravoos.ai.practice.internal.model.entity.CaseMessage;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
 public interface CaseMessageRepository extends JpaRepository<CaseMessage, UUID> {
 
-    interface ThreadView {
-        UUID getCaseId();
-        String getCaseTitle();
-        String getClientName();
-        String getLastBody();
-        LocalDateTime getLastCreatedAt();
-        String getLastAuthorRole();
-        long getUnreadCount();
-    }
+  interface ThreadView {
+    UUID getCaseId();
 
-    List<CaseMessage> findByCaseIdOrderByCreatedAtAsc(UUID caseId);
+    String getCaseTitle();
 
-    @Query(value = """
+    String getClientName();
+
+    String getLastBody();
+
+    LocalDateTime getLastCreatedAt();
+
+    String getLastAuthorRole();
+
+    long getUnreadCount();
+  }
+
+  List<CaseMessage> findByCaseIdOrderByCreatedAtAsc(UUID caseId);
+
+  @Query(
+      value =
+          """
             SELECT * FROM (
                 SELECT DISTINCT ON (m.case_id)
                     m.case_id                      AS "caseId",
@@ -44,6 +51,7 @@ public interface CaseMessageRepository extends JpaRepository<CaseMessage, UUID> 
                 ORDER BY m.case_id, m.created_at DESC
             ) threads
             ORDER BY threads."lastCreatedAt" DESC
-            """, nativeQuery = true)
-    List<ThreadView> findLawyerThreads(@Param("lawyerId") UUID lawyerId);
+            """,
+      nativeQuery = true)
+  List<ThreadView> findLawyerThreads(@Param("lawyerId") UUID lawyerId);
 }

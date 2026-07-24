@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @EnableConfigurationProperties({TelegramBotProperties.class, UserServiceProperties.class})
 public class NotificationServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(NotificationServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(NotificationServiceApplication.class, args);
+  }
 }

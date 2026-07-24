@@ -9,28 +9,28 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaTopicsConfig {
 
-    @Value("${app.kafka.topic-partitions:3}")
-    private int partitions;
+  @Value("${app.kafka.topic-partitions:3}")
+  private int partitions;
 
-    @Value("${app.kafka.topic-replicas:1}")
-    private short replicas;
+  @Value("${app.kafka.topic-replicas:1}")
+  private short replicas;
 
-    private NewTopic topic(String name) {
-        return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
-    }
+  private NewTopic topic(String name) {
+    return TopicBuilder.name(name).partitions(partitions).replicas(replicas).build();
+  }
 
-    @Bean
-    public NewTopic applicationSubmittedTopic() {
-        return topic("application.submitted");
-    }
+  @Bean
+  public NewTopic applicationSubmittedTopic() {
+    return topic("application.submitted");
+  }
 
-    @Bean
-    public NewTopic lawyerDeletedTopic() {
-        return topic("lawyer.deleted");
-    }
+  @Bean
+  public NewTopic lawyerDeletedTopic() {
+    return topic("lawyer.deleted");
+  }
 
-    @Bean
-    public NewTopic newLoginTopic() {
-        return topic("user.new_login");
-    }
+  @Bean
+  public NewTopic newLoginTopic() {
+    return topic("user.new_login");
+  }
 }

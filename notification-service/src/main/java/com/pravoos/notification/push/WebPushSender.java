@@ -4,5 +4,5 @@ import com.pravoos.notification.client.PushSubscriptionResponse;
 
 public interface WebPushSender {
 
-    PushDeliveryStatus send(PushSubscriptionResponse subscription, PushMessage message);
+  PushDeliveryStatus send(PushSubscriptionResponse subscription, PushMessage message);
 }

@@ -19,34 +19,36 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user/push")
 public class PushController {
 
-    private final PushSubscriptionService pushSubscriptionService;
-    private final VapidProperties vapidProperties;
+  private final PushSubscriptionService pushSubscriptionService;
+  private final VapidProperties vapidProperties;
 
-    public PushController(PushSubscriptionService pushSubscriptionService,
-                          VapidProperties vapidProperties) {
-        this.pushSubscriptionService = pushSubscriptionService;
-        this.vapidProperties = vapidProperties;
-    }
+  public PushController(
+      PushSubscriptionService pushSubscriptionService, VapidProperties vapidProperties) {
+    this.pushSubscriptionService = pushSubscriptionService;
+    this.vapidProperties = vapidProperties;
+  }
 
-    @GetMapping("/config")
-    public ResponseEntity<PushConfigResponse> config() {
-        if (!vapidProperties.configured()) {
-            return ResponseEntity.ok(PushConfigResponse.disabled());
-        }
-        return ResponseEntity.ok(new PushConfigResponse(true, vapidProperties.publicKey()));
+  @GetMapping("/config")
+  public ResponseEntity<PushConfigResponse> config() {
+    if (!vapidProperties.configured()) {
+      return ResponseEntity.ok(PushConfigResponse.disabled());
     }
+    return ResponseEntity.ok(new PushConfigResponse(true, vapidProperties.publicKey()));
+  }
 
-    @PostMapping("/subscriptions")
-    public ResponseEntity<Void> subscribe(@Valid @RequestBody RegisterPushSubscriptionRequest request,
-                                          Authentication authentication) {
-        pushSubscriptionService.register(SecurityUtils.currentUserId(authentication), request);
-        return ResponseEntity.noContent().build();
-    }
+  @PostMapping("/subscriptions")
+  public ResponseEntity<Void> subscribe(
+      @Valid @RequestBody RegisterPushSubscriptionRequest request, Authentication authentication) {
+    pushSubscriptionService.register(SecurityUtils.currentUserId(authentication), request);
+    return ResponseEntity.noContent().build();
+  }
 
-    @PostMapping("/subscriptions/remove")
-    public ResponseEntity<Void> unsubscribe(@Valid @RequestBody UnregisterPushSubscriptionRequest request,
-                                            Authentication authentication) {
-        pushSubscriptionService.unregister(SecurityUtils.currentUserId(authentication), request.endpoint());
-        return ResponseEntity.noContent().build();
-    }
+  @PostMapping("/subscriptions/remove")
+  public ResponseEntity<Void> unsubscribe(
+      @Valid @RequestBody UnregisterPushSubscriptionRequest request,
+      Authentication authentication) {
+    pushSubscriptionService.unregister(
+        SecurityUtils.currentUserId(authentication), request.endpoint());
+    return ResponseEntity.noContent().build();
+  }
 }

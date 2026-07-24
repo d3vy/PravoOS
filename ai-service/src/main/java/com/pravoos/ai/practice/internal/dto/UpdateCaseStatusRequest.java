@@ -3,6 +3,4 @@ package com.pravoos.ai.practice.internal.dto;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import jakarta.validation.constraints.NotNull;
 
-public record UpdateCaseStatusRequest(
-        @NotNull CaseStatus status
-) {}
+public record UpdateCaseStatusRequest(@NotNull CaseStatus status) {}

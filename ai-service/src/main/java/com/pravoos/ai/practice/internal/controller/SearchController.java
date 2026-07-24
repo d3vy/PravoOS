@@ -14,16 +14,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/ai/search")
 public class SearchController {
 
-    private final SearchService searchService;
+  private final SearchService searchService;
 
-    public SearchController(SearchService searchService) {
-        this.searchService = searchService;
-    }
+  public SearchController(SearchService searchService) {
+    this.searchService = searchService;
+  }
 
-    @GetMapping
-    public ResponseEntity<GlobalSearchResponse> search(@RequestParam(required = false) String q,
-                                                       @RequestParam(defaultValue = "true") boolean content,
-                                                       Authentication authentication) {
-        return ResponseEntity.ok(searchService.search(SecurityUtils.currentUserId(authentication), q, content));
-    }
+  @GetMapping
+  public ResponseEntity<GlobalSearchResponse> search(
+      @RequestParam(required = false) String q,
+      @RequestParam(defaultValue = "true") boolean content,
+      Authentication authentication) {
+    return ResponseEntity.ok(
+        searchService.search(SecurityUtils.currentUserId(authentication), q, content));
+  }
 }

@@ -5,5 +5,4 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(TelegramProperties.class)
-public class CollaborationPropertiesConfig {
-}
+public class CollaborationPropertiesConfig {}

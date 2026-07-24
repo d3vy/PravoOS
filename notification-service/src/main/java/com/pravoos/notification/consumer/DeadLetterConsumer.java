@@ -10,21 +10,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class DeadLetterConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(DeadLetterConsumer.class);
+  private static final Logger log = LoggerFactory.getLogger(DeadLetterConsumer.class);
 
-    private final MeterRegistry meterRegistry;
+  private final MeterRegistry meterRegistry;
 
-    public DeadLetterConsumer(MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
-    }
+  public DeadLetterConsumer(MeterRegistry meterRegistry) {
+    this.meterRegistry = meterRegistry;
+  }
 
-    @KafkaListener(
-            topicPattern = ".*\\.DLT",
-            groupId = "notification-dlt-group",
-            containerFactory = "dltKafkaListenerContainerFactory")
-    public void onDeadLetter(ConsumerRecord<String, String> record) {
-        meterRegistry.counter("pravoos.kafka.dlt", "topic", record.topic()).increment();
-        log.error("DLT message received: topic={} key={} payload={}",
-                record.topic(), record.key(), record.value());
-    }
+  @KafkaListener(
+      topicPattern = ".*\\.DLT",
+      groupId = "notification-dlt-group",
+      containerFactory = "dltKafkaListenerContainerFactory")
+  public void onDeadLetter(ConsumerRecord<String, String> record) {
+    meterRegistry.counter("pravoos.kafka.dlt", "topic", record.topic()).increment();
+    log.error(
+        "DLT message received: topic={} key={} payload={}",
+        record.topic(),
+        record.key(),
+        record.value());
+  }
 }

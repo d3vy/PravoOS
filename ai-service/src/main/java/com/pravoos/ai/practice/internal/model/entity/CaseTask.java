@@ -1,7 +1,6 @@
 package com.pravoos.ai.practice.internal.model.entity;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -11,43 +10,67 @@ import java.util.UUID;
 @Table(name = "case_tasks")
 public class CaseTask {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
-    @Column(name = "case_id", nullable = false)
-    private UUID caseId;
+  @Column(name = "case_id", nullable = false)
+  private UUID caseId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String text;
+  @Column(nullable = false, columnDefinition = "TEXT")
+  private String text;
 
-    @Column(name = "due_date")
-    private LocalDate dueDate;
+  @Column(name = "due_date")
+  private LocalDate dueDate;
 
-    @Column(nullable = false)
-    private boolean done;
+  @Column(nullable = false)
+  private boolean done;
 
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
+  @Column(nullable = false)
+  private LocalDateTime createdAt;
 
-    @PrePersist
-    void prePersist() {
-        createdAt = LocalDateTime.now(ZoneOffset.UTC);
-    }
+  @PrePersist
+  void prePersist() {
+    createdAt = LocalDateTime.now(ZoneOffset.UTC);
+  }
 
-    public UUID getId() { return id; }
+  public UUID getId() {
+    return id;
+  }
 
-    public UUID getCaseId() { return caseId; }
-    public void setCaseId(UUID caseId) { this.caseId = caseId; }
+  public UUID getCaseId() {
+    return caseId;
+  }
 
-    public String getText() { return text; }
-    public void setText(String text) { this.text = text; }
+  public void setCaseId(UUID caseId) {
+    this.caseId = caseId;
+  }
 
-    public LocalDate getDueDate() { return dueDate; }
-    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+  public String getText() {
+    return text;
+  }
 
-    public boolean isDone() { return done; }
-    public void setDone(boolean done) { this.done = done; }
+  public void setText(String text) {
+    this.text = text;
+  }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
+  public LocalDate getDueDate() {
+    return dueDate;
+  }
+
+  public void setDueDate(LocalDate dueDate) {
+    this.dueDate = dueDate;
+  }
+
+  public boolean isDone() {
+    return done;
+  }
+
+  public void setDone(boolean done) {
+    this.done = done;
+  }
+
+  public LocalDateTime getCreatedAt() {
+    return createdAt;
+  }
 }

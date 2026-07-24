@@ -5,5 +5,5 @@ import java.util.UUID;
 
 public interface PortalAccessProvider {
 
-    List<UUID> acceptedClientIdsForUser(UUID userId);
+  List<UUID> acceptedClientIdsForUser(UUID userId);
 }

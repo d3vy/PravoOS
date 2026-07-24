@@ -4,5 +4,5 @@ import java.util.UUID;
 
 public interface AiDataCleanup {
 
-    void purgeChatData(UUID lawyerId);
+  void purgeChatData(UUID lawyerId);
 }

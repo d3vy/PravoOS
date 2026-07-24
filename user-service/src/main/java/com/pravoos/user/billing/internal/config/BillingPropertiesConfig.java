@@ -5,5 +5,4 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableConfigurationProperties(YooKassaProperties.class)
-public class BillingPropertiesConfig {
-}
+public class BillingPropertiesConfig {}

@@ -13,11 +13,6 @@ import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -25,130 +20,170 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CitationCheckService {
 
-    private static final Logger log = LoggerFactory.getLogger(CitationCheckService.class);
-    private static final DateTimeFormatter EDITION_DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+  private static final Logger log = LoggerFactory.getLogger(CitationCheckService.class);
+  private static final DateTimeFormatter EDITION_DATE_FORMAT =
+      DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
-    private final CitationExtractor citationExtractor;
-    private final ArbitrCaseProvider arbitrCaseProvider;
-    private final DocumentAccess documentAccess;
-    private final AiResponseRepository aiResponseRepository;
-    private final CitationCheckProperties properties;
-    private final Map<CitationStatus, Counter> statusCounters;
+  private final CitationExtractor citationExtractor;
+  private final ArbitrCaseProvider arbitrCaseProvider;
+  private final DocumentAccess documentAccess;
+  private final AiResponseRepository aiResponseRepository;
+  private final CitationCheckProperties properties;
+  private final Map<CitationStatus, Counter> statusCounters;
 
-    public CitationCheckService(CitationExtractor citationExtractor,
-                                ArbitrCaseProvider arbitrCaseProvider,
-                                DocumentAccess documentAccess,
-                                AiResponseRepository aiResponseRepository,
-                                CitationCheckProperties properties,
-                                MeterRegistry registry) {
-        this.citationExtractor = citationExtractor;
-        this.arbitrCaseProvider = arbitrCaseProvider;
-        this.documentAccess = documentAccess;
-        this.aiResponseRepository = aiResponseRepository;
-        this.properties = properties;
-        this.statusCounters = new EnumMap<>(CitationStatus.class);
-        for (CitationStatus status : CitationStatus.values()) {
-            statusCounters.put(status, Counter.builder("pravoos.citation.checks")
-                    .description("Citation verification outcomes")
-                    .tag("status", status.name().toLowerCase())
-                    .register(registry));
+  public CitationCheckService(
+      CitationExtractor citationExtractor,
+      ArbitrCaseProvider arbitrCaseProvider,
+      DocumentAccess documentAccess,
+      AiResponseRepository aiResponseRepository,
+      CitationCheckProperties properties,
+      MeterRegistry registry) {
+    this.citationExtractor = citationExtractor;
+    this.arbitrCaseProvider = arbitrCaseProvider;
+    this.documentAccess = documentAccess;
+    this.aiResponseRepository = aiResponseRepository;
+    this.properties = properties;
+    this.statusCounters = new EnumMap<>(CitationStatus.class);
+    for (CitationStatus status : CitationStatus.values()) {
+      statusCounters.put(
+          status,
+          Counter.builder("pravoos.citation.checks")
+              .description("Citation verification outcomes")
+              .tag("status", status.name().toLowerCase())
+              .register(registry));
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public CitationCheckResult check(String text, UUID lawyerId) {
+    List<ExtractedCitation> extracted = citationExtractor.extract(text, properties.maxCitations());
+    List<CitationCheck> checks = new ArrayList<>();
+    int courtLookups = 0;
+    for (ExtractedCitation citation : extracted) {
+      switch (citation.type()) {
+        case COURT_CASE -> {
+          boolean lookupBudgetLeft = courtLookups < properties.maxCourtCaseLookups();
+          checks.add(checkCourtCase(citation, lookupBudgetLeft));
+          if (lookupBudgetLeft && arbitrCaseProvider.isEnabled()) {
+            courtLookups++;
+          }
         }
+        case STATUTE -> checks.add(checkStatute(citation));
+      }
+    }
+    checks.forEach(check -> statusCounters.get(check.status()).increment());
+    log.info(
+        "Citation check for lawyer {}: {} citation(s) ({} court lookups)",
+        lawyerId,
+        checks.size(),
+        courtLookups);
+    return CitationCheckResult.of(checks);
+  }
+
+  @Transactional(readOnly = true)
+  public CitationCheckResult checkResponse(UUID responseId, UUID lawyerId) {
+    AiResponse response =
+        aiResponseRepository
+            .findById(responseId)
+            .orElseThrow(() -> new AiResponseNotFoundException(responseId));
+    if (!response.getLawyerId().equals(lawyerId)) {
+      log.warn(
+          "Lawyer {} attempted to check citations of response {} owned by another user",
+          lawyerId,
+          responseId);
+      throw new AiResponseNotFoundException(responseId);
+    }
+    return check(response.getResult(), lawyerId);
+  }
+
+  private CitationCheck checkCourtCase(ExtractedCitation citation, boolean lookupBudgetLeft) {
+    String number = citation.core();
+    if (!arbitrCaseProvider.isEnabled()) {
+      return citationOf(
+          citation, number, CitationStatus.UNVERIFIED, "Проверка через КАД.Арбитр недоступна");
+    }
+    if (!lookupBudgetLeft) {
+      return citationOf(
+          citation,
+          number,
+          CitationStatus.UNVERIFIED,
+          "Превышен лимит проверок дел за один запрос");
+    }
+    try {
+      boolean found = arbitrCaseProvider.fetchCase(number).isPresent();
+      return found
+          ? citationOf(citation, number, CitationStatus.VERIFIED, "Дело найдено в КАД.Арбитр")
+          : citationOf(
+              citation,
+              number,
+              CitationStatus.NOT_FOUND,
+              "Дело не найдено в КАД.Арбитр — проверьте номер, возможна ошибка");
+    } catch (RuntimeException e) {
+      log.warn("КАД.Арбитр lookup failed for case {}: {}", number, e.getMessage());
+      return citationOf(
+          citation,
+          number,
+          CitationStatus.UNVERIFIED,
+          "Ошибка обращения к КАД.Арбитр, повторите позже");
+    }
+  }
+
+  private CitationCheck checkStatute(ExtractedCitation citation) {
+    Optional<LegislationRef> current =
+        documentAccess.currentLegislation(citation.core(), citation.actCanonical());
+    if (current.isPresent()) {
+      LegislationRef ref = current.get();
+      String normalized =
+          "ст. "
+              + citation.core()
+              + " "
+              + ref.actCanonical()
+              + (ref.editionDate() != null
+                  ? ", ред. от " + EDITION_DATE_FORMAT.format(ref.editionDate())
+                  : "");
+      return citationOf(
+          citation,
+          normalized,
+          CitationStatus.VERIFIED,
+          "Норма подтверждена по актуальной редакции законодательства");
     }
 
-    @Transactional(readOnly = true)
-    public CitationCheckResult check(String text, UUID lawyerId) {
-        List<ExtractedCitation> extracted = citationExtractor.extract(text, properties.maxCitations());
-        List<CitationCheck> checks = new ArrayList<>();
-        int courtLookups = 0;
-        for (ExtractedCitation citation : extracted) {
-            switch (citation.type()) {
-                case COURT_CASE -> {
-                    boolean lookupBudgetLeft = courtLookups < properties.maxCourtCaseLookups();
-                    checks.add(checkCourtCase(citation, lookupBudgetLeft));
-                    if (lookupBudgetLeft && arbitrCaseProvider.isEnabled()) {
-                        courtLookups++;
-                    }
-                }
-                case STATUTE -> checks.add(checkStatute(citation));
-            }
-        }
-        checks.forEach(check -> statusCounters.get(check.status()).increment());
-        log.info("Citation check for lawyer {}: {} citation(s) ({} court lookups)",
-                lawyerId, checks.size(), courtLookups);
-        return CitationCheckResult.of(checks);
+    String normalized =
+        "ст. "
+            + citation.core()
+            + (citation.actCanonical() != null ? " — " + citation.actCanonical() : "");
+    boolean grounded = documentAccess.knowledgeBaseMentions(citation.core());
+    String detail;
+    if (citation.actCanonical() != null) {
+      detail =
+          grounded
+              ? "Акт распознан ("
+                  + citation.actCanonical()
+                  + "), но актуальная редакция нормы "
+                  + "не загружена в базу законодательства — проверьте по первоисточнику"
+              : "Акт распознан ("
+                  + citation.actCanonical()
+                  + "), но норма не подтверждена "
+                  + "актуальной редакцией — проверьте вручную";
+    } else {
+      detail =
+          grounded
+              ? "Норма упоминается в базе знаний, но не подтверждена актуальной редакцией — проверьте вручную"
+              : "Норма и акт не подтверждены — проверьте вручную";
     }
+    return citationOf(citation, normalized, CitationStatus.UNVERIFIED, detail);
+  }
 
-    @Transactional(readOnly = true)
-    public CitationCheckResult checkResponse(UUID responseId, UUID lawyerId) {
-        AiResponse response = aiResponseRepository.findById(responseId)
-                .orElseThrow(() -> new AiResponseNotFoundException(responseId));
-        if (!response.getLawyerId().equals(lawyerId)) {
-            log.warn("Lawyer {} attempted to check citations of response {} owned by another user",
-                    lawyerId, responseId);
-            throw new AiResponseNotFoundException(responseId);
-        }
-        return check(response.getResult(), lawyerId);
-    }
-
-    private CitationCheck checkCourtCase(ExtractedCitation citation, boolean lookupBudgetLeft) {
-        String number = citation.core();
-        if (!arbitrCaseProvider.isEnabled()) {
-            return citationOf(citation, number, CitationStatus.UNVERIFIED,
-                    "Проверка через КАД.Арбитр недоступна");
-        }
-        if (!lookupBudgetLeft) {
-            return citationOf(citation, number, CitationStatus.UNVERIFIED,
-                    "Превышен лимит проверок дел за один запрос");
-        }
-        try {
-            boolean found = arbitrCaseProvider.fetchCase(number).isPresent();
-            return found
-                    ? citationOf(citation, number, CitationStatus.VERIFIED, "Дело найдено в КАД.Арбитр")
-                    : citationOf(citation, number, CitationStatus.NOT_FOUND,
-                            "Дело не найдено в КАД.Арбитр — проверьте номер, возможна ошибка");
-        } catch (RuntimeException e) {
-            log.warn("КАД.Арбитр lookup failed for case {}: {}", number, e.getMessage());
-            return citationOf(citation, number, CitationStatus.UNVERIFIED,
-                    "Ошибка обращения к КАД.Арбитр, повторите позже");
-        }
-    }
-
-    private CitationCheck checkStatute(ExtractedCitation citation) {
-        Optional<LegislationRef> current =
-                documentAccess.currentLegislation(citation.core(), citation.actCanonical());
-        if (current.isPresent()) {
-            LegislationRef ref = current.get();
-            String normalized = "ст. " + citation.core() + " " + ref.actCanonical()
-                    + (ref.editionDate() != null ? ", ред. от " + EDITION_DATE_FORMAT.format(ref.editionDate()) : "");
-            return citationOf(citation, normalized, CitationStatus.VERIFIED,
-                    "Норма подтверждена по актуальной редакции законодательства");
-        }
-
-        String normalized = "ст. " + citation.core()
-                + (citation.actCanonical() != null ? " — " + citation.actCanonical() : "");
-        boolean grounded = documentAccess.knowledgeBaseMentions(citation.core());
-        String detail;
-        if (citation.actCanonical() != null) {
-            detail = grounded
-                    ? "Акт распознан (" + citation.actCanonical() + "), но актуальная редакция нормы "
-                            + "не загружена в базу законодательства — проверьте по первоисточнику"
-                    : "Акт распознан (" + citation.actCanonical() + "), но норма не подтверждена "
-                            + "актуальной редакцией — проверьте вручную";
-        } else {
-            detail = grounded
-                    ? "Норма упоминается в базе знаний, но не подтверждена актуальной редакцией — проверьте вручную"
-                    : "Норма и акт не подтверждены — проверьте вручную";
-        }
-        return citationOf(citation, normalized, CitationStatus.UNVERIFIED, detail);
-    }
-
-    private CitationCheck citationOf(ExtractedCitation citation, String normalized,
-                                     CitationStatus status, String detail) {
-        return new CitationCheck(citation.raw(), citation.type(), normalized, status, detail);
-    }
-
+  private CitationCheck citationOf(
+      ExtractedCitation citation, String normalized, CitationStatus status, String detail) {
+    return new CitationCheck(citation.raw(), citation.type(), normalized, status, detail);
+  }
 }

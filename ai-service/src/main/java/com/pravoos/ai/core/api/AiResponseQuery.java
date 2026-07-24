@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public interface AiResponseQuery {
 
-    List<AiResponseDto> listVisibleByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds);
+  List<AiResponseDto> listVisibleByCase(UUID caseId, UUID lawyerId, List<UUID> orgIds);
 
-    List<AiResponseDto> listByCase(UUID caseId);
+  List<AiResponseDto> listByCase(UUID caseId);
 }

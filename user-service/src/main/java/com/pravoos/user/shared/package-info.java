@@ -1,3 +1,3 @@
 @org.springframework.modulith.ApplicationModule(
-        type = org.springframework.modulith.ApplicationModule.Type.OPEN)
+    type = org.springframework.modulith.ApplicationModule.Type.OPEN)
 package com.pravoos.user.shared;

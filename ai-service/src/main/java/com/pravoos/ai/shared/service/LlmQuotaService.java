@@ -3,108 +3,115 @@ package com.pravoos.ai.shared.service;
 import com.pravoos.ai.shared.exception.LlmQuotaExceededException;
 import com.pravoos.ai.shared.security.PlanLimitsProvider;
 import com.pravoos.common.web.PlanLimits;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.util.UUID;
-
 @Service
 public class LlmQuotaService {
 
-    private static final Logger log = LoggerFactory.getLogger(LlmQuotaService.class);
-    private static final String REQUEST_KEY_PREFIX = "llm_quota:";
-    private static final String TOKEN_KEY_PREFIX = "llm_tokens:";
-    private static final Duration WINDOW = Duration.ofDays(1);
+  private static final Logger log = LoggerFactory.getLogger(LlmQuotaService.class);
+  private static final String REQUEST_KEY_PREFIX = "llm_quota:";
+  private static final String TOKEN_KEY_PREFIX = "llm_tokens:";
+  private static final Duration WINDOW = Duration.ofDays(1);
 
-    private final StringRedisTemplate redisTemplate;
-    private final PlanLimitsProvider planLimitsProvider;
+  private final StringRedisTemplate redisTemplate;
+  private final PlanLimitsProvider planLimitsProvider;
 
-    public LlmQuotaService(StringRedisTemplate redisTemplate, PlanLimitsProvider planLimitsProvider) {
-        this.redisTemplate = redisTemplate;
-        this.planLimitsProvider = planLimitsProvider;
+  public LlmQuotaService(StringRedisTemplate redisTemplate, PlanLimitsProvider planLimitsProvider) {
+    this.redisTemplate = redisTemplate;
+    this.planLimitsProvider = planLimitsProvider;
+  }
+
+  public void assertWithinQuota(UUID lawyerId) {
+    PlanLimits limits = planLimitsProvider.currentLimits();
+    if (limits.quotaDisabled()) {
+      return;
     }
-
-    public void assertWithinQuota(UUID lawyerId) {
-        PlanLimits limits = planLimitsProvider.currentLimits();
-        if (limits.quotaDisabled()) {
-            return;
+    try {
+      if (limits.dailyRequests() > 0) {
+        long requests = readCounter(requestKey(lawyerId));
+        if (requests >= limits.dailyRequests()) {
+          log.warn(
+              "LLM daily request quota exceeded for lawyer {} on plan {} ({}/{})",
+              lawyerId,
+              limits.code(),
+              requests,
+              limits.dailyRequests());
+          throw new LlmQuotaExceededException();
         }
-        try {
-            if (limits.dailyRequests() > 0) {
-                long requests = readCounter(requestKey(lawyerId));
-                if (requests >= limits.dailyRequests()) {
-                    log.warn("LLM daily request quota exceeded for lawyer {} on plan {} ({}/{})",
-                            lawyerId, limits.code(), requests, limits.dailyRequests());
-                    throw new LlmQuotaExceededException();
-                }
-            }
-            if (limits.dailyTokens() > 0) {
-                long tokens = readCounter(tokenKey(lawyerId));
-                if (tokens >= limits.dailyTokens()) {
-                    log.warn("LLM daily token budget exceeded for lawyer {} on plan {} ({}/{})",
-                            lawyerId, limits.code(), tokens, limits.dailyTokens());
-                    throw new LlmQuotaExceededException();
-                }
-            }
-        } catch (DataAccessException ex) {
-            log.warn("Redis unavailable during LLM quota check, allowing", ex);
+      }
+      if (limits.dailyTokens() > 0) {
+        long tokens = readCounter(tokenKey(lawyerId));
+        if (tokens >= limits.dailyTokens()) {
+          log.warn(
+              "LLM daily token budget exceeded for lawyer {} on plan {} ({}/{})",
+              lawyerId,
+              limits.code(),
+              tokens,
+              limits.dailyTokens());
+          throw new LlmQuotaExceededException();
         }
+      }
+    } catch (DataAccessException ex) {
+      log.warn("Redis unavailable during LLM quota check, allowing", ex);
     }
+  }
 
-    public void recordUsage(UUID lawyerId, long totalTokens) {
-        if (planLimitsProvider.currentLimits().quotaDisabled()) {
-            return;
-        }
-        try {
-            incrementWithTtl(requestKey(lawyerId), 1L);
-            if (totalTokens > 0) {
-                incrementWithTtl(tokenKey(lawyerId), totalTokens);
-            }
-        } catch (DataAccessException ex) {
-            log.warn("Redis unavailable during LLM usage recording for lawyer {}", lawyerId, ex);
-        }
+  public void recordUsage(UUID lawyerId, long totalTokens) {
+    if (planLimitsProvider.currentLimits().quotaDisabled()) {
+      return;
     }
+    try {
+      incrementWithTtl(requestKey(lawyerId), 1L);
+      if (totalTokens > 0) {
+        incrementWithTtl(tokenKey(lawyerId), totalTokens);
+      }
+    } catch (DataAccessException ex) {
+      log.warn("Redis unavailable during LLM usage recording for lawyer {}", lawyerId, ex);
+    }
+  }
 
-    public void recordTokenUsage(UUID lawyerId, long totalTokens) {
-        if (totalTokens <= 0 || planLimitsProvider.currentLimits().dailyTokens() <= 0) {
-            return;
-        }
-        try {
-            incrementWithTtl(tokenKey(lawyerId), totalTokens);
-        } catch (DataAccessException ex) {
-            log.warn("Redis unavailable during embedding token accounting for lawyer {}", lawyerId, ex);
-        }
+  public void recordTokenUsage(UUID lawyerId, long totalTokens) {
+    if (totalTokens <= 0 || planLimitsProvider.currentLimits().dailyTokens() <= 0) {
+      return;
     }
+    try {
+      incrementWithTtl(tokenKey(lawyerId), totalTokens);
+    } catch (DataAccessException ex) {
+      log.warn("Redis unavailable during embedding token accounting for lawyer {}", lawyerId, ex);
+    }
+  }
 
-    private void incrementWithTtl(String key, long delta) {
-        Long value = redisTemplate.opsForValue().increment(key, delta);
-        if (value != null && value == delta) {
-            redisTemplate.expire(key, WINDOW);
-        }
+  private void incrementWithTtl(String key, long delta) {
+    Long value = redisTemplate.opsForValue().increment(key, delta);
+    if (value != null && value == delta) {
+      redisTemplate.expire(key, WINDOW);
     }
+  }
 
-    private long readCounter(String key) {
-        String value = redisTemplate.opsForValue().get(key);
-        if (value == null) {
-            return 0L;
-        }
-        try {
-            return Long.parseLong(value);
-        } catch (NumberFormatException e) {
-            return 0L;
-        }
+  private long readCounter(String key) {
+    String value = redisTemplate.opsForValue().get(key);
+    if (value == null) {
+      return 0L;
     }
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException e) {
+      return 0L;
+    }
+  }
 
-    private String requestKey(UUID lawyerId) {
-        return REQUEST_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
-    }
+  private String requestKey(UUID lawyerId) {
+    return REQUEST_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
+  }
 
-    private String tokenKey(UUID lawyerId) {
-        return TOKEN_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
-    }
+  private String tokenKey(UUID lawyerId) {
+    return TOKEN_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
+  }
 }

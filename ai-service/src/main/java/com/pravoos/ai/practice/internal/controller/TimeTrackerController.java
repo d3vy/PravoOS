@@ -13,16 +13,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/ai/time")
 public class TimeTrackerController {
 
-    private final TimeEntryService timeEntryService;
+  private final TimeEntryService timeEntryService;
 
-    public TimeTrackerController(TimeEntryService timeEntryService) {
-        this.timeEntryService = timeEntryService;
-    }
+  public TimeTrackerController(TimeEntryService timeEntryService) {
+    this.timeEntryService = timeEntryService;
+  }
 
-    @GetMapping("/active")
-    public ResponseEntity<TimeEntryResponse> activeTimer(Authentication authentication) {
-        return timeEntryService.activeTimer(SecurityUtils.currentUserId(authentication))
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
-    }
+  @GetMapping("/active")
+  public ResponseEntity<TimeEntryResponse> activeTimer(Authentication authentication) {
+    return timeEntryService
+        .activeTimer(SecurityUtils.currentUserId(authentication))
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.noContent().build());
+  }
 }

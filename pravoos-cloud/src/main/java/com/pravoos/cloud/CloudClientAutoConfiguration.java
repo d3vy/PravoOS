@@ -12,9 +12,9 @@ import org.springframework.web.client.RestClient;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class CloudClientAutoConfiguration {
 
-    @Bean
-    @LoadBalanced
-    public RestClient.Builder loadBalancedRestClientBuilder() {
-        return RestClient.builder();
-    }
+  @Bean
+  @LoadBalanced
+  public RestClient.Builder loadBalancedRestClientBuilder() {
+    return RestClient.builder();
+  }
 }
