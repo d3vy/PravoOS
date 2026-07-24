@@ -52,30 +52,34 @@ public class ClientPiiBackfillService {
   @Transactional
   public int backfill() {
     List<Map<String, Object>> rows =
-        jdbcTemplate.queryForList("SELECT id, name, phone, email, notes FROM clients");
+        jdbcTemplate.queryForList("SELECT id, name, phone, email, inn, notes FROM clients");
     int updated = 0;
     for (Map<String, Object> row : rows) {
       String name = (String) row.get("name");
       String phone = (String) row.get("phone");
       String email = (String) row.get("email");
+      String inn = (String) row.get("inn");
       String notes = (String) row.get("notes");
 
       String newName = reEncrypt(name);
       String newPhone = reEncrypt(phone);
       String newEmail = reEncrypt(email);
+      String newInn = reEncrypt(inn);
       String newNotes = reEncrypt(notes);
 
       if (Objects.equals(newName, name)
           && Objects.equals(newPhone, phone)
           && Objects.equals(newEmail, email)
+          && Objects.equals(newInn, inn)
           && Objects.equals(newNotes, notes)) {
         continue;
       }
       jdbcTemplate.update(
-          "UPDATE clients SET name = ?, phone = ?, email = ?, notes = ? WHERE id = ?",
+          "UPDATE clients SET name = ?, phone = ?, email = ?, inn = ?, notes = ? WHERE id = ?",
           newName,
           newPhone,
           newEmail,
+          newInn,
           newNotes,
           (UUID) row.get("id"));
       updated++;

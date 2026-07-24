@@ -1,20 +1,32 @@
 package com.pravoos.ai.shared.security;
 
-public final class PiiCryptoHolder {
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
 
+@Component
+public class PiiCryptoHolder implements ApplicationContextAware {
+
+  private static volatile ApplicationContext applicationContext;
   private static volatile PiiEncryptor encryptor;
 
-  private PiiCryptoHolder() {}
-
-  static void register(PiiEncryptor instance) {
-    encryptor = instance;
+  @Override
+  public void setApplicationContext(ApplicationContext context) throws BeansException {
+    applicationContext = context;
   }
 
   public static PiiEncryptor encryptor() {
     PiiEncryptor current = encryptor;
-    if (current == null) {
-      throw new IllegalStateException("PiiEncryptor is not initialized yet");
+    if (current != null) {
+      return current;
     }
+    ApplicationContext context = applicationContext;
+    if (context == null) {
+      throw new IllegalStateException("PII crypto context is not initialized yet");
+    }
+    current = context.getBean(PiiEncryptor.class);
+    encryptor = current;
     return current;
   }
 }

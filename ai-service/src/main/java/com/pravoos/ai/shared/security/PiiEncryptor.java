@@ -2,7 +2,6 @@ package com.pravoos.ai.shared.security;
 
 import com.pravoos.ai.shared.config.PiiCryptoProperties;
 import com.pravoos.ai.shared.exception.DocumentProcessingException;
-import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -61,11 +60,6 @@ public class PiiEncryptor {
         "PII encryption enabled with key '{}' ({} key(s) available for decryption)",
         activeKeyId,
         keysById.size());
-  }
-
-  @PostConstruct
-  void register() {
-    PiiCryptoHolder.register(this);
   }
 
   public boolean isEncryptionEnabled() {

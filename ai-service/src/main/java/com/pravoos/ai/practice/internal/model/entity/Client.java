@@ -34,7 +34,8 @@ public class Client {
   @Column(columnDefinition = "TEXT")
   private String email;
 
-  @Column(length = 12)
+  @Convert(converter = PiiStringConverter.class)
+  @Column(columnDefinition = "TEXT")
   private String inn;
 
   @Convert(converter = PiiStringConverter.class)
