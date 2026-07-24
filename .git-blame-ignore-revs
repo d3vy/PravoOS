@@ -2,3 +2,4 @@
 # git blame игнорирует эти коммиты. Включить локально:
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
 de64d06ad7fc32adca3a4987608fbea8b7732a2e
+0ac2a2dc50fe6a0edf01bb1821fb01c90b2d7556
