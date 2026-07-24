@@ -9,5 +9,8 @@ public record CreateClientRequest(
         @Pattern(regexp = "(\\+?[\\d\\s()\\-]{10,20})?", message = "Некорректный номер телефона") String phone,
         @Email @Size(max = 255) String email,
         @Pattern(regexp = "(\\d{10}|\\d{12})?", message = "ИНН должен содержать 10 или 12 цифр") String inn,
-        @Size(max = 5000) String notes
+        @Size(max = 5000) String notes,
+        @NotNull(message = "Требуется согласие на обработку персональных данных")
+        @AssertTrue(message = "Требуется согласие на обработку персональных данных")
+        Boolean personalDataConsent
 ) {}

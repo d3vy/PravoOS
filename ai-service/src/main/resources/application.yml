@@ -150,6 +150,14 @@ document:
     max-archive-entries: ${DOCUMENT_MAX_ARCHIVE_ENTRIES:2000}
     block-active-content: ${DOCUMENT_BLOCK_ACTIVE_CONTENT:true}
 
+pii:
+  crypto:
+    key: ${PII_ENCRYPTION_KEY:}
+
+pdn:
+  consent:
+    current-version: ${PDN_CONSENT_VERSION:1.0}
+
 arbitr:
   api:
     base-url: ${ARBITR_API_BASE_URL:https://parser-api.com/parser/arbitr_api/details_by_number}

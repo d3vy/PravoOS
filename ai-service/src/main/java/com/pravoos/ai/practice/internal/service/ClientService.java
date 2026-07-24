@@ -3,9 +3,12 @@ package com.pravoos.ai.practice.internal.service;
 import com.pravoos.ai.practice.internal.dto.*;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Client;
+import com.pravoos.ai.practice.internal.model.entity.ClientConsent;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.ClientConsentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
+import com.pravoos.ai.shared.config.PersonalDataConsentProperties;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.exception.ClientEmailRequiredException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
@@ -29,18 +32,24 @@ public class ClientService {
     private static final Logger log = LoggerFactory.getLogger(ClientService.class);
 
     private final ClientRepository clientRepository;
+    private final ClientConsentRepository clientConsentRepository;
     private final CaseRepository caseRepository;
     private final CaseService caseService;
     private final UserServiceClient userServiceClient;
+    private final PersonalDataConsentProperties consentProperties;
 
     public ClientService(ClientRepository clientRepository,
+                         ClientConsentRepository clientConsentRepository,
                          CaseRepository caseRepository,
                          CaseService caseService,
-                         UserServiceClient userServiceClient) {
+                         UserServiceClient userServiceClient,
+                         PersonalDataConsentProperties consentProperties) {
         this.clientRepository = clientRepository;
+        this.clientConsentRepository = clientConsentRepository;
         this.caseRepository = caseRepository;
         this.caseService = caseService;
         this.userServiceClient = userServiceClient;
+        this.consentProperties = consentProperties;
     }
 
     @Transactional(readOnly = true)
@@ -74,8 +83,64 @@ public class ClientService {
                 request.email(), request.inn(), request.notes());
 
         Client saved = clientRepository.save(client);
+        recordConsent(saved.getId(), lawyerId);
         log.info("Client created: '{}' ({}) by lawyer {}", saved.getName(), saved.getId(), lawyerId);
         return ClientResponse.from(saved, 0L);
+    }
+
+    @Transactional(readOnly = true)
+    public ConsentResponse currentConsent(UUID clientId, UUID lawyerId) {
+        requireOwnedClient(clientId, lawyerId);
+        return clientConsentRepository.findFirstByClientIdOrderByGrantedAtDesc(clientId)
+                .map(ConsentResponse::from)
+                .orElse(null);
+    }
+
+    @Transactional
+    public ConsentResponse grantConsent(UUID clientId, UUID lawyerId) {
+        requireOwnedClient(clientId, lawyerId);
+        clientConsentRepository.findFirstByClientIdOrderByGrantedAtDesc(clientId)
+                .filter(ClientConsent::isActive)
+                .ifPresent(ClientConsent::revoke);
+        ConsentResponse response = ConsentResponse.from(recordConsent(clientId, lawyerId));
+        log.info("Consent granted (v{}) for client {} by lawyer {}", response.policyVersion(), clientId, lawyerId);
+        return response;
+    }
+
+    @Transactional
+    public void revokeConsent(UUID clientId, UUID lawyerId) {
+        requireOwnedClient(clientId, lawyerId);
+        clientConsentRepository.findFirstByClientIdOrderByGrantedAtDesc(clientId)
+                .filter(ClientConsent::isActive)
+                .ifPresent(consent -> {
+                    consent.revoke();
+                    log.info("Consent revoked for client {} by lawyer {}", clientId, lawyerId);
+                });
+    }
+
+    @Transactional(readOnly = true)
+    public PersonalDataExportResponse exportPersonalData(UUID clientId, UUID lawyerId) {
+        Client client = requireOwnedClient(clientId, lawyerId);
+        List<ConsentResponse> consents = clientConsentRepository
+                .findByClientIdOrderByGrantedAtDesc(clientId)
+                .stream()
+                .map(ConsentResponse::from)
+                .toList();
+        List<CaseResponse> cases = caseRepository
+                .findByClientIdAndLawyerIdOrderByCreatedAtDesc(clientId, lawyerId)
+                .stream()
+                .map(caseEntity -> CaseResponse.from(caseEntity, client.getName()))
+                .toList();
+        log.info("Personal data export produced for client {} by lawyer {}", clientId, lawyerId);
+        return PersonalDataExportResponse.of(client, consents, cases);
+    }
+
+    private ClientConsent recordConsent(UUID clientId, UUID lawyerId) {
+        ClientConsent consent = new ClientConsent();
+        consent.setClientId(clientId);
+        consent.setLawyerId(lawyerId);
+        consent.setPolicyVersion(consentProperties.resolvedVersion());
+        return clientConsentRepository.save(consent);
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +185,7 @@ public class ClientService {
             log.info("Cascade-deleted {} cases for client {} by lawyer {}", cases.size(), clientId, lawyerId);
         }
 
+        clientConsentRepository.deleteByClientId(clientId);
         clientRepository.delete(client);
         log.info("Client deleted: {} (cascade={}) by lawyer {}", clientId, cascade, lawyerId);
     }

@@ -2,7 +2,9 @@ package com.pravoos.ai.practice.internal.controller;
 
 import com.pravoos.ai.practice.internal.dto.ClientDetailResponse;
 import com.pravoos.ai.practice.internal.dto.ClientResponse;
+import com.pravoos.ai.practice.internal.dto.ConsentResponse;
 import com.pravoos.ai.practice.internal.dto.CreateClientRequest;
+import com.pravoos.ai.practice.internal.dto.PersonalDataExportResponse;
 import com.pravoos.ai.practice.internal.dto.UpdateClientRequest;
 import com.pravoos.ai.practice.internal.service.ClientService;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
@@ -81,6 +83,40 @@ public class ClientController {
                                                    Authentication authentication) {
         clientService.revokePortalInvite(clientId, SecurityUtils.currentUserId(authentication));
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{clientId}/consent")
+    public ResponseEntity<ConsentResponse> consent(@PathVariable UUID clientId,
+                                                   Authentication authentication) {
+        ConsentResponse consent = clientService.currentConsent(clientId, SecurityUtils.currentUserId(authentication));
+        return consent == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(consent);
+    }
+
+    @PostMapping("/{clientId}/consent")
+    public ResponseEntity<ConsentResponse> grantConsent(@PathVariable UUID clientId,
+                                                        Authentication authentication,
+                                                        HttpServletRequest request) {
+        ConsentResponse consent = clientService.grantConsent(clientId, SecurityUtils.currentUserId(authentication));
+        accessAuditService.record(authentication, AuditAction.CONSENT_GRANT, clientId, request);
+        return ResponseEntity.ok(consent);
+    }
+
+    @DeleteMapping("/{clientId}/consent")
+    public ResponseEntity<Void> revokeConsent(@PathVariable UUID clientId,
+                                              Authentication authentication,
+                                              HttpServletRequest request) {
+        clientService.revokeConsent(clientId, SecurityUtils.currentUserId(authentication));
+        accessAuditService.record(authentication, AuditAction.CONSENT_REVOKE, clientId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{clientId}/personal-data-export")
+    public ResponseEntity<PersonalDataExportResponse> exportPersonalData(@PathVariable UUID clientId,
+                                                                         Authentication authentication,
+                                                                         HttpServletRequest request) {
+        PersonalDataExportResponse export = clientService.exportPersonalData(clientId, SecurityUtils.currentUserId(authentication));
+        accessAuditService.record(authentication, AuditAction.PERSONAL_DATA_EXPORT, clientId, request);
+        return ResponseEntity.ok(export);
     }
 
     @DeleteMapping("/{clientId}")

@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.model.entity;
 
 import com.pravoos.ai.shared.model.enums.ClientType;
+import com.pravoos.ai.shared.security.PiiStringConverter;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -18,22 +19,26 @@ public class Client {
     @Column(nullable = false)
     private UUID lawyerId;
 
-    @Column(nullable = false, length = 300)
+    @Convert(converter = PiiStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ClientType type;
 
-    @Column(length = 20)
+    @Convert(converter = PiiStringConverter.class)
+    @Column(columnDefinition = "TEXT")
     private String phone;
 
-    @Column(length = 255)
+    @Convert(converter = PiiStringConverter.class)
+    @Column(columnDefinition = "TEXT")
     private String email;
 
     @Column(length = 12)
     private String inn;
 
+    @Convert(converter = PiiStringConverter.class)
     @Column(columnDefinition = "TEXT")
     private String notes;
 
