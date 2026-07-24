@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.internal.dto.ReviewCitation;
 import com.pravoos.ai.core.internal.model.entity.TabularReviewCell;
 import com.pravoos.ai.document.api.DocumentChunkMatch;
+import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
@@ -18,6 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,9 +29,9 @@ import org.springframework.stereotype.Service;
 public class TabularReviewDocumentProcessor {
 
   private static final Logger log = LoggerFactory.getLogger(TabularReviewDocumentProcessor.class);
-  private static final String USER_MESSAGE =
-      "Ответь на все вопросы по переданному документу и верни результат строго в JSON по заданной схеме.";
   private static final String NOT_FOUND_ANSWER = "Не найдено в документе";
+  private static final Pattern CODE_FENCE =
+      Pattern.compile("```(?:json)?\\s*(.*?)```", Pattern.DOTALL);
 
   private final DocumentRetrieval documentRetrieval;
   private final TabularReviewPrompt reviewPrompt;
@@ -58,9 +61,10 @@ public class TabularReviewDocumentProcessor {
   public boolean process(
       UUID reviewId, UUID documentId, String documentTitle, List<String> questions, UUID lawyerId) {
     try {
+      llmQuotaService.assertWithinQuota(lawyerId);
       reviewWriter.markDocumentRunning(reviewId, documentId);
 
-      List<Fragment> fragments = retrieveFragments(documentId, questions);
+      List<Fragment> fragments = retrieveFragments(documentId, questions, lawyerId);
       List<TabularReviewCell> cells =
           fragments.isEmpty()
               ? emptyCells(reviewId, documentId, questions)
@@ -75,29 +79,25 @@ public class TabularReviewDocumentProcessor {
     }
   }
 
-  private List<Fragment> retrieveFragments(UUID documentId, List<String> questions) {
-    Map<UUID, Fragment> byChunk = new LinkedHashMap<>();
-    for (String question : questions) {
-      List<DocumentChunkMatch> matches =
-          documentRetrieval.retrieveInDocument(question, properties.topKPerQuestion(), documentId);
-      for (DocumentChunkMatch match : matches) {
-        byChunk.merge(
-            match.chunkId(),
-            new Fragment(match.chunkIndex(), match.content(), match.score()),
-            (existing, candidate) -> existing.score() >= candidate.score() ? existing : candidate);
-      }
-    }
+  private List<Fragment> retrieveFragments(UUID documentId, List<String> questions, UUID lawyerId) {
+    DocumentChunkMatches retrieved =
+        documentRetrieval.retrieveInDocument(questions, properties.topKPerQuestion(), documentId);
+    llmQuotaService.recordTokenUsage(lawyerId, retrieved.embeddingTokens());
 
-    List<Fragment> ordered = new ArrayList<>(byChunk.values());
-    ordered.sort(Comparator.comparingInt(Fragment::chunkIndex));
-    return budget(ordered);
+    List<Fragment> fragments = new ArrayList<>();
+    for (DocumentChunkMatch match : retrieved.matches()) {
+      fragments.add(new Fragment(match.chunkIndex(), match.content(), match.score()));
+    }
+    return budget(fragments);
   }
 
   private List<Fragment> budget(List<Fragment> fragments) {
     int limit = properties.contextMaxChars();
     if (limit <= 0) {
+      fragments.sort(Comparator.comparingInt(Fragment::chunkIndex));
       return fragments;
     }
+    fragments.sort(Comparator.comparingDouble(Fragment::score).reversed());
     List<Fragment> kept = new ArrayList<>();
     int used = 0;
     for (Fragment fragment : fragments) {
@@ -108,6 +108,7 @@ public class TabularReviewDocumentProcessor {
       kept.add(fragment);
       used += length;
     }
+    kept.sort(Comparator.comparingInt(Fragment::chunkIndex));
     return kept;
   }
 
@@ -118,12 +119,12 @@ public class TabularReviewDocumentProcessor {
       List<String> questions,
       List<Fragment> fragments,
       UUID lawyerId) {
-    String systemPrompt =
-        reviewPrompt.buildSystemPrompt(
+    String userMessage =
+        reviewPrompt.buildUserMessage(
             documentTitle, fragments.stream().map(Fragment::content).toList(), questions);
 
-    llmQuotaService.assertWithinQuota(lawyerId);
-    LlmResult completion = llmClient.complete(systemPrompt, List.of(), USER_MESSAGE);
+    LlmResult completion =
+        llmClient.complete(reviewPrompt.buildSystemPrompt(), List.of(), userMessage);
     llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
     log.info(
         "Tabular review {} document {} tokens: total={}",
@@ -249,15 +250,54 @@ public class TabularReviewDocumentProcessor {
   }
 
   private String extractJson(String content) {
-    if (content == null) {
+    if (content == null || content.isBlank()) {
       throw new TabularReviewFailedException("Пустой ответ модели при разборе документа");
     }
-    int start = content.indexOf('{');
-    int end = content.lastIndexOf('}');
-    if (start < 0 || end <= start) {
+    String fenced = unwrapCodeFence(content);
+    String json = balancedObject(fenced != null ? fenced : content);
+    if (json == null && fenced != null) {
+      json = balancedObject(content);
+    }
+    if (json == null) {
       throw new TabularReviewFailedException("Модель вернула ответ без JSON");
     }
-    return content.substring(start, end + 1);
+    return json;
+  }
+
+  private String unwrapCodeFence(String content) {
+    Matcher matcher = CODE_FENCE.matcher(content);
+    return matcher.find() ? matcher.group(1) : null;
+  }
+
+  private String balancedObject(String content) {
+    int start = content.indexOf('{');
+    if (start < 0) {
+      return null;
+    }
+    int depth = 0;
+    boolean inString = false;
+    boolean escaped = false;
+    for (int index = start; index < content.length(); index++) {
+      char current = content.charAt(index);
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (current == '\\') {
+          escaped = true;
+        } else if (current == '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (current == '"') {
+        inString = true;
+      } else if (current == '{') {
+        depth++;
+      } else if (current == '}' && --depth == 0) {
+        return content.substring(start, index + 1);
+      }
+    }
+    return null;
   }
 
   private String truncate(String value, int max) {

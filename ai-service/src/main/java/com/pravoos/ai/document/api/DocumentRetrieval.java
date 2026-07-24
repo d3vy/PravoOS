@@ -9,5 +9,5 @@ public interface DocumentRetrieval {
 
   List<RetrievedChunk> retrieveForCase(String query, int topK, UUID caseId);
 
-  List<DocumentChunkMatch> retrieveInDocument(String query, int topK, UUID documentId);
+  DocumentChunkMatches retrieveInDocument(List<String> queries, int topK, UUID documentId);
 }

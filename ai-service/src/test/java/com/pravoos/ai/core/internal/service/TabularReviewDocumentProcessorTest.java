@@ -3,6 +3,7 @@ package com.pravoos.ai.core.internal.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.internal.model.entity.TabularReviewCell;
 import com.pravoos.ai.document.api.DocumentChunkMatch;
+import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
@@ -71,6 +73,7 @@ class TabularReviewDocumentProcessorTest {
 
     assertThat(process()).isTrue();
 
+    verify(llmQuotaService).recordTokenUsage(LAWYER_ID, 128L);
     List<TabularReviewCell> cells = savedCells();
     assertThat(cells).hasSize(2);
     assertThat(cells.get(0).getConfidence()).isEqualTo(ReviewAnswerConfidence.HIGH);
@@ -84,6 +87,24 @@ class TabularReviewDocumentProcessorTest {
     assertThat(cells.get(1).getCitations())
         .singleElement()
         .satisfies(citation -> assertThat(citation.chunkIndex()).isEqualTo(11));
+  }
+
+  @Test
+  void sendsDocumentContentInUserMessageNotSystemPrompt() {
+    stubRetrieval(
+        new DocumentChunkMatch(UUID.randomUUID(), 4, "Стороны: ООО «Альфа» и ИП Петров", 0.9));
+    stubCompletion(
+        """
+                {"answers":[{"question":1,"answer":"Ответ","confidence":"HIGH","sources":[1]}]}""");
+
+    process();
+
+    ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> userMessage = ArgumentCaptor.forClass(String.class);
+    verify(llmClient).complete(systemPrompt.capture(), any(), userMessage.capture());
+    assertThat(systemPrompt.getValue()).doesNotContain("ООО «Альфа»", "Договор поставки");
+    assertThat(userMessage.getValue())
+        .contains("ООО «Альфа»", "Договор поставки", "Стороны договора");
   }
 
   @Test
@@ -118,8 +139,8 @@ class TabularReviewDocumentProcessorTest {
 
   @Test
   void skipsLlmCallWhenNothingRetrieved() {
-    when(documentRetrieval.retrieveInDocument(anyString(), anyInt(), eq(DOCUMENT_ID)))
-        .thenReturn(List.of());
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(DOCUMENT_ID)))
+        .thenReturn(DocumentChunkMatches.empty());
 
     assertThat(process()).isTrue();
 
@@ -130,18 +151,36 @@ class TabularReviewDocumentProcessorTest {
   }
 
   @Test
-  void exceededQuotaFailsDocumentBeforeCallingModel() {
-    stubRetrieval(new DocumentChunkMatch(UUID.randomUUID(), 1, "Текст", 0.5));
+  void exceededQuotaFailsDocumentBeforeSpendingRetrieval() {
     org.mockito.Mockito.doThrow(new com.pravoos.ai.shared.exception.LlmQuotaExceededException())
         .when(llmQuotaService)
         .assertWithinQuota(LAWYER_ID);
 
     assertThat(process()).isFalse();
 
+    verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any());
     verify(llmClient, never()).complete(anyString(), any(), anyString());
     verify(llmQuotaService, never()).recordUsage(any(), anyLong());
     verify(reviewWriter).markDocumentFailed(eq(REVIEW_ID), eq(DOCUMENT_ID), anyString());
     verify(reviewWriter, never()).saveDocumentResult(any(), any(), any());
+  }
+
+  @Test
+  void extractsJsonWrappedInCodeFenceWithSurroundingProse() {
+    stubRetrieval(new DocumentChunkMatch(UUID.randomUUID(), 3, "Текст {черновой}", 0.7));
+    stubCompletion(
+        """
+                Готово. Вот результат (формат {answers}):
+                ```json
+                {"answers":[{"question":1,"answer":"Итог","confidence":"HIGH","sources":[1]}]}
+                ```
+                Спасибо! {конец}""");
+
+    assertThat(process()).isTrue();
+
+    List<TabularReviewCell> cells = savedCells();
+    assertThat(cells.get(0).getAnswer()).isEqualTo("Итог");
+    assertThat(cells.get(0).getConfidence()).isEqualTo(ReviewAnswerConfidence.HIGH);
   }
 
   @Test
@@ -160,8 +199,8 @@ class TabularReviewDocumentProcessorTest {
   }
 
   private void stubRetrieval(DocumentChunkMatch... matches) {
-    when(documentRetrieval.retrieveInDocument(anyString(), anyInt(), eq(DOCUMENT_ID)))
-        .thenReturn(List.of(matches));
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(DOCUMENT_ID)))
+        .thenReturn(new DocumentChunkMatches(List.of(matches), 128L));
   }
 
   private void stubCompletion(String content) {

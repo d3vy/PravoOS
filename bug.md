@@ -36,34 +36,43 @@
 - Идемпотентно: строки, уже зашифрованные активным ключом (`isEncryptedWithActiveKey`), пропускаются; plaintext и `pii1:`/старый ключ → `encrypt(decrypt(...))` активным ключом. Т.е. заодно завершает ротацию из #3.
 - Пропускается, если шифрование выключено (нет ключа). Транзакция через self-invocation (`@Lazy self`), как в `LawyerDataCleanupService`.
 
-### 5. [MED] INN не шифруется
-`Client.java:38-39` — `inn` оставлен открытым, хотя для ИП/физлиц это персональные данные того же уровня, что имя/телефон. Непоследовательное покрытие PII.
+### 5. [MED] INN не шифруется — ✅ ИСПРАВЛЕНО
+`Client.java` — `inn` оставлен открытым, хотя для ИП/физлиц это персональные данные того же уровня, что имя/телефон.
+**Решение:** `inn` помечен `@Convert(PiiStringConverter)`, колонка → TEXT (миграция `V40__clients_inn_pii_encryption.sql`). `ClientPiiBackfillService` дошифровывает `inn` наравне с name/phone/email/notes. INN нигде не участвует в `WHERE`/поиске (только чтение/экспорт) — регрессии поиска нет.
 
-### 6. [LOW] Гонка инициализации холдера
-`PiiCryptoHolder` + JPA-конвертер: если любая сущность `Client` грузится до `@PostConstruct register()` (Flyway-callback, `@PostConstruct` другого бина, прогрев кэша) → `IllegalStateException: PiiEncryptor is not initialized`. Лучше лениво резолвить бин из контекста.
+### 6. [LOW] Гонка инициализации холдера — ✅ ИСПРАВЛЕНО
+`PiiCryptoHolder` + JPA-конвертер: если любая сущность `Client` грузилась до `@PostConstruct register()` → `IllegalStateException`.
+**Решение:** `PiiCryptoHolder` реализует `ApplicationContextAware` и резолвит `PiiEncryptor` лениво через `getBean` (с кэшированием), `@PostConstruct register()` в `PiiEncryptor` удалён. `getBean` форсирует создание бина по требованию — окно гонки сжато до захвата ссылки на контекст.
 
 ## RAG / табличный разбор
 
-### 7. [MED] Квота LLM проверяется один раз на весь разбор
-`TabularReviewService.create():70` вызывает `assertWithinQuota` единожды, а `TabularReviewRunner` затем гоняет до 15 документов × запрос к LLM, списывая токены пост-фактум. Один разбор пробивает лимит насквозь. Нужна проверка квоты перед каждым документом внутри процессора.
+### 7. [MED] Квота LLM проверяется один раз на весь разбор — ✅ ИСПРАВЛЕНО
+`TabularReviewService.create()` проверял квоту единожды, а раннер гонял до 15 документов.
+**Решение:** `assertWithinQuota(lawyerId)` вызывается в начале `process()` для каждого документа — до ретривала (эмбеддинги №9 тоже не тратятся при исчерпанной квоте) и до LLM-запроса. Превышение → документ помечается FAILED, `recordUsage`/`complete` не вызываются. Тест `exceededQuotaFailsDocumentBeforeSpendingRetrieval`.
 
-### 8. [MED] `budget()` отбрасывает самые релевантные фрагменты
-`TabularReviewDocumentProcessor.java:89-91` сортирует фрагменты по `chunkIndex` (порядок в документе), затем режет по `contextMaxChars`, сохраняя первые. Высокорелевантные чанки (высокий score), стоящие ближе к концу документа, выкидываются. Обрезать надо по score, а по chunkIndex — только упорядочивать уже отобранное.
+### 8. [MED] `budget()` отбрасывает самые релевантные фрагменты — ✅ ИСПРАВЛЕНО
+`budget()` сортировал по `chunkIndex` и резал первые, выкидывая высокорелевантные чанки из конца документа.
+**Решение:** сначала сортировка по `score` (убыв.) и обрезка по `contextMaxChars`, затем отобранное упорядочивается по `chunkIndex` (для читаемого контекста и стабильной нумерации цитат).
 
-### 9. [MED] N запросов ретривала на разбор
-`retrieveFragments():79-81` вызывает `retrieveInDocument` отдельно на каждый вопрос → вопросов×документов эмбеддинг-поисков (до 8×15=120), причём токены эмбеддингов в квоту не пишутся (`recordUsage` только за completion). Стоимость/латентность недооценены.
+### 9. [MED] N запросов ретривала на разбор — ✅ ИСПРАВЛЕНО
+`retrieveInDocument` вызывался отдельно на каждый вопрос, токены эмбеддингов не учитывались.
+**Решение:** сигнатура → `retrieveInDocument(List<queries>, topK, documentId)`, возвращает `DocumentChunkMatches(matches, embeddingTokens)`. Один батч-эмбеддинг всех вопросов (`EmbeddingService.embedBatch`), поиск переиспользует готовый вектор (`HybridSearchService.search(query, embedding, …)`), дедуп чанков по максимальному score. Эмбеддинг-токены пишутся в квоту (`recordTokenUsage`). Пустые/бланк-вопросы отфильтровываются.
 
-### 10. [LOW] Наивный `extractJson`
-`TabularReviewDocumentProcessor.java:217-222` берёт первую `{` и последнюю `}`. Любой префикс/суффикс модели с фигурными скобками захватит мусорный диапазон → `TabularReviewFailedException`. Лучше парсить с fallback по code-fence.
+### 10. [LOW] Наивный `extractJson` — ✅ ИСПРАВЛЕНО
+Первая `{` / последняя `}` захватывали мусорный диапазон при обрамляющей прозе со скобками.
+**Решение:** сначала распаковка code-fence ```` ```json ```` (regex, DOTALL), затем скан первого сбалансированного `{…}`-объекта с учётом строковых литералов и экранирования (`balancedObject`); fallback на весь ответ, если во фрагменте фенса объекта нет. Тест `extractsJsonWrappedInCodeFenceWithSurroundingProse`.
 
-### 11. [LOW] `filledCells` вводит в заблуждение
-`TabularReviewDto.java:37` считает `cells.size()`, но `NOT_FOUND`-ячейки тоже сохраняются как cells → прогресс-бар покажет «заполнено», хотя ответов нет. Для FAILED-документов ячейки не создаются вовсе → `filledCells < totalCells` навсегда, даже у завершённого PARTIAL-разбора прогресс не дойдёт до 100%.
+### 11. [LOW] `filledCells` вводит в заблуждение — ✅ ИСПРАВЛЕНО
+`TabularReviewDto.java` считал `cells.size()`, но `NOT_FOUND`-ячейки тоже сохраняются как cells → прогресс-бар «заполнено», хотя ответов нет; для FAILED-документов ячеек нет вовсе.
+**Решение:** `filledCells` считает только реально отвеченные ячейки (`confidence != NOT_FOUND`) — честная метрика покрытия. NOT_FOUND и провалившиеся документы дают 0 и не раздувают счётчик; `totalCells` остаётся `documentCount*questionCount`. Тесты: `TabularReviewDtoTest` (отвеченные vs NOT_FOUND, все документы упали → 0).
 
-### 12. [LOW] Тихая деградация confidence
-`ReviewAnswerConfidence.fromString():default -> LOW` — неизвестное значение («CERTAIN», «Unknown») молча становится LOW. Стоит хотя бы логировать неожиданные значения.
+### 12. [LOW] Тихая деградация confidence — ✅ ИСПРАВЛЕНО
+`ReviewAnswerConfidence.fromString():default -> LOW` глотал неизвестное значение («CERTAIN», «Unknown»).
+**Решение:** явная ветка `LOW`/`НИЗКАЯ`, а неизвестный вход логируется `log.warn` перед fallback на LOW. Тест: `ReviewAnswerConfidenceTest`.
 
-### 13. [LOW] Данные документа в system-роли
-`TabularReviewPrompt.SYSTEM_PROMPT` вставляет содержимое документа прямо в системный промпт (`answerCells():117` — `complete(systemPrompt, List.of(), USER_MESSAGE)`). Фенсы есть, но помещать недоверенный текст в system, а не в user-сообщение, ослабляет защиту от prompt injection.
+### 13. [LOW] Данные документа в system-роли — ✅ ИСПРАВЛЕНО
+`TabularReviewPrompt.SYSTEM_PROMPT` вставлял содержимое документа прямо в системный промпт.
+**Решение:** промпт разделён — `buildSystemPrompt()` содержит только инструкции и JSON-схему; `buildUserMessage(title, fragments, questions)` собирает недоверенный контент документа (с фенсами и sanitize) и уходит user-ролью в `complete(system, [], userMessage)`. Тест: `sendsDocumentContentInUserMessageNotSystemPrompt` — контент в user, не в system.
 
 ## Тайм-трекинг / новые фичи
 
@@ -94,6 +103,42 @@
 
 ---
 
-## Приоритеты
-- **Срочно:** №1 (поиск по клиенту сломан сейчас), №2–4 (шифрование PII не защищает старые данные и хрупко к ротации ключа), №7 (обход квоты LLM), №14–15 (таймер копит небиллируемое время).
-- **Крупный блок под отдельную ветку:** PII-шифрование целиком — blind index для поиска + backfill-миграция + key-id в маркер.
+## План: осталось 12 пунктов (7–13, 16–20) — 3 сессии
+
+Готово: №1–6 (PII), №14–15 (таймер). Ниже — оставшееся, по модулям, чтобы каждая
+сессия шла с `/clear` и минимальным набором файлов.
+
+### Сессия A — RAG-ядро: ретривал + квота (№7, 8, 9, 10)
+Один слой (`ai-service`, табличный разбор), пункты связаны по коду.
+- **№9 [MED] + №8 [MED] — уже в работе (незакоммичено):** батч-ретривал
+  `retrieveInDocument(List<queries>)` + учёт эмбеддинг-токенов в квоту; `budget()` режет
+  по `score`, упорядочивает по `chunkIndex`. Доделать: обновить/дописать тесты
+  (`TabularReviewDocumentProcessorTest`, ретривал), прогнать `spotless:check` + `mvn verify`.
+- **№7 [MED] — обход квоты:** `assertWithinQuota` вызывается один раз на весь разбор, а
+  прогоняется до 15 документов. Проверять квоту перед каждым документом внутри процессора.
+- **№10 [LOW] — наивный `extractJson`:** первая `{` / последняя `}` ловит мусор. Fallback по
+  code-fence ```` ```json ````, затем баланс скобок.
+Файлы: `TabularReviewDocumentProcessor`, `DocumentRetrieval(Impl)`, `HybridSearchService`,
+`TabularReviewRunner/Service` (квота), их тесты.
+
+### Сессия B — RAG-качество: прогресс, confidence, prompt-injection (№11, 12, 13)
+- **№11 [LOW] — `filledCells` врёт:** `cells.size()` включает `NOT_FOUND`; FAILED-документы
+  ячеек не создают → 100% недостижим. Считать по реально отвеченным / завести знаменатель
+  корректно для PARTIAL.
+- **№12 [LOW] — тихая деградация confidence:** `fromString():default -> LOW` глотает
+  неизвестные значения. Логировать неожиданный вход.
+- **№13 [LOW] — данные документа в system-роли:** контент документа уходит в системный
+  промпт. Перенести недоверенный текст в user-сообщение (`complete`).
+Файлы: `TabularReviewDto`, `ReviewAnswerConfidence`, `TabularReviewPrompt`,
+`TabularReviewDocumentProcessor`, их тесты.
+
+### Сессия C — Frontend + SavedView (№16, 17, 18, 19, 20)
+Мелкие независимые правки на стыке FE и `SavedViewService`.
+- **№16 [LOW]:** `DataTable.tsx` — пустые значения всегда вниз независимо от `asc/desc`.
+- **№17 [LOW]:** `useHotkeys.ts` — `n` ограничить страницей списка дел; индикация `g`-префикса.
+- **№18 [LOW]:** `SavedViewService.create()` — ловить нарушение uq-констрейнта →
+  `SavedViewNameTakenException` (409) вместо 500.
+- **№19 [LOW]:** шаринг у мультиorg-юриста — валидировать `orgId` на уровне DTO при
+  `sharedWithTeam=true`.
+- **№20 [LOW]:** `SavedViewService.update()` — дублирующий guard длины имени (trim + обрезка).
+Файлы: `DataTable.tsx`, `useHotkeys.ts`, `SavedViewService`, DTO SavedView, их тесты.

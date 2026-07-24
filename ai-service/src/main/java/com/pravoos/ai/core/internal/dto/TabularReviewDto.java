@@ -3,6 +3,7 @@ package com.pravoos.ai.core.internal.dto;
 import com.pravoos.ai.core.internal.model.entity.TabularReview;
 import com.pravoos.ai.core.internal.model.entity.TabularReviewCell;
 import com.pravoos.ai.core.internal.model.entity.TabularReviewDocument;
+import com.pravoos.ai.shared.model.enums.ReviewAnswerConfidence;
 import com.pravoos.ai.shared.model.enums.TabularReviewStatus;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +25,11 @@ public record TabularReviewDto(
 
   public static TabularReviewDto from(
       TabularReview review, List<TabularReviewDocument> documents, List<TabularReviewCell> cells) {
+    int answeredCells =
+        (int)
+            cells.stream()
+                .filter(cell -> cell.getConfidence() != ReviewAnswerConfidence.NOT_FOUND)
+                .count();
     return new TabularReviewDto(
         review.getId(),
         review.getCaseId(),
@@ -32,7 +38,7 @@ public record TabularReviewDto(
         review.getQuestions(),
         documents.stream().map(TabularReviewDocumentDto::from).toList(),
         cells.stream().map(TabularReviewCellDto::from).toList(),
-        cells.size(),
+        answeredCells,
         review.getDocumentCount() * review.getQuestionCount(),
         review.getErrorMessage(),
         review.getCreatedAt(),

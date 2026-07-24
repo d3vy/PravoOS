@@ -40,10 +40,18 @@ public class HybridSearchService {
     if (query == null || query.isBlank() || topK <= 0) {
       return List.of();
     }
+    return search(query, embeddingService.embed(query), topK, scope);
+  }
+
+  public List<ChunkCandidate> search(
+      String query, float[] queryEmbedding, int topK, ChunkSearchScope scope) {
+    if (query == null || query.isBlank() || queryEmbedding == null || topK <= 0) {
+      return List.of();
+    }
 
     int candidateLimit = properties.candidateLimit(topK);
     List<ChunkCandidate> vectorCandidates =
-        vectorSearchRepository.search(embeddingService.embed(query), candidateLimit, scope);
+        vectorSearchRepository.search(queryEmbedding, candidateLimit, scope);
     List<ChunkCandidate> lexicalCandidates = lexicalCandidates(query, candidateLimit, scope);
 
     List<ChunkCandidate> fused =

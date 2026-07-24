@@ -1,12 +1,17 @@
 package com.pravoos.ai.document.internal;
 
 import com.pravoos.ai.document.api.DocumentChunkMatch;
+import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.RetrievedChunk;
 import com.pravoos.ai.document.internal.search.ChunkCandidate;
 import com.pravoos.ai.document.internal.search.ChunkSearchScope;
 import com.pravoos.ai.document.internal.search.HybridSearchService;
+import com.pravoos.ai.document.internal.service.EmbeddingService;
+import com.pravoos.ai.llm.api.EmbeddingResult;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +19,12 @@ import org.springframework.stereotype.Service;
 class DocumentRetrievalImpl implements DocumentRetrieval {
 
   private final HybridSearchService hybridSearchService;
+  private final EmbeddingService embeddingService;
 
-  DocumentRetrievalImpl(HybridSearchService hybridSearchService) {
+  DocumentRetrievalImpl(
+      HybridSearchService hybridSearchService, EmbeddingService embeddingService) {
     this.hybridSearchService = hybridSearchService;
+    this.embeddingService = embeddingService;
   }
 
   @Override
@@ -32,18 +40,36 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
   }
 
   @Override
-  public List<DocumentChunkMatch> retrieveInDocument(String query, int topK, UUID documentId) {
-    return hybridSearchService
-        .search(query, topK, ChunkSearchScope.forDocument(documentId))
-        .stream()
-        .map(
-            candidate ->
-                new DocumentChunkMatch(
-                    candidate.chunkId(),
-                    candidate.chunkIndex(),
-                    candidate.content(),
-                    candidate.score()))
-        .toList();
+  public DocumentChunkMatches retrieveInDocument(List<String> queries, int topK, UUID documentId) {
+    if (queries == null || topK <= 0) {
+      return DocumentChunkMatches.empty();
+    }
+    List<String> effectiveQueries =
+        queries.stream().filter(query -> query != null && !query.isBlank()).toList();
+    if (effectiveQueries.isEmpty()) {
+      return DocumentChunkMatches.empty();
+    }
+
+    EmbeddingResult embedded = embeddingService.embedBatch(effectiveQueries);
+    ChunkSearchScope scope = ChunkSearchScope.forDocument(documentId);
+    Map<UUID, DocumentChunkMatch> bestByChunk = new LinkedHashMap<>();
+    for (int index = 0; index < effectiveQueries.size(); index++) {
+      List<ChunkCandidate> candidates =
+          hybridSearchService.search(
+              effectiveQueries.get(index), embedded.embeddings().get(index), topK, scope);
+      for (ChunkCandidate candidate : candidates) {
+        bestByChunk.merge(
+            candidate.chunkId(),
+            toMatch(candidate),
+            (existing, incoming) -> existing.score() >= incoming.score() ? existing : incoming);
+      }
+    }
+    return new DocumentChunkMatches(List.copyOf(bestByChunk.values()), embedded.totalTokens());
+  }
+
+  private DocumentChunkMatch toMatch(ChunkCandidate candidate) {
+    return new DocumentChunkMatch(
+        candidate.chunkId(), candidate.chunkIndex(), candidate.content(), candidate.score());
   }
 
   private List<RetrievedChunk> toRetrievedChunks(List<ChunkCandidate> candidates) {
