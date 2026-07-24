@@ -1,0 +1,4 @@
+# Массовое переформатирование в Google style (Spotless / google-java-format), 2026-07-24.
+# git blame игнорирует эти коммиты. Включить локально:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+de64d06ad7fc32adca3a4987608fbea8b7732a2e
