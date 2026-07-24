@@ -200,6 +200,7 @@ const ru = {
     selectOrgFirst: 'Чтобы поделиться видом, выберите организацию в фильтре.',
   },
   common: {
+    skipToContent: 'Перейти к содержимому',
     save: 'Сохранить',
     cancel: 'Отмена',
     delete: 'Удалить',
@@ -293,6 +294,8 @@ const ru = {
     newClient: 'Новый клиент',
     askAi: 'Задать вопрос AI',
     commandPalette: 'Открыть командную палитру',
+    more: 'Ещё',
+    mobileTabBar: 'Основная навигация',
   },
   admin: {
     applications: 'Заявки',

@@ -5,6 +5,7 @@ import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { LanguageSwitcher } from '../ui/LanguageSwitcher'
+import { SkipLink } from '../ui/SkipLink'
 import { authApi } from '../../api/auth'
 import { useTranslation } from 'react-i18next'
 
@@ -27,6 +28,7 @@ export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
+      <SkipLink />
       <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
         <Link to="/portal" className="hover:opacity-80 transition-opacity">
           <Logo />
@@ -45,7 +47,7 @@ export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 focus:outline-none">{children}</main>
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Modal } from '../../components/ui/Modal'
 import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
 import { TableToolbar } from '../../components/ui/TableToolbar'
 import { useDensity } from '../../hooks/useDensity'
@@ -201,28 +202,27 @@ export default function UsersPage(): JSX.Element {
 
       <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={setPage} />
 
-      <AnimatePresence>
-        {confirmOpen && (
-          <ConfirmDeleteModal
-            count={selectedCount}
-            names={selectedNames}
-            loading={deleteMutation.isPending}
-            onCancel={() => setConfirmOpen(false)}
-            onConfirm={() => deleteMutation.mutate([...selectedIds])}
-          />
-        )}
-      </AnimatePresence>
+      <ConfirmDeleteModal
+        open={confirmOpen}
+        count={selectedCount}
+        names={selectedNames}
+        loading={deleteMutation.isPending}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => deleteMutation.mutate([...selectedIds])}
+      />
     </div>
   )
 }
 
 function ConfirmDeleteModal({
+  open,
   count,
   names,
   loading,
   onCancel,
   onConfirm,
 }: {
+  open: boolean
   count: number
   names: string[]
   loading: boolean
@@ -231,43 +231,30 @@ function ConfirmDeleteModal({
 }): JSX.Element {
   const { t } = useTranslation()
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onCancel}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 8 }}
-        transition={{ duration: 0.15 }}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-line bg-bg p-6 shadow-xl"
-      >
-        <h2 className="text-lg font-semibold text-fg mb-2">
-          {count === 1 ? t('adminUsers.confirmTitleOne') : t('adminUsers.confirmTitleMany', { count })}
-        </h2>
-        <ul className="mb-4 max-h-40 overflow-y-auto rounded-lg border border-line divide-y divide-line text-sm">
-          {names.map((name, i) => (
-            <li key={`${name}-${i}`} className="px-3 py-2 text-fg truncate">
-              {name}
-            </li>
-          ))}
-        </ul>
-        <p className="text-sm text-fg-muted mb-6">
-          {t('adminUsers.confirmWarning')}
-        </p>
-        <div className="flex justify-end gap-2">
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={count === 1 ? t('adminUsers.confirmTitleOne') : t('adminUsers.confirmTitleMany', { count })}
+      size="sm"
+      footer={
+        <>
           <Button variant="secondary" size="sm" onClick={onCancel} disabled={loading}>
             {t('adminUsers.cancel')}
           </Button>
           <Button variant="danger" size="sm" loading={loading} onClick={onConfirm}>
             {t('adminUsers.delete')}
           </Button>
-        </div>
-      </motion.div>
-    </motion.div>
+        </>
+      }
+    >
+      <ul className="mb-4 max-h-40 overflow-y-auto rounded-lg border border-line divide-y divide-line text-sm">
+        {names.map((name, i) => (
+          <li key={`${name}-${i}`} className="px-3 py-2 text-fg truncate">
+            {name}
+          </li>
+        ))}
+      </ul>
+      <p className="text-sm text-fg-muted">{t('adminUsers.confirmWarning')}</p>
+    </Modal>
   )
 }

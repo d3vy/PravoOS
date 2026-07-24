@@ -195,6 +195,7 @@ const en = {
     selectOrgFirst: 'Pick an organization in the filter to share this view.',
   },
   common: {
+    skipToContent: 'Skip to content',
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',
@@ -288,6 +289,8 @@ const en = {
     newClient: 'New client',
     askAi: 'Ask AI',
     commandPalette: 'Open command palette',
+    more: 'More',
+    mobileTabBar: 'Primary navigation',
   },
   admin: {
     applications: 'Applications',

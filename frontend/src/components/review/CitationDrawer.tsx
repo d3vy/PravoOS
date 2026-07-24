@@ -26,9 +26,16 @@ export function CitationDrawer({
 }: CitationDrawerProps): JSX.Element | null {
   const { t } = useTranslation()
   const panelRef = useRef<HTMLDivElement>(null)
+  const previouslyFocused = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!cell) return undefined
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null
+    const focusTimer = setTimeout(() => {
+      panelRef.current?.querySelector<HTMLElement>('button')?.focus()
+    }, 30)
+
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -36,7 +43,11 @@ export function CitationDrawer({
       }
     }
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      clearTimeout(focusTimer)
+      document.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused.current?.focus()
+    }
   }, [cell, onClose])
 
   if (typeof document === 'undefined') return null

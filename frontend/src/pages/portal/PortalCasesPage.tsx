@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { PortalLayout } from '../../components/layout/PortalLayout'
 import { CaseStatusBadge } from '../../components/ui/Badge'
 import { Spinner } from '../../components/ui/Spinner'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { portalApi } from '../../api/portal'
 import i18n from '../../i18n'
 import type { PortalCaseResponse } from '../../types'
@@ -37,9 +38,7 @@ export default function PortalCasesPage(): JSX.Element {
       )}
 
       {!isLoading && !isError && cases.length === 0 && (
-        <div className="card-elevated rounded-xl p-10 text-center text-fg-muted">
-          {t('portalCases.empty')}
-        </div>
+        <EmptyState description={t('portalCases.empty')} />
       )}
 
       {!isLoading && !isError && cases.length > 0 && (

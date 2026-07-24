@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { NavTabs } from '../ui/NavTabs'
 import type { NavTabItem } from '../ui/NavTabs'
 import { Navbar } from './Navbar'
+import { SkipLink } from '../ui/SkipLink'
 
 const GRAFANA_URL = '/grafana/'
 
@@ -17,6 +18,7 @@ export function AdminLayout(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-bg">
+      <SkipLink />
       <Navbar />
 
       {/* Mobile section nav */}
@@ -50,7 +52,7 @@ export function AdminLayout(): JSX.Element {
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-auto">
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-auto focus:outline-none">
           <Outlet />
         </main>
       </div>

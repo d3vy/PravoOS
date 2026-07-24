@@ -7,18 +7,13 @@ import { useShortcutsDialogStore } from '../../store/shortcutsDialogStore'
 import { authApi } from '../../api/auth'
 import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
-import { NavTabs } from '../ui/NavTabs'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { LanguageSwitcher } from '../ui/LanguageSwitcher'
 import { GlobalTimer } from '../time/GlobalTimer'
-import { useLawyerAccountLinks, useLawyerNavSections } from './lawyerNav'
-
-const LAWYER_MOBILE_NAV_INDICATOR_ID = 'lawyer-mobile-nav-indicator'
+import { useLawyerAccountLinks } from './lawyerNav'
 
 export function Navbar(): JSX.Element {
   const { t } = useTranslation()
-  const lawyerNavSections = useLawyerNavSections()
-  const lawyerAccountLinks = useLawyerAccountLinks()
   const { user, clearAuth, isAuthenticated, effectiveRole } = useAuthStore()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -94,15 +89,17 @@ export function Navbar(): JSX.Element {
                     <UserMenu email={user?.email ?? ''} onLogout={() => void handleLogout()} />
                   </div>
                 )}
-                <button
-                  type="button"
-                  aria-label={t('nav.menu')}
-                  aria-expanded={mobileMenuOpen}
-                  onClick={() => setMobileMenuOpen((open) => !open)}
-                  className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-fg-muted hover:text-fg hover:bg-surface transition-colors"
-                >
-                  <HamburgerIcon open={mobileMenuOpen} />
-                </button>
+                {role !== 'LAWYER' && (
+                  <button
+                    type="button"
+                    aria-label={t('nav.menu')}
+                    aria-expanded={mobileMenuOpen}
+                    onClick={() => setMobileMenuOpen((open) => !open)}
+                    className="md:hidden flex items-center justify-center w-11 h-11 rounded-lg text-fg-muted hover:text-fg hover:bg-surface transition-colors"
+                  >
+                    <HamburgerIcon open={mobileMenuOpen} />
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -122,58 +119,21 @@ export function Navbar(): JSX.Element {
         </nav>
       </div>
 
-      {authenticated && mobileMenuOpen && (
+      {authenticated && role !== 'LAWYER' && mobileMenuOpen && (
         <div className="md:hidden border-t border-line bg-bg/95 backdrop-blur-md">
           <div className="page-container py-3 flex flex-col gap-1">
-            {role === 'LAWYER' && (
-              <>
-                <div className="mb-2">
-                  <p className="eyebrow px-4 mb-1">{t('nav.create')}</p>
-                  {CREATE_ACTIONS.map((action) => (
-                    <Link
-                      key={action.to}
-                      to={action.to}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-4 py-3 rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
-                    >
-                      {t(action.labelKey)}
-                    </Link>
-                  ))}
-                </div>
-                {lawyerNavSections.map((section) => (
-                  <div key={section.id} className="mb-2">
-                    <p className="eyebrow px-4 mb-1">{section.title}</p>
-                    <NavTabs
-                      items={section.items}
-                      indicatorId={LAWYER_MOBILE_NAV_INDICATOR_ID}
-                      orientation="vertical"
-                      onNavigate={() => setMobileMenuOpen(false)}
-                    />
-                  </div>
-                ))}
-                <div className="mb-2">
-                  <p className="eyebrow px-4 mb-1">{t('nav.account')}</p>
-                  <NavTabs
-                    items={lawyerAccountLinks}
-                    indicatorId={LAWYER_MOBILE_NAV_INDICATOR_ID}
-                    orientation="vertical"
-                    onNavigate={() => setMobileMenuOpen(false)}
-                  />
-                </div>
-              </>
-            )}
             {role === 'ADMIN' && (
               <Link
                 to={dashboardPath}
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-4 py-3 rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
+                className="px-4 min-h-11 flex items-center rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
               >
                 {t('nav.workspace')}
               </Link>
             )}
             <button
               onClick={() => void handleLogout()}
-              className="text-left px-4 py-3 rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
+              className="text-left px-4 min-h-11 flex items-center rounded-lg text-sm font-medium text-fg hover:bg-surface transition-colors"
             >
               {t('nav.logout')}
             </button>

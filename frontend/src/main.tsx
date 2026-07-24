@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query'
+import { MotionConfig } from 'framer-motion'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastViewport } from './components/ui/Toast'
@@ -59,9 +60,11 @@ ReactDOM.createRoot(rootElement).render(
     <ErrorBoundary>
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          <App />
-          <ToastViewport />
-          <ConfirmDialogHost />
+          <MotionConfig reducedMotion="user">
+            <App />
+            <ToastViewport />
+            <ConfirmDialogHost />
+          </MotionConfig>
         </QueryClientProvider>
       </BrowserRouter>
     </ErrorBoundary>

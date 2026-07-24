@@ -7,6 +7,7 @@ import type { CaseThreadResponse } from '../../types'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { usePassiveTimeCapture } from '../../hooks/usePassiveTimeCapture'
 import { NavTabs } from '../ui/NavTabs'
+import { SkipLink } from '../ui/SkipLink'
 import { LAWYER_NAV_INDICATOR_ID, useLawyerNavSections } from './lawyerNav'
 import { CollapseIcon } from './navIcons'
 import { Navbar } from './Navbar'
@@ -14,6 +15,9 @@ import { CommandPalette } from '../command/CommandPalette'
 import { ShortcutsDialog } from '../command/ShortcutsDialog'
 import { GlobalProgressBar } from '../ui/GlobalProgressBar'
 import { useHotkeys } from '../../hooks/useHotkeys'
+import { MobileTabBar } from './MobileTabBar'
+import { MoreSheet } from './MoreSheet'
+import { MobileTimerSheet } from '../time/MobileTimerSheet'
 
 const SIDEBAR_COLLAPSED_KEY = 'pravoos.sidebar.collapsed'
 const WIDE_SCREEN_QUERY = '(min-width: 1024px)'
@@ -53,6 +57,7 @@ export function LawyerLayout(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-bg">
+      <SkipLink />
       <GlobalProgressBar />
       <CommandPalette />
       <ShortcutsDialog />
@@ -94,10 +99,18 @@ export function LawyerLayout(): JSX.Element {
           )}
         </aside>
 
-        <main className="flex-1 min-w-0">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 min-w-0 focus:outline-none pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+        >
           <Outlet />
         </main>
       </div>
+
+      <MobileTabBar />
+      <MoreSheet />
+      <MobileTimerSheet />
     </div>
   )
 }

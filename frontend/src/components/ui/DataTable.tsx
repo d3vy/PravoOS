@@ -2,6 +2,8 @@ import { useMemo, useRef, type ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useTranslation } from 'react-i18next'
 import type { Density } from '../../hooks/useDensity'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { useSwipeReveal } from '../../hooks/useSwipeReveal'
 
 export type SortDirection = 'asc' | 'desc'
 
@@ -53,6 +55,8 @@ type FlatItem<T> =
 
 const VIRTUALIZE_THRESHOLD = 60
 const MAX_BODY_HEIGHT = 620
+const CARD_MODE_QUERY = '(max-width: 639px)'
+const SWIPE_REVEAL_WIDTH = 192
 
 function compareValues(a: CellValue, b: CellValue): number {
   if (a === b) return 0
@@ -113,6 +117,7 @@ export function DataTable<T>({
 }: DataTableProps<T>): JSX.Element {
   const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const isCardMode = useMediaQuery(CARD_MODE_QUERY)
 
   const shownColumns = useMemo(
     () => columns.filter((column) => !visibleColumnIds || column.alwaysVisible || visibleColumnIds.includes(column.id)),
@@ -189,6 +194,23 @@ export function DataTable<T>({
     const id = rowId(row)
     const href = rowHref?.(row)
     const isSelected = selectedIds?.has(id) ?? false
+
+    if (isCardMode) {
+      return (
+        <CardRow
+          row={row}
+          columns={shownColumns}
+          href={href}
+          isSelected={isSelected}
+          selectable={selectable}
+          onToggleRow={onToggleRow ? () => onToggleRow(id) : undefined}
+          selectionLabel={selectionLabel?.(row)}
+          onRowClick={onRowClick ? () => onRowClick(row) : undefined}
+          actions={rowActions?.(row)}
+        />
+      )
+    }
+
     return (
       <div
         role="row"
@@ -286,6 +308,7 @@ export function DataTable<T>({
 
   return (
     <div role="table" className="rounded-xl border border-line bg-surface overflow-hidden">
+      {!isCardMode && (
       <div
         role="row"
         className="grid items-center gap-3 px-3 py-2 border-b border-line bg-surface-2 sticky top-0 z-10"
@@ -328,12 +351,123 @@ export function DataTable<T>({
         ))}
         {rowActions && <div role="columnheader" className="sr-only">{t('table.actions')}</div>}
       </div>
+      )}
       <div
         ref={scrollRef}
         style={virtualized ? { maxHeight: maxBodyHeight, overflowY: 'auto' } : undefined}
         role="rowgroup"
       >
         {body}
+      </div>
+    </div>
+  )
+}
+
+interface CardRowProps<T> {
+  row: T
+  columns: DataTableColumn<T>[]
+  href?: string
+  isSelected: boolean
+  selectable: boolean
+  onToggleRow?: () => void
+  selectionLabel?: string
+  onRowClick?: () => void
+  actions?: ReactNode
+}
+
+function CardRow<T>({
+  row,
+  columns,
+  href,
+  isSelected,
+  selectable,
+  onToggleRow,
+  selectionLabel,
+  onRowClick,
+  actions,
+}: CardRowProps<T>): JSX.Element {
+  const { t } = useTranslation()
+  const swipe = useSwipeReveal(SWIPE_REVEAL_WIDTH)
+  const [primaryColumn, ...restColumns] = columns
+  const primaryContent = primaryColumn?.render ? primaryColumn.render(row) : formatValue(primaryColumn?.value?.(row))
+
+  const handleActivate = (): void => {
+    if (swipe.offsetX !== 0) {
+      swipe.reset()
+      return
+    }
+    onRowClick?.()
+  }
+
+  return (
+    <div role="row" className="relative overflow-hidden border-b border-line last:border-b-0">
+      {actions && (
+        <div
+          className="absolute inset-y-0 right-0 flex items-stretch divide-x divide-line/60"
+          style={{ width: SWIPE_REVEAL_WIDTH }}
+        >
+          {actions}
+        </div>
+      )}
+      <div
+        className="relative bg-surface px-3 py-3 flex flex-col gap-2"
+        style={{
+          transform: `translateX(${swipe.offsetX}px)`,
+          transition: swipe.dragging ? 'none' : 'transform 150ms ease-out',
+        }}
+        onTouchStart={actions ? swipe.onTouchStart : undefined}
+        onTouchMove={actions ? swipe.onTouchMove : undefined}
+        onTouchEnd={actions ? swipe.onTouchEnd : undefined}
+      >
+        <div className="flex items-start gap-3">
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleRow?.()}
+              onClick={(event) => event.stopPropagation()}
+              aria-label={selectionLabel ?? t('table.selectRow')}
+              className="mt-1 h-5 w-5 rounded accent-accent cursor-pointer shrink-0"
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            {href ? (
+              <a
+                href={href}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey) return
+                  event.preventDefault()
+                  handleActivate()
+                }}
+                className="block min-h-[2.75rem] flex items-center font-medium text-fg hover:text-accent transition-colors truncate"
+              >
+                {primaryContent}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={handleActivate}
+                className="block min-h-[2.75rem] w-full text-left flex items-center font-medium text-fg truncate"
+              >
+                {primaryContent}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {restColumns.length > 0 && (
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 pl-0">
+            {restColumns.map((column) => {
+              const content = column.render ? column.render(row) : formatValue(column.value?.(row))
+              return (
+                <div key={column.id} className="min-w-0">
+                  <dt className="text-[11px] uppercase tracking-wide text-fg-muted truncate">{column.header}</dt>
+                  <dd className="text-sm text-fg truncate">{content}</dd>
+                </div>
+              )
+            })}
+          </dl>
+        )}
       </div>
     </div>
   )

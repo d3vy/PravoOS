@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useAuthBootstrap } from './hooks/useAuthBootstrap'
@@ -7,41 +8,42 @@ import { FullScreenLoader } from './components/ui/FullScreenLoader'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { LawyerLayout } from './components/layout/LawyerLayout'
 import type { UserRole } from './types'
-import LandingPage from './pages/LandingPage'
-import LoginPage from './pages/LoginPage'
-import ApplyPage from './pages/ApplyPage'
-import ApplicationStatusPage from './pages/ApplicationStatusPage'
-import EditApplicationPage from './pages/EditApplicationPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import VerifyEmailPage from './pages/VerifyEmailPage'
-import PortalAcceptPage from './pages/PortalAcceptPage'
-import PortalCasesPage from './pages/portal/PortalCasesPage'
-import PortalCaseDetailPage from './pages/portal/PortalCaseDetailPage'
-import DashboardPage from './pages/dashboard/DashboardPage'
-import ChatPage from './pages/chat/ChatPage'
-import CalendarPage from './pages/calendar/CalendarPage'
-import CasesPage from './pages/cases/CasesPage'
-import CaseDetailPage from './pages/cases/CaseDetailPage'
-import DraftEditorPage from './pages/cases/DraftEditorPage'
-import MessagesPage from './pages/messages/MessagesPage'
-import ClientsPage from './pages/clients/ClientsPage'
-import ClientDetailPage from './pages/clients/ClientDetailPage'
-import SearchPage from './pages/search/SearchPage'
-import TabularReviewPage from './pages/review/TabularReviewPage'
-import TemplatesPage from './pages/templates/TemplatesPage'
-import WorkflowsPage from './pages/workflows/WorkflowsPage'
-import TeamPage from './pages/team/TeamPage'
-import InvitePage from './pages/team/InvitePage'
-import ApplicationsPage from './pages/admin/ApplicationsPage'
-import DocumentsPage from './pages/admin/DocumentsPage'
-import AiStatsPage from './pages/admin/AiStatsPage'
-import UsersPage from './pages/admin/UsersPage'
-import BillingPage from './pages/billing/BillingPage'
-import InvoicesPage from './pages/invoices/InvoicesPage'
-import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage'
-import ProfilePage from './pages/profile/ProfilePage'
-import SettingsPage from './pages/settings/SettingsPage'
+
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const ApplyPage = lazy(() => import('./pages/ApplyPage'))
+const ApplicationStatusPage = lazy(() => import('./pages/ApplicationStatusPage'))
+const EditApplicationPage = lazy(() => import('./pages/EditApplicationPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
+const PortalAcceptPage = lazy(() => import('./pages/PortalAcceptPage'))
+const PortalCasesPage = lazy(() => import('./pages/portal/PortalCasesPage'))
+const PortalCaseDetailPage = lazy(() => import('./pages/portal/PortalCaseDetailPage'))
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
+const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
+const CalendarPage = lazy(() => import('./pages/calendar/CalendarPage'))
+const CasesPage = lazy(() => import('./pages/cases/CasesPage'))
+const CaseDetailPage = lazy(() => import('./pages/cases/CaseDetailPage'))
+const DraftEditorPage = lazy(() => import('./pages/cases/DraftEditorPage'))
+const MessagesPage = lazy(() => import('./pages/messages/MessagesPage'))
+const ClientsPage = lazy(() => import('./pages/clients/ClientsPage'))
+const ClientDetailPage = lazy(() => import('./pages/clients/ClientDetailPage'))
+const SearchPage = lazy(() => import('./pages/search/SearchPage'))
+const TabularReviewPage = lazy(() => import('./pages/review/TabularReviewPage'))
+const TemplatesPage = lazy(() => import('./pages/templates/TemplatesPage'))
+const WorkflowsPage = lazy(() => import('./pages/workflows/WorkflowsPage'))
+const TeamPage = lazy(() => import('./pages/team/TeamPage'))
+const InvitePage = lazy(() => import('./pages/team/InvitePage'))
+const ApplicationsPage = lazy(() => import('./pages/admin/ApplicationsPage'))
+const DocumentsPage = lazy(() => import('./pages/admin/DocumentsPage'))
+const AiStatsPage = lazy(() => import('./pages/admin/AiStatsPage'))
+const UsersPage = lazy(() => import('./pages/admin/UsersPage'))
+const BillingPage = lazy(() => import('./pages/billing/BillingPage'))
+const InvoicesPage = lazy(() => import('./pages/invoices/InvoicesPage'))
+const InvoiceDetailPage = lazy(() => import('./pages/invoices/InvoiceDetailPage'))
+const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'))
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 
 function homePathForRole(role: UserRole | undefined): string {
   if (role === 'ADMIN') return '/admin/applications'
@@ -59,91 +61,93 @@ export default function App(): JSX.Element {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/apply" element={<ApplyPage />} />
-      <Route path="/application/:token" element={<ApplicationStatusPage />} />
-      <Route path="/application/:token/edit" element={<EditApplicationPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/portal/accept" element={<PortalAcceptPage />} />
+    <Suspense fallback={<FullScreenLoader />}>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/apply" element={<ApplyPage />} />
+        <Route path="/application/:token" element={<ApplicationStatusPage />} />
+        <Route path="/application/:token/edit" element={<EditApplicationPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/portal/accept" element={<PortalAcceptPage />} />
 
-      <Route
-        path="/portal"
-        element={
-          <ProtectedRoute requiredRole="CLIENT">
-            <PortalCasesPage />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/portal"
+          element={
+            <ProtectedRoute requiredRole="CLIENT">
+              <PortalCasesPage />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/portal/cases/:caseId"
-        element={
-          <ProtectedRoute requiredRole="CLIENT">
-            <PortalCaseDetailPage />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/portal/cases/:caseId"
+          element={
+            <ProtectedRoute requiredRole="CLIENT">
+              <PortalCaseDetailPage />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        element={
-          <ProtectedRoute requiredRole="LAWYER">
-            <LawyerLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/cases" element={<CasesPage />} />
-        <Route path="/cases/:caseId" element={<CaseDetailPage />} />
-        <Route path="/cases/:caseId/drafts/:draftId" element={<DraftEditorPage />} />
-        <Route path="/messages" element={<MessagesPage />} />
-        <Route path="/review" element={<TabularReviewPage />} />
-        <Route path="/review/:reviewId" element={<TabularReviewPage />} />
-        <Route path="/templates" element={<TemplatesPage />} />
-        <Route path="/workflows" element={<WorkflowsPage />} />
-        <Route path="/clients" element={<ClientsPage />} />
-        <Route path="/clients/:clientId" element={<ClientDetailPage />} />
-        <Route path="/invoices" element={<InvoicesPage />} />
-        <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/team" element={<TeamPage />} />
-        <Route path="/invite" element={<InvitePage />} />
-        <Route path="/billing" element={<BillingPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Route>
+        <Route
+          element={
+            <ProtectedRoute requiredRole="LAWYER">
+              <LawyerLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/cases" element={<CasesPage />} />
+          <Route path="/cases/:caseId" element={<CaseDetailPage />} />
+          <Route path="/cases/:caseId/drafts/:draftId" element={<DraftEditorPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/review" element={<TabularReviewPage />} />
+          <Route path="/review/:reviewId" element={<TabularReviewPage />} />
+          <Route path="/templates" element={<TemplatesPage />} />
+          <Route path="/workflows" element={<WorkflowsPage />} />
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/clients/:clientId" element={<ClientDetailPage />} />
+          <Route path="/invoices" element={<InvoicesPage />} />
+          <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/team" element={<TeamPage />} />
+          <Route path="/invite" element={<InvitePage />} />
+          <Route path="/billing" element={<BillingPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
 
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute requiredRole="ADMIN">
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="/admin/applications" replace />} />
-        <Route path="applications" element={<ApplicationsPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="documents" element={<DocumentsPage />} />
-        <Route path="ai-stats" element={<AiStatsPage />} />
-      </Route>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/admin/applications" replace />} />
+          <Route path="applications" element={<ApplicationsPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="ai-stats" element={<AiStatsPage />} />
+        </Route>
 
-      {/* Fallback */}
-      <Route
-        path="*"
-        element={
-          isAuthenticated() ? (
-            <Navigate to={homePathForRole(effectiveRole())} replace />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
-      />
-    </Routes>
+        {/* Fallback */}
+        <Route
+          path="*"
+          element={
+            isAuthenticated() ? (
+              <Navigate to={homePathForRole(effectiveRole())} replace />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+      </Routes>
+    </Suspense>
   )
 }
