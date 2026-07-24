@@ -47,6 +47,7 @@
         <logstash-logback.version>8.0</logstash-logback.version>
         <web-push.version>5.1.1</web-push.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
+        <spotless.version>2.43.0</spotless.version>
     </properties>
 
     <dependencyManagement>
@@ -126,6 +127,31 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                        </includes>
+                        <googleJavaFormat/>
+                        <removeUnusedImports/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
