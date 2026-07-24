@@ -152,7 +152,10 @@ document:
 
 pii:
   crypto:
+    required: ${PII_ENCRYPTION_REQUIRED:false}
+    active-key-id: ${PII_ACTIVE_KEY_ID:}
     key: ${PII_ENCRYPTION_KEY:}
+    backfill-on-start: ${PII_BACKFILL_ON_START:false}
 
 pdn:
   consent:

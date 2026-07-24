@@ -17,14 +17,24 @@
 - Сохранён подстрочный UX, новой колонки/backfill не требуется.
 - Тесты: `ClientNameMatchTest` (6) + существующие `CaseServiceOwnershipTest`/`CaseServiceVisibilityTest` — зелёные.
 
-### 2. [MED] Тихий откат в plaintext при отсутствии ключа
-`PiiEncryptor.java:36-39,48` — если `pii.crypto.key` не задан, `encrypt()` пишет открытым текстом, только `log.warn`. Для комплаенс-фичи безопаснее fail-fast на старте (или явный флаг `pii.crypto.enabled=false`), иначе прод может годами писать ПДн в открытую.
+### 2. [MED] Тихий откат в plaintext при отсутствии ключа — ✅ ИСПРАВЛЕНО
+`PiiEncryptor.java` — если `pii.crypto.key` не задан, `encrypt()` писал открытым текстом, только `log.warn`.
+**Решение:** флаг `pii.crypto.required` (env `PII_ENCRYPTION_REQUIRED`, default false). При `required=true` и отсутствии активного ключа `PiiEncryptor` кидает `IllegalStateException` на старте (приложение не поднимается). При `false` — прежнее поведение (warn + plaintext) для дев-режима. Тест: `failsFastWhenRequiredButNoKeyConfigured`.
 
-### 3. [MED] Нет версионирования/ротации ключа
-`decrypt()` при смене ключа кидает `DocumentProcessingException` на обычном чтении сущности (`PiiStringConverter.convertToEntityAttribute`) → падают любые `SELECT` клиентов. Маркер `pii1:` есть, но key-id в него не заложен — ротация невозможна без даунтайма/ручной миграции.
+### 3. [MED] Нет версионирования/ротации ключа — ✅ ИСПРАВЛЕНО
+`decrypt()` при смене ключа кидал `DocumentProcessingException` на обычном чтении сущности → падали любые `SELECT` клиентов.
+**Решение:** мультиключевой `PiiEncryptor` с key-id в маркере.
+- Новый формат: `pii2:<keyId>:<base64(iv+ct)>`. Ключи задаются как `pii.crypto.keys.<id>`, активный — `pii.crypto.active-key-id` (env `PII_ACTIVE_KEY_ID`).
+- `decrypt` выбирает ключ по id из маркера → одновременно живут старый и новый ключи, ротация без даунтайма. Легаси `pii1:` читается через ключ `legacy` (или единственный/активный). Одиночный `pii.crypto.key` маппится в id `legacy` — обратная совместимость с текущим `.env`.
+- Отсутствие ключа для сохранённого id → явная `DocumentProcessingException` с понятным сообщением, а не тихое падение.
+- Тесты: `tagsCiphertextWithActiveKeyId`, `rotatedKeyStillDecryptsDataEncryptedWithOldKey`, `failsWhenKeyForStoredKeyIdIsMissing`, `failsWhenActiveKeyIdHasNoMatchingKey`.
 
-### 4. [MED] Миграция V37 не бэкфиллит данные
-`V37__clients_pii_encryption.sql` меняет только тип колонок на TEXT. Существующие строки остаются в открытом виде (decrypt их отдаёт как есть — без маркера). «Шифрование ПДн» не покрывает уже накопленные данные; нужен backfill-скрипт, прогоняющий строки через `encrypt`.
+### 4. [MED] Миграция V37 не бэкфиллит данные — ✅ ИСПРАВЛЕНО
+`V37` менял только тип колонок на TEXT; существующие строки оставались в открытом виде.
+**Решение:** `ClientPiiBackfillService` — по флагу `pii.crypto.backfill-on-start` (env `PII_BACKFILL_ON_START`) на `ApplicationReadyEvent` дошифровывает строки `clients` (name/phone/email/notes).
+- Через native SQL (JPA-конвертер не годится: dirty-check идёт по расшифрованному атрибуту и UPDATE не триггерит).
+- Идемпотентно: строки, уже зашифрованные активным ключом (`isEncryptedWithActiveKey`), пропускаются; plaintext и `pii1:`/старый ключ → `encrypt(decrypt(...))` активным ключом. Т.е. заодно завершает ротацию из #3.
+- Пропускается, если шифрование выключено (нет ключа). Транзакция через self-invocation (`@Lazy self`), как в `LawyerDataCleanupService`.
 
 ### 5. [MED] INN не шифруется
 `Client.java:38-39` — `inn` оставлен открытым, хотя для ИП/физлиц это персональные данные того же уровня, что имя/телефон. Непоследовательное покрытие PII.
