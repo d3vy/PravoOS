@@ -51,7 +51,7 @@ public class TimeEntryService {
     entry.setDescription(request.description().trim());
     entry.setActivityDate(request.activityDate());
     entry.setMinutes(request.minutes());
-    entry.setHourlyRate(BillingAmounts.normalize(request.hourlyRate()));
+    entry.setHourlyRate(resolveHourlyRate(request.hourlyRate(), caseEntity));
     entry.setBillable(request.billable());
 
     TimeEntry saved = timeEntryRepository.save(entry);
@@ -115,7 +115,7 @@ public class TimeEntryService {
     entry.setDescription(request.description().trim());
     entry.setActivityDate(LocalDate.now(ZoneOffset.UTC));
     entry.setMinutes(0);
-    entry.setHourlyRate(BillingAmounts.normalize(request.hourlyRate()));
+    entry.setHourlyRate(resolveHourlyRate(request.hourlyRate(), caseEntity));
     entry.setBillable(request.billable());
     entry.setRunning(true);
     entry.setStartedAt(Instant.now());
@@ -152,6 +152,13 @@ public class TimeEntryService {
   @Transactional(readOnly = true)
   public Optional<TimeEntryResponse> activeTimer(UUID lawyerId) {
     return timeEntryRepository.findByLawyerIdAndRunningTrue(lawyerId).map(TimeEntryResponse::from);
+  }
+
+  private BigDecimal resolveHourlyRate(BigDecimal requestedRate, Case caseEntity) {
+    if (requestedRate != null && requestedRate.signum() > 0) {
+      return BillingAmounts.normalize(requestedRate);
+    }
+    return BillingAmounts.normalize(caseEntity.getDefaultHourlyRate());
   }
 
   private int elapsedMinutes(Instant startedAt) {

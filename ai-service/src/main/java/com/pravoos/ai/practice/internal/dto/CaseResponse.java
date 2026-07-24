@@ -2,6 +2,7 @@ package com.pravoos.ai.practice.internal.dto;
 
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -21,6 +22,7 @@ public record CaseResponse(
     LocalDate expiresAt,
     String arbitrCaseNumber,
     String arbitrCardUrl,
+    BigDecimal defaultHourlyRate,
     LocalDateTime createdAt) {
   private static final String KAD_CARD_BASE_URL = "https://kad.arbitr.ru/Card/";
 
@@ -42,6 +44,7 @@ public record CaseResponse(
         caseEntity.getArbitrCaseGuid() == null
             ? null
             : KAD_CARD_BASE_URL + caseEntity.getArbitrCaseGuid(),
+        caseEntity.getDefaultHourlyRate(),
         caseEntity.getCreatedAt());
   }
 }

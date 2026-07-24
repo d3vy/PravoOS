@@ -2,6 +2,7 @@ package com.pravoos.ai.practice.internal.model.entity;
 
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -51,6 +52,9 @@ public class Case {
 
   @Column(name = "arbitr_judge", length = 300)
   private String arbitrJudge;
+
+  @Column(name = "default_hourly_rate")
+  private BigDecimal defaultHourlyRate;
 
   @Column(nullable = false)
   private LocalDateTime createdAt;
@@ -158,6 +162,14 @@ public class Case {
 
   public void setArbitrJudge(String arbitrJudge) {
     this.arbitrJudge = arbitrJudge;
+  }
+
+  public BigDecimal getDefaultHourlyRate() {
+    return defaultHourlyRate;
+  }
+
+  public void setDefaultHourlyRate(BigDecimal defaultHourlyRate) {
+    this.defaultHourlyRate = defaultHourlyRate;
   }
 
   public LocalDateTime getCreatedAt() {

@@ -86,6 +86,7 @@ public class CaseService {
     caseEntity.setNextHearingDate(request.nextHearingDate());
     caseEntity.setExpiresAt(request.expiresAt());
     caseEntity.setArbitrCaseNumber(normalizeArbitrNumber(request.arbitrCaseNumber()));
+    caseEntity.setDefaultHourlyRate(request.defaultHourlyRate());
 
     Case saved = caseRepository.save(caseEntity);
     log.info(
@@ -110,6 +111,7 @@ public class CaseService {
     caseEntity.setNextHearingDate(request.nextHearingDate());
     caseEntity.setExpiresAt(request.expiresAt());
     applyArbitrNumber(caseEntity, request.arbitrCaseNumber());
+    caseEntity.setDefaultHourlyRate(request.defaultHourlyRate());
 
     log.info(
         "Case updated: {} by lawyer {}, client {}", caseId, lawyerId, caseEntity.getClientId());

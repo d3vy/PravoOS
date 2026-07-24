@@ -1,7 +1,10 @@
 package com.pravoos.ai.practice.internal.dto;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -13,4 +16,5 @@ public record CreateCaseRequest(
     LocalDate filingDeadline,
     LocalDate nextHearingDate,
     LocalDate expiresAt,
-    @Size(max = 50) String arbitrCaseNumber) {}
+    @Size(max = 50) String arbitrCaseNumber,
+    @DecimalMin("0.0") @Digits(integer = 10, fraction = 2) BigDecimal defaultHourlyRate) {}

@@ -69,6 +69,45 @@ class TimeEntryServiceTest {
   }
 
   @Test
+  void create_fallsBackToCaseDefaultRateWhenRequestRateZero() {
+    when(caseService.requireVisibleCase(caseId, lawyerId, List.of()))
+        .thenReturn(caseEntity(new BigDecimal("5000")));
+
+    CreateTimeEntryRequest request =
+        new CreateTimeEntryRequest(
+            "Изучение", LocalDate.of(2026, 7, 15), 60, BigDecimal.ZERO, true);
+    TimeEntryResponse response = service.create(caseId, request, lawyerId, List.of());
+
+    assertThat(response.hourlyRate()).isEqualByComparingTo("5000.00");
+    assertThat(response.amount()).isEqualByComparingTo("5000.00");
+  }
+
+  @Test
+  void create_keepsExplicitRateOverCaseDefault() {
+    when(caseService.requireVisibleCase(caseId, lawyerId, List.of()))
+        .thenReturn(caseEntity(new BigDecimal("5000")));
+
+    CreateTimeEntryRequest request =
+        new CreateTimeEntryRequest(
+            "Изучение", LocalDate.of(2026, 7, 15), 60, new BigDecimal("3000"), true);
+    TimeEntryResponse response = service.create(caseId, request, lawyerId, List.of());
+
+    assertThat(response.hourlyRate()).isEqualByComparingTo("3000.00");
+  }
+
+  @Test
+  void startTimer_fallsBackToCaseDefaultRateWhenRequestRateNull() {
+    when(caseService.requireVisibleCase(caseId, lawyerId, List.of()))
+        .thenReturn(caseEntity(new BigDecimal("4500")));
+    when(timeEntryRepository.findByLawyerIdAndRunningTrue(lawyerId)).thenReturn(Optional.empty());
+
+    StartTimerRequest request = new StartTimerRequest("Звонок", null, true);
+    TimeEntryResponse response = service.startTimer(caseId, request, lawyerId, List.of());
+
+    assertThat(response.hourlyRate()).isEqualByComparingTo("4500.00");
+  }
+
+  @Test
   void summary_countsBillableAndUninvoicedExcludingRunning() {
     when(caseService.requireVisibleCase(caseId, lawyerId, List.of())).thenReturn(caseEntity());
     TimeEntry billable = entry(60, new BigDecimal("2000"), true, null, false);
@@ -153,9 +192,14 @@ class TimeEntryServiceTest {
   }
 
   private Case caseEntity() {
+    return caseEntity(null);
+  }
+
+  private Case caseEntity(BigDecimal defaultHourlyRate) {
     Case caseEntity = new Case();
     caseEntity.setLawyerId(lawyerId);
     caseEntity.setClientId(clientId);
+    caseEntity.setDefaultHourlyRate(defaultHourlyRate);
     setField(caseEntity, "id", caseId);
     return caseEntity;
   }
