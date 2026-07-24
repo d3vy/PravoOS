@@ -9,9 +9,11 @@ import com.pravoos.ai.practice.internal.repository.jpa.SavedViewRepository;
 import com.pravoos.ai.shared.exception.OrganizationAccessException;
 import com.pravoos.ai.shared.exception.SavedViewNameTakenException;
 import com.pravoos.ai.shared.exception.SavedViewNotFoundException;
+import com.pravoos.ai.shared.exception.SavedViewOrgRequiredException;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SavedViewService {
 
   private static final UUID NIL_ORG_SENTINEL = new UUID(0L, 0L);
+  private static final int MAX_NAME_LENGTH = 80;
 
   private final SavedViewRepository savedViewRepository;
 
@@ -37,7 +40,7 @@ public class SavedViewService {
   @Transactional
   public SavedViewResponse create(
       CreateSavedViewRequest request, UUID lawyerId, List<UUID> orgIds) {
-    String name = request.name().trim();
+    String name = truncateName(request.name());
     if (savedViewRepository.existsByLawyerIdAndScopeAndName(lawyerId, request.scope(), name)) {
       throw new SavedViewNameTakenException(name);
     }
@@ -47,14 +50,14 @@ public class SavedViewService {
     view.setName(name);
     view.setConfig(request.config());
     applySharing(view, request.sharedWithTeam(), request.orgId(), orgIds);
-    return SavedViewResponse.from(savedViewRepository.save(view), lawyerId);
+    return SavedViewResponse.from(saveOrThrowNameTaken(view, name), lawyerId);
   }
 
   @Transactional
   public SavedViewResponse update(
       UUID viewId, UpdateSavedViewRequest request, UUID lawyerId, List<UUID> orgIds) {
     SavedView view = requireOwnedView(viewId, lawyerId);
-    String name = request.name().trim();
+    String name = truncateName(request.name());
     if (!name.equals(view.getName())
         && savedViewRepository.existsByLawyerIdAndScopeAndName(lawyerId, view.getScope(), name)) {
       throw new SavedViewNameTakenException(name);
@@ -62,12 +65,20 @@ public class SavedViewService {
     view.setName(name);
     view.setConfig(request.config());
     applySharing(view, request.sharedWithTeam(), request.orgId(), orgIds);
-    return SavedViewResponse.from(view, lawyerId);
+    return SavedViewResponse.from(saveOrThrowNameTaken(view, name), lawyerId);
   }
 
   @Transactional
   public void delete(UUID viewId, UUID lawyerId) {
     savedViewRepository.delete(requireOwnedView(viewId, lawyerId));
+  }
+
+  private SavedView saveOrThrowNameTaken(SavedView view, String name) {
+    try {
+      return savedViewRepository.save(view);
+    } catch (DataIntegrityViolationException e) {
+      throw new SavedViewNameTakenException(name);
+    }
   }
 
   private void applySharing(SavedView view, boolean sharedWithTeam, UUID orgId, List<UUID> orgIds) {
@@ -77,11 +88,19 @@ public class SavedViewService {
       return;
     }
     UUID targetOrgId = orgId != null ? orgId : singleOrgOrNull(orgIds);
-    if (targetOrgId == null || orgIds == null || !orgIds.contains(targetOrgId)) {
+    if (targetOrgId == null) {
+      throw new SavedViewOrgRequiredException();
+    }
+    if (orgIds == null || !orgIds.contains(targetOrgId)) {
       throw new OrganizationAccessException(targetOrgId);
     }
     view.setSharedWithTeam(true);
     view.setOrgId(targetOrgId);
+  }
+
+  private String truncateName(String rawName) {
+    String trimmed = rawName.trim();
+    return trimmed.length() > MAX_NAME_LENGTH ? trimmed.substring(0, MAX_NAME_LENGTH) : trimmed;
   }
 
   private UUID singleOrgOrNull(List<UUID> orgIds) {

@@ -13,6 +13,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.SavedViewRepository;
 import com.pravoos.ai.shared.exception.OrganizationAccessException;
 import com.pravoos.ai.shared.exception.SavedViewNameTakenException;
 import com.pravoos.ai.shared.exception.SavedViewNotFoundException;
+import com.pravoos.ai.shared.exception.SavedViewOrgRequiredException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
 class SavedViewServiceTest {
@@ -112,6 +114,39 @@ class SavedViewServiceTest {
                         lawyerId,
                         List.of()))
         .isInstanceOf(SavedViewNameTakenException.class);
+  }
+
+  @Test
+  void concurrentNameRaceIsReportedAsNameTaken() {
+    UUID lawyerId = UUID.randomUUID();
+    when(savedViewRepository.existsByLawyerIdAndScopeAndName(
+            lawyerId, SavedViewScope.CASES, "Гонка"))
+        .thenReturn(false);
+    when(savedViewRepository.save(any(SavedView.class)))
+        .thenThrow(new DataIntegrityViolationException("uq_saved_views_owner_scope_name"));
+
+    assertThatThrownBy(
+            () ->
+                service()
+                    .create(
+                        new CreateSavedViewRequest(
+                            SavedViewScope.CASES, "Гонка", CONFIG, false, null),
+                        lawyerId,
+                        List.of()))
+        .isInstanceOf(SavedViewNameTakenException.class);
+  }
+
+  @Test
+  void sharingWithAmbiguousOrganizationRequiresExplicitOrgId() {
+    assertThatThrownBy(
+            () ->
+                service()
+                    .create(
+                        new CreateSavedViewRequest(
+                            SavedViewScope.CASES, "Много организаций", CONFIG, true, null),
+                        UUID.randomUUID(),
+                        List.of(UUID.randomUUID(), UUID.randomUUID())))
+        .isInstanceOf(SavedViewOrgRequiredException.class);
   }
 
   @Test

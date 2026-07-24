@@ -70,4 +70,18 @@ describe('sortRows', () => {
     sortRows(source, [{ columnId: 'name', direction: 'asc' }], columns)
     expect(source.map((row) => row.id)).toEqual(['1', '2', '3'])
   })
+
+  it('always keeps empty values last regardless of sort direction', () => {
+    const withEmpty: Row[] = [
+      { id: '1', name: 'Борис', amount: 30 },
+      { id: '2', name: 'Анна', amount: null as unknown as number },
+      { id: '3', name: 'Виктор', amount: 10 },
+    ]
+
+    const ascending = sortRows(withEmpty, [{ columnId: 'amount', direction: 'asc' }], columns)
+    expect(ascending.map((row) => row.id)).toEqual(['3', '1', '2'])
+
+    const descending = sortRows(withEmpty, [{ columnId: 'amount', direction: 'desc' }], columns)
+    expect(descending.map((row) => row.id)).toEqual(['1', '3', '2'])
+  })
 })

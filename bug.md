@@ -84,26 +84,31 @@
 
 ## Frontend DataTable
 
-### 16. [LOW] Пустые значения всплывают наверх при сортировке по убыванию
+### 16. [LOW] Пустые значения всплывают наверх при сортировке по убыванию — ✅ ИСПРАВЛЕНО
 `DataTable.tsx:61-68` — `null/undefined` всегда возвращает `+1` («в конец»), но при `desc` результат инвертируется (`:92 -result`) → пустые ячейки оказываются сверху. Обычно ждут, что пустые всегда снизу независимо от направления.
+**Решение:** пустые значения (`null`/`undefined`) обрабатываются в `sortRows` до применения направления сортировки — сравниваются между собой отдельно (`isEmpty`) и всегда уходят в конец, направление `asc/desc` инвертирует только сравнение непустых значений. `compareValues` больше не занимается null-логикой. Тест: `always keeps empty values last regardless of sort direction`.
 
-### 17. [LOW] Хоткеи ловят клавиши слишком широко
+### 17. [LOW] Хоткеи ловят клавиши слишком широко — ✅ ИСПРАВЛЕНО
 `useHotkeys.ts:103` — `n` → `/cases?new=1` срабатывает на любой странице (не только на списке дел); `g`-префикс глотает следующую немаппленную клавишу без индикации.
+**Решение:** `n` теперь проверяет `CASES_LIST_ROUTE` (`/cases` или `/cases/`) перед навигацией — на других страницах клавиша не перехватывается. При входе в `g`-префикс показывается `toast.info(t('hotkeys.gPrefixActive'))` («Нажмите d, c или k…») как индикация ожидания второй клавиши.
 
 ## SavedView
 
-### 18. [LOW] Гонка на уникальном имени → 500 вместо 409
+### 18. [LOW] Гонка на уникальном имени → 500 вместо 409 — ✅ ИСПРАВЛЕНО
 `SavedViewService.create():41` проверяет `existsBy...Name`, но при параллельном создании двух видов с одним именем сработает уникальный констрейнт БД (`uq_saved_views_owner_scope_name`) → `DataIntegrityViolationException` (500), а не `SavedViewNameTakenException` (409). Нужна обёртка на нарушение констрейнта.
+**Решение:** `save()` в `create()`/`update()` обёрнут в `saveOrThrowNameTaken()` — перехватывает `DataIntegrityViolationException` и перебрасывает как `SavedViewNameTakenException(name)` (409, тот же код `SAVED_VIEW_NAME_TAKEN`, что и при обычной пред-проверке). Тест: `concurrentNameRaceIsReportedAsNameTaken`.
 
-### 19. [LOW] Повторный шаринг требует явный orgId у мультиorg-юриста
+### 19. [LOW] Повторный шаринг требует явный orgId у мультиorg-юриста — ✅ ИСПРАВЛЕНО
 `SavedViewService.applySharing():78` — `singleOrgOrNull` возвращает `null`, если у юриста >1 организации и `orgId` не передан → `OrganizationAccessException`. Если UI при `sharedWithTeam=true` не всегда шлёт `orgId`, шаринг падает. Стоит явно валидировать на уровне DTO.
+**Решение:** случай «orgId не передан и однозначно не выводится» (мультиorg-юрист) отделён от случая «orgId передан, но недоступен» — первый теперь кидает новый `SavedViewOrgRequiredException` (400, `SAVED_VIEW_ORG_REQUIRED`, «Укажите организацию: юрист состоит в нескольких организациях»), второй по-прежнему `OrganizationAccessException` (403). Фолбэк на единственную организацию юриста (без orgId в запросе) не тронут — это штатный путь, покрытый `sharedViewFallsBackToTheSingleOrganizationOfTheCaller`. Тест: `sharingWithAmbiguousOrganizationRequiresExplicitOrgId`.
 
-### 20. [LOW] Длина имени вида проверяется только в DTO
+### 20. [LOW] Длина имени вида проверяется только в DTO — ✅ ИСПРАВЛЕНО
 `SavedView.name` — `length=80`, `SavedViewService.update()` делает `request.name().trim()` без обрезки; полагается целиком на `@Size` в `UpdateSavedViewRequest`. Дублирующий guard в сервисе не помешает.
+**Решение:** `create()`/`update()` вызывают общий `truncateName()` (trim + обрезка до `MAX_NAME_LENGTH = 80`) вместо голого `.trim()` — сервис не полагается только на bean-валидацию DTO.
 
 ---
 
-## План: осталось 5 пунктов (16–20) — 1 сессия
+## План: осталось 5 пунктов (16–20) — 1 сессия (✅ ГОТОВО — все пункты закрыты)
 
 Готово: №1–6 (PII), №7–13 (RAG-ядро + RAG-качество), №14–15 (таймер). Ниже — оставшееся,
 по модулям, чтобы каждая сессия шла с `/clear` и минимальным набором файлов.
@@ -132,7 +137,7 @@
 Файлы: `TabularReviewDto`, `ReviewAnswerConfidence`, `TabularReviewPrompt`,
 `TabularReviewDocumentProcessor`, их тесты.
 
-### Сессия C — Frontend + SavedView (№16, 17, 18, 19, 20)
+### Сессия C — Frontend + SavedView (№16, 17, 18, 19, 20) — ✅ ГОТОВО
 Мелкие независимые правки на стыке FE и `SavedViewService`.
 - **№16 [LOW]:** `DataTable.tsx` — пустые значения всегда вниз независимо от `asc/desc`.
 - **№17 [LOW]:** `useHotkeys.ts` — `n` ограничить страницей списка дел; индикация `g`-префикса.

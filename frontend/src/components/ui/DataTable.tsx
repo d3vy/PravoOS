@@ -58,10 +58,12 @@ const MAX_BODY_HEIGHT = 620
 const CARD_MODE_QUERY = '(max-width: 639px)'
 const SWIPE_REVEAL_WIDTH = 192
 
+function isEmpty(value: CellValue): boolean {
+  return value === null || value === undefined
+}
+
 function compareValues(a: CellValue, b: CellValue): number {
   if (a === b) return 0
-  if (a === null || a === undefined) return 1
-  if (b === null || b === undefined) return -1
   if (typeof a === 'number' && typeof b === 'number') return a - b
   if (typeof a === 'boolean' && typeof b === 'boolean') return Number(a) - Number(b)
   return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' })
@@ -88,7 +90,15 @@ export function sortRows<T>(rows: T[], sort: SortRule[], columns: DataTableColum
     for (const rule of sort) {
       const value = valueById.get(rule.columnId)
       if (!value) continue
-      const result = compareValues(value(left), value(right))
+      const leftValue = value(left)
+      const rightValue = value(right)
+      const leftEmpty = isEmpty(leftValue)
+      const rightEmpty = isEmpty(rightValue)
+      if (leftEmpty || rightEmpty) {
+        if (leftEmpty === rightEmpty) continue
+        return leftEmpty ? 1 : -1
+      }
+      const result = compareValues(leftValue, rightValue)
       if (result !== 0) return rule.direction === 'asc' ? result : -result
     }
     return 0

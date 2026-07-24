@@ -344,6 +344,7 @@ const ru = {
     openSearch: 'Командная палитра / поиск',
     openCheatsheet: 'Эта шпаргалка',
     timerNeedsCase: 'Откройте дело, чтобы запустить таймер',
+    gPrefixActive: 'Нажмите d, c или k…',
   },
   auth: {
     loginTitle: 'Вход в систему',

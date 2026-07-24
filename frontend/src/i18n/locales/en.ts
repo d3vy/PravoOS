@@ -339,6 +339,7 @@ const en = {
     openSearch: 'Command palette / search',
     openCheatsheet: 'This cheatsheet',
     timerNeedsCase: 'Open a case to start the timer',
+    gPrefixActive: 'Press d, c or k…',
   },
   auth: {
     loginTitle: 'Sign in',
