@@ -1,14 +1,20 @@
 package com.pravoos.user.identity.internal.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.pravoos.common.web.SecurityUtils;
 import com.pravoos.user.identity.internal.dto.MfaCodeRequest;
 import com.pravoos.user.identity.internal.dto.MfaSetupResponse;
 import com.pravoos.user.identity.internal.dto.MfaStatusResponse;
 import com.pravoos.user.identity.internal.service.MfaService;
+
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/user/mfa")

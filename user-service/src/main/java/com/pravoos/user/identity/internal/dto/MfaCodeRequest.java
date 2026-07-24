@@ -4,5 +4,5 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 public record MfaCodeRequest(
-        @NotBlank @Pattern(regexp = "\\d{6}", message = "Код должен состоять из 6 цифр") String code
-) {}
+                @NotBlank @Pattern(regexp = "\\d{6}", message = "Код должен состоять из 6 цифр") String code) {
+}
