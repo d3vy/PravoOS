@@ -51,7 +51,10 @@ public class ChatController {
   public ResponseEntity<ChatResponse> chat(
       @Valid @RequestBody ChatRequest request, Authentication authentication) {
     return ResponseEntity.ok(
-        chatService.chat(request, SecurityUtils.currentUserId(authentication)));
+        chatService.chat(
+            request,
+            SecurityUtils.currentUserId(authentication),
+            SecurityUtils.currentOrgIds(authentication)));
   }
 
   @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -61,17 +64,27 @@ public class ChatController {
       HttpServletResponse response) {
     response.setHeader("X-Accel-Buffering", "no");
     response.setHeader("Cache-Control", "no-cache");
-    return chatService.chatStream(request, SecurityUtils.currentUserId(authentication));
+    return chatService.chatStream(
+        request,
+        SecurityUtils.currentUserId(authentication),
+        SecurityUtils.currentOrgIds(authentication));
   }
 
   @GetMapping("/conversations")
   public ResponseEntity<List<ConversationResponse>> getConversations(
       @RequestParam(required = false) String q,
+      @RequestParam(required = false) UUID caseId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size,
       Authentication authentication) {
     return PagedResponse.of(
-        chatService.getConversations(SecurityUtils.currentUserId(authentication), q, page, size));
+        chatService.getConversations(
+            SecurityUtils.currentUserId(authentication),
+            q,
+            caseId,
+            SecurityUtils.currentOrgIds(authentication),
+            page,
+            size));
   }
 
   @GetMapping("/conversations/{id}/messages")

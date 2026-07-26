@@ -14,13 +14,20 @@ public class Conversation {
 
   private String title;
 
+  private UUID caseId;
+
   private LocalDateTime createdAt;
 
   public Conversation() {}
 
   public Conversation(UUID lawyerId, String title) {
+    this(lawyerId, title, null);
+  }
+
+  public Conversation(UUID lawyerId, String title, UUID caseId) {
     this.lawyerId = lawyerId;
     this.title = title;
+    this.caseId = caseId;
     this.createdAt = LocalDateTime.now();
   }
 
@@ -38,6 +45,10 @@ public class Conversation {
 
   public void setTitle(String title) {
     this.title = title;
+  }
+
+  public UUID getCaseId() {
+    return caseId;
   }
 
   public LocalDateTime getCreatedAt() {

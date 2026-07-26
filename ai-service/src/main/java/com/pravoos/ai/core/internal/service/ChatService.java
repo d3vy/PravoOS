@@ -1,6 +1,8 @@
 package com.pravoos.ai.core.internal.service;
 
 import com.pravoos.ai.core.api.CaseAccessProvider;
+import com.pravoos.ai.core.api.CaseContext;
+import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.model.mongo.Message;
@@ -15,6 +17,7 @@ import com.pravoos.ai.llm.api.LlmMessage;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
 import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.shared.exception.ConversationCaseMismatchException;
 import com.pravoos.ai.shared.exception.ConversationNotFoundException;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.exception.LlmException;
@@ -43,6 +46,7 @@ public class ChatService {
   private static final java.time.format.DateTimeFormatter EDITION_DATE_FORMAT =
       java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
   private static final int TITLE_MAX_LENGTH = 60;
+  private static final String CASE_SOURCE_PREFIX = "Материалы дела: ";
   private static final long STREAM_TIMEOUT_MS = 180_000L;
   private static final String STREAM_ERROR_MESSAGE =
       "Произошла ошибка при обработке запроса. Попробуйте ещё раз.";
@@ -52,6 +56,7 @@ public class ChatService {
   private final DocumentRetrieval documentRetrieval;
   private final DocumentAccess documentAccess;
   private final CaseAccessProvider caseAccessProvider;
+  private final CaseContextProvider caseContextProvider;
   private final RagService ragService;
   private final LlmClient llmClient;
   private final DocumentProperties documentProperties;
@@ -66,6 +71,7 @@ public class ChatService {
       DocumentRetrieval documentRetrieval,
       DocumentAccess documentAccess,
       CaseAccessProvider caseAccessProvider,
+      CaseContextProvider caseContextProvider,
       RagService ragService,
       LlmClient llmClient,
       DocumentProperties documentProperties,
@@ -78,6 +84,7 @@ public class ChatService {
     this.documentRetrieval = documentRetrieval;
     this.documentAccess = documentAccess;
     this.caseAccessProvider = caseAccessProvider;
+    this.caseContextProvider = caseContextProvider;
     this.ragService = ragService;
     this.llmClient = llmClient;
     this.documentProperties = documentProperties;
@@ -87,10 +94,12 @@ public class ChatService {
     this.historyMaxChars = historyMaxChars;
   }
 
-  public ChatResponse chat(ChatRequest request, UUID lawyerId) {
+  public ChatResponse chat(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
+    assertCaseAccessible(request.caseId(), lawyerId, orgIds);
     llmQuotaService.assertWithinQuota(lawyerId);
     Conversation conversation =
-        resolveConversation(request.conversationId(), lawyerId, request.message());
+        resolveConversation(
+            request.conversationId(), lawyerId, request.message(), request.caseId());
     boolean isNewConversation = conversation.getId() == null;
 
     legalDomainGuard.assertLegalQuery(request.message());
@@ -103,7 +112,8 @@ public class ChatService {
     List<DocumentRef> attachedDocuments =
         loadOwnedAttachedDocuments(request.attachedDocumentIds(), lawyerId);
     PreparedContext context =
-        prepareContext(request, conversation, isNewConversation, attachedDocuments);
+        prepareContext(
+            request, conversation, isNewConversation, attachedDocuments, lawyerId, orgIds);
 
     LlmResult completion =
         llmClient.complete(context.systemPrompt(), context.history(), request.message());
@@ -128,10 +138,12 @@ public class ChatService {
         persisted.getId(), parsed.answer(), context.sources(), parsed.followUps());
   }
 
-  public SseEmitter chatStream(ChatRequest request, UUID lawyerId) {
+  public SseEmitter chatStream(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
+    assertCaseAccessible(request.caseId(), lawyerId, orgIds);
     llmQuotaService.assertWithinQuota(lawyerId);
     Conversation conversation =
-        resolveConversation(request.conversationId(), lawyerId, request.message());
+        resolveConversation(
+            request.conversationId(), lawyerId, request.message(), request.caseId());
     boolean isNewConversation = conversation.getId() == null;
 
     legalDomainGuard.assertLegalQuery(request.message());
@@ -150,7 +162,13 @@ public class ChatService {
       chatStreamExecutor.execute(
           () ->
               streamAnswer(
-                  emitter, request, lawyerId, resolved, isNewConversation, attachedDocuments));
+                  emitter,
+                  request,
+                  lawyerId,
+                  orgIds,
+                  resolved,
+                  isNewConversation,
+                  attachedDocuments));
     } catch (TaskRejectedException e) {
       log.warn("Chat stream rejected: executor saturated (lawyer {})", lawyerId);
       throw new LlmException("Сервис перегружен, попробуйте позже");
@@ -162,12 +180,14 @@ public class ChatService {
       SseEmitter emitter,
       ChatRequest request,
       UUID lawyerId,
+      List<UUID> orgIds,
       Conversation conversation,
       boolean isNewConversation,
       List<DocumentRef> attachedDocuments) {
     try {
       PreparedContext context =
-          prepareContext(request, conversation, isNewConversation, attachedDocuments);
+          prepareContext(
+              request, conversation, isNewConversation, attachedDocuments, lawyerId, orgIds);
 
       StreamingAnswerAccumulator accumulator = new StreamingAnswerAccumulator(emitter);
       LlmUsage usage =
@@ -219,7 +239,9 @@ public class ChatService {
       ChatRequest request,
       Conversation conversation,
       boolean isNewConversation,
-      List<DocumentRef> attachedDocuments) {
+      List<DocumentRef> attachedDocuments,
+      UUID lawyerId,
+      List<UUID> orgIds) {
     List<String> attachedChunks =
         attachedDocuments.isEmpty()
             ? List.of()
@@ -233,30 +255,60 @@ public class ChatService {
                 messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(
                     conversation.getId()));
 
-    List<RetrievedChunk> matches =
+    List<RetrievedChunk> knowledgeBaseMatches =
         documentRetrieval.retrieveKnowledgeBase(
             request.message(), documentProperties.topKResults());
+    boolean legislationPresent =
+        knowledgeBaseMatches.stream().anyMatch(RetrievedChunk::legislation);
 
-    boolean legislationPresent = matches.stream().anyMatch(RetrievedChunk::legislation);
-    List<String> relevantChunks =
-        new ArrayList<>(matches.stream().map(RetrievedChunk::content).toList());
-    List<String> sources =
-        new ArrayList<>(
-            matches.stream()
-                .map(ChatService::sourceLabel)
-                .filter(label -> label != null && !label.isBlank())
-                .distinct()
-                .toList());
-    relevantChunks.addAll(0, attachedChunks);
+    List<RetrievedChunk> caseMatches =
+        request.caseId() == null
+            ? List.of()
+            : documentRetrieval.retrieveForCase(
+                request.message(), documentProperties.topKResults(), request.caseId());
 
-    attachedDocuments.stream()
-        .map(DocumentRef::title)
+    List<String> relevantChunks = new ArrayList<>(attachedChunks);
+    relevantChunks.addAll(caseMatches.stream().map(RetrievedChunk::content).toList());
+    relevantChunks.addAll(knowledgeBaseMatches.stream().map(RetrievedChunk::content).toList());
+
+    List<String> sources = new ArrayList<>();
+    caseMatches.stream()
+        .map(RetrievedChunk::documentTitle)
         .filter(title -> title != null && !title.isBlank())
-        .filter(title -> !sources.contains(title))
-        .forEach(sources::add);
+        .map(title -> CASE_SOURCE_PREFIX + title)
+        .forEach(label -> addSource(sources, label));
+    knowledgeBaseMatches.stream()
+        .map(ChatService::sourceLabel)
+        .forEach(label -> addSource(sources, label));
+    attachedDocuments.stream().map(DocumentRef::title).forEach(title -> addSource(sources, title));
 
+    if (request.caseId() == null) {
+      return new PreparedContext(
+          ragService.buildSystemPrompt(relevantChunks, legislationPresent), sources, historyForLlm);
+    }
+
+    CaseContext caseContext = caseContextProvider.loadContext(request.caseId(), lawyerId, orgIds);
     return new PreparedContext(
-        ragService.buildSystemPrompt(relevantChunks, legislationPresent), sources, historyForLlm);
+        ragService.buildCaseSystemPrompt(
+            caseContext.caseCard(),
+            caseContext.hearingTimeline(),
+            caseContext.checklist(),
+            relevantChunks,
+            legislationPresent),
+        sources,
+        historyForLlm);
+  }
+
+  private static void addSource(List<String> sources, String label) {
+    if (label != null && !label.isBlank() && !sources.contains(label)) {
+      sources.add(label);
+    }
+  }
+
+  private void assertCaseAccessible(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+    if (caseId != null) {
+      caseAccessProvider.assertCaseVisible(caseId, lawyerId, orgIds);
+    }
   }
 
   private static String sourceLabel(RetrievedChunk chunk) {
@@ -386,13 +438,29 @@ public class ChatService {
   }
 
   public Page<ConversationResponse> getConversations(
-      UUID lawyerId, String query, int page, int size) {
+      UUID lawyerId, String query, UUID caseId, List<UUID> orgIds, int page, int size) {
+    assertCaseAccessible(caseId, lawyerId, orgIds);
     var pageRequest = PageRequests.of(page, size);
-    Page<Conversation> conversations =
-        (query != null && !query.isBlank())
-            ? conversationRepository.findByLawyerIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-                lawyerId, query.trim(), pageRequest)
-            : conversationRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId, pageRequest);
+    boolean filtered = query != null && !query.isBlank();
+    String title = filtered ? query.trim() : null;
+    Page<Conversation> conversations;
+    if (caseId == null) {
+      conversations =
+          filtered
+              ? conversationRepository
+                  .findByLawyerIdAndCaseIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
+                      lawyerId, title, pageRequest)
+              : conversationRepository.findByLawyerIdAndCaseIdIsNullOrderByCreatedAtDesc(
+                  lawyerId, pageRequest);
+    } else {
+      conversations =
+          filtered
+              ? conversationRepository
+                  .findByLawyerIdAndCaseIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
+                      lawyerId, caseId, title, pageRequest)
+              : conversationRepository.findByLawyerIdAndCaseIdOrderByCreatedAtDesc(
+                  lawyerId, caseId, pageRequest);
+    }
     return conversations.map(
         c -> new ConversationResponse(c.getId(), c.getTitle(), c.getCreatedAt()));
   }
@@ -443,18 +511,29 @@ public class ChatService {
   }
 
   private Conversation resolveConversation(
-      String conversationId, UUID lawyerId, String firstMessage) {
+      String conversationId, UUID lawyerId, String firstMessage, UUID caseId) {
     if (conversationId != null) {
-      return conversationRepository
-          .findById(conversationId)
-          .filter(c -> c.getLawyerId().equals(lawyerId))
-          .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+      Conversation existing =
+          conversationRepository
+              .findById(conversationId)
+              .filter(c -> c.getLawyerId().equals(lawyerId))
+              .orElseThrow(() -> new ConversationNotFoundException(conversationId));
+      if (!Objects.equals(existing.getCaseId(), caseId)) {
+        log.warn(
+            "Lawyer {} sent message with case {} into conversation {} bound to case {}",
+            lawyerId,
+            caseId,
+            conversationId,
+            existing.getCaseId());
+        throw new ConversationCaseMismatchException(conversationId);
+      }
+      return existing;
     }
     String title =
         firstMessage.length() > TITLE_MAX_LENGTH
             ? firstMessage.substring(0, TITLE_MAX_LENGTH) + "..."
             : firstMessage;
-    return new Conversation(lawyerId, title);
+    return new Conversation(lawyerId, title, caseId);
   }
 
   private List<LlmMessage> buildLlmHistory(List<Message> recentDescending) {

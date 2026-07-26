@@ -36,11 +36,13 @@
 
 ## Углубление AI (M — главный дифференциатор)
 
-- [ ] **4. Чат в контексте дела («Спросить по делу»). [ПРИОРИТЕТ]** Чат в карточке дела, который автоматически видит все документы дела + хронологию КАД + чеклист.
-  Реюз: `ChatService.prepareContext` уже умеет `attachedChunks` — надо скоупить контекст по `caseId` (~80% механики есть).
-  Ценность: killer-feature vs общих ассистентов.
+- [x] **4. Чат в контексте дела («Спросить по делу»). [ПРИОРИТЕТ]** ✅ Сделано. Вкладка «Спросить по делу» в карточке дела: чат, скоупленный по `caseId`, видит карточку дела, хронологию КАД, задачи по делу и документы дела, плюс базу законодательства для правового обоснования.
+  Бэкенд: `ChatRequest.caseId` (nullable), `Conversation.caseId` + привязка новой беседы к делу, `ConversationCaseMismatchException` при попытке писать в беседу другого дела (или в общую беседу с `caseId`), доступ через `CaseAccessProvider.assertCaseVisible` до квоты и ретрива. Новый порт `CaseContextProvider`/`CaseContext` в `core.api` с реализацией `CaseContextProviderImpl` в `practice` (карточка дела + стороны, хронология `case_hearing_events`, задачи `case_tasks` вместо LLM-чеклиста — он бы стоил лишнего вызова модели). Форматирование вынесено в `CaseContextFormatter` и переиспользовано `CaseAnalyticsService` (были приватные `buildCaseContext`/`buildTimelineText`). Контекст: `retrieveForCase` + `retrieveKnowledgeBase`, источники дела помечаются «Материалы дела: …». Промпт — отдельный `RagService.buildCaseSystemPrompt` (приоритет материалов дела, запрет додумывать факты; карточка/хронология/задачи проходят ту же анти-инъекционную санацию, что и чанки). `orgIds` пробрасываются из `Authentication` в `ChatController`; `GET /api/ai/conversations?caseId=…` отдаёт беседы дела, без параметра — только общие (беседы дел исключены и из глобального ⌘K-поиска, чтобы нельзя было продолжить их вне карточки дела).
+  Фронт: общие части чата вынесены в `components/chat/ChatMessageBubble.tsx` (`MessageBubble`, рейтинг, проверка цитат, follow-ups) и переиспользованы `ChatPage` и новым `CaseChatSection`; вкладка `ask` в `CaseDetailPage`.
+  Тесты: `CaseChatContextTest` (доступ к чужому делу, привязка беседы, mismatch беседы/дела, `retrieveForCase` vs общий путь, метки источников), `CaseChatSection.test.tsx` (фильтр бесед по делу, отправка с `caseId` и стриминг, история беседы, подсказки).
+  Файлы: `core/api/{CaseContext,CaseContextProvider}.java`, `practice/internal/service/{CaseContextFormatter,CaseContextProviderImpl}.java`, `core/internal/service/{ChatService,RagService}.java`, `core/internal/controller/ChatController.java`, `core/internal/dto/ChatRequest.java`, `core/internal/model/mongo/Conversation.java`, `core/internal/repository/mongo/ConversationRepository.java`, `shared/exception/ConversationCaseMismatchException.java`, `frontend/src/components/chat/ChatMessageBubble.tsx`, `frontend/src/components/cases/CaseChatSection.tsx`, `frontend/src/pages/cases/CaseDetailPage.tsx`, `frontend/src/api/chat.ts`, `frontend/src/i18n/locales/{ru,en}.ts`.
 
-  ### План реализации
+  ### План реализации (выполнен)
 
   Что уже готово (переиспользуем, не строим):
   - `DocumentRetrieval.retrieveForCase(query, topK, caseId)` — векторный поиск по документам конкретного дела уже реализован (`DocumentRetrievalImpl`, используется в `LegalAiPortImpl.answerForCase`).
@@ -121,4 +123,4 @@
 3. **#5 / #6 / #10** — углубление AI и монетизация.
 4. **#9** — маркетинговый дифференциатор.
 
-Старт: **#4 (чат по делу)** — наибольший отрыв от конкурентов при готовой на 80% механике в `ChatService`.
+Старт: #4 закрыт — следующий по отрыву от конкурентов **#5 («чат с документом» + авто-саммари)**.

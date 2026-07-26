@@ -87,6 +87,7 @@ export interface ChatRequest {
   conversationId?: string
   message: string
   attachedDocumentIds?: string[]
+  caseId?: string
 }
 
 export interface ChatResponse {

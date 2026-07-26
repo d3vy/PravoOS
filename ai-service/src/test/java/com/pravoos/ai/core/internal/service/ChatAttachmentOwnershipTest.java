@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.pravoos.ai.core.api.CaseAccessProvider;
+import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
 import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
@@ -41,6 +42,7 @@ class ChatAttachmentOwnershipTest {
   @Mock private DocumentRetrieval documentRetrieval;
   @Mock private DocumentAccess documentAccess;
   @Mock private CaseAccessProvider caseAccessProvider;
+  @Mock private CaseContextProvider caseContextProvider;
   @Mock private RagService ragService;
   @Mock private LlmClient llmClient;
   @Mock private LegalDomainGuard legalDomainGuard;
@@ -62,6 +64,7 @@ class ChatAttachmentOwnershipTest {
             documentRetrieval,
             documentAccess,
             caseAccessProvider,
+            caseContextProvider,
             ragService,
             llmClient,
             properties,
@@ -83,7 +86,8 @@ class ChatAttachmentOwnershipTest {
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    service.chat(new ChatRequest(null, "Проверь договор", List.of(documentId)), lawyerId);
+    service.chat(
+        new ChatRequest(null, "Проверь договор", List.of(documentId), null), lawyerId, List.of());
   }
 
   @Test
@@ -95,7 +99,9 @@ class ChatAttachmentOwnershipTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Проверь договор", List.of(documentId)), lawyerId))
+                    new ChatRequest(null, "Проверь договор", List.of(documentId), null),
+                    lawyerId,
+                    List.of()))
         .isInstanceOf(DocumentNotFoundException.class);
   }
 
@@ -109,7 +115,9 @@ class ChatAttachmentOwnershipTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Проверь договор", List.of(documentId)), lawyerId))
+                    new ChatRequest(null, "Проверь договор", List.of(documentId), null),
+                    lawyerId,
+                    List.of()))
         .isInstanceOf(DocumentNotFoundException.class);
   }
 
@@ -124,7 +132,9 @@ class ChatAttachmentOwnershipTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Проверь договор", List.of(documentId)), lawyerId))
+                    new ChatRequest(null, "Проверь договор", List.of(documentId), null),
+                    lawyerId,
+                    List.of()))
         .isInstanceOf(DocumentNotFoundException.class);
   }
 }

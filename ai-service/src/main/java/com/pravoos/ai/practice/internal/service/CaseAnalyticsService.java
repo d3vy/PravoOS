@@ -42,9 +42,7 @@ public class CaseAnalyticsService {
   private static final Logger log = LoggerFactory.getLogger(CaseAnalyticsService.class);
   private static final UUID NIL_ORG_SENTINEL = new UUID(0L, 0L);
   private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-  private static final int MAX_TIMELINE_EVENTS = 60;
   private static final int MAX_EVENT_TYPES = 8;
-  private static final int EVENT_DESCRIPTION_MAX_LENGTH = 300;
 
   private final CaseService caseService;
   private final CaseRepository caseRepository;
@@ -127,8 +125,8 @@ public class CaseAnalyticsService {
         courtStats,
         judgeStats,
         partyStats,
-        buildCaseContext(caseEntity, parties),
-        buildTimelineText(events),
+        CaseContextFormatter.formatCaseCard(caseEntity, parties),
+        CaseContextFormatter.formatTimeline(events),
         buildStatisticsText(timeline, courtStats, judgeStats, partyStats));
   }
 
@@ -307,66 +305,6 @@ public class CaseAnalyticsService {
         .toList();
   }
 
-  private String buildCaseContext(Case caseEntity, List<CaseParty> parties) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("Название: ").append(caseEntity.getTitle()).append('\n');
-    builder.append("Статус: ").append(caseEntity.getStatus().getDisplayName()).append('\n');
-    if (caseEntity.getArbitrCaseNumber() != null) {
-      builder.append("Номер в КАД.Арбитр: ").append(caseEntity.getArbitrCaseNumber()).append('\n');
-    }
-    if (caseEntity.getArbitrJudge() != null) {
-      builder.append("Судья: ").append(caseEntity.getArbitrJudge()).append('\n');
-    }
-    if (!parties.isEmpty()) {
-      builder.append("Стороны: ");
-      builder.append(
-          parties.stream()
-              .map(
-                  party ->
-                      party.getRole() == null
-                          ? party.getName()
-                          : party.getName() + " (" + party.getRole() + ")")
-              .reduce((first, second) -> first + "; " + second)
-              .orElse(""));
-      builder.append('\n');
-    }
-    if (caseEntity.getNextHearingDate() != null) {
-      builder
-          .append("Ближайшее заседание: ")
-          .append(DATE_FORMATTER.format(caseEntity.getNextHearingDate()))
-          .append('\n');
-    }
-    if (caseEntity.getDescription() != null && !caseEntity.getDescription().isBlank()) {
-      builder.append("Описание: ").append(caseEntity.getDescription());
-    }
-    return builder.toString().strip();
-  }
-
-  private String buildTimelineText(List<CaseHearingEvent> events) {
-    if (events.isEmpty()) {
-      return "Событий по делу из КАД.Арбитр пока нет.";
-    }
-    StringBuilder builder = new StringBuilder();
-    events.stream()
-        .limit(MAX_TIMELINE_EVENTS)
-        .forEach(
-            event -> {
-              builder.append(
-                  event.getEventDate() == null ? "—" : DATE_FORMATTER.format(event.getEventDate()));
-              builder
-                  .append(" — ")
-                  .append(event.getEventType() == null ? "событие" : event.getEventType());
-              if (event.getCourtName() != null && !event.getCourtName().isBlank()) {
-                builder.append(" (").append(event.getCourtName()).append(')');
-              }
-              if (event.getDescription() != null && !event.getDescription().isBlank()) {
-                builder.append(": ").append(truncate(event.getDescription()));
-              }
-              builder.append('\n');
-            });
-    return builder.toString().strip();
-  }
-
   private String buildStatisticsText(
       CaseTimelineStats timeline,
       List<OutcomeStat> courtStats,
@@ -423,13 +361,6 @@ public class CaseAnalyticsService {
       }
       builder.append('\n');
     }
-  }
-
-  private String truncate(String text) {
-    String trimmed = text.trim();
-    return trimmed.length() <= EVENT_DESCRIPTION_MAX_LENGTH
-        ? trimmed
-        : trimmed.substring(0, EVENT_DESCRIPTION_MAX_LENGTH) + "...";
   }
 
   private Collection<UUID> orgIdsOrSentinel(List<UUID> orgIds) {

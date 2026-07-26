@@ -16,7 +16,7 @@ public class RagService {
   private static final Logger log = LoggerFactory.getLogger(RagService.class);
   private static final String CHUNK_SEPARATOR = "\n\n---\n\n";
   private static final Pattern PLACEHOLDER =
-      Pattern.compile("\\{(instruction|context|legislationNotice)\\}");
+      Pattern.compile("\\{(instruction|context|legislationNotice|caseCard|timeline|checklist)\\}");
 
   private static final String CONTEXT_FENCE_OPEN = "<<<КОНТЕКСТ_НАЧАЛО>>>";
   private static final String CONTEXT_FENCE_CLOSE = "<<<КОНТЕКСТ_КОНЕЦ>>>";
@@ -110,6 +110,39 @@ public class RagService {
             """
           + FOLLOW_UP_INSTRUCTION;
 
+  private static final String CASE_PROMPT_TEMPLATE =
+      """
+            Вы — юридический ИИ-ассистент платформы PravoOS. Вы отвечаете на вопросы юриста \
+            строго по материалам конкретного дела, которые приведены ниже.
+
+            Приоритет источников: карточка дела, хронология заседаний, задачи по делу и \
+            документы дела. Законодательство используйте только для правового обоснования. \
+            Если в материалах дела нет данных для ответа — прямо скажите об этом и укажите, \
+            какого документа или сведения не хватает. Не додумывайте факты, суммы, даты и \
+            наименования сторон.
+
+            КАРТОЧКА ДЕЛА:
+            {caseCard}
+
+            ХРОНОЛОГИЯ ЗАСЕДАНИЙ (КАД.Арбитр):
+            {timeline}
+
+            ЗАДАЧИ ПО ДЕЛУ:
+            {checklist}
+
+            """
+          + CITATION_INSTRUCTION
+          + """
+            {legislationNotice}
+            """
+          + INJECTION_GUARD_INSTRUCTION
+          + """
+
+            КОНТЕКСТ (ДОКУМЕНТЫ ДЕЛА И ЗАКОНОДАТЕЛЬСТВО):
+            {context}
+            """
+          + FOLLOW_UP_INSTRUCTION;
+
   private final int contextMaxChars;
 
   public RagService(DocumentProperties documentProperties) {
@@ -120,6 +153,27 @@ public class RagService {
     return fill(
         SYSTEM_PROMPT_TEMPLATE,
         Map.of(
+            "context",
+            joinContext(relevantChunks),
+            "legislationNotice",
+            legislationPresent ? "" : NO_LEGISLATION_CAUTION));
+  }
+
+  public String buildCaseSystemPrompt(
+      String caseCard,
+      String hearingTimeline,
+      String checklist,
+      List<String> relevantChunks,
+      boolean legislationPresent) {
+    return fill(
+        CASE_PROMPT_TEMPLATE,
+        Map.of(
+            "caseCard",
+            sanitizeChunk(caseCard),
+            "timeline",
+            sanitizeChunk(hearingTimeline),
+            "checklist",
+            sanitizeChunk(checklist),
             "context",
             joinContext(relevantChunks),
             "legislationNotice",

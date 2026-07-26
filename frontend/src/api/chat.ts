@@ -109,9 +109,9 @@ export const chatApi = {
     return response.data
   },
 
-  getConversations: async (q?: string): Promise<ConversationResponse[]> => {
+  getConversations: async (q?: string, caseId?: string): Promise<ConversationResponse[]> => {
     const response = await apiClient.get<ConversationResponse[]>('/api/ai/conversations', {
-      params: { ...(q ? { q } : {}), page: 0, size: MAX_PAGE_SIZE },
+      params: { ...(q ? { q } : {}), ...(caseId ? { caseId } : {}), page: 0, size: MAX_PAGE_SIZE },
     })
     return response.data
   },

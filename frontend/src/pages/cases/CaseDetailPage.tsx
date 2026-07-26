@@ -21,10 +21,11 @@ import { ResponsesSection } from '../../components/cases/ResponsesSection'
 import { CaseTimeSection } from '../../components/cases/CaseTimeSection'
 import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
 import { ArbitrSection } from '../../components/cases/ArbitrSection'
+import { CaseChatSection } from '../../components/cases/CaseChatSection'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { DOCUMENT_POLLING_INTERVAL_MS } from '../../components/cases/caseFormatting'
 
-const TAB_IDS = ['overview', 'documents', 'analysis', 'time', 'tasks', 'messages'] as const
+const TAB_IDS = ['overview', 'documents', 'ask', 'analysis', 'time', 'tasks', 'messages'] as const
 type TabId = (typeof TAB_IDS)[number]
 
 function resolveInitialTab(param: string | null, hash: string): TabId {
@@ -123,6 +124,7 @@ export default function CaseDetailPage(): JSX.Element {
   const tabs: CaseTabDescriptor[] = [
     { id: 'overview', label: t('caseDetail.tabOverview') },
     { id: 'documents', label: t('caseDetail.tabDocuments'), badge: documents.length },
+    { id: 'ask', label: t('caseDetail.tabAsk') },
     { id: 'analysis', label: t('caseDetail.tabAnalysis'), badge: responses.length },
     { id: 'time', label: t('caseDetail.tabTime') },
     { id: 'tasks', label: t('caseDetail.tabTasks') },
@@ -160,6 +162,8 @@ export default function CaseDetailPage(): JSX.Element {
               <CaseSignatureSection caseId={caseId} documents={documents} />
             </>
           )}
+
+          {activeTab === 'ask' && <CaseChatSection caseId={caseId} />}
 
           {activeTab === 'analysis' && (
             <>
