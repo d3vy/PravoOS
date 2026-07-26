@@ -10,7 +10,7 @@ import { clientsApi } from '../../api/clients'
 import { organizationsApi } from '../../api/organizations'
 import { savedViewsApi } from '../../api/savedViews'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type Page } from '../../api/pagination'
-import type { CaseResponse, CaseStatus, ClientResponse, Organization } from '../../types'
+import type { CaseResponse, CaseStatus, ClientResponse, Organization, OrganizationMember } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { SkeletonCardGrid } from '../../components/ui/Skeleton'
@@ -145,6 +145,12 @@ export default function CasesPage(): JSX.Element {
     [organizations]
   )
 
+  const { data: orgFilterMembers = [] } = useQuery<OrganizationMember[]>({
+    queryKey: ['org-members', orgFilter],
+    queryFn: () => organizationsApi.members(orgFilter),
+    enabled: Boolean(orgFilter),
+  })
+
   useEffect(() => {
     const raw = localStorage.getItem(LEGACY_VIEWS_KEY)
     if (!raw) return
@@ -222,6 +228,38 @@ export default function CasesPage(): JSX.Element {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cases'] })
       setSelectedIds(new Set())
+    },
+  })
+
+  const bulkChangeOrgMutation = useMutation({
+    mutationFn: async ({ ids, newOrgId }: { ids: string[]; newOrgId: string | null }) => {
+      const results = await Promise.allSettled(ids.map((id) => casesApi.changeOrg(id, newOrgId)))
+      const failed = results.filter((result) => result.status === 'rejected').length
+      if (failed > 0) throw new Error('bulk-change-org-partial-failure')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+      setSelectedIds(new Set())
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+      toast.error(t('cases.bulkChangeOrgError'))
+    },
+  })
+
+  const bulkTransferOwnerMutation = useMutation({
+    mutationFn: async ({ ids, newOwnerId }: { ids: string[]; newOwnerId: string }) => {
+      const results = await Promise.allSettled(ids.map((id) => casesApi.transferOwner(id, newOwnerId)))
+      const failed = results.filter((result) => result.status === 'rejected').length
+      if (failed > 0) throw new Error('bulk-transfer-owner-partial-failure')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+      setSelectedIds(new Set())
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+      toast.error(t('cases.bulkTransferOwnerError'))
     },
   })
 
@@ -741,6 +779,50 @@ export default function CasesPage(): JSX.Element {
                     </option>
                   ))}
                 </select>
+                {organizations.length > 0 && (
+                  <select
+                    value=""
+                    disabled={bulkChangeOrgMutation.isPending}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value === '') return
+                      bulkChangeOrgMutation.mutate({
+                        ids: Array.from(selectedIds),
+                        newOrgId: value === 'personal' ? null : value,
+                      })
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                  >
+                    <option value="">{t('cases.bulkChangeOrg')}</option>
+                    <option value="personal">{t('cases.personalCase')}</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {orgFilter && (
+                  <select
+                    value=""
+                    disabled={bulkTransferOwnerMutation.isPending || orgFilterMembers.length === 0}
+                    title={t('cases.bulkTransferOwnerHint')}
+                    onChange={(e) => {
+                      const newOwnerId = e.target.value
+                      if (newOwnerId) {
+                        bulkTransferOwnerMutation.mutate({ ids: Array.from(selectedIds), newOwnerId })
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                  >
+                    <option value="">{t('cases.bulkTransferOwner')}</option>
+                    {orgFilterMembers.map((member) => (
+                      <option key={member.userId} value={member.userId}>
+                        {member.fullName || member.email || member.userId}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <button
                   type="button"
                   onClick={() => setSelectedIds(new Set())}

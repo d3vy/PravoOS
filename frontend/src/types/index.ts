@@ -499,10 +499,29 @@ export interface SearchDocumentHit {
   snippet: string | null
 }
 
+export interface SearchClientHit {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+}
+
+export interface SearchInvoiceHit {
+  id: string
+  number: string
+  clientName: string | null
+  total: number
+  currency: string
+  status: InvoiceStatus
+  statusName: string
+}
+
 export interface GlobalSearchResponse {
   cases: SearchCaseHit[]
   conversations: SearchConversationHit[]
   documents: SearchDocumentHit[]
+  clients: SearchClientHit[]
+  invoices: SearchInvoiceHit[]
 }
 
 export type ClientType = 'INDIVIDUAL' | 'COMPANY'

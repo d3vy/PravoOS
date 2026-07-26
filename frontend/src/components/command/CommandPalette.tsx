@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { casesApi } from '../../api/cases'
 import { searchApi } from '../../api/search'
 import { timeApi } from '../../api/time'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
@@ -12,7 +13,9 @@ import { useTheme } from '../../hooks/useTheme'
 import { useToast } from '../../hooks/useToast'
 import { useLawyerAccountLinks, useLawyerNavSections } from '../layout/lawyerNav'
 import { CaseStatusBadge } from '../ui/Badge'
-import type { GlobalSearchResponse } from '../../types'
+import type { CaseResponse, GlobalSearchResponse } from '../../types'
+
+const OPEN_CASE_STATUSES = new Set(['INTAKE', 'IN_PROGRESS', 'SUBMITTED'])
 
 const MIN_SEARCH_LENGTH = 2
 
@@ -67,8 +70,15 @@ export function CommandPalette(): JSX.Element | null {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const [mode, setMode] = useState<'root' | 'timer-case-picker'>('root')
   const inputRef = useRef<HTMLInputElement>(null)
   const activeItemRef = useRef<HTMLButtonElement>(null)
+
+  const { data: openCases } = useQuery<CaseResponse[]>({
+    queryKey: ['command-timer-cases'],
+    queryFn: async () => (await casesApi.list(undefined, '', 0, 50)).items,
+    enabled: open && mode === 'timer-case-picker',
+  })
 
   useEffect(() => {
     const handleHotkey = (event: KeyboardEvent): void => {
@@ -86,6 +96,7 @@ export function CommandPalette(): JSX.Element | null {
       setQuery('')
       setDebouncedQuery('')
       setActiveIndex(0)
+      setMode('root')
       const focusTimer = setTimeout(() => inputRef.current?.focus(), 30)
       return () => clearTimeout(focusTimer)
     }
@@ -167,6 +178,18 @@ export function CommandPalette(): JSX.Element | null {
         perform: () => run(() => navigate('/chat')),
       },
       {
+        id: 'action:start-timer',
+        label: t('command.startTimer'),
+        hint: t('command.startTimerHint'),
+        keywords: 'таймер время учёт timer time tracking старт',
+        icon: <ClockIcon />,
+        perform: () => {
+          setQuery('')
+          setActiveIndex(0)
+          setMode('timer-case-picker')
+        },
+      },
+      {
         id: 'action:toggle-theme',
         label: t('command.toggleTheme'),
         hint: t('command.appearance'),
@@ -245,11 +268,53 @@ export function CommandPalette(): JSX.Element | null {
           })),
         })
       }
+      if (searchResults.clients.length > 0) {
+        result.push({
+          title: t('command.clients'),
+          items: searchResults.clients.map((hit) => ({
+            id: `client:${hit.id}`,
+            label: hit.name,
+            hint: hit.email ?? hit.phone ?? undefined,
+            icon: <ClientIcon />,
+            perform: () => run(() => navigate(`/clients/${hit.id}`)),
+          })),
+        })
+      }
+      if (searchResults.invoices.length > 0) {
+        result.push({
+          title: t('command.invoices'),
+          items: searchResults.invoices.map((hit) => ({
+            id: `invoice:${hit.id}`,
+            label: hit.number,
+            hint: hit.clientName ?? hit.statusName,
+            icon: <DocIcon />,
+            perform: () => run(() => navigate(`/invoices/${hit.id}`)),
+          })),
+        })
+      }
     }
     return result
   }, [actionGroup, debouncedQuery, searchEnabled, searchResults, recentGroup, navigate, startTimer, t])
 
-  const flatItems = useMemo(() => groups.flatMap((group) => group.items), [groups])
+  const timerGroups = useMemo<CommandGroup[]>(() => {
+    const cases = (openCases ?? []).filter((c) => OPEN_CASE_STATUSES.has(c.status))
+    const items: CommandItem[] = cases.map((c) => ({
+      id: `timer-case:${c.id}`,
+      label: c.title,
+      hint: c.clientName ?? undefined,
+      keywords: c.clientName ?? '',
+      icon: <CaseIcon />,
+      badge: <CaseStatusBadge status={c.status} />,
+      perform: () =>
+        run(() => {
+          startTimer.mutate(c.id)
+        }),
+    }))
+    return [{ title: t('command.startTimer'), items: items.filter((item) => matches(query, item)) }]
+  }, [openCases, startTimer, t, query])
+
+  const activeGroups = mode === 'timer-case-picker' ? timerGroups : groups
+  const flatItems = useMemo(() => activeGroups.flatMap((group) => group.items), [activeGroups])
 
   useEffect(() => {
     setActiveIndex((current) => (current >= flatItems.length ? 0 : current))
@@ -273,7 +338,13 @@ export function CommandPalette(): JSX.Element | null {
       flatItems[activeIndex]?.perform()
     } else if (event.key === 'Escape') {
       event.preventDefault()
-      close()
+      if (mode === 'timer-case-picker') {
+        setMode('root')
+        setQuery('')
+        setActiveIndex(0)
+      } else {
+        close()
+      }
     }
   }
 
@@ -303,9 +374,24 @@ export function CommandPalette(): JSX.Element | null {
             className="w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-overlay shadow-card"
           >
             <div className="flex items-center gap-3 px-4 border-b border-line">
-              <span className="text-fg-muted">
-                <SearchIcon />
-              </span>
+              {mode === 'timer-case-picker' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('root')
+                    setQuery('')
+                    setActiveIndex(0)
+                  }}
+                  aria-label={t('command.back')}
+                  className="text-fg-muted hover:text-fg"
+                >
+                  <BackIcon />
+                </button>
+              ) : (
+                <span className="text-fg-muted">
+                  <SearchIcon />
+                </span>
+              )}
               <input
                 ref={inputRef}
                 value={query}
@@ -313,7 +399,9 @@ export function CommandPalette(): JSX.Element | null {
                   setQuery(event.target.value)
                   setActiveIndex(0)
                 }}
-                placeholder={t('command.placeholder')}
+                placeholder={
+                  mode === 'timer-case-picker' ? t('command.pickCaseForTimer') : t('command.placeholder')
+                }
                 className="flex-1 bg-transparent py-4 text-sm text-fg placeholder:text-fg-muted/70 focus:outline-none"
                 aria-label={t('command.inputAria')}
               />
@@ -325,12 +413,14 @@ export function CommandPalette(): JSX.Element | null {
             <div className="max-h-[52vh] overflow-y-auto scrollbar-thin p-2">
               {flatItems.length === 0 ? (
                 <p className="px-3 py-10 text-center text-sm text-fg-muted">
-                  {debouncedQuery.length >= MIN_SEARCH_LENGTH
-                    ? t('command.nothingFound', { query: debouncedQuery })
-                    : t('command.startTyping')}
+                  {mode === 'timer-case-picker'
+                    ? t('command.noOpenCases')
+                    : debouncedQuery.length >= MIN_SEARCH_LENGTH
+                      ? t('command.nothingFound', { query: debouncedQuery })
+                      : t('command.startTyping')}
                 </p>
               ) : (
-                groups.map((group) => (
+                activeGroups.map((group) => (
                   <div key={group.title} className="mb-1 last:mb-0">
                     <p className="eyebrow px-3 pt-2 pb-1">{group.title}</p>
                     {group.items.map((item) => {
@@ -483,6 +573,15 @@ function ClientIcon(): JSX.Element {
     <IconWrapper>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+    </IconWrapper>
+  )
+}
+
+function BackIcon(): JSX.Element {
+  return (
+    <IconWrapper>
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
     </IconWrapper>
   )
 }
