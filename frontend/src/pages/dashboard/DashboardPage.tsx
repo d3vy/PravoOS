@@ -11,7 +11,7 @@ import type { TFunction } from 'i18next'
 import { WidgetGrid } from './widgets/WidgetGrid'
 import { WidgetPickerModal } from './widgets/WidgetPickerModal'
 
-function greeting(hour: number, t: TFunction): string {
+export function greeting(hour: number, t: TFunction): string {
   if (hour >= 5 && hour < 12) return t('dashboard.greetingMorning')
   if (hour >= 12 && hour < 18) return t('dashboard.greetingDay')
   if (hour >= 18 && hour < 23) return t('dashboard.greetingEvening')
@@ -215,7 +215,7 @@ function QuickAskWidget(): JSX.Element {
   )
 }
 
-function DigestBanner({ data }: { data: DashboardResponse }): JSX.Element {
+export function DigestBanner({ data }: { data: DashboardResponse }): JSX.Element {
   const { t, i18n } = useTranslation()
   const now = new Date()
   const dueToday = data.upcomingDeadlines.filter((deadline) => deadline.daysLeft <= 0).length
