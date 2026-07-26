@@ -3,14 +3,16 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/authStore'
 import { useMoreSheetStore } from '../../store/moreSheetStore'
+import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { authApi } from '../../api/auth'
 import { useLawyerAccountLinks, useLawyerNavSections } from './lawyerNav'
-import { DashboardIcon, ClientsIcon, InvoiceIcon } from './navIcons'
+import { DashboardIcon, ClientsIcon, InvoiceIcon, SearchIcon } from './navIcons'
 
 export function MoreSheet(): JSX.Element | null {
   const { t } = useTranslation()
   const open = useMoreSheetStore((state) => state.open)
   const close = useMoreSheetStore((state) => state.close)
+  const openCommandPalette = useCommandPaletteStore((state) => state.setOpen)
   const lawyerNavSections = useLawyerNavSections()
   const lawyerAccountLinks = useLawyerAccountLinks()
   const { user, clearAuth } = useAuthStore()
@@ -71,6 +73,17 @@ export function MoreSheet(): JSX.Element | null {
         )}
 
         <div className="p-2">
+          <button
+            type="button"
+            onClick={() => {
+              close()
+              openCommandPalette(true)
+            }}
+            className="w-full text-left flex items-center gap-3 px-3 min-h-11 rounded-lg text-sm font-medium text-fg hover:bg-bg transition-colors"
+          >
+            <span aria-hidden="true"><SearchIcon /></span>
+            {t('nav.search')}
+          </button>
           {quickLinks.map((link) => (
             <NavLink
               key={link.to}
