@@ -52,6 +52,7 @@ class CaseChatContextTest {
   @Mock private DocumentAccess documentAccess;
   @Mock private CaseAccessProvider caseAccessProvider;
   @Mock private CaseContextProvider caseContextProvider;
+  @Mock private DocumentAccessGuard documentAccessGuard;
   @Mock private RagService ragService;
   @Mock private LlmClient llmClient;
   @Mock private LegalDomainGuard legalDomainGuard;
@@ -77,6 +78,7 @@ class CaseChatContextTest {
             documentAccess,
             caseAccessProvider,
             caseContextProvider,
+            documentAccessGuard,
             ragService,
             llmClient,
             properties,
@@ -107,7 +109,9 @@ class CaseChatContextTest {
 
     var response =
         service.chat(
-            new ChatRequest(null, "Какие сроки по договору?", null, caseId), lawyerId, orgIds);
+            new ChatRequest(null, "Какие сроки по договору?", null, caseId, null),
+            lawyerId,
+            orgIds);
 
     verify(caseAccessProvider).assertCaseVisible(caseId, lawyerId, orgIds);
     verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId));
@@ -127,7 +131,7 @@ class CaseChatContextTest {
     when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
         .thenReturn(List.of());
 
-    service.chat(new ChatRequest(null, "Вопрос по делу", null, caseId), lawyerId, orgIds);
+    service.chat(new ChatRequest(null, "Вопрос по делу", null, caseId, null), lawyerId, orgIds);
 
     verify(conversationRepository)
         .save(ArgumentMatchers.argThat(conversation -> caseId.equals(conversation.getCaseId())));
@@ -142,7 +146,9 @@ class CaseChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Вопрос по чужому делу", null, caseId), lawyerId, orgIds))
+                    new ChatRequest(null, "Вопрос по чужому делу", null, caseId, null),
+                    lawyerId,
+                    orgIds))
         .isInstanceOf(CaseNotFoundException.class);
 
     verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
@@ -150,13 +156,13 @@ class CaseChatContextTest {
 
   @Test
   void rejectsConversationBoundToAnotherCase() {
-    Conversation conversation = new Conversation(lawyerId, "Беседа", UUID.randomUUID());
+    Conversation conversation = new Conversation(lawyerId, "Беседа", UUID.randomUUID(), null);
     when(conversationRepository.findById("c1")).thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest("c1", "Вопрос по делу", null, caseId), lawyerId, orgIds))
+                    new ChatRequest("c1", "Вопрос по делу", null, caseId, null), lawyerId, orgIds))
         .isInstanceOf(ConversationCaseMismatchException.class);
   }
 
@@ -168,13 +174,13 @@ class CaseChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest("c1", "Вопрос по делу", null, caseId), lawyerId, orgIds))
+                    new ChatRequest("c1", "Вопрос по делу", null, caseId, null), lawyerId, orgIds))
         .isInstanceOf(ConversationCaseMismatchException.class);
   }
 
   @Test
   void generalChatKeepsKnowledgeBaseOnlyPath() {
-    service.chat(new ChatRequest(null, "Общий вопрос", null, null), lawyerId, orgIds);
+    service.chat(new ChatRequest(null, "Общий вопрос", null, null, null), lawyerId, orgIds);
 
     verify(caseAccessProvider, never()).assertCaseVisible(any(), any(), anyList());
     verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());

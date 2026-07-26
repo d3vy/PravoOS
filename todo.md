@@ -77,9 +77,13 @@
 
   Порядок: DTO+модель+доступ (S) → сборка контекста+промпт (S) → фронт (S). Миграции БД не нужны (Mongo). Отдельный эндпоинт не обязателен — хватает поля в `ChatRequest`.
 
-- [ ] **5. «Чат с документом» + авто-саммари при загрузке.** При загрузке (`DocumentService.completeProcessing`) генерировать саммари + ключевые пункты; в карточке дока — Q&A.
-  Реюз: chunks/embeddings уже считаются, LLM-шлюз готов.
-  Ценность: нет «задать вопрос к этому PDF» и «краткое содержание» — есть только сравнение/review.
+- [x] **5. «Чат с документом» + авто-саммари при загрузке.** ✅ Сделано. Документ после загрузки сам себя пересказывает, и по нему можно вести отдельный чат.
+  **Авто-саммари.** V41: `documents.summary` / `summary_key_points` / `summary_status` / `summary_generated_at` (проверено на живом pg16). Ключевые пункты — JSON в одной TEXT-колонке через `StringListJsonConverter`, а не отдельная таблица: `@ElementCollection` дал бы либо N+1 на списках документов, либо lazy-загрузку вне транзакции. Генерация висит на хвосте `EmbeddingPipeline` (текст уже извлечён — второй раз файл не расшифровываем): `DocumentSummaryService.summarizeAfterUpload` **best-effort** — любая ошибка кладёт `summary_status = FAILED`, но документ остаётся `READY` (саммари не должно ронять загрузку). Только `DocumentKind.GENERAL`: НПА пересказывать незачем, чат-вложения эфемерны. Промпт (`DocumentSummaryPrompt`) требует один JSON-объект, текст документа идёт в собственном фенсе с анти-инъекционной инструкцией и обрезкой по `max-input-chars`; `DocumentSummaryParser` терпит markdown-фенсы и болтовню вокруг JSON, режет дубли/пустые пункты и длину. Транзакционная запись вынесена в отдельный бин `DocumentSummaryStore` (self-invocation не дал бы `@Transactional`). Токены: при загрузке — `recordTokenUsage` на владельца (как эмбеддинги), при ручном «Обновить» — `assertWithinQuota` + `recordUsage` на инициатора.
+  **Чат с документом.** `ChatRequest.documentId` + `Conversation.documentId` (тот же паттерн, что `caseId` из #4); `caseId` и `documentId` одновременно → 400 `CHAT_SCOPE_CONFLICT`, беседа чужого документа → `CONVERSATION_DOCUMENT_MISMATCH`. Ретривал — уже существовавший `DocumentRetrieval.retrieveInDocument` (скоуп `ChunkSearchScope.forDocument`) ∪ база законодательства для правового обоснования; промпт `RagService.buildDocumentSystemPrompt` («отвечай по тексту этого документа, законодательство помечай как норму, формулировки цитируй дословно») получает готовое саммари как шапку. Доступ — новый `DocumentAccessGuard` (case-документ → `assertCaseVisible`, документ базы знаний → любой юрист, чужое чат-вложение → 404), он же используется эндпоинтами саммари. Беседы документа исключены из общего списка и из ⌘K (`...CaseIdIsNullAndDocumentIdIsNull...`).
+  **API/доступ:** `GET|POST /api/ai/document-insights/{id}[/regenerate]` — отдельный префикс, потому что `/api/ai/documents/**` в `SecurityConfig` зарезервирован под ADMIN; новый матчер `hasAnyRole("LAWYER","ADMIN")`.
+  **Фронт:** тело чата вынесено из `CaseChatSection` в переиспользуемый `ScopedChatPanel` (скоуп case/document + префикс i18n), `CaseChatSection` стал обёрткой. В карточке дела каждый READY-документ разворачивает `DocumentInsightPanel` (саммари + ключевые пункты + «Обновить» + чат по документу); в админской базе знаний — `DocumentSummaryCard` в модалке (чат там не нужен: он про юриста). i18n RU/EN.
+  Тесты: `DocumentSummaryParserTest` (7), `DocumentSummaryServiceTest` (10), `DocumentAccessGuardTest` (5), `DocumentChatContextTest` (7), `DocumentInsightPanel.test.tsx` (5). Весь ai-service: 316 зелёных, ModularityTests зелёные, фронт `tsc && vitest && vite build` чистый.
+  ⚠️ Саммари считается синхронно внутри async-пайплайна — на большом документе `READY` появляется на несколько секунд раньше саммари (UI показывает статус `PENDING`). Ручной прогон на реальных договорах — на тебе: качество пересказа зависит от модели, всё вынесено в `DOCUMENT_SUMMARY_*`.
 
 - [ ] **6. Из чата → черновик документа одной кнопкой.** Ответ AI по делу → «Создать черновик» (жалоба/ходатайство) с предзаполнением из дела.
   Реюз: `DraftController` + `DraftType` (5 типов).
@@ -123,4 +127,4 @@
 3. **#5 / #6 / #10** — углубление AI и монетизация.
 4. **#9** — маркетинговый дифференциатор.
 
-Старт: #4 закрыт — следующий по отрыву от конкурентов **#5 («чат с документом» + авто-саммари)**.
+Старт: #4 и #5 закрыты — следующий **#6 («из чата → черновик документа одной кнопкой»)**, он замыкает связку «анализ → документ» на уже готовых `DraftController`/`DraftType`.

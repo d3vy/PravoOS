@@ -43,6 +43,7 @@ class ChatAttachmentOwnershipTest {
   @Mock private DocumentAccess documentAccess;
   @Mock private CaseAccessProvider caseAccessProvider;
   @Mock private CaseContextProvider caseContextProvider;
+  @Mock private DocumentAccessGuard documentAccessGuard;
   @Mock private RagService ragService;
   @Mock private LlmClient llmClient;
   @Mock private LegalDomainGuard legalDomainGuard;
@@ -65,6 +66,7 @@ class ChatAttachmentOwnershipTest {
             documentAccess,
             caseAccessProvider,
             caseContextProvider,
+            documentAccessGuard,
             ragService,
             llmClient,
             properties,
@@ -87,7 +89,9 @@ class ChatAttachmentOwnershipTest {
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
     service.chat(
-        new ChatRequest(null, "Проверь договор", List.of(documentId), null), lawyerId, List.of());
+        new ChatRequest(null, "Проверь договор", List.of(documentId), null, null),
+        lawyerId,
+        List.of());
   }
 
   @Test
@@ -99,7 +103,7 @@ class ChatAttachmentOwnershipTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Проверь договор", List.of(documentId), null),
+                    new ChatRequest(null, "Проверь договор", List.of(documentId), null, null),
                     lawyerId,
                     List.of()))
         .isInstanceOf(DocumentNotFoundException.class);
@@ -115,7 +119,7 @@ class ChatAttachmentOwnershipTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Проверь договор", List.of(documentId), null),
+                    new ChatRequest(null, "Проверь договор", List.of(documentId), null, null),
                     lawyerId,
                     List.of()))
         .isInstanceOf(DocumentNotFoundException.class);
@@ -132,7 +136,7 @@ class ChatAttachmentOwnershipTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Проверь договор", List.of(documentId), null),
+                    new ChatRequest(null, "Проверь договор", List.of(documentId), null, null),
                     lawyerId,
                     List.of()))
         .isInstanceOf(DocumentNotFoundException.class);

@@ -12,6 +12,8 @@ import { Spinner } from '../../components/ui/Spinner'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
+import { Modal } from '../../components/ui/Modal'
+import { DocumentSummaryCard } from '../../components/documents/DocumentSummaryCard'
 import { TableToolbar } from '../../components/ui/TableToolbar'
 import { useDensity } from '../../hooks/useDensity'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
@@ -434,6 +436,7 @@ function DocumentRowActions({ doc, onDelete, isDeleting }: DocumentRowActionsPro
   const { t } = useTranslation()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [isOpening, setIsOpening] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
 
   const handleOpen = async (): Promise<void> => {
     const newWindow = window.open('', '_blank')
@@ -468,6 +471,19 @@ function DocumentRowActions({ doc, onDelete, isDeleting }: DocumentRowActionsPro
       <Button variant="ghost" size="sm" onClick={() => void handleOpen()} loading={isOpening} disabled={isOpening}>
         {t('documents.open')}
       </Button>
+      {doc.status === 'READY' && (
+        <Button variant="ghost" size="sm" onClick={() => setSummaryOpen(true)}>
+          {t('documentSummary.title')}
+        </Button>
+      )}
+      <Modal
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        title={doc.title}
+        size="lg"
+      >
+        <DocumentSummaryCard documentId={doc.id} />
+      </Modal>
       <Button
         variant={confirmDelete ? 'danger' : 'ghost'}
         size="sm"

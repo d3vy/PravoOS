@@ -17,6 +17,10 @@ public interface DocumentAccess {
 
   String extractText(UUID id);
 
+  DocumentSummaryView summaryFor(UUID id);
+
+  DocumentSummaryView regenerateSummary(UUID id, UUID requestedBy);
+
   boolean knowledgeBaseMentions(String needle);
 
   Optional<LegislationRef> currentLegislation(String articleNumber, String actCanonical);

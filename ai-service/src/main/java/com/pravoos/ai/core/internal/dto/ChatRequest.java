@@ -10,4 +10,5 @@ public record ChatRequest(
     @NotBlank @Size(max = 4000) String message,
     @Size(max = 10, message = "Не более 10 вложенных документов на сообщение")
         List<UUID> attachedDocumentIds,
-    UUID caseId) {}
+    UUID caseId,
+    UUID documentId) {}

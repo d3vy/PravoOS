@@ -1,6 +1,12 @@
 import apiClient from './client'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, readTotal, type Page } from './pagination'
-import type { DocumentResponse, DocumentUploadResponse, LegislationResponse, LegislationUpload } from '../types'
+import type {
+  DocumentInsightResponse,
+  DocumentResponse,
+  DocumentUploadResponse,
+  LegislationResponse,
+  LegislationUpload,
+} from '../types'
 
 export const documentsApi = {
   list: async (page = 0, size = DEFAULT_PAGE_SIZE): Promise<Page<DocumentResponse>> => {
@@ -33,6 +39,18 @@ export const documentsApi = {
     const response = await apiClient.get(`/api/ai/documents/${id}/content`, {
       responseType: 'blob',
     })
+    return response.data
+  },
+
+  getInsight: async (id: string): Promise<DocumentInsightResponse> => {
+    const response = await apiClient.get<DocumentInsightResponse>(`/api/ai/document-insights/${id}`)
+    return response.data
+  },
+
+  regenerateInsight: async (id: string): Promise<DocumentInsightResponse> => {
+    const response = await apiClient.post<DocumentInsightResponse>(
+      `/api/ai/document-insights/${id}/regenerate`
+    )
     return response.data
   },
 

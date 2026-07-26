@@ -4,6 +4,7 @@ import com.pravoos.ai.document.internal.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
 import com.pravoos.ai.document.internal.service.DocumentService;
+import com.pravoos.ai.document.internal.service.DocumentSummaryService;
 import com.pravoos.ai.document.internal.service.EmbeddingService;
 import com.pravoos.ai.document.internal.service.FileCryptoService;
 import com.pravoos.ai.llm.api.EmbeddingResult;
@@ -35,6 +36,7 @@ public class EmbeddingPipeline {
   private final EmbeddingService embeddingService;
   private final DocumentProperties documentProperties;
   private final LlmQuotaService llmQuotaService;
+  private final DocumentSummaryService documentSummaryService;
 
   public EmbeddingPipeline(
       DocumentRepository documentRepository,
@@ -44,7 +46,8 @@ public class EmbeddingPipeline {
       TextChunker textChunker,
       EmbeddingService embeddingService,
       DocumentProperties documentProperties,
-      LlmQuotaService llmQuotaService) {
+      LlmQuotaService llmQuotaService,
+      DocumentSummaryService documentSummaryService) {
     this.documentRepository = documentRepository;
     this.documentService = documentService;
     this.documentParser = documentParser;
@@ -53,6 +56,7 @@ public class EmbeddingPipeline {
     this.embeddingService = embeddingService;
     this.documentProperties = documentProperties;
     this.llmQuotaService = llmQuotaService;
+    this.documentSummaryService = documentSummaryService;
   }
 
   @Async
@@ -94,6 +98,7 @@ public class EmbeddingPipeline {
           chunkData.size(),
           embeddingTokens,
           document.getUploadedBy());
+      documentSummaryService.summarizeAfterUpload(documentId, text);
     } catch (Exception e) {
       log.error("Embedding pipeline failed for document: {}", documentId, e);
       documentService.markFailed(documentId);

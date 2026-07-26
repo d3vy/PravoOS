@@ -2,9 +2,12 @@ package com.pravoos.ai.document.internal.model.entity;
 
 import com.pravoos.ai.shared.model.enums.DocumentKind;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
+import com.pravoos.ai.shared.model.enums.DocumentSummaryStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -62,6 +65,20 @@ public class Document {
   @Column(nullable = false, length = 50)
   private DocumentStatus status;
 
+  @Column(columnDefinition = "text")
+  private String summary;
+
+  @Convert(converter = StringListJsonConverter.class)
+  @Column(name = "summary_key_points", columnDefinition = "text")
+  private List<String> summaryKeyPoints = new ArrayList<>();
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "summary_status", nullable = false, length = 50)
+  private DocumentSummaryStatus summaryStatus = DocumentSummaryStatus.NONE;
+
+  @Column(name = "summary_generated_at")
+  private LocalDateTime summaryGeneratedAt;
+
   @PrePersist
   void prePersist() {
     uploadedAt = LocalDateTime.now();
@@ -70,6 +87,9 @@ public class Document {
     }
     if (documentKind == null) {
       documentKind = DocumentKind.GENERAL;
+    }
+    if (summaryStatus == null) {
+      summaryStatus = DocumentSummaryStatus.NONE;
     }
   }
 
@@ -191,5 +211,40 @@ public class Document {
 
   public void setStatus(DocumentStatus status) {
     this.status = status;
+  }
+
+  public String getSummary() {
+    return summary;
+  }
+
+  public void setSummary(String summary) {
+    this.summary = summary;
+  }
+
+  public List<String> getSummaryKeyPoints() {
+    return summaryKeyPoints;
+  }
+
+  public void setSummaryKeyPoints(List<String> summaryKeyPoints) {
+    this.summaryKeyPoints.clear();
+    if (summaryKeyPoints != null) {
+      this.summaryKeyPoints.addAll(summaryKeyPoints);
+    }
+  }
+
+  public DocumentSummaryStatus getSummaryStatus() {
+    return summaryStatus;
+  }
+
+  public void setSummaryStatus(DocumentSummaryStatus summaryStatus) {
+    this.summaryStatus = summaryStatus;
+  }
+
+  public LocalDateTime getSummaryGeneratedAt() {
+    return summaryGeneratedAt;
+  }
+
+  public void setSummaryGeneratedAt(LocalDateTime summaryGeneratedAt) {
+    this.summaryGeneratedAt = summaryGeneratedAt;
   }
 }

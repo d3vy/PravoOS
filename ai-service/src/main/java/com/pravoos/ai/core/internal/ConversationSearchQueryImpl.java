@@ -20,7 +20,7 @@ public class ConversationSearchQueryImpl implements ConversationSearchQuery {
   @Transactional(readOnly = true)
   public List<ConversationSearchHit> searchConversations(UUID lawyerId, String query, int limit) {
     return conversationRepository
-        .findTop50ByLawyerIdAndCaseIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
+        .findTop50ByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
             lawyerId, query)
         .stream()
         .limit(limit)

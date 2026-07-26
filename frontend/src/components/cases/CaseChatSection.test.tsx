@@ -74,7 +74,7 @@ describe('CaseChatSection', () => {
     renderSection()
 
     await waitFor(() => {
-      expect(mockedChatApi.getConversations).toHaveBeenCalledWith(undefined, CASE_ID)
+      expect(mockedChatApi.getConversations).toHaveBeenCalledWith(undefined, CASE_ID, undefined)
     })
   })
 

@@ -118,6 +118,13 @@ document:
   max-per-lawyer: ${DOCUMENT_MAX_PER_LAWYER:2000}
   max-total-bytes-per-lawyer: ${DOCUMENT_MAX_TOTAL_BYTES_PER_LAWYER:5368709120}
   upload-rate-per-minute: ${DOCUMENT_UPLOAD_RATE_PER_MINUTE:20}
+  summary:
+    enabled: ${DOCUMENT_SUMMARY_ENABLED:true}
+    max-input-chars: ${DOCUMENT_SUMMARY_MAX_INPUT_CHARS:24000}
+    max-key-points: ${DOCUMENT_SUMMARY_MAX_KEY_POINTS:7}
+    max-summary-chars: ${DOCUMENT_SUMMARY_MAX_CHARS:1500}
+    max-key-point-chars: ${DOCUMENT_SUMMARY_MAX_KEY_POINT_CHARS:400}
+    max-tokens: ${DOCUMENT_SUMMARY_MAX_TOKENS:900}
   search:
     lexical-enabled: ${RAG_LEXICAL_ENABLED:true}
     max-distance: ${RAG_MAX_DISTANCE:0.85}

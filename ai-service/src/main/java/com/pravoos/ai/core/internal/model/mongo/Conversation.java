@@ -16,18 +16,21 @@ public class Conversation {
 
   private UUID caseId;
 
+  private UUID documentId;
+
   private LocalDateTime createdAt;
 
   public Conversation() {}
 
   public Conversation(UUID lawyerId, String title) {
-    this(lawyerId, title, null);
+    this(lawyerId, title, null, null);
   }
 
-  public Conversation(UUID lawyerId, String title, UUID caseId) {
+  public Conversation(UUID lawyerId, String title, UUID caseId, UUID documentId) {
     this.lawyerId = lawyerId;
     this.title = title;
     this.caseId = caseId;
+    this.documentId = documentId;
     this.createdAt = LocalDateTime.now();
   }
 
@@ -49,6 +52,10 @@ public class Conversation {
 
   public UUID getCaseId() {
     return caseId;
+  }
+
+  public UUID getDocumentId() {
+    return documentId;
   }
 
   public LocalDateTime getCreatedAt() {

@@ -74,6 +74,7 @@ public class ChatController {
   public ResponseEntity<List<ConversationResponse>> getConversations(
       @RequestParam(required = false) String q,
       @RequestParam(required = false) UUID caseId,
+      @RequestParam(required = false) UUID documentId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size,
       Authentication authentication) {
@@ -82,6 +83,7 @@ public class ChatController {
             SecurityUtils.currentUserId(authentication),
             q,
             caseId,
+            documentId,
             SecurityUtils.currentOrgIds(authentication),
             page,
             size));

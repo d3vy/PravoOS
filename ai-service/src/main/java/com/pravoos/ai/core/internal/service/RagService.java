@@ -16,7 +16,8 @@ public class RagService {
   private static final Logger log = LoggerFactory.getLogger(RagService.class);
   private static final String CHUNK_SEPARATOR = "\n\n---\n\n";
   private static final Pattern PLACEHOLDER =
-      Pattern.compile("\\{(instruction|context|legislationNotice|caseCard|timeline|checklist)\\}");
+      Pattern.compile(
+          "\\{(instruction|context|legislationNotice|caseCard|timeline|checklist|documentTitle|documentSummary)\\}");
 
   private static final String CONTEXT_FENCE_OPEN = "<<<КОНТЕКСТ_НАЧАЛО>>>";
   private static final String CONTEXT_FENCE_CLOSE = "<<<КОНТЕКСТ_КОНЕЦ>>>";
@@ -143,6 +144,35 @@ public class RagService {
             """
           + FOLLOW_UP_INSTRUCTION;
 
+  private static final String DOCUMENT_PROMPT_TEMPLATE =
+      """
+            Вы — юридический ИИ-ассистент платформы PravoOS. Вы отвечаете на вопросы юриста \
+            строго по одному документу, фрагменты которого приведены ниже.
+
+            Отвечайте только на основании текста этого документа. Законодательство используйте \
+            только для правового обоснования и всегда помечайте, что это норма, а не условие \
+            документа. Если в документе нет данных для ответа — прямо скажите об этом, не \
+            додумывайте условия, суммы, даты и наименования сторон. Когда вопрос касается \
+            конкретной формулировки — цитируйте её дословно.
+
+            ДОКУМЕНТ: {documentTitle}
+
+            КРАТКОЕ СОДЕРЖАНИЕ:
+            {documentSummary}
+
+            """
+          + CITATION_INSTRUCTION
+          + """
+            {legislationNotice}
+            """
+          + INJECTION_GUARD_INSTRUCTION
+          + """
+
+            КОНТЕКСТ (ФРАГМЕНТЫ ДОКУМЕНТА И ЗАКОНОДАТЕЛЬСТВО):
+            {context}
+            """
+          + FOLLOW_UP_INSTRUCTION;
+
   private final int contextMaxChars;
 
   public RagService(DocumentProperties documentProperties) {
@@ -174,6 +204,25 @@ public class RagService {
             sanitizeChunk(hearingTimeline),
             "checklist",
             sanitizeChunk(checklist),
+            "context",
+            joinContext(relevantChunks),
+            "legislationNotice",
+            legislationPresent ? "" : NO_LEGISLATION_CAUTION));
+  }
+
+  public String buildDocumentSystemPrompt(
+      String documentTitle,
+      String documentSummary,
+      List<String> relevantChunks,
+      boolean legislationPresent) {
+    String summary = sanitizeChunk(documentSummary);
+    return fill(
+        DOCUMENT_PROMPT_TEMPLATE,
+        Map.of(
+            "documentTitle",
+            sanitizeChunk(documentTitle),
+            "documentSummary",
+            summary.isEmpty() ? "Краткое содержание не составлено." : summary,
             "context",
             joinContext(relevantChunks),
             "legislationNotice",

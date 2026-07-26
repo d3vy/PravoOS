@@ -12,14 +12,21 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
   List<Conversation> findTop100ByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
   List<Conversation>
-      findTop50ByLawyerIdAndCaseIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
+      findTop50ByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
           UUID lawyerId, String title);
 
-  Page<Conversation> findByLawyerIdAndCaseIdIsNullOrderByCreatedAtDesc(
+  Page<Conversation> findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullOrderByCreatedAtDesc(
       UUID lawyerId, Pageable pageable);
 
-  Page<Conversation> findByLawyerIdAndCaseIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-      UUID lawyerId, String title, Pageable pageable);
+  Page<Conversation>
+      findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
+          UUID lawyerId, String title, Pageable pageable);
+
+  Page<Conversation> findByLawyerIdAndDocumentIdOrderByCreatedAtDesc(
+      UUID lawyerId, UUID documentId, Pageable pageable);
+
+  Page<Conversation> findByLawyerIdAndDocumentIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
+      UUID lawyerId, UUID documentId, String title, Pageable pageable);
 
   Page<Conversation> findByLawyerIdAndCaseIdOrderByCreatedAtDesc(
       UUID lawyerId, UUID caseId, Pageable pageable);

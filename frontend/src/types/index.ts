@@ -88,6 +88,7 @@ export interface ChatRequest {
   message: string
   attachedDocumentIds?: string[]
   caseId?: string
+  documentId?: string
 }
 
 export interface ChatResponse {
@@ -119,6 +120,18 @@ export interface DocumentResponse {
   status: DocumentStatus
   uploadedAt: string
   visibleToClient?: boolean
+}
+
+export type DocumentSummaryStatus = 'NONE' | 'PENDING' | 'READY' | 'FAILED'
+
+export interface DocumentInsightResponse {
+  documentId: string
+  title: string
+  status: DocumentStatus
+  summaryStatus: DocumentSummaryStatus
+  summary: string | null
+  keyPoints: string[]
+  generatedAt: string | null
 }
 
 export interface DocumentUploadResponse {

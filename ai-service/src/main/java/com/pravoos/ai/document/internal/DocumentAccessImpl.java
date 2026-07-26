@@ -3,18 +3,16 @@ package com.pravoos.ai.document.internal;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentResponse;
+import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.document.api.LegislationRef;
 import com.pravoos.ai.document.internal.model.entity.Document;
-import com.pravoos.ai.document.internal.pipeline.DocumentParser;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
 import com.pravoos.ai.document.internal.service.DocumentService;
-import com.pravoos.ai.document.internal.service.FileCryptoService;
+import com.pravoos.ai.document.internal.service.DocumentSummaryService;
+import com.pravoos.ai.document.internal.service.DocumentTextExtractor;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.model.enums.DocumentKind;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -31,21 +29,21 @@ class DocumentAccessImpl implements DocumentAccess {
 
   private final DocumentRepository documentRepository;
   private final DocumentChunkRepository documentChunkRepository;
-  private final FileCryptoService fileCryptoService;
-  private final DocumentParser documentParser;
+  private final DocumentTextExtractor documentTextExtractor;
   private final DocumentService documentService;
+  private final DocumentSummaryService documentSummaryService;
 
   DocumentAccessImpl(
       DocumentRepository documentRepository,
       DocumentChunkRepository documentChunkRepository,
-      FileCryptoService fileCryptoService,
-      DocumentParser documentParser,
-      DocumentService documentService) {
+      DocumentTextExtractor documentTextExtractor,
+      DocumentService documentService,
+      DocumentSummaryService documentSummaryService) {
     this.documentRepository = documentRepository;
     this.documentChunkRepository = documentChunkRepository;
-    this.fileCryptoService = fileCryptoService;
-    this.documentParser = documentParser;
+    this.documentTextExtractor = documentTextExtractor;
     this.documentService = documentService;
+    this.documentSummaryService = documentSummaryService;
   }
 
   @Override
@@ -70,14 +68,18 @@ class DocumentAccessImpl implements DocumentAccess {
 
   @Override
   public String extractText(UUID id) {
-    Document document = loadOrThrow(id);
-    Path path = Paths.get(document.getFilePath());
-    if (!Files.isReadable(path)) {
-      log.warn("Document {} has missing file on disk: {}", id, path);
-      throw new DocumentNotFoundException(id);
-    }
-    byte[] content = fileCryptoService.decryptFile(path);
-    return documentParser.extractText(content, document.getFileType());
+    return documentTextExtractor.extractText(loadOrThrow(id));
+  }
+
+  @Override
+  public DocumentSummaryView summaryFor(UUID id) {
+    return toSummaryView(loadOrThrow(id));
+  }
+
+  @Override
+  public DocumentSummaryView regenerateSummary(UUID id, UUID requestedBy) {
+    documentSummaryService.regenerate(id, requestedBy);
+    return summaryFor(id);
   }
 
   @Override
@@ -110,6 +112,20 @@ class DocumentAccessImpl implements DocumentAccess {
 
   private Document loadOrThrow(UUID id) {
     return documentRepository.findById(id).orElseThrow(() -> new DocumentNotFoundException(id));
+  }
+
+  private DocumentSummaryView toSummaryView(Document document) {
+    return new DocumentSummaryView(
+        document.getId(),
+        document.getCaseId(),
+        document.getUploadedBy(),
+        document.getTitle(),
+        document.getDocumentKind(),
+        document.getStatus(),
+        document.getSummaryStatus(),
+        document.getSummary(),
+        List.copyOf(document.getSummaryKeyPoints()),
+        document.getSummaryGeneratedAt());
   }
 
   private DocumentRef toRef(Document document) {

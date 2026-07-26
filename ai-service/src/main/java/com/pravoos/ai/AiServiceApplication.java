@@ -15,6 +15,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({
   LlmServiceProperties.class,
   DocumentProperties.class,
+  DocumentSummaryProperties.class,
   JwtProperties.class,
   ArbitrProperties.class,
   FileCryptoProperties.class,
