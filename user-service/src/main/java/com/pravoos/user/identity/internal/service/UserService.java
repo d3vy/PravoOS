@@ -11,6 +11,7 @@ import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.repository.LawyerProfileRepository;
 import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.shared.exception.ProfileNotFoundException;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,7 +63,15 @@ public class UserService {
     user.setCaseMessageEmail(request.caseMessageEmail());
     user.setCaseMessageTelegram(request.caseMessageTelegram());
     user.setCaseMessagePush(request.caseMessagePush());
+    user.setDigestPush(request.digestPush());
     return toSettingsResponse(user);
+  }
+
+  public List<UUID> filterDigestEnabled(List<UUID> userIds) {
+    if (userIds.isEmpty()) {
+      return List.of();
+    }
+    return userRepository.findIdsByIdInAndDigestPushTrue(userIds);
   }
 
   public LanguageSettingsResponse getLanguage(UUID userId) {
@@ -90,6 +99,7 @@ public class UserService {
         user.isCaseMessageEmail(),
         user.isCaseMessageTelegram(),
         user.isCaseMessagePush(),
+        user.isDigestPush(),
         telegramLinked);
   }
 

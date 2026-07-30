@@ -7,4 +7,5 @@ public record NotificationSettingsResponse(
     boolean caseMessageEmail,
     boolean caseMessageTelegram,
     boolean caseMessagePush,
+    boolean digestPush,
     boolean telegramLinked) {}

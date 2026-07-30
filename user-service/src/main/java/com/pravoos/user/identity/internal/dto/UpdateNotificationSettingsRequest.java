@@ -8,4 +8,5 @@ public record UpdateNotificationSettingsRequest(
     @NotNull Boolean loginAlertPush,
     @NotNull Boolean caseMessageEmail,
     @NotNull Boolean caseMessageTelegram,
-    @NotNull Boolean caseMessagePush) {}
+    @NotNull Boolean caseMessagePush,
+    @NotNull Boolean digestPush) {}

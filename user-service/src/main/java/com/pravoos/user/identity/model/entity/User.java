@@ -52,6 +52,9 @@ public class User {
   @Column(name = "preferred_language", nullable = false, length = 8)
   private String preferredLanguage = "ru";
 
+  @Column(name = "digest_push", nullable = false)
+  private boolean digestPush = true;
+
   @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
   private LawyerProfile lawyerProfile;
 
@@ -162,6 +165,14 @@ public class User {
 
   public void setPreferredLanguage(String preferredLanguage) {
     this.preferredLanguage = preferredLanguage;
+  }
+
+  public boolean isDigestPush() {
+    return digestPush;
+  }
+
+  public void setDigestPush(boolean digestPush) {
+    this.digestPush = digestPush;
   }
 
   public LawyerProfile getLawyerProfile() {

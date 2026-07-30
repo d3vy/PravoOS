@@ -862,6 +862,7 @@ export interface NotificationSettingsResponse {
   caseMessageEmail: boolean
   caseMessageTelegram: boolean
   caseMessagePush: boolean
+  digestPush: boolean
   telegramLinked: boolean
 }
 
@@ -872,6 +873,7 @@ export interface UpdateNotificationSettingsRequest {
   caseMessageEmail: boolean
   caseMessageTelegram: boolean
   caseMessagePush: boolean
+  digestPush: boolean
 }
 
 export interface PushConfigResponse {

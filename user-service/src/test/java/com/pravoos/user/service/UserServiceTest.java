@@ -3,6 +3,7 @@ package com.pravoos.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.pravoos.user.identity.internal.dto.NotificationSettingsResponse;
@@ -13,6 +14,7 @@ import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.repository.LawyerProfileRepository;
 import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.shared.exception.ProfileNotFoundException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +82,8 @@ class UserServiceTest {
 
     NotificationSettingsResponse response =
         service.updateNotificationSettings(
-            userId, new UpdateNotificationSettingsRequest(false, true, false, true, false, true));
+            userId,
+            new UpdateNotificationSettingsRequest(false, true, false, true, false, true, false));
 
     assertThat(user.isLoginAlertEmail()).isFalse();
     assertThat(user.isLoginAlertTelegram()).isTrue();
@@ -88,7 +91,9 @@ class UserServiceTest {
     assertThat(user.isCaseMessageEmail()).isTrue();
     assertThat(user.isCaseMessageTelegram()).isFalse();
     assertThat(user.isCaseMessagePush()).isTrue();
+    assertThat(user.isDigestPush()).isFalse();
     assertThat(response.caseMessagePush()).isTrue();
+    assertThat(response.digestPush()).isFalse();
   }
 
   @Test
@@ -100,8 +105,24 @@ class UserServiceTest {
             () ->
                 service.updateNotificationSettings(
                     userId,
-                    new UpdateNotificationSettingsRequest(true, true, true, true, true, true)))
+                    new UpdateNotificationSettingsRequest(
+                        true, true, true, true, true, true, true)))
         .isInstanceOf(ProfileNotFoundException.class);
+  }
+
+  @Test
+  void filterDigestEnabled_returnsOnlyIdsWithDigestPushEnabled() {
+    UUID enabledId = UUID.randomUUID();
+    when(userRepository.findIdsByIdInAndDigestPushTrue(List.of(enabledId)))
+        .thenReturn(List.of(enabledId));
+
+    assertThat(service.filterDigestEnabled(List.of(enabledId))).containsExactly(enabledId);
+  }
+
+  @Test
+  void filterDigestEnabled_returnsEmpty_whenInputEmpty() {
+    assertThat(service.filterDigestEnabled(List.of())).isEmpty();
+    verifyNoInteractions(userRepository);
   }
 
   private User user(UUID userId) {

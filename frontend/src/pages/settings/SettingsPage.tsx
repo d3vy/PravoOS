@@ -119,6 +119,14 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
     caseMessageEmail: settings.caseMessageEmail,
     caseMessageTelegram: settings.caseMessageTelegram,
     caseMessagePush: settings.caseMessagePush,
+    digestPush: settings.digestPush,
+  }
+
+  const toggleDigestPush = (): void => {
+    updateMutation.mutate({
+      ...currentRequest,
+      digestPush: !settings.digestPush,
+    })
   }
 
   const toggleLoginChannel = (channel: NotificationChannel): void => {
@@ -179,6 +187,33 @@ function NotificationsTab({ onGoToIntegrations }: { onGoToIntegrations: () => vo
         onToggle={toggleCaseMessageChannel}
         disabled={updateMutation.isPending}
       />
+
+      <div>
+        <h2 className="text-xl font-semibold text-fg">{t('settings.digestTitle')}</h2>
+        <p className="text-sm text-fg-muted mt-1">
+          {t('settings.digestDesc')}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        disabled={updateMutation.isPending}
+        onClick={toggleDigestPush}
+        className="flex items-center gap-3 text-sm text-left text-fg disabled:opacity-50 transition-colors max-w-xs"
+      >
+        <span
+          className={`flex items-center justify-center w-4 h-4 rounded border ${
+            settings.digestPush ? 'bg-accent-solid border-accent' : 'border-line'
+          }`}
+        >
+          {settings.digestPush && (
+            <svg className="w-3 h-3 text-accent-fg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
+        </span>
+        {t('settings.digestPushLabel')}
+      </button>
 
       {telegramSelectedButNotLinked && (
         <div className="rounded-lg border border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 p-3">

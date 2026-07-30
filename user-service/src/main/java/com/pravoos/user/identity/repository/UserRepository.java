@@ -40,4 +40,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   @Query("SELECT u FROM User u LEFT JOIN FETCH u.lawyerProfile WHERE u.id IN :ids")
   List<User> findByIdInWithProfile(@Param("ids") Collection<UUID> ids);
+
+  @Query("SELECT u.id FROM User u WHERE u.id IN :ids AND u.digestPush = true")
+  List<UUID> findIdsByIdInAndDigestPushTrue(@Param("ids") Collection<UUID> ids);
 }
