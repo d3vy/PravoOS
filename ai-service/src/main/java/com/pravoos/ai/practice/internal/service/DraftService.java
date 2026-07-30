@@ -64,11 +64,22 @@ public class DraftService {
     self.assertGeneratable(caseId, lawyerId, orgIds);
     log.info("Generating draft {} for case {} by lawyer {}", draftType.name(), caseId, lawyerId);
 
+    String userMessage = buildUserMessage(request.seedAnswer());
     LegalAiAnswer answer =
-        legalAiPort.answerForCase(caseId, draftType.instruction(), "Выполни задачу.", lawyerId);
+        legalAiPort.answerForCase(caseId, draftType.instruction(), userMessage, lawyerId);
     log.info("LLM draft tokens for lawyer {}: total={}", lawyerId, answer.totalTokens());
 
     return self.persistGeneratedDraft(caseId, lawyerId, draftType, answer.content());
+  }
+
+  private String buildUserMessage(String seedAnswer) {
+    if (seedAnswer == null || seedAnswer.isBlank()) {
+      return "Выполни задачу.";
+    }
+    validateSeedLength(seedAnswer);
+    return "Используй как основу для документа следующий разбор по делу, подготовленный ранее:\n\n"
+        + seedAnswer.strip()
+        + "\n\nВыполни задачу с учётом этого разбора.";
   }
 
   @Transactional(readOnly = true)
@@ -174,6 +185,13 @@ public class DraftService {
     if (text.length() > properties.maxRefineChars()) {
       throw new DraftEditingException(
           "Фрагмент для доработки превышает лимит в " + properties.maxRefineChars() + " символов");
+    }
+  }
+
+  private void validateSeedLength(String text) {
+    if (text.length() > properties.maxRefineChars()) {
+      throw new DraftEditingException(
+          "Текст-основа превышает лимит в " + properties.maxRefineChars() + " символов");
     }
   }
 

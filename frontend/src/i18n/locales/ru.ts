@@ -876,6 +876,8 @@ const ru = {
     feedbackThanks: 'Спасибо, отзыв учтён.',
     feedbackPlaceholder: 'Что не так с ответом? (необязательно)',
     sendFeedback: 'Отправить отзыв',
+    createDraft: 'Создать черновик документа',
+    createDraftError: 'Не удалось создать черновик. Попробуйте снова.',
   },
   invoices: {
     columnNumber: 'Номер',

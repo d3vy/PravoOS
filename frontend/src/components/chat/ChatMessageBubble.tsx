@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { citationsApi } from '../../api/citations'
+import { casesApi } from '../../api/cases'
+import type { DraftTypeInfo } from '../../types'
 import { Spinner } from '../ui/Spinner'
 import { PravoIcon } from '../ui/Logo'
 import { RatingButtons } from '../ui/RatingButtons'
@@ -54,11 +57,87 @@ function CopyButton({ text }: { text: string }): JSX.Element {
   )
 }
 
+function CreateDraftMenu({ caseId, seedAnswer }: { caseId: string; seedAnswer: string }): JSX.Element {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const { data: draftTypes = [] } = useQuery<DraftTypeInfo[]>({
+    queryKey: ['draft-types'],
+    queryFn: casesApi.getDraftTypes,
+    enabled: open,
+  })
+
+  const generateMutation = useMutation({
+    mutationFn: (draftType: string) => casesApi.generateDraft(caseId, { draftType, seedAnswer }),
+    onSuccess: (draft) => {
+      setOpen(false)
+      navigate(`/cases/${caseId}/drafts/${draft.id}`)
+    },
+  })
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        disabled={generateMutation.isPending}
+        title={t('chat.createDraft')}
+        className="text-fg-muted hover:text-fg transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+      >
+        {generateMutation.isPending ? (
+          <Spinner size="sm" />
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M12 18v-6M9 15h6" />
+          </svg>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute z-10 bottom-full left-0 mb-1 w-56 rounded-lg border border-line bg-surface shadow-lg py-1">
+          {draftTypes.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-fg-muted">{t('common.loading')}</p>
+          ) : (
+            draftTypes.map((type) => (
+              <button
+                key={type.id}
+                type="button"
+                onClick={() => generateMutation.mutate(type.id)}
+                className="block w-full text-left px-3 py-1.5 text-xs text-fg hover:bg-bg transition-colors"
+              >
+                {type.displayName}
+              </button>
+            ))
+          )}
+          {generateMutation.isError && (
+            <p className="px-3 py-1.5 text-xs text-danger">{t('chat.createDraftError')}</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function MessageBubble({
   message,
+  caseId,
   onRate,
 }: {
   message: LocalMessage
+  caseId?: string
   onRate: (rating: number, comment?: string) => void
 }): JSX.Element {
   const { t } = useTranslation()
@@ -124,6 +203,7 @@ export function MessageBubble({
           <div className="flex items-center gap-3">
             <CopyButton text={message.content} />
             {canRate && <RatingButtons rating={message.rating} onRate={(rating) => onRate(rating)} />}
+            {canRate && caseId && <CreateDraftMenu caseId={caseId} seedAnswer={message.content} />}
           </div>
         )}
 

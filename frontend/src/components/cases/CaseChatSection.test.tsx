@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import i18n from '../../i18n'
 import { CaseChatSection } from './CaseChatSection'
@@ -31,9 +32,11 @@ const mockedStreamMessage = vi.mocked(streamMessage)
 function renderSection(): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={queryClient}>
-      <CaseChatSection caseId={CASE_ID} />
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <CaseChatSection caseId={CASE_ID} />
+      </QueryClientProvider>
+    </MemoryRouter>
   )
 }
 

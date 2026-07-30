@@ -86,13 +86,50 @@ class DraftServiceTest {
     when(legalAiPort.answerForCase(eq(caseId), any(), any(), eq(lawyerId)))
         .thenReturn(new LegalAiAnswer("сгенерированный текст", 10));
 
-    service.generate(caseId, new GenerateDraftRequest("STATEMENT"), lawyerId, List.of());
+    service.generate(caseId, new GenerateDraftRequest("STATEMENT", null), lawyerId, List.of());
 
     ArgumentCaptor<CaseDraftVersion> captor = ArgumentCaptor.forClass(CaseDraftVersion.class);
     verify(caseDraftVersionRepository).save(captor.capture());
     assertThat(captor.getValue().getVersionNo()).isEqualTo(1);
     assertThat(captor.getValue().getNote()).isEqualTo("Исходная генерация");
     assertThat(captor.getValue().getContent()).isEqualTo("сгенерированный текст");
+  }
+
+  @Test
+  void generateWithoutSeedAnswerUsesDefaultUserMessage() {
+    when(legalAiPort.answerForCase(eq(caseId), any(), eq("Выполни задачу."), eq(lawyerId)))
+        .thenReturn(new LegalAiAnswer("сгенерированный текст", 10));
+
+    service.generate(caseId, new GenerateDraftRequest("STATEMENT", null), lawyerId, List.of());
+
+    verify(legalAiPort).answerForCase(eq(caseId), any(), eq("Выполни задачу."), eq(lawyerId));
+  }
+
+  @Test
+  void generateWithSeedAnswerEmbedsItInUserMessage() {
+    when(legalAiPort.answerForCase(eq(caseId), any(), any(), eq(lawyerId)))
+        .thenReturn(new LegalAiAnswer("сгенерированный текст", 10));
+
+    service.generate(
+        caseId,
+        new GenerateDraftRequest("STATEMENT", "разбор дела от ассистента"),
+        lawyerId,
+        List.of());
+
+    ArgumentCaptor<String> userMessageCaptor = ArgumentCaptor.forClass(String.class);
+    verify(legalAiPort).answerForCase(eq(caseId), any(), userMessageCaptor.capture(), eq(lawyerId));
+    assertThat(userMessageCaptor.getValue()).contains("разбор дела от ассистента");
+  }
+
+  @Test
+  void generateRejectsOversizedSeedAnswer() {
+    String tooLong = "x".repeat(501);
+
+    assertThatThrownBy(
+            () ->
+                service.generate(
+                    caseId, new GenerateDraftRequest("STATEMENT", tooLong), lawyerId, List.of()))
+        .isInstanceOf(DraftEditingException.class);
   }
 
   @Test

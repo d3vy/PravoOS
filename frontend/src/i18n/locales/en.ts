@@ -871,6 +871,8 @@ const en = {
     feedbackThanks: 'Thank you, your feedback has been noted.',
     feedbackPlaceholder: 'What is wrong with the answer? (optional)',
     sendFeedback: 'Send feedback',
+    createDraft: 'Create a document draft',
+    createDraftError: 'Failed to create the draft. Please try again.',
   },
   invoices: {
     columnNumber: 'Number',

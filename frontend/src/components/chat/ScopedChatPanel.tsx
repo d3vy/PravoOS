@@ -237,6 +237,7 @@ export function ScopedChatPanel({
                 <MessageBubble
                   key={message.id}
                   message={message}
+                  caseId={caseId}
                   onRate={(rating, comment) =>
                     rateMutation.mutate({ messageId: message.id, rating, comment })
                   }

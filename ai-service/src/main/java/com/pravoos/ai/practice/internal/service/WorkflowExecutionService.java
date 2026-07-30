@@ -174,7 +174,7 @@ public class WorkflowExecutionService {
       case GENERATE_DRAFT -> {
         CaseDraftDto draft =
             draftService.generate(
-                caseId, new GenerateDraftRequest(config.draftType()), lawyerId, orgIds);
+                caseId, new GenerateDraftRequest(config.draftType(), null), lawyerId, orgIds);
         yield step.completed("Черновик создан: " + draft.title(), null, draft.id());
       }
       case GENERATE_TASKS -> {

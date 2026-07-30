@@ -812,6 +812,7 @@ export interface CaseDraftSummaryDto {
 
 export interface GenerateDraftRequest {
   draftType: string
+  seedAnswer?: string
 }
 
 export interface LawyerProfileResponse {
