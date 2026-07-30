@@ -99,9 +99,13 @@
   Тесты: `ClientPortalInviteServiceTest`, `CaseMessageNotificationServiceTest`.
   Ценность: прямой пункт сравнения с Clio/MyCase в тендерах — закрыт.
 
-- [ ] **8. Авто-синхронизация заседаний КАД → календарь + авто-задачи.** `ArbitrPollingService` пишет `case_hearing_events` и шлёт в Telegram, но не заводит события в календаре и задачи «подготовиться за 3 дня».
-  Реюз: `CalendarController`/`case_tasks`, дедлайн-пороги 7/3/1.
-  Ценность: убирает ручной перенос дат.
+- [x] **8. Авто-синхронизация заседаний КАД → календарь + авто-задачи.** ✅ Сделано. Календарь уже показывал заседания КАД автоматически (`CalendarService.collectHearings` читает `case_hearing_events` напрямую) — реального пробела там не было. Реализована недостающая часть: авто-задача «Подготовиться к заседанию» + докрутка 7/3/1-напоминаний под задачи.
+  **Авто-задача.** `ArbitrSyncService.applyHearingDate` при появлении новой/изменившейся будущей даты заседания (в дополнение к уже существующей публикации `case.hearing.updated`) создаёт `CaseTask` с текстом «Подготовиться к заседанию dd.MM.yyyy» и `dueDate = hearingDate - 3 дня`; дедупликация — по тексту среди незавершённых задач дела (тот же паттерн, что `CaseTaskService.createFromChecklist`). Для дат в прошлом задача не создаётся.
+  **Напоминания 7/3/1 для задач.** `DeadlineReminderService` — было: `casesForType(TASK)` возвращал `List.of()` (заглушка). Добавлен отдельный путь `processTaskReminders`/`enqueueTaskReminder` (не через `Function<Case,LocalDate>`-аксессор, т.к. срок у задачи, а не у дела): новый запрос `CaseTaskRepository.findDueOnDate(target)` (join с `Case` за `lawyerId`/`caseTitle`), `deadlineTypeName` в `CaseDeadlineKafkaPayload` — текст самой задачи (а не литеральное «Задача»), что делает push/Telegram-уведомление содержательным. Дедупликация отправленных напоминаний — по `(caseId, TASK, dueDate, threshold, taskId)`: в `CaseDeadlineReminder`/`case_deadline_reminders` добавлено nullable поле `task_id` (V42), уникальный индекс переделан на `COALESCE(task_id, sentinel-uuid)`, чтобы задачи с одинаковым сроком в одном деле не схлопывались в одно напоминание. `notification-service` не менялся — `PushMessageFactory.deadline(...)`/`NotificationDispatcher.dispatchDeadline(...)` уже универсальны по `deadlineTypeName` как строке.
+  Тесты: `ArbitrSyncServiceTest` (создание задачи на будущую дату, отсутствие дубля, отсутствие создания при неизменной/прошедшей дате), `DeadlineReminderServiceTest` (enqueue/дедуп для `enqueueTaskReminder`). Весь `ai-service`: тесты зелёные.
+  ⚠️ Миграция V42 не прогонялась на живой БД в этой сессии (порт 5432 в окружении был занят посторонним контейнером) — синтаксис проверен вручную, стоит накатить перед мёрджем.
+  Файлы: `ai-service/.../service/{ArbitrSyncService,DeadlineReminderService}.java`, `.../model/entity/CaseDeadlineReminder.java`, `.../repository/jpa/{CaseDeadlineReminderRepository,CaseTaskRepository}.java`, `.../resources/db/migration/V42__case_deadline_reminders_task_id.sql`, тесты `ArbitrSyncServiceTest.java`, `DeadlineReminderServiceTest.java`.
+  Ценность: убирает ручной перенос дат и ручное напоминание о подготовке к заседанию.
 
 ## Новые фичи с юридической спецификой (M–L)
 

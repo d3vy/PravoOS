@@ -10,4 +10,11 @@ public interface CaseDeadlineReminderRepository extends JpaRepository<CaseDeadli
 
   boolean existsByCaseIdAndDeadlineTypeAndDeadlineDateAndThresholdDays(
       UUID caseId, DeadlineType deadlineType, LocalDate deadlineDate, int thresholdDays);
+
+  boolean existsByCaseIdAndDeadlineTypeAndDeadlineDateAndThresholdDaysAndTaskId(
+      UUID caseId,
+      DeadlineType deadlineType,
+      LocalDate deadlineDate,
+      int thresholdDays,
+      UUID taskId);
 }

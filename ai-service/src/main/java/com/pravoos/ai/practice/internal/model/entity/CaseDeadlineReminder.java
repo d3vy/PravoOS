@@ -30,6 +30,9 @@ public class CaseDeadlineReminder {
   @Column(name = "sent_at", nullable = false)
   private LocalDateTime sentAt;
 
+  @Column(name = "task_id")
+  private UUID taskId;
+
   protected CaseDeadlineReminder() {}
 
   public CaseDeadlineReminder(
@@ -38,11 +41,22 @@ public class CaseDeadlineReminder {
       LocalDate deadlineDate,
       int thresholdDays,
       LocalDateTime sentAt) {
+    this(caseId, deadlineType, deadlineDate, thresholdDays, sentAt, null);
+  }
+
+  public CaseDeadlineReminder(
+      UUID caseId,
+      DeadlineType deadlineType,
+      LocalDate deadlineDate,
+      int thresholdDays,
+      LocalDateTime sentAt,
+      UUID taskId) {
     this.caseId = caseId;
     this.deadlineType = deadlineType;
     this.deadlineDate = deadlineDate;
     this.thresholdDays = thresholdDays;
     this.sentAt = sentAt;
+    this.taskId = taskId;
   }
 
   public UUID getId() {
@@ -67,5 +81,9 @@ public class CaseDeadlineReminder {
 
   public LocalDateTime getSentAt() {
     return sentAt;
+  }
+
+  public UUID getTaskId() {
+    return taskId;
   }
 }

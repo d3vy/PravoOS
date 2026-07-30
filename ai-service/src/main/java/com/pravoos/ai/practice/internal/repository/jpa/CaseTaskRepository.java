@@ -33,6 +33,20 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, UUID> {
     LocalDate getDueDate();
   }
 
+  interface TaskReminderView {
+    UUID getId();
+
+    UUID getCaseId();
+
+    UUID getLawyerId();
+
+    String getCaseTitle();
+
+    String getText();
+
+    LocalDate getDueDate();
+  }
+
   List<CaseTask> findByCaseIdOrderByDoneAscCreatedAtAsc(UUID caseId);
 
   List<CaseTask> findByCaseIdInAndDoneFalseAndDueDateBetween(
@@ -79,4 +93,15 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, UUID> {
   @Query(
       "DELETE FROM CaseTask t WHERE t.caseId IN (SELECT c.id FROM Case c WHERE c.lawyerId = :lawyerId)")
   int deleteByLawyerId(@Param("lawyerId") UUID lawyerId);
+
+  @Query(
+      """
+            SELECT t.id AS id, c.id AS caseId, c.lawyerId AS lawyerId, c.title AS caseTitle,
+                   t.text AS text, t.dueDate AS dueDate
+            FROM CaseTask t, Case c
+            WHERE t.caseId = c.id
+              AND t.done = false
+              AND t.dueDate = :target
+            """)
+  List<TaskReminderView> findDueOnDate(@Param("target") LocalDate target);
 }
