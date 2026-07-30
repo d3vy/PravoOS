@@ -91,9 +91,11 @@
 
 ## Дожать начатое (M)
 
-- [ ] **7. Завершить клиентский портал (M3–M5).** Дела/документы/переписка для клиента + JWT-claim `clients` (запланирован, ещё не реализован).
-  Статус: M1 готов, M2 фронт. Половина работы сделана.
-  Ценность: прямой пункт сравнения с Clio/MyCase в тендерах.
+- [x] **7. Завершить клиентский портал (M3–M5).** ✅ Сделано (коммиты `c3d6fc0` E14 M1–M5, `fcb724c` мульти-клиент на один email). Дела/документы/переписка/электронная подпись для клиента + JWT-claim `clients`.
+  Бэкенд: `PortalAuthController` (инвайт/accept, SHA-256-хеш токена, 7 дней жизни, IP rate-limit), `ClientPortalInviteService` (создание/отзыв/scheduled-очистка просроченных), `PortalCaseController`/`PortalDocumentController`/`PortalMessageController`/`PortalSignatureController` — доступ через `SecurityUtils.currentClientIds` из JWT-claim `clients` (`JwtTokenProvider` + `PortalAccessProviderImpl`). `SecurityConfig`: `/api/ai/portal/**` → `hasRole("CLIENT")`.
+  Фронт: `pages/portal/{PortalCasesPage,PortalCaseDetailPage}.tsx`, `pages/PortalAcceptPage.tsx`, роуты в `App.tsx` с `ProtectedRoute requiredRole="CLIENT"`, `api/portal.ts`, у юриста — `ClientPortalSection`/`PortalSignatureSection` в `ClientDetailPage`.
+  Тесты: `ClientPortalInviteServiceTest`, `CaseMessageNotificationServiceTest`.
+  Ценность: прямой пункт сравнения с Clio/MyCase в тендерах — закрыт.
 
 - [ ] **8. Авто-синхронизация заседаний КАД → календарь + авто-задачи.** `ArbitrPollingService` пишет `case_hearing_events` и шлёт в Telegram, но не заводит события в календаре и задачи «подготовиться за 3 дня».
   Реюз: `CalendarController`/`case_tasks`, дедлайн-пороги 7/3/1.
