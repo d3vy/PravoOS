@@ -109,6 +109,19 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
       @Param("today") LocalDate today,
       @Param("horizon") LocalDate horizon);
 
+  @Query(
+      """
+            SELECT DISTINCT c.lawyerId FROM Case c
+            WHERE c.status NOT IN :closedStatuses
+              AND ((c.filingDeadline BETWEEN :today AND :horizon)
+                   OR (c.nextHearingDate BETWEEN :today AND :horizon)
+                   OR (c.expiresAt BETWEEN :today AND :horizon))
+            """)
+  List<UUID> findDistinctLawyerIdsWithUpcomingDeadlines(
+      @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
+      @Param("today") LocalDate today,
+      @Param("horizon") LocalDate horizon);
+
   List<Case> findTop5ByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
   List<Case> findByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);

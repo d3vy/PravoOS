@@ -80,6 +80,20 @@ public class KafkaConsumerConfig {
   }
 
   @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, InvoiceOverdueKafkaPayload>
+      invoiceOverdueKafkaListenerContainerFactory(
+          KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
+    return listenerFactory(InvoiceOverdueKafkaPayload.class, deadLetterKafkaTemplate);
+  }
+
+  @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, LawyerDigestKafkaPayload>
+      lawyerDigestKafkaListenerContainerFactory(
+          KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
+    return listenerFactory(LawyerDigestKafkaPayload.class, deadLetterKafkaTemplate);
+  }
+
+  @Bean
   public ConsumerFactory<String, String> dltConsumerFactory() {
     Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
     return new DefaultKafkaConsumerFactory<>(

@@ -104,4 +104,25 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, UUID> {
               AND t.dueDate = :target
             """)
   List<TaskReminderView> findDueOnDate(@Param("target") LocalDate target);
+
+  @Query(
+      """
+            SELECT DISTINCT c.lawyerId FROM CaseTask t, Case c
+            WHERE t.caseId = c.id
+              AND t.done = false
+              AND c.status NOT IN :closedStatuses
+              AND t.dueDate <= :today
+            """)
+  List<UUID> findDistinctLawyerIdsWithTasksDueTodayOrOverdue(
+      @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
+      @Param("today") LocalDate today);
+
+  @Query(
+      "SELECT COUNT(t) FROM CaseTask t, Case c WHERE t.caseId = c.id "
+          + "AND t.done = false AND c.lawyerId = :lawyerId "
+          + "AND c.status NOT IN :closedStatuses AND t.dueDate <= :today")
+  long countDueTodayOrOverdueByLawyerId(
+      @Param("lawyerId") UUID lawyerId,
+      @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
+      @Param("today") LocalDate today);
 }

@@ -3,7 +3,11 @@ package com.pravoos.notification.push;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
+import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
+import com.pravoos.notification.event.LawyerDigestKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -41,6 +45,55 @@ public class PushMessageFactory {
         senderLabel(payload.authorRole()) + ": " + preview(payload.preview()),
         path + payload.caseId(),
         "case-message-" + payload.caseId());
+  }
+
+  public PushMessage invoiceOverdue(InvoiceOverdueKafkaPayload payload) {
+    return PushMessage.of(
+        "Просрочен счёт № " + payload.invoiceNumber(),
+        String.format(
+            "%s — %s. Просрочка: %d дн.",
+            payload.clientName(), payload.totalFormatted(), payload.daysOverdue()),
+        "/invoices/" + payload.invoiceId(),
+        "invoice-overdue-" + payload.invoiceId() + "-" + payload.daysOverdue());
+  }
+
+  public PushMessage morningDigest(LawyerDigestKafkaPayload payload) {
+    List<String> parts = new ArrayList<>();
+    if (payload.tasksTodayCount() > 0) {
+      parts.add(payload.tasksTodayCount() + " " + pluralizeTasks(payload.tasksTodayCount()));
+    }
+    if (payload.upcomingDeadlinesCount() > 0) {
+      parts.add(
+          payload.upcomingDeadlinesCount()
+              + " "
+              + pluralizeDeadlines(payload.upcomingDeadlinesCount())
+              + " на неделе");
+    }
+    if (payload.unpaidInvoicesCount() > 0) {
+      parts.add(
+          payload.unpaidInvoicesCount()
+              + " "
+              + pluralizeInvoices(payload.unpaidInvoicesCount())
+              + " на "
+              + payload.unpaidInvoicesTotalFormatted());
+    }
+    return PushMessage.of(
+        "Утренний дайджест",
+        String.join(", ", parts),
+        "/dashboard",
+        "digest-" + payload.lawyerId() + "-" + payload.digestDate());
+  }
+
+  private String pluralizeTasks(int count) {
+    return count == 1 ? "задача на сегодня" : "задачи на сегодня";
+  }
+
+  private String pluralizeDeadlines(int count) {
+    return count == 1 ? "дедлайн" : "дедлайна";
+  }
+
+  private String pluralizeInvoices(int count) {
+    return count == 1 ? "неоплаченный счёт" : "неоплаченных счёта";
   }
 
   public PushMessage newLogin(NewLoginKafkaPayload payload) {

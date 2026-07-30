@@ -6,6 +6,8 @@ import com.pravoos.notification.client.UserServiceClient;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
+import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
+import com.pravoos.notification.event.LawyerDigestKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import com.pravoos.notification.push.PushMessageFactory;
 import org.springframework.stereotype.Service;
@@ -65,6 +67,16 @@ public class NotificationDispatcher {
     if (result.telegramChatId() != null) {
       telegramNotificationService.sendCaseMessage(payload, result.telegramChatId());
     }
+  }
+
+  public void dispatchInvoiceOverdue(InvoiceOverdueKafkaPayload payload) {
+    pushNotificationService.notifyUser(
+        payload.lawyerId(), pushMessageFactory.invoiceOverdue(payload));
+  }
+
+  public void dispatchMorningDigest(LawyerDigestKafkaPayload payload) {
+    pushNotificationService.notifyUser(
+        payload.lawyerId(), pushMessageFactory.morningDigest(payload));
   }
 
   public void dispatchNewLogin(NewLoginKafkaPayload payload) {

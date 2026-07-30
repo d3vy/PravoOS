@@ -10,6 +10,8 @@ import com.pravoos.notification.client.CaseMessageNotificationResult;
 import com.pravoos.notification.client.UserServiceClient;
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
+import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
+import com.pravoos.notification.event.LawyerDigestKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import com.pravoos.notification.push.PushMessage;
 import com.pravoos.notification.push.PushMessageFactory;
@@ -126,6 +128,27 @@ class NotificationDispatcherTest {
 
     verify(pushNotificationService, never()).notifyUser(any(), any());
     verify(telegramNotificationService).sendNewLogin(telegramOnly);
+  }
+
+  @Test
+  void dispatchInvoiceOverdue_pushesToLawyer() {
+    InvoiceOverdueKafkaPayload payload =
+        new InvoiceOverdueKafkaPayload(
+            UUID.randomUUID(), UUID.randomUUID(), "СЧ-2026-0007", "ООО Ромашка", "2 500.00 RUB", 3);
+
+    dispatcher.dispatchInvoiceOverdue(payload);
+
+    verify(pushNotificationService).notifyUser(eq(payload.lawyerId()), any(PushMessage.class));
+  }
+
+  @Test
+  void dispatchMorningDigest_pushesToLawyer() {
+    LawyerDigestKafkaPayload payload =
+        new LawyerDigestKafkaPayload(UUID.randomUUID(), "2026-07-30", 2, 1, 1, "1 500,00");
+
+    dispatcher.dispatchMorningDigest(payload);
+
+    verify(pushNotificationService).notifyUser(eq(payload.lawyerId()), any(PushMessage.class));
   }
 
   private CaseDeadlineKafkaPayload deadlinePayload() {

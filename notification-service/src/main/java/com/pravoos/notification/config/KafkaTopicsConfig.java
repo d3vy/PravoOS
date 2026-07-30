@@ -38,4 +38,14 @@ public class KafkaTopicsConfig {
   public NewTopic caseMessageCreatedDltTopic() {
     return topic("case.message.created.DLT");
   }
+
+  @Bean
+  public NewTopic invoiceOverdueDltTopic() {
+    return topic("invoice.overdue.DLT");
+  }
+
+  @Bean
+  public NewTopic lawyerDigestMorningDltTopic() {
+    return topic("lawyer.digest.morning.DLT");
+  }
 }

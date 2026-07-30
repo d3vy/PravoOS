@@ -188,6 +188,11 @@ invoice:
     reminder:
       cron: ${INVOICE_OVERDUE_REMINDER_CRON:0 0 9 * * *}
 
+lawyer:
+  digest:
+    morning:
+      cron: ${LAWYER_DIGEST_MORNING_CRON:0 0 8 * * *}
+
 app:
   billing:
     yookassa:

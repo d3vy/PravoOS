@@ -2,10 +2,12 @@ package com.pravoos.ai.shared.client;
 
 import com.pravoos.ai.shared.config.UserServiceProperties;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
+import com.pravoos.ai.shared.exception.DigestPreferenceCheckException;
 import com.pravoos.ai.shared.exception.OrgMembershipCheckException;
 import com.pravoos.ai.shared.exception.PortalInviteException;
 import com.pravoos.cloud.DiscoveryAwareRestClients;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,8 +112,30 @@ public class UserServiceClient {
     }
   }
 
+  public List<UUID> filterDigestEnabledLawyerIds(List<UUID> lawyerIds) {
+    try {
+      DigestPreferenceResponse response =
+          restClient
+              .post()
+              .uri("/internal/users/digest-preferences")
+              .header("X-Internal-Secret", internalSecret)
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new DigestPreferenceRequest(lawyerIds))
+              .retrieve()
+              .body(DigestPreferenceResponse.class);
+      return response == null ? List.of() : response.userIds();
+    } catch (RestClientException e) {
+      log.error("Failed to fetch digest preferences via user-service", e);
+      throw new DigestPreferenceCheckException();
+    }
+  }
+
   private record OrgMembershipCheckResponse(boolean member) {}
 
   private record CreatePortalInviteRequest(
       UUID clientId, UUID lawyerId, String email, String clientName) {}
+
+  private record DigestPreferenceRequest(List<UUID> userIds) {}
+
+  private record DigestPreferenceResponse(List<UUID> userIds) {}
 }
