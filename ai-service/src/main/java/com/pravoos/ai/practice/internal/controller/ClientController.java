@@ -2,11 +2,13 @@ package com.pravoos.ai.practice.internal.controller;
 
 import com.pravoos.ai.practice.internal.dto.ClientDetailResponse;
 import com.pravoos.ai.practice.internal.dto.ClientResponse;
+import com.pravoos.ai.practice.internal.dto.ConflictHit;
 import com.pravoos.ai.practice.internal.dto.ConsentResponse;
 import com.pravoos.ai.practice.internal.dto.CreateClientRequest;
 import com.pravoos.ai.practice.internal.dto.PersonalDataExportResponse;
 import com.pravoos.ai.practice.internal.dto.UpdateClientRequest;
 import com.pravoos.ai.practice.internal.service.ClientService;
+import com.pravoos.ai.practice.internal.service.ConflictCheckService;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.service.AccessAuditService;
@@ -26,10 +28,15 @@ import org.springframework.web.bind.annotation.*;
 public class ClientController {
 
   private final ClientService clientService;
+  private final ConflictCheckService conflictCheckService;
   private final AccessAuditService accessAuditService;
 
-  public ClientController(ClientService clientService, AccessAuditService accessAuditService) {
+  public ClientController(
+      ClientService clientService,
+      ConflictCheckService conflictCheckService,
+      AccessAuditService accessAuditService) {
     this.clientService = clientService;
+    this.conflictCheckService = conflictCheckService;
     this.accessAuditService = accessAuditService;
   }
 
@@ -38,6 +45,15 @@ public class ClientController {
       @Valid @RequestBody CreateClientRequest request, Authentication authentication) {
     UUID lawyerId = SecurityUtils.currentUserId(authentication);
     return ResponseEntity.status(HttpStatus.CREATED).body(clientService.create(request, lawyerId));
+  }
+
+  @GetMapping("/conflict-check")
+  public ResponseEntity<List<ConflictHit>> conflictCheck(
+      @RequestParam String name,
+      @RequestParam(required = false) UUID excludeClientId,
+      Authentication authentication) {
+    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+    return ResponseEntity.ok(conflictCheckService.check(lawyerId, name, excludeClientId));
   }
 
   @GetMapping

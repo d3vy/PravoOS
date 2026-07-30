@@ -522,6 +522,9 @@ const ru = {
     notesLabel: 'Заметки',
     notesOptional: '(опционально)',
     notesPlaceholder: 'Контактное лицо, особенности, договорённости',
+    conflictWarningTitle: 'Возможен конфликт интересов',
+    conflictCaseParty: '«{{name}}» уже проходит по делу «{{caseTitle}}» как {{role}}',
+    conflictClient: '«{{name}}» уже есть среди ваших клиентов',
   },
   applicationForm: {
     phoneRequired: 'Укажите контактный телефон',

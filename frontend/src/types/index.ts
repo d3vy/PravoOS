@@ -608,6 +608,17 @@ export interface CreateClientRequest {
 
 export type UpdateClientRequest = CreateClientRequest
 
+export type ConflictSource = 'CLIENT' | 'CASE_PARTY'
+
+export interface ConflictHit {
+  source: ConflictSource
+  matchedName: string
+  clientId: string | null
+  caseId: string | null
+  caseTitle: string | null
+  role: string | null
+}
+
 export type ContactType = 'CALL' | 'MEETING' | 'LETTER' | 'EMAIL' | 'MESSENGER'
 
 export interface ContactResponse {

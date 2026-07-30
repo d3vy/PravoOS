@@ -517,6 +517,9 @@ const en = {
     notesLabel: 'Notes',
     notesOptional: '(optional)',
     notesPlaceholder: 'Contact person, specifics, agreements',
+    conflictWarningTitle: 'Possible conflict of interest',
+    conflictCaseParty: '"{{name}}" already appears in case "{{caseTitle}}" as {{role}}',
+    conflictClient: '"{{name}}" already exists among your clients',
   },
   applicationForm: {
     phoneRequired: 'Enter a contact phone number',

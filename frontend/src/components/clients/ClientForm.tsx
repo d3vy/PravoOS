@@ -1,18 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ClientType, CreateClientRequest } from '../../types'
+import { clientsApi } from '../../api/clients'
+import type { ClientType, ConflictHit, CreateClientRequest } from '../../types'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 
 interface ClientFormProps {
   initial?: CreateClientRequest
+  excludeClientId?: string
   submitLabel: string
   isSubmitting: boolean
   error?: string | null
   onSubmit: (data: CreateClientRequest) => void
 }
 
-export function ClientForm({ initial, submitLabel, isSubmitting, error, onSubmit }: ClientFormProps): JSX.Element {
+export function ClientForm({
+  initial,
+  excludeClientId,
+  submitLabel,
+  isSubmitting,
+  error,
+  onSubmit,
+}: ClientFormProps): JSX.Element {
   const { t } = useTranslation()
   const clientTypes: { value: ClientType; label: string }[] = [
     { value: 'INDIVIDUAL', label: t('clientForm.typeIndividual') },
@@ -25,6 +34,34 @@ export function ClientForm({ initial, submitLabel, isSubmitting, error, onSubmit
   const [inn, setInn] = useState(initial?.inn ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [fieldError, setFieldError] = useState<string | null>(null)
+  const [conflicts, setConflicts] = useState<ConflictHit[]>([])
+
+  useEffect(() => {
+    const trimmed = name.trim()
+    if (trimmed.length < 3) {
+      setConflicts([])
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(() => {
+      clientsApi
+        .checkConflicts(trimmed, excludeClientId)
+        .then((hits) => {
+          if (!cancelled) {
+            setConflicts(hits)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setConflicts([])
+          }
+        })
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [name, excludeClientId])
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
@@ -56,6 +93,25 @@ export function ClientForm({ initial, submitLabel, isSubmitting, error, onSubmit
         onChange={(e) => setName(e.target.value)}
         maxLength={300}
       />
+
+      {conflicts.length > 0 && (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-fg">
+          <p className="font-medium mb-1.5">{t('clientForm.conflictWarningTitle')}</p>
+          <ul className="flex flex-col gap-1 list-disc list-inside">
+            {conflicts.map((hit, index) => (
+              <li key={index}>
+                {hit.source === 'CASE_PARTY'
+                  ? t('clientForm.conflictCaseParty', {
+                      name: hit.matchedName,
+                      role: hit.role ?? '',
+                      caseTitle: hit.caseTitle ?? '',
+                    })
+                  : t('clientForm.conflictClient', { name: hit.matchedName })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-fg">{t('clientForm.typeLabel')}</label>

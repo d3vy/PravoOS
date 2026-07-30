@@ -3,6 +3,7 @@ import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, readTotal, type Page } from './pagina
 import type {
   ClientDetailResponse,
   ClientResponse,
+  ConflictHit,
   ContactResponse,
   CreateClientRequest,
   CreateContactRequest,
@@ -84,5 +85,12 @@ export const clientsApi = {
 
   revokePortal: async (clientId: string): Promise<void> => {
     await apiClient.delete(`/api/ai/clients/${clientId}/portal/invite`)
+  },
+
+  checkConflicts: async (name: string, excludeClientId?: string): Promise<ConflictHit[]> => {
+    const response = await apiClient.get<ConflictHit[]>('/api/ai/clients/conflict-check', {
+      params: { name, excludeClientId },
+    })
+    return response.data
   },
 }
