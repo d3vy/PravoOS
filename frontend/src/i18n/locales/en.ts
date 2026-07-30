@@ -426,9 +426,18 @@ const en = {
   },
   portalCases: {
     title: 'My cases',
+    navLabel: 'Cases',
     loadError: 'Could not load cases. Try refreshing the page.',
     empty: 'You have no cases yet. Your lawyer will add them here.',
     nextHearing: 'Next hearing: {{date}}',
+  },
+  portalInvoices: {
+    title: 'My invoices',
+    navLabel: 'Invoices',
+    loadError: 'Could not load invoices. Try refreshing the page.',
+    empty: 'You have no invoices yet.',
+    pay: 'Pay online',
+    payError: 'Could not start the payment. Please try again later.',
   },
   messages: {
     title: 'Messages',

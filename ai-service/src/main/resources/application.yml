@@ -183,6 +183,19 @@ signature:
     base-url: ${DIADOC_API_BASE_URL:https://diadoc-api.kontur.ru}
     api-key: ${DIADOC_API_KEY:}
 
+invoice:
+  overdue:
+    reminder:
+      cron: ${INVOICE_OVERDUE_REMINDER_CRON:0 0 9 * * *}
+
+app:
+  billing:
+    yookassa:
+      shop-id: ${YOOKASSA_SHOP_ID:}
+      secret-key: ${YOOKASSA_SECRET_KEY:}
+      return-url: ${YOOKASSA_INVOICE_RETURN_URL:http://localhost:5173/portal/invoices}
+      webhook-allowed-ips: ${YOOKASSA_WEBHOOK_IPS:185.71.76.0/27,185.71.77.0/27,77.75.153.0/25,77.75.156.11,77.75.156.35,77.75.154.128/25,2a02:5180::/32}
+
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:false}

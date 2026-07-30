@@ -20,6 +20,8 @@ const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const PortalAcceptPage = lazy(() => import('./pages/PortalAcceptPage'))
 const PortalCasesPage = lazy(() => import('./pages/portal/PortalCasesPage'))
 const PortalCaseDetailPage = lazy(() => import('./pages/portal/PortalCaseDetailPage'))
+const PortalInvoicesPage = lazy(() => import('./pages/portal/PortalInvoicesPage'))
+const PortalInvoiceDetailPage = lazy(() => import('./pages/portal/PortalInvoiceDetailPage'))
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
 const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
 const CalendarPage = lazy(() => import('./pages/calendar/CalendarPage'))
@@ -87,6 +89,24 @@ export default function App(): JSX.Element {
           element={
             <ProtectedRoute requiredRole="CLIENT">
               <PortalCaseDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/portal/invoices"
+          element={
+            <ProtectedRoute requiredRole="CLIENT">
+              <PortalInvoicesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/portal/invoices/:invoiceId"
+          element={
+            <ProtectedRoute requiredRole="CLIENT">
+              <PortalInvoiceDetailPage />
             </ProtectedRoute>
           }
         />

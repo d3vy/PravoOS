@@ -3,6 +3,9 @@ import type {
   CaseMessageResponse,
   DocumentResponse,
   DocumentUploadResponse,
+  InvoicePaymentResponse,
+  InvoiceResponse,
+  InvoiceSummary,
   PortalCaseDetailResponse,
   PortalCaseResponse,
   SignatureRequestResponse,
@@ -104,6 +107,23 @@ export const portalApi = {
     const response = await apiClient.post<SignatureRequestResponse>(
       `/api/ai/portal/signatures/${signatureId}/decline`,
       { reason }
+    )
+    return response.data
+  },
+
+  listInvoices: async (): Promise<InvoiceSummary[]> => {
+    const response = await apiClient.get<InvoiceSummary[]>('/api/ai/portal/invoices')
+    return response.data
+  },
+
+  getInvoice: async (invoiceId: string): Promise<InvoiceResponse> => {
+    const response = await apiClient.get<InvoiceResponse>(`/api/ai/portal/invoices/${invoiceId}`)
+    return response.data
+  },
+
+  payInvoice: async (invoiceId: string): Promise<InvoicePaymentResponse> => {
+    const response = await apiClient.post<InvoicePaymentResponse>(
+      `/api/ai/portal/invoices/${invoiceId}/pay`
     )
     return response.data
   },

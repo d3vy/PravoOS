@@ -30,7 +30,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
   SignatureProperties.class,
   TabularReviewProperties.class,
   PiiCryptoProperties.class,
-  PersonalDataConsentProperties.class
+  PersonalDataConsentProperties.class,
+  InvoicePaymentProperties.class
 })
 @EnableJpaRepositories(
     basePackages = {

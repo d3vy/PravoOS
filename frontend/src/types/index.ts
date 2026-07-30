@@ -405,6 +405,11 @@ export interface InvoiceSummary {
   createdAt: string
 }
 
+export interface InvoicePaymentResponse {
+  invoiceId: string
+  confirmationUrl: string
+}
+
 export interface CreateInvoiceRequest {
   clientId: string
   caseId?: string | null

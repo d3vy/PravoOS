@@ -43,6 +43,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                     .permitAll()
+                    .requestMatchers("/api/ai/billing/invoice-webhook")
+                    .permitAll()
                     .requestMatchers("/api/ai/admin/**")
                     .hasRole("ADMIN")
                     .requestMatchers("/api/ai/documents/**")
