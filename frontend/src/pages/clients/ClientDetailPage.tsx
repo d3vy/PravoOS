@@ -142,6 +142,7 @@ export default function ClientDetailPage(): JSX.Element {
                 inn: client.inn ?? undefined,
                 notes: client.notes ?? undefined,
               }}
+              excludeClientId={client.id}
               submitLabel={t('clientDetail.save')}
               isSubmitting={updateMutation.isPending}
               error={editError}
