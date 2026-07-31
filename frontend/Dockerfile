@@ -1,8 +1,7 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN apk add --no-cache build-base python3 vips-dev \
-    && npm ci --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 COPY . .
 ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
