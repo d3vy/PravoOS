@@ -333,7 +333,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       CONFIG_SERVER_ENABLED: "true"
       CONFIG_SERVER_URL: http://config-server:8888
-      JAVA_TOOL_OPTIONS: "-Xms32m -Xmx100m"
+      JAVA_TOOL_OPTIONS: "-Xms32m -Xmx100m -Djava.net.preferIPv4Stack=true"
       # Secret isolation: blank out secrets this service never reads (overrides env_file).
       OPENAI_API_KEY: ""
       ARBITR_API_KEY: ""

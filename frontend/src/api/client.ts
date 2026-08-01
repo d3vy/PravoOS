@@ -4,9 +4,12 @@ import type { AuthResponse } from '../types'
 
 const baseURL = import.meta.env.VITE_API_URL || ''
 
+const REQUEST_TIMEOUT_MS = 30000
+
 const apiClient = axios.create({
   baseURL,
   withCredentials: true,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,7 +29,7 @@ export async function refreshSession(): Promise<string> {
   const response = await axios.post<AuthResponse>(
     '/api/auth/refresh',
     null,
-    { baseURL, withCredentials: true }
+    { baseURL, withCredentials: true, timeout: REQUEST_TIMEOUT_MS }
   )
   const { accessToken, userId, email, role } = response.data
   useAuthStore.getState().setSession(accessToken, { userId, email, role })
