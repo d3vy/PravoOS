@@ -231,6 +231,8 @@ export interface LawyerResponse {
 
 export type CaseStatus = 'INTAKE' | 'IN_PROGRESS' | 'SUBMITTED' | 'CLOSED_WON' | 'CLOSED_LOST'
 
+export type CourtSystem = 'ARBITR' | 'GENERAL_JURISDICTION'
+
 export interface CaseResponse {
   id: string
   ownerId: string
@@ -244,8 +246,10 @@ export interface CaseResponse {
   filingDeadline: string | null
   nextHearingDate: string | null
   expiresAt: string | null
-  arbitrCaseNumber: string | null
-  arbitrCardUrl: string | null
+  courtSystem: CourtSystem
+  courtSystemName: string
+  courtCaseNumber: string | null
+  courtCardUrl: string | null
   createdAt: string
 }
 
@@ -310,7 +314,8 @@ export interface CreateCaseRequest {
   filingDeadline?: string | null
   nextHearingDate?: string | null
   expiresAt?: string | null
-  arbitrCaseNumber?: string | null
+  courtCaseNumber?: string | null
+  courtSystem?: CourtSystem | null
 }
 
 export interface UpdateCaseRequest {
@@ -320,7 +325,8 @@ export interface UpdateCaseRequest {
   filingDeadline?: string | null
   nextHearingDate?: string | null
   expiresAt?: string | null
-  arbitrCaseNumber?: string | null
+  courtCaseNumber?: string | null
+  courtSystem?: CourtSystem | null
 }
 
 export type OrgRole = 'OWNER' | 'MANAGER' | 'MEMBER'
@@ -652,8 +658,10 @@ export interface PortalCaseDetailResponse {
   statusName: string
   filingDeadline: string | null
   nextHearingDate: string | null
-  arbitrCaseNumber: string | null
-  arbitrCardUrl: string | null
+  courtSystem: CourtSystem
+  courtSystemName: string
+  courtCaseNumber: string | null
+  courtCardUrl: string | null
   createdAt: string
   hearings: CaseHearingEvent[]
 }

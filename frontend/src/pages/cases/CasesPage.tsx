@@ -71,7 +71,7 @@ export default function CasesPage(): JSX.Element {
   const [filingDeadline, setFilingDeadline] = useState('')
   const [nextHearingDate, setNextHearingDate] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
-  const [arbitrCaseNumber, setArbitrCaseNumber] = useState('')
+  const [courtCaseNumber, setCourtCaseNumber] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('table')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
@@ -194,7 +194,7 @@ export default function CasesPage(): JSX.Element {
       setFilingDeadline('')
       setNextHearingDate('')
       setExpiresAt('')
-      setArbitrCaseNumber('')
+      setCourtCaseNumber('')
       setFormError(null)
       toast.success(t('cases.createSuccess', { title: createdCase.title }))
     },
@@ -342,11 +342,11 @@ export default function CasesPage(): JSX.Element {
         render: (row) => formatDate(row.nextHearingDate),
       },
       {
-        id: 'arbitrCaseNumber',
-        header: t('cases.columnArbitr'),
+        id: 'courtCaseNumber',
+        header: t('cases.columnCourtNumber'),
         sortable: true,
         width: '10rem',
-        value: (row) => row.arbitrCaseNumber,
+        value: (row) => row.courtCaseNumber,
       },
       {
         id: 'createdAt',
@@ -417,7 +417,7 @@ export default function CasesPage(): JSX.Element {
       filingDeadline: filingDeadline || undefined,
       nextHearingDate: nextHearingDate || undefined,
       expiresAt: expiresAt || undefined,
-      arbitrCaseNumber: arbitrCaseNumber.trim() || undefined,
+      courtCaseNumber: courtCaseNumber.trim() || undefined,
     })
   }
 
@@ -544,11 +544,11 @@ export default function CasesPage(): JSX.Element {
               <DateField label={t('cases.expiresAt')} value={expiresAt} onChange={setExpiresAt} />
             </div>
             <Input
-              label={t('cases.arbitrNumberLabel')}
-              value={arbitrCaseNumber}
-              onChange={(e) => setArbitrCaseNumber(e.target.value)}
+              label={t('cases.courtNumberLabel')}
+              value={courtCaseNumber}
+              onChange={(e) => setCourtCaseNumber(e.target.value)}
               maxLength={50}
-              placeholder={t('cases.arbitrPlaceholder')}
+              placeholder={t('cases.courtNumberPlaceholder')}
             />
             {formError && <p className="text-sm text-danger">{formError}</p>}
             <div>

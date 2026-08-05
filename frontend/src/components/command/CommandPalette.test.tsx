@@ -52,8 +52,10 @@ function makeCase(overrides: Partial<CaseResponse>): CaseResponse {
     filingDeadline: null,
     nextHearingDate: null,
     expiresAt: null,
-    arbitrCaseNumber: null,
-    arbitrCardUrl: null,
+    courtSystem: 'ARBITR' as const,
+    courtSystemName: 'КАД.Арбитр',
+    courtCaseNumber: null,
+    courtCardUrl: null,
     createdAt: new Date().toISOString(),
     ...overrides,
   }

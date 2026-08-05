@@ -25,7 +25,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
   const [filingDeadline, setFilingDeadline] = useState(caseItem.filingDeadline ?? '')
   const [nextHearingDate, setNextHearingDate] = useState(caseItem.nextHearingDate ?? '')
   const [expiresAt, setExpiresAt] = useState(caseItem.expiresAt ?? '')
-  const [arbitrCaseNumber, setArbitrCaseNumber] = useState(caseItem.arbitrCaseNumber ?? '')
+  const [courtCaseNumber, setCourtCaseNumber] = useState(caseItem.courtCaseNumber ?? '')
   const [transferTo, setTransferTo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState<'docx' | 'pdf' | null>(null)
@@ -118,7 +118,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
         filingDeadline: filingDeadline || null,
         nextHearingDate: nextHearingDate || null,
         expiresAt: expiresAt || null,
-        arbitrCaseNumber: arbitrCaseNumber.trim() || null,
+        courtCaseNumber: courtCaseNumber.trim() || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
@@ -144,7 +144,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
     setFilingDeadline(caseItem.filingDeadline ?? '')
     setNextHearingDate(caseItem.nextHearingDate ?? '')
     setExpiresAt(caseItem.expiresAt ?? '')
-    setArbitrCaseNumber(caseItem.arbitrCaseNumber ?? '')
+    setCourtCaseNumber(caseItem.courtCaseNumber ?? '')
     setError(null)
     setIsEditing(false)
   }
@@ -185,11 +185,11 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             <DateField label={t('cases.expiresAt')} value={expiresAt} onChange={setExpiresAt} />
           </div>
           <Input
-            label={t('cases.arbitrNumberEditLabel')}
-            value={arbitrCaseNumber}
-            onChange={(e) => setArbitrCaseNumber(e.target.value)}
+            label={t('cases.courtNumberEditLabel')}
+            value={courtCaseNumber}
+            onChange={(e) => setCourtCaseNumber(e.target.value)}
             maxLength={50}
-            placeholder={t('cases.arbitrPlaceholder')}
+            placeholder={t('cases.courtNumberPlaceholder')}
           />
           {isOwner && (
             <div className="flex flex-col gap-4 pt-4 border-t border-line">

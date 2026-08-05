@@ -194,8 +194,8 @@ export default function PortalCaseDetailPage(): JSX.Element {
             <DetailRow label={t('portalCaseDetail.fieldStatus')} value={caseData.statusName} />
             <DetailRow label={t('portalCaseDetail.fieldFilingDeadline')} value={formatDate(caseData.filingDeadline)} />
             <DetailRow label={t('portalCaseDetail.fieldNextHearing')} value={formatDate(caseData.nextHearingDate)} />
-            {caseData.arbitrCaseNumber && (
-              <DetailRow label={t('portalCaseDetail.fieldCaseNumber')} value={caseData.arbitrCaseNumber} />
+            {caseData.courtCaseNumber && (
+              <DetailRow label={t('portalCaseDetail.fieldCaseNumber')} value={caseData.courtCaseNumber} />
             )}
             <DetailRow label={t('portalCaseDetail.fieldCreated')} value={formatDate(caseData.createdAt)} />
           </div>
