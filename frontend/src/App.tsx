@@ -44,6 +44,7 @@ const UsersPage = lazy(() => import('./pages/admin/UsersPage'))
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'))
 const InvoicesPage = lazy(() => import('./pages/invoices/InvoicesPage'))
 const InvoiceDetailPage = lazy(() => import('./pages/invoices/InvoiceDetailPage'))
+const MailboxesPage = lazy(() => import('./pages/mailboxes/MailboxesPage'))
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 
@@ -133,6 +134,7 @@ export default function App(): JSX.Element {
           <Route path="/clients/:clientId" element={<ClientDetailPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />
+          <Route path="/emails" element={<MailboxesPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/team" element={<TeamPage />} />
           <Route path="/invite" element={<InvitePage />} />
