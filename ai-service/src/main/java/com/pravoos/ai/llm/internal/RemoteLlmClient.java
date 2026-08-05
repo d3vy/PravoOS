@@ -9,6 +9,7 @@ import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
 import com.pravoos.ai.shared.config.LlmServiceProperties;
 import com.pravoos.ai.shared.exception.LlmException;
+import com.pravoos.ai.shared.security.AiProcessingGuard;
 import com.pravoos.cloud.DiscoveryAwareRestClients;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -40,17 +41,20 @@ public class RemoteLlmClient implements LlmClient {
   private final RestClient guardRestClient;
   private final String internalSecret;
   private final ObjectMapper objectMapper;
+  private final AiProcessingGuard aiProcessingGuard;
 
   public RemoteLlmClient(
       LlmServiceProperties properties,
       @LoadBalanced RestClient.Builder loadBalancedRestClientBuilder,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      AiProcessingGuard aiProcessingGuard) {
     this.restClient =
         buildClient(properties.baseUrl(), READ_TIMEOUT, loadBalancedRestClientBuilder);
     this.guardRestClient =
         buildClient(properties.baseUrl(), GUARD_READ_TIMEOUT, loadBalancedRestClientBuilder);
     this.internalSecret = properties.internalSecret();
     this.objectMapper = objectMapper;
+    this.aiProcessingGuard = aiProcessingGuard;
   }
 
   private static RestClient buildClient(
@@ -72,6 +76,7 @@ public class RemoteLlmClient implements LlmClient {
   @Override
   public LlmResult complete(
       String systemPrompt, List<LlmMessage> history, String userMessage, LlmOptions options) {
+    aiProcessingGuard.ensureRemoteCallAllowed();
     try {
       LlmResult result =
           clientFor(options)
@@ -98,6 +103,7 @@ public class RemoteLlmClient implements LlmClient {
       List<LlmMessage> history,
       String userMessage,
       Consumer<String> tokenConsumer) {
+    aiProcessingGuard.ensureRemoteCallAllowed();
     try {
       return restClient
           .post()
@@ -171,6 +177,7 @@ public class RemoteLlmClient implements LlmClient {
 
   @Override
   public float[] embed(String text) {
+    aiProcessingGuard.ensureRemoteCallAllowed();
     try {
       EmbedResponse response =
           restClient
@@ -193,6 +200,7 @@ public class RemoteLlmClient implements LlmClient {
 
   @Override
   public EmbeddingResult embedBatch(List<String> texts) {
+    aiProcessingGuard.ensureRemoteCallAllowed();
     try {
       EmbeddingResult result =
           restClient

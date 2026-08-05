@@ -1,6 +1,7 @@
 package com.pravoos.ai.shared.security;
 
 import com.pravoos.common.security.JwtVerifier;
+import com.pravoos.common.web.AiProcessingMode;
 import com.pravoos.common.web.OrgContext;
 import com.pravoos.common.web.PlanLimits;
 import io.jsonwebtoken.Claims;
@@ -49,7 +50,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             new OrgContext(
                 extractUuidList(claims, "orgs"),
                 extractUuidList(claims, "clients"),
-                extractPlanLimits(claims)));
+                extractPlanLimits(claims),
+                extractAiProcessingMode(claims)));
         SecurityContextHolder.getContext().setAuthentication(authentication);
       }
     }
@@ -85,6 +87,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String.valueOf(code),
         toNumber(plan.get("dailyRequests")).intValue(),
         toNumber(plan.get("dailyTokens")).longValue());
+  }
+
+  private AiProcessingMode extractAiProcessingMode(Claims claims) {
+    Object raw = claims.get("aiMode");
+    if (raw != null) {
+      return AiProcessingMode.fromClaim(String.valueOf(raw));
+    }
+    return Boolean.TRUE.equals(claims.get("xb", Boolean.class))
+        ? AiProcessingMode.CROSS_BORDER
+        : AiProcessingMode.DEFAULT;
   }
 
   private Number toNumber(Object value) {
