@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.security;
+package com.pravoos.common.security;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;

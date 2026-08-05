@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.config;
+package com.pravoos.common.security;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

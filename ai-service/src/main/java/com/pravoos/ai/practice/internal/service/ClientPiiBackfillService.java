@@ -1,6 +1,6 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.shared.security.PiiEncryptor;
+import com.pravoos.common.security.PiiEncryptor;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

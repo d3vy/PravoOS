@@ -1,5 +1,6 @@
 package com.pravoos.ai.shared.security;
 
+import com.pravoos.common.security.PiiCryptoHolder;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 

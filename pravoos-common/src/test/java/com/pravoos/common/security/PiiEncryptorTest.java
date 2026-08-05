@@ -1,9 +1,7 @@
-package com.pravoos.ai.shared.security;
+package com.pravoos.common.security;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.pravoos.ai.shared.config.PiiCryptoProperties;
-import com.pravoos.ai.shared.exception.DocumentProcessingException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
@@ -81,7 +79,7 @@ class PiiEncryptorTest {
     String stored = withKeys("v1", Map.of("v1", randomKey())).encrypt("secret");
 
     PiiEncryptor withoutV1 = withKeys("v2", Map.of("v2", randomKey()));
-    assertThrows(DocumentProcessingException.class, () -> withoutV1.decrypt(stored));
+    assertThrows(PiiCryptoException.class, () -> withoutV1.decrypt(stored));
   }
 
   @Test
@@ -96,7 +94,7 @@ class PiiEncryptorTest {
   void wrongKeyFailsToDecrypt() {
     String stored = withKey(randomKey()).encrypt("secret");
 
-    assertThrows(DocumentProcessingException.class, () -> withKey(randomKey()).decrypt(stored));
+    assertThrows(PiiCryptoException.class, () -> withKey(randomKey()).decrypt(stored));
   }
 
   @Test

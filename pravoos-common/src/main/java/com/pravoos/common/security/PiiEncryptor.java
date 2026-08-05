@@ -1,7 +1,5 @@
-package com.pravoos.ai.shared.security;
+package com.pravoos.common.security;
 
-import com.pravoos.ai.shared.config.PiiCryptoProperties;
-import com.pravoos.ai.shared.exception.DocumentProcessingException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -15,9 +13,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
-@Component
 public class PiiEncryptor {
 
   private static final Logger log = LoggerFactory.getLogger(PiiEncryptor.class);
@@ -109,7 +105,7 @@ public class PiiEncryptor {
           + KEY_ID_SEPARATOR
           + Base64.getEncoder().encodeToString(combined);
     } catch (GeneralSecurityException e) {
-      throw new DocumentProcessingException("Failed to encrypt personal data: " + e.getMessage());
+      throw new PiiCryptoException("Failed to encrypt personal data: " + e.getMessage());
     }
   }
 
@@ -117,13 +113,12 @@ public class PiiEncryptor {
     int keyIdStart = MARKER_PREFIX.length();
     int separator = stored.indexOf(KEY_ID_SEPARATOR, keyIdStart);
     if (separator < 0) {
-      throw new DocumentProcessingException("Malformed encrypted personal data: missing key id");
+      throw new PiiCryptoException("Malformed encrypted personal data: missing key id");
     }
     String keyId = stored.substring(keyIdStart, separator);
     SecretKey key = keysById.get(keyId);
     if (key == null) {
-      throw new DocumentProcessingException(
-          "No PII key configured for id '" + keyId + "' — cannot decrypt");
+      throw new PiiCryptoException("No PII key configured for id '" + keyId + "' — cannot decrypt");
     }
     return decryptPayload(key, stored.substring(separator + 1));
   }
@@ -131,7 +126,7 @@ public class PiiEncryptor {
   private String decryptLegacy(String stored) {
     SecretKey key = legacyKey();
     if (key == null) {
-      throw new DocumentProcessingException(
+      throw new PiiCryptoException(
           "Legacy encrypted personal data found but no key configured to decrypt it");
     }
     return decryptPayload(key, stored.substring(LEGACY_MARKER.length()));
@@ -155,7 +150,7 @@ public class PiiEncryptor {
       cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
       return new String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8);
     } catch (GeneralSecurityException | IllegalArgumentException e) {
-      throw new DocumentProcessingException("Failed to decrypt personal data: " + e.getMessage());
+      throw new PiiCryptoException("Failed to decrypt personal data: " + e.getMessage());
     }
   }
 
