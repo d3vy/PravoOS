@@ -115,14 +115,14 @@ public class TelegramNotificationService {
         payload.previousHearingDate() == null ? "не было" : payload.previousHearingDate();
     return String.format(
         """
-                <b>Изменилась дата заседания (КАД.Арбитр)</b>
+                <b>Изменилась дата заседания</b>
 
                 <b>Дело:</b> %s
-                <b>Номер в КАД:</b> %s
+                <b>Номер дела:</b> %s
                 <b>Было:</b> %s
                 <b>Стало:</b> %s""",
         escapeHtml(payload.caseTitle()),
-        escapeHtml(payload.arbitrCaseNumber()),
+        escapeHtml(payload.courtCaseNumber()),
         escapeHtml(previous),
         escapeHtml(payload.newHearingDate()));
   }

@@ -6,6 +6,6 @@ public record CaseHearingUpdatedKafkaPayload(
     UUID caseId,
     UUID lawyerId,
     String caseTitle,
-    String arbitrCaseNumber,
+    String courtCaseNumber,
     String previousHearingDate,
     String newHearingDate) {}

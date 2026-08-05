@@ -88,7 +88,7 @@ class CaseAnalyticsServiceTest {
     caseEntity.setTitle("Взыскание задолженности");
     caseEntity.setStatus(CaseStatus.IN_PROGRESS);
     caseEntity.setNextHearingDate(LocalDate.of(2026, 8, 1));
-    caseEntity.setArbitrJudge(judge);
+    caseEntity.setJudgeName(judge);
     return caseEntity;
   }
 

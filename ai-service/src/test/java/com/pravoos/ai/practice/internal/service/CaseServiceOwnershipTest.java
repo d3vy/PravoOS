@@ -35,7 +35,7 @@ class CaseServiceOwnershipTest {
   @Mock private CaseHearingEventRepository hearingEventRepository;
   @Mock private CasePartyRepository casePartyRepository;
   @Mock private SignatureRequestRepository signatureRequestRepository;
-  @Mock private ArbitrSyncService arbitrSyncService;
+  @Mock private CourtSyncService courtSyncService;
   @Mock private UserServiceClient userServiceClient;
 
   private CaseService caseService() {
@@ -47,7 +47,7 @@ class CaseServiceOwnershipTest {
         hearingEventRepository,
         casePartyRepository,
         signatureRequestRepository,
-        arbitrSyncService,
+        courtSyncService,
         userServiceClient);
   }
 

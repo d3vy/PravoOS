@@ -20,11 +20,16 @@ final class CaseContextFormatter {
     StringBuilder builder = new StringBuilder();
     builder.append("Название: ").append(caseEntity.getTitle()).append('\n');
     builder.append("Статус: ").append(caseEntity.getStatus().getDisplayName()).append('\n');
-    if (caseEntity.getArbitrCaseNumber() != null) {
-      builder.append("Номер в КАД.Арбитр: ").append(caseEntity.getArbitrCaseNumber()).append('\n');
+    if (caseEntity.getCourtCaseNumber() != null) {
+      builder
+          .append("Номер дела (")
+          .append(caseEntity.getCourtSystem().getDisplayName())
+          .append("): ")
+          .append(caseEntity.getCourtCaseNumber())
+          .append('\n');
     }
-    if (caseEntity.getArbitrJudge() != null) {
-      builder.append("Судья: ").append(caseEntity.getArbitrJudge()).append('\n');
+    if (caseEntity.getJudgeName() != null) {
+      builder.append("Судья: ").append(caseEntity.getJudgeName()).append('\n');
     }
     if (!parties.isEmpty()) {
       builder.append("Стороны: ");

@@ -117,7 +117,7 @@ public class CaseAnalyticsService {
     List<CaseParty> parties = casePartyRepository.findByCaseId(caseId);
     CaseTimelineStats timeline = buildTimeline(caseEntity, events, parties);
     List<OutcomeStat> courtStats = buildCourtStats(timeline.courts(), lawyerId, orgIds);
-    List<OutcomeStat> judgeStats = buildJudgeStats(caseEntity.getArbitrJudge(), lawyerId, orgIds);
+    List<OutcomeStat> judgeStats = buildJudgeStats(caseEntity.getJudgeName(), lawyerId, orgIds);
     List<OutcomeStat> partyStats = buildPartyStats(parties, lawyerId, orgIds);
 
     return new AnalysisInputs(
@@ -169,7 +169,7 @@ public class CaseAnalyticsService {
     return new CaseAnalyticsResponse(
         timeline,
         buildCourtStats(timeline.courts(), lawyerId, orgIds),
-        buildJudgeStats(caseEntity.getArbitrJudge(), lawyerId, orgIds),
+        buildJudgeStats(caseEntity.getJudgeName(), lawyerId, orgIds),
         buildPartyStats(parties, lawyerId, orgIds),
         aiAnalysis);
   }
@@ -215,7 +215,7 @@ public class CaseAnalyticsService {
         buildEventTypeCounts(events),
         nextHearingDate,
         daysToNextHearing,
-        caseEntity.getArbitrJudge(),
+        caseEntity.getJudgeName(),
         parties.stream().map(CasePartyDto::from).toList());
   }
 

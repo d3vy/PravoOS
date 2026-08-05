@@ -36,7 +36,7 @@ class CaseServiceVisibilityTest {
   @Mock private CaseHearingEventRepository hearingEventRepository;
   @Mock private CasePartyRepository casePartyRepository;
   @Mock private SignatureRequestRepository signatureRequestRepository;
-  @Mock private ArbitrSyncService arbitrSyncService;
+  @Mock private CourtSyncService courtSyncService;
   @Mock private UserServiceClient userServiceClient;
 
   private CaseService caseService() {
@@ -48,7 +48,7 @@ class CaseServiceVisibilityTest {
         hearingEventRepository,
         casePartyRepository,
         signatureRequestRepository,
-        arbitrSyncService,
+        courtSyncService,
         userServiceClient);
   }
 
@@ -109,7 +109,8 @@ class CaseServiceVisibilityTest {
   void createRejectsOrgNotInCallerMemberships() {
     UUID lawyerId = UUID.randomUUID();
     CreateCaseRequest request =
-        new CreateCaseRequest("Дело", null, null, UUID.randomUUID(), null, null, null, null, null);
+        new CreateCaseRequest(
+            "Дело", null, null, UUID.randomUUID(), null, null, null, null, null, null);
 
     assertThatThrownBy(() -> caseService().create(request, lawyerId, List.of(UUID.randomUUID())))
         .isInstanceOf(OrganizationAccessException.class);
@@ -120,7 +121,7 @@ class CaseServiceVisibilityTest {
     UUID lawyerId = UUID.randomUUID();
     UUID orgId = UUID.randomUUID();
     CreateCaseRequest request =
-        new CreateCaseRequest("Дело", null, null, orgId, null, null, null, null, null);
+        new CreateCaseRequest("Дело", null, null, orgId, null, null, null, null, null, null);
     when(caseRepository.save(any(Case.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
     CaseResponse response = caseService().create(request, lawyerId, List.of(orgId));
