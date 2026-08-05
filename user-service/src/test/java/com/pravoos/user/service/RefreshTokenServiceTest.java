@@ -3,9 +3,11 @@ package com.pravoos.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.pravoos.user.identity.internal.config.JwtProperties;
+import com.pravoos.user.identity.internal.dto.SessionResponse;
 import com.pravoos.user.identity.internal.model.entity.RefreshToken;
 import com.pravoos.user.identity.internal.repository.RefreshTokenRepository;
 import com.pravoos.user.identity.internal.service.RefreshTokenFamilyRevoker;
@@ -13,6 +15,7 @@ import com.pravoos.user.identity.internal.service.RefreshTokenService;
 import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.shared.security.TokenHasher;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -151,6 +154,85 @@ class RefreshTokenServiceTest {
     service.revoke(raw);
 
     assertThat(revoked.getRevokedAt()).isEqualTo(originalRevokedAt);
+  }
+
+  @Test
+  void listActiveSessionsReturnsMappedSessionsForUser() {
+    UUID userId = UUID.randomUUID();
+    RefreshToken session = token(userId, null, LocalDateTime.now().plusDays(1));
+    session.setId(UUID.randomUUID());
+    session.setIpAddress("203.0.113.7");
+    session.setUserAgent("JUnit-UA");
+    when(refreshTokenRepository.findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
+            eq(userId), any()))
+        .thenReturn(List.of(session));
+
+    List<SessionResponse> sessions = service.listActiveSessions(userId);
+
+    assertThat(sessions).hasSize(1);
+    SessionResponse response = sessions.get(0);
+    assertThat(response.id()).isEqualTo(session.getId());
+    assertThat(response.ipAddress()).isEqualTo("203.0.113.7");
+    assertThat(response.userAgent()).isEqualTo("JUnit-UA");
+  }
+
+  @Test
+  void listActiveSessionsReturnsEmptyListWhenNoActiveSessions() {
+    UUID userId = UUID.randomUUID();
+    when(refreshTokenRepository.findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
+            eq(userId), any()))
+        .thenReturn(List.of());
+
+    assertThat(service.listActiveSessions(userId)).isEmpty();
+  }
+
+  @Test
+  void revokeSessionRevokesMatchingActiveSessionForUser() {
+    UUID userId = UUID.randomUUID();
+    UUID sessionId = UUID.randomUUID();
+    RefreshToken session = token(userId, null, LocalDateTime.now().plusDays(1));
+    session.setId(sessionId);
+    when(refreshTokenRepository.findByIdAndUserId(sessionId, userId))
+        .thenReturn(Optional.of(session));
+
+    service.revokeSession(userId, sessionId);
+
+    assertThat(session.getRevokedAt()).isNotNull();
+  }
+
+  @Test
+  void revokeSessionIsNoOpForAlreadyRevokedSession() {
+    UUID userId = UUID.randomUUID();
+    UUID sessionId = UUID.randomUUID();
+    LocalDateTime originalRevokedAt = LocalDateTime.now().minusHours(1);
+    RefreshToken session = token(userId, originalRevokedAt, LocalDateTime.now().plusDays(1));
+    session.setId(sessionId);
+    when(refreshTokenRepository.findByIdAndUserId(sessionId, userId))
+        .thenReturn(Optional.of(session));
+
+    service.revokeSession(userId, sessionId);
+
+    assertThat(session.getRevokedAt()).isEqualTo(originalRevokedAt);
+  }
+
+  @Test
+  void revokeSessionIsNoOpForSessionBelongingToAnotherUser() {
+    UUID userId = UUID.randomUUID();
+    UUID sessionId = UUID.randomUUID();
+    when(refreshTokenRepository.findByIdAndUserId(sessionId, userId)).thenReturn(Optional.empty());
+
+    service.revokeSession(userId, sessionId);
+
+    verify(refreshTokenRepository).findByIdAndUserId(sessionId, userId);
+  }
+
+  @Test
+  void isKnownDeviceReturnsFalseWhenIpAddressIsNull() {
+    UUID userId = UUID.randomUUID();
+
+    assertThat(service.isKnownDevice(userId, null)).isFalse();
+    verify(refreshTokenRepository, never())
+        .existsByUserIdAndIpAddressAndRevokedAtIsNullAndExpiresAtAfter(any(), any(), any());
   }
 
   private RefreshToken token(UUID userId, LocalDateTime revokedAt, LocalDateTime expiresAt) {
