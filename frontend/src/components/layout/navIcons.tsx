@@ -164,6 +164,15 @@ export function BillingIcon(): JSX.Element {
   )
 }
 
+export function MailIcon(): JSX.Element {
+  return (
+    <Icon>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m3 6 9 7 9-7" />
+    </Icon>
+  )
+}
+
 export function InvoiceIcon(): JSX.Element {
   return (
     <Icon>

@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { ClientForm } from '../../components/clients/ClientForm'
 import { ClientContactsSection } from '../../components/clients/ClientContactsSection'
+import { ClientEmailSection } from '../../components/clients/ClientEmailSection'
 import { ClientPortalSection } from '../../components/clients/ClientPortalSection'
 import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
 
@@ -168,6 +169,8 @@ export default function ClientDetailPage(): JSX.Element {
         <ClientPortalSection clientId={clientId} email={client.email} />
 
         <ClientContactsSection clientId={clientId} />
+
+        <ClientEmailSection clientId={clientId} />
 
         <section>
           <h2 className="text-sm font-semibold text-fg mb-3">

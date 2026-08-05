@@ -1206,3 +1206,90 @@ export interface UpdateSavedViewRequest {
   sharedWithTeam: boolean
   orgId?: string | null
 }
+
+export type MailboxStatus = 'PENDING' | 'OK' | 'ERROR'
+
+export interface MailboxResponse {
+  id: string
+  emailAddress: string
+  imapHost: string
+  imapPort: number
+  imapSsl: boolean
+  folder: string
+  syncEnabled: boolean
+  status: MailboxStatus
+  lastError: string | null
+  lastSyncAt: string | null
+  createdAt: string
+}
+
+export interface MailHostPresetResponse {
+  id: string
+  displayName: string
+  imapHost: string
+  imapPort: number
+  imapSsl: boolean
+  domains: string[]
+}
+
+export interface CreateMailboxRequest {
+  emailAddress: string
+  password: string
+  imapHost?: string
+  imapPort?: number
+  imapSsl?: boolean
+  folder?: string
+}
+
+export interface UpdateMailboxRequest {
+  password?: string
+  imapHost?: string
+  imapPort?: number
+  imapSsl?: boolean
+  folder?: string
+  syncEnabled?: boolean
+}
+
+export interface MailboxTestResult {
+  success: boolean
+  status: MailboxStatus
+  message: string | null
+}
+
+export interface MailSyncResult {
+  mailboxId: string
+  success: boolean
+  status: MailboxStatus
+  fetched: number
+  saved: number
+  reindexed: boolean
+  error: string | null
+}
+
+export type EmailDirection = 'IN' | 'OUT'
+
+export type EmailLinkSource = 'CASE_NUMBER' | 'THREAD' | 'ADDRESS' | 'MANUAL'
+
+export interface EmailMessageResponse {
+  id: string
+  mailboxId: string
+  direction: EmailDirection
+  fromAddress: string
+  toAddresses: string
+  ccAddresses: string | null
+  subject: string | null
+  bodyText: string | null
+  sentAt: string
+  hasAttachments: boolean
+  attachmentCount: number
+  caseId: string | null
+  clientId: string | null
+  linkSource: EmailLinkSource | null
+  linkSourceName: string | null
+  linkedAt: string | null
+}
+
+export interface LinkEmailRequest {
+  caseId?: string | null
+  clientId?: string | null
+}
