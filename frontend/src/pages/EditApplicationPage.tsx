@@ -51,6 +51,9 @@ export default function EditApplicationPage(): JSX.Element {
           password: '',
           specialization: data.specialization,
           phone: data.phone,
+          personalDataConsent: true,
+          crossBorderConsent: true,
+          marketingConsent: false,
         })
         setState('editable')
       })

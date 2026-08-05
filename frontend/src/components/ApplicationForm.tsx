@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { motion } from 'framer-motion'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { validatePassword } from '../utils/password'
@@ -12,7 +13,14 @@ export interface ApplicationFormData {
   password: string
   specialization: string
   phone: string
+  personalDataConsent: boolean
+  crossBorderConsent: boolean
+  marketingConsent: boolean
 }
+
+type TextField = 'fullName' | 'email' | 'password' | 'specialization' | 'phone'
+
+type ConsentField = 'personalDataConsent' | 'crossBorderConsent' | 'marketingConsent'
 
 interface FormErrors {
   fullName?: string
@@ -20,6 +28,8 @@ interface FormErrors {
   password?: string
   specialization?: string
   phone?: string
+  personalDataConsent?: string
+  crossBorderConsent?: string
 }
 
 interface ApplicationFormProps {
@@ -27,6 +37,7 @@ interface ApplicationFormProps {
   passwordRequired: boolean
   submitLabel: string
   passwordHint?: string
+  consentsRequired?: boolean
   onSubmit: (data: ApplicationFormData) => Promise<void>
 }
 
@@ -62,7 +73,11 @@ function validatePhone(phone: string): string | undefined {
   return undefined
 }
 
-function validate(data: ApplicationFormData, passwordRequired: boolean): FormErrors {
+function validate(
+  data: ApplicationFormData,
+  passwordRequired: boolean,
+  consentsRequired: boolean,
+): FormErrors {
   const errors: FormErrors = {}
   if (!data.fullName.trim()) errors.fullName = i18n.t('applicationForm.nameRequired')
   if (!EMAIL_REGEX.test(data.email.trim())) errors.email = i18n.t('applicationForm.emailInvalid')
@@ -73,7 +88,48 @@ function validate(data: ApplicationFormData, passwordRequired: boolean): FormErr
   if (!data.specialization.trim()) errors.specialization = i18n.t('applicationForm.specializationRequired')
   const phoneError = validatePhone(data.phone)
   if (phoneError) errors.phone = phoneError
+  if (consentsRequired) {
+    if (!data.personalDataConsent) {
+      errors.personalDataConsent = i18n.t('applicationForm.consentPersonalDataRequired')
+    }
+    if (!data.crossBorderConsent) {
+      errors.crossBorderConsent = i18n.t('applicationForm.consentCrossBorderRequired')
+    }
+  }
   return errors
+}
+
+function ConsentCheckbox({
+  id,
+  checked,
+  onChange,
+  error,
+  children,
+}: {
+  id: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  error?: string
+  children: React.ReactNode
+}): JSX.Element {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="flex items-start gap-3 cursor-pointer">
+        <input
+          id={id}
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          aria-invalid={error ? true : undefined}
+          className={`mt-0.5 h-4 w-4 shrink-0 rounded border accent-accent ${
+            error ? 'border-danger' : 'border-line'
+          }`}
+        />
+        <span className="text-xs leading-relaxed text-fg-muted">{children}</span>
+      </label>
+      {error && <p className="text-xs text-danger pl-7">{error}</p>}
+    </div>
+  )
 }
 
 export function ApplicationForm({
@@ -81,6 +137,7 @@ export function ApplicationForm({
   passwordRequired,
   submitLabel,
   passwordHint,
+  consentsRequired = false,
   onSubmit,
 }: ApplicationFormProps): JSX.Element {
   const { t } = useTranslation()
@@ -90,7 +147,7 @@ export function ApplicationForm({
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const updateField =
-    (field: keyof ApplicationFormData) => (e: React.ChangeEvent<HTMLInputElement>): void => {
+    (field: TextField) => (e: React.ChangeEvent<HTMLInputElement>): void => {
       const value =
         field === 'phone' ? sanitizePhone(e.target.value) :
         e.target.value
@@ -100,13 +157,20 @@ export function ApplicationForm({
       }
     }
 
+  const updateConsent =
+    (field: ConsentField) =>
+    (checked: boolean): void => {
+      setFormData((prev) => ({ ...prev, [field]: checked }))
+      setErrors((prev) => ({ ...prev, [field]: undefined }))
+    }
+
   const handlePhoneBlur = (): void => {
     setErrors((prev) => ({ ...prev, phone: validatePhone(formData.phone) }))
   }
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
-    const validationErrors = validate(formData, passwordRequired)
+    const validationErrors = validate(formData, passwordRequired, consentsRequired)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       return
@@ -178,6 +242,47 @@ export function ApplicationForm({
         onChange={updateField('specialization')}
         error={errors.specialization}
       />
+
+      {consentsRequired && (
+        <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
+          <ConsentCheckbox
+            id="personalDataConsent"
+            checked={formData.personalDataConsent}
+            onChange={updateConsent('personalDataConsent')}
+            error={errors.personalDataConsent}
+          >
+            <Trans
+              i18nKey="applicationForm.consentPersonalData"
+              components={[
+                <Link key="consent" to="/legal/consent" target="_blank" className="text-accent hover:underline" />,
+                <Link key="privacy" to="/legal/privacy" target="_blank" className="text-accent hover:underline" />,
+              ]}
+            />
+          </ConsentCheckbox>
+
+          <ConsentCheckbox
+            id="crossBorderConsent"
+            checked={formData.crossBorderConsent}
+            onChange={updateConsent('crossBorderConsent')}
+            error={errors.crossBorderConsent}
+          >
+            <Trans
+              i18nKey="applicationForm.consentCrossBorder"
+              components={[
+                <Link key="crossBorder" to="/legal/cross-border" target="_blank" className="text-accent hover:underline" />,
+              ]}
+            />
+          </ConsentCheckbox>
+
+          <ConsentCheckbox
+            id="marketingConsent"
+            checked={formData.marketingConsent}
+            onChange={updateConsent('marketingConsent')}
+          >
+            {t('applicationForm.consentMarketing')}
+          </ConsentCheckbox>
+        </div>
+      )}
 
       {submitError && (
         <motion.div

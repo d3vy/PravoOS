@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '../i18n'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import axios from 'axios'
 import { authApi } from '../api/auth'
+import { privacyApi } from '../api/privacy'
 import type { ApplicationSubmissionResponse } from '../types'
 import { ApplicationForm, type ApplicationFormData } from '../components/ApplicationForm'
 import { Button } from '../components/ui/Button'
@@ -17,6 +18,9 @@ const EMPTY_FORM: ApplicationFormData = {
   password: '',
   specialization: '',
   phone: '',
+  personalDataConsent: false,
+  crossBorderConsent: false,
+  marketingConsent: false,
 }
 
 function submissionErrorMessage(error: unknown): string {
@@ -32,6 +36,9 @@ function submissionErrorMessage(error: unknown): string {
     }
     if (status === 409) {
       return message ?? i18n.t('apply.errorConflict')
+    }
+    if (status === 400 && code === 'CONSENT_REQUIRED') {
+      return i18n.t('apply.errorConsentRequired')
     }
     if (status === 400 && message) {
       return message
@@ -68,10 +75,26 @@ function ApplicationField({
 export default function ApplyPage(): JSX.Element {
   const { t } = useTranslation()
   const [submission, setSubmission] = useState<ApplicationSubmissionResponse | null>(null)
+  const [policyVersion, setPolicyVersion] = useState('')
+
+  useEffect(() => {
+    let active = true
+    privacyApi
+      .policy()
+      .then((policy) => {
+        if (active) setPolicyVersion(policy.policyVersion)
+      })
+      .catch(() => {
+        if (active) setPolicyVersion('')
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleSubmit = async (data: ApplicationFormData): Promise<void> => {
     try {
-      const result = await authApi.apply(data)
+      const result = await authApi.apply({ ...data, consentPolicyVersion: policyVersion })
       setSubmission(result)
     } catch (error) {
       throw new Error(submissionErrorMessage(error))
@@ -172,6 +195,7 @@ export default function ApplyPage(): JSX.Element {
 
               <ApplicationForm
                 initialValues={EMPTY_FORM}
+                consentsRequired
                 passwordRequired
                 submitLabel={t('apply.submit')}
                 onSubmit={handleSubmit}
