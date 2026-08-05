@@ -1,6 +1,7 @@
 package com.pravoos.user.identity.internal.security;
 
 import com.pravoos.common.security.RsaKeyLoader;
+import com.pravoos.common.web.AiProcessingMode;
 import com.pravoos.user.billing.api.PlanClaim;
 import com.pravoos.user.identity.internal.config.JwtProperties;
 import com.pravoos.user.identity.model.enums.UserRole;
@@ -29,7 +30,8 @@ public class JwtTokenProvider {
       UserRole role,
       List<UUID> orgIds,
       List<UUID> clientIds,
-      PlanClaim plan) {
+      PlanClaim plan,
+      AiProcessingMode aiProcessingMode) {
     var builder =
         Jwts.builder().subject(userId.toString()).claim("email", email).claim("role", role.name());
     if (orgIds != null && !orgIds.isEmpty()) {
@@ -45,6 +47,11 @@ public class JwtTokenProvider {
               "code", plan.code(),
               "dailyRequests", plan.dailyRequests(),
               "dailyTokens", plan.dailyTokens()));
+    }
+    AiProcessingMode mode = aiProcessingMode == null ? AiProcessingMode.DEFAULT : aiProcessingMode;
+    builder.claim("aiMode", mode.name());
+    if (mode.allowsCrossBorderTransfer()) {
+      builder.claim("xb", true);
     }
     return builder
         .issuedAt(new Date())

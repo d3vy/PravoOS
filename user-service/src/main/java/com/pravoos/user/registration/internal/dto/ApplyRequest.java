@@ -15,4 +15,8 @@ public record ApplyRequest(
         String password,
     @NotBlank @Size(max = 255) String specialization,
     @NotBlank @Pattern(regexp = "\\+?[\\d\\s()\\-]{10,20}", message = "Некорректный телефон")
-        String phone) {}
+        String phone,
+    boolean personalDataConsent,
+    boolean crossBorderConsent,
+    boolean marketingConsent,
+    @Size(max = 20) String consentPolicyVersion) {}

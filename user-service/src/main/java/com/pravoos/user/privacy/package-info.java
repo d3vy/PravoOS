@@ -4,9 +4,6 @@
       "identity :: api",
       "identity :: model",
       "identity :: enums",
-      "identity :: repository",
-      "collaboration :: api",
-      "billing :: api",
-      "privacy :: api"
+      "identity :: repository"
     })
-package com.pravoos.user.registration;
+package com.pravoos.user.privacy;

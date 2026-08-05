@@ -53,7 +53,9 @@ public class AuthApplicationController {
     passwordPolicyService.validate(request.password());
     emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(applicationService.submitApplication(request));
+        .body(
+            applicationService.submitApplication(
+                request, clientIp, httpRequest.getHeader("User-Agent")));
   }
 
   @GetMapping("/application")

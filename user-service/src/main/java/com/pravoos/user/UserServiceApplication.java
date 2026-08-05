@@ -1,5 +1,6 @@
 package com.pravoos.user;
 
+import com.pravoos.common.security.PiiCryptoProperties;
 import com.pravoos.common.web.RequestIdFilter;
 import com.pravoos.user.shared.config.AdminProperties;
 import com.pravoos.user.shared.config.InternalSecretProperties;
@@ -16,7 +17,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({
   AdminProperties.class,
   InternalSecretProperties.class,
-  ResendProperties.class
+  ResendProperties.class,
+  PiiCryptoProperties.class
 })
 @EnableScheduling
 @EnableAsync

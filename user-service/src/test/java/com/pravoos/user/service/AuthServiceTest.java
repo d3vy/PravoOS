@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.pravoos.user.billing.api.PlanClaimProvider;
+import com.pravoos.user.identity.api.AiProcessingModeProvider;
 import com.pravoos.user.identity.api.OrgMembershipProvider;
 import com.pravoos.user.identity.api.PortalAccessProvider;
 import com.pravoos.user.identity.internal.dto.LoginRequest;
@@ -48,6 +49,7 @@ class AuthServiceTest {
   @Mock private OrgMembershipProvider orgMembershipProvider;
   @Mock private PortalAccessProvider portalAccessProvider;
   @Mock private PlanClaimProvider planClaimProvider;
+  @Mock private AiProcessingModeProvider aiProcessingModeProvider;
   @Mock private JwtTokenProvider jwtTokenProvider;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private RefreshTokenService refreshTokenService;
@@ -69,6 +71,7 @@ class AuthServiceTest {
             orgMembershipProvider,
             portalAccessProvider,
             planClaimProvider,
+            aiProcessingModeProvider,
             jwtTokenProvider,
             passwordEncoder,
             refreshTokenService,
@@ -90,7 +93,7 @@ class AuthServiceTest {
     when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
     when(jwtTokenProvider.generateToken(
-            eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any()))
+            eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any(), any()))
         .thenReturn("access");
     when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
 
@@ -215,7 +218,7 @@ class AuthServiceTest {
     when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
     when(jwtTokenProvider.generateToken(
-            eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any()))
+            eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any(), any()))
         .thenReturn("access");
     when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
 

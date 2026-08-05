@@ -7,6 +7,8 @@ import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.privacy.api.ConsentRecorder;
+import com.pravoos.user.privacy.api.SignupConsent;
 import com.pravoos.user.registration.internal.dto.ApplicationResponse;
 import com.pravoos.user.registration.internal.dto.ApplicationSubmissionResponse;
 import com.pravoos.user.registration.internal.dto.ApplyRequest;
@@ -51,6 +53,7 @@ public class ApplicationService {
   private final OutboxEventService outboxEventService;
   private final TokenHasher tokenHasher;
   private final SubscriptionProvisioner subscriptionProvisioner;
+  private final ConsentRecorder consentRecorder;
   private final Counter applicationSubmittedCounter;
   private final Counter applicationApprovedCounter;
   private final Counter applicationRejectedCounter;
@@ -64,6 +67,7 @@ public class ApplicationService {
       OutboxEventService outboxEventService,
       TokenHasher tokenHasher,
       SubscriptionProvisioner subscriptionProvisioner,
+      ConsentRecorder consentRecorder,
       MeterRegistry meterRegistry) {
     this.applicationRepository = applicationRepository;
     this.userRepository = userRepository;
@@ -73,6 +77,7 @@ public class ApplicationService {
     this.outboxEventService = outboxEventService;
     this.tokenHasher = tokenHasher;
     this.subscriptionProvisioner = subscriptionProvisioner;
+    this.consentRecorder = consentRecorder;
     this.applicationSubmittedCounter =
         Counter.builder("pravoos.application").tag("action", "submitted").register(meterRegistry);
     this.applicationApprovedCounter =
@@ -82,7 +87,11 @@ public class ApplicationService {
   }
 
   @Transactional
-  public ApplicationSubmissionResponse submitApplication(ApplyRequest request) {
+  public ApplicationSubmissionResponse submitApplication(
+      ApplyRequest request, String clientIp, String userAgent) {
+    if (!request.personalDataConsent() || !request.crossBorderConsent()) {
+      throw new ConsentRequiredException();
+    }
     String email = EmailNormalizer.normalize(request.email());
     if (applicationRepository.existsByEmailAndStatus(email, ApplicationStatus.PENDING)) {
       throw new ApplicationAlreadyExistsException();
@@ -97,6 +106,12 @@ public class ApplicationService {
     application.setPasswordHash(passwordEncoder.encode(request.password()));
     application.setSpecialization(request.specialization());
     application.setPhone(PhoneNormalizer.normalize(request.phone()));
+    application.setConsentPolicyVersion(request.consentPolicyVersion());
+    application.setConsentGrantedAt(LocalDateTime.now());
+    application.setConsentIp(clientIp);
+    application.setConsentUserAgent(userAgent);
+    application.setConsentCrossBorder(request.crossBorderConsent());
+    application.setConsentMarketing(request.marketingConsent());
     String rawVerificationToken = emailVerificationService.generateToken();
     application.setStatusToken(emailVerificationService.generateToken());
     application.setStatusTokenExpiresAt(LocalDateTime.now().plus(STATUS_TOKEN_TTL));
@@ -213,6 +228,7 @@ public class ApplicationService {
 
     User user = buildUserFromApplication(application);
     userRepository.save(user);
+    consentRecorder.recordSignupConsent(user.getId(), toSignupConsent(application));
     subscriptionProvisioner.startTrial(user.getId());
 
     markReviewed(application, ApplicationStatus.APPROVED, adminId);
@@ -233,6 +249,16 @@ public class ApplicationService {
 
     log.info("Application rejected: {} by admin: {}", applicationId, adminId);
     return toApplicationResponse(application);
+  }
+
+  private SignupConsent toSignupConsent(LawyerApplication application) {
+    return new SignupConsent(
+        application.getConsentPolicyVersion(),
+        application.isConsentCrossBorder(),
+        application.isConsentMarketing(),
+        application.getConsentGrantedAt(),
+        application.getConsentIp(),
+        application.getConsentUserAgent());
   }
 
   private void markReviewed(LawyerApplication application, ApplicationStatus status, UUID adminId) {

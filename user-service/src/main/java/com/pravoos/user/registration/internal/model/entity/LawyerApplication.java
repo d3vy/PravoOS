@@ -1,6 +1,7 @@
 package com.pravoos.user.registration.internal.model.entity;
 
 import com.pravoos.user.registration.internal.model.enums.ApplicationStatus;
+import com.pravoos.user.shared.security.PiiStringConverter;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,6 +17,7 @@ public class LawyerApplication {
   @Column(nullable = false)
   private String email;
 
+  @Convert(converter = PiiStringConverter.class)
   @Column(nullable = false)
   private String fullName;
 
@@ -25,7 +27,8 @@ public class LawyerApplication {
   @Column(length = 255)
   private String specialization;
 
-  @Column(length = 50)
+  @Convert(converter = PiiStringConverter.class)
+  @Column
   private String phone;
 
   @Enumerated(EnumType.STRING)
@@ -51,6 +54,24 @@ public class LawyerApplication {
 
   @Column(nullable = false)
   private boolean emailVerified = false;
+
+  @Column(name = "consent_policy_version", length = 20)
+  private String consentPolicyVersion;
+
+  @Column(name = "consent_granted_at")
+  private LocalDateTime consentGrantedAt;
+
+  @Column(name = "consent_ip", length = 64)
+  private String consentIp;
+
+  @Column(name = "consent_user_agent")
+  private String consentUserAgent;
+
+  @Column(name = "consent_cross_border", nullable = false)
+  private boolean consentCrossBorder = false;
+
+  @Column(name = "consent_marketing", nullable = false)
+  private boolean consentMarketing = false;
 
   @PrePersist
   void prePersist() {
@@ -170,5 +191,53 @@ public class LawyerApplication {
 
   public void setEmailVerified(boolean emailVerified) {
     this.emailVerified = emailVerified;
+  }
+
+  public String getConsentPolicyVersion() {
+    return consentPolicyVersion;
+  }
+
+  public void setConsentPolicyVersion(String consentPolicyVersion) {
+    this.consentPolicyVersion = consentPolicyVersion;
+  }
+
+  public LocalDateTime getConsentGrantedAt() {
+    return consentGrantedAt;
+  }
+
+  public void setConsentGrantedAt(LocalDateTime consentGrantedAt) {
+    this.consentGrantedAt = consentGrantedAt;
+  }
+
+  public String getConsentIp() {
+    return consentIp;
+  }
+
+  public void setConsentIp(String consentIp) {
+    this.consentIp = consentIp;
+  }
+
+  public String getConsentUserAgent() {
+    return consentUserAgent;
+  }
+
+  public void setConsentUserAgent(String consentUserAgent) {
+    this.consentUserAgent = consentUserAgent;
+  }
+
+  public boolean isConsentCrossBorder() {
+    return consentCrossBorder;
+  }
+
+  public void setConsentCrossBorder(boolean consentCrossBorder) {
+    this.consentCrossBorder = consentCrossBorder;
+  }
+
+  public boolean isConsentMarketing() {
+    return consentMarketing;
+  }
+
+  public void setConsentMarketing(boolean consentMarketing) {
+    this.consentMarketing = consentMarketing;
   }
 }

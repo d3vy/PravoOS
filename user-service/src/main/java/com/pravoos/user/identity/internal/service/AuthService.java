@@ -1,7 +1,9 @@
 package com.pravoos.user.identity.internal.service;
 
+import com.pravoos.common.web.AiProcessingMode;
 import com.pravoos.user.billing.api.PlanClaim;
 import com.pravoos.user.billing.api.PlanClaimProvider;
+import com.pravoos.user.identity.api.AiProcessingModeProvider;
 import com.pravoos.user.identity.api.OrgMembershipProvider;
 import com.pravoos.user.identity.api.PortalAccessProvider;
 import com.pravoos.user.identity.internal.dto.LoginRequest;
@@ -49,6 +51,7 @@ public class AuthService {
   private final OrgMembershipProvider orgMembershipProvider;
   private final PortalAccessProvider portalAccessProvider;
   private final PlanClaimProvider planClaimProvider;
+  private final AiProcessingModeProvider aiProcessingModeProvider;
   private final JwtTokenProvider jwtTokenProvider;
   private final PasswordEncoder passwordEncoder;
   private final RefreshTokenService refreshTokenService;
@@ -67,6 +70,7 @@ public class AuthService {
       OrgMembershipProvider orgMembershipProvider,
       PortalAccessProvider portalAccessProvider,
       PlanClaimProvider planClaimProvider,
+      AiProcessingModeProvider aiProcessingModeProvider,
       JwtTokenProvider jwtTokenProvider,
       PasswordEncoder passwordEncoder,
       RefreshTokenService refreshTokenService,
@@ -80,6 +84,7 @@ public class AuthService {
     this.orgMembershipProvider = orgMembershipProvider;
     this.portalAccessProvider = portalAccessProvider;
     this.planClaimProvider = planClaimProvider;
+    this.aiProcessingModeProvider = aiProcessingModeProvider;
     this.jwtTokenProvider = jwtTokenProvider;
     this.passwordEncoder = passwordEncoder;
     this.refreshTokenService = refreshTokenService;
@@ -225,9 +230,16 @@ public class AuthService {
         user.getRole() == UserRole.CLIENT
             ? null
             : planClaimProvider.effectivePlanFor(user.getId()).orElse(null);
+    AiProcessingMode aiProcessingMode = aiProcessingModeProvider.resolveMode(user.getId());
     String accessToken =
         jwtTokenProvider.generateToken(
-            user.getId(), user.getEmail(), user.getRole(), orgIds, clientIds, plan);
+            user.getId(),
+            user.getEmail(),
+            user.getRole(),
+            orgIds,
+            clientIds,
+            plan,
+            aiProcessingMode);
     String refreshToken = refreshTokenService.issue(user.getId(), ipAddress, userAgent);
     return new TokenResponse(
         accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
