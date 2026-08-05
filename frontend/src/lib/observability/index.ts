@@ -1,4 +1,5 @@
 import { useAuthStore } from '../../store/authStore'
+import { analyticsAllowed } from '../../utils/cookieConsent'
 import { scrubPii } from './scrub'
 import { createBeaconSink } from './sinks/beaconSink'
 import { createSentrySink } from './sinks/sentrySink'
@@ -20,6 +21,9 @@ let sinks: ErrorSink[] = []
 
 function buildSinks(): ErrorSink[] {
   const configured: ErrorSink[] = []
+  if (!analyticsAllowed()) {
+    return configured
+  }
   const sentryDsn = import.meta.env.VITE_SENTRY_DSN
   if (sentryDsn) {
     configured.push(createSentrySink({ dsn: sentryDsn, environment, release }))
@@ -64,11 +68,12 @@ export function reportError(error: unknown, context: ErrorContext): void {
   })
 }
 
+export function refreshErrorReportingConsent(): void {
+  sinks = buildSinks()
+}
+
 export function installErrorReporting(): void {
   sinks = buildSinks()
-  if (sinks.length === 0) {
-    return
-  }
   window.addEventListener('error', (event) => {
     reportError(event.error ?? event.message, { source: 'window.onerror' })
   })
