@@ -1,6 +1,7 @@
 package com.pravoos.ai;
 
 import com.pravoos.ai.shared.config.*;
+import com.pravoos.common.security.PiiCryptoProperties;
 import com.pravoos.common.web.RequestIdFilter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -31,7 +32,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
   TabularReviewProperties.class,
   PiiCryptoProperties.class,
   PersonalDataConsentProperties.class,
-  InvoicePaymentProperties.class
+  InvoicePaymentProperties.class,
+  MailboxProperties.class,
+  MailSyncProperties.class,
+  MailAttachmentProperties.class
 })
 @EnableJpaRepositories(
     basePackages = {

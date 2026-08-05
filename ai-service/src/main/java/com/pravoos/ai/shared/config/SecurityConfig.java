@@ -93,6 +93,10 @@ public class SecurityConfig {
                     .hasRole("LAWYER")
                     .requestMatchers("/api/ai/time/**")
                     .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/mailboxes/**")
+                    .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/emails/**")
+                    .hasRole("LAWYER")
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(
