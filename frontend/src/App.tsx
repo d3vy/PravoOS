@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore'
 import { useAuthBootstrap } from './hooks/useAuthBootstrap'
 import { useLanguageSync } from './hooks/useLanguage'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
+import { CookieBanner } from './components/CookieBanner'
 import { FullScreenLoader } from './components/ui/FullScreenLoader'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { LawyerLayout } from './components/layout/LawyerLayout'
@@ -12,6 +13,7 @@ import type { UserRole } from './types'
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ApplyPage = lazy(() => import('./pages/ApplyPage'))
+const LegalPage = lazy(() => import('./pages/LegalPage'))
 const ApplicationStatusPage = lazy(() => import('./pages/ApplicationStatusPage'))
 const EditApplicationPage = lazy(() => import('./pages/EditApplicationPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
@@ -65,10 +67,12 @@ export default function App(): JSX.Element {
 
   return (
     <Suspense fallback={<FullScreenLoader />}>
+      <CookieBanner />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/apply" element={<ApplyPage />} />
+        <Route path="/legal/:slug" element={<LegalPage />} />
         <Route path="/application/:token" element={<ApplicationStatusPage />} />
         <Route path="/application/:token/edit" element={<EditApplicationPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

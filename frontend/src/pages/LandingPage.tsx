@@ -357,10 +357,24 @@ export default function LandingPage(): JSX.Element {
               </p>
             </div>
           </div>
-          <div className="pt-6 border-t border-line">
+          <div className="pt-6 border-t border-line flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-fg-muted font-light">
               {t('landing.footerCopyright', { year: new Date().getFullYear() })}
             </p>
+            <nav className="flex flex-wrap gap-x-4 gap-y-2" aria-label={t('legal.navLabel')}>
+              <Link to="/legal/privacy" className="text-sm text-fg-muted hover:text-fg transition-colors font-light">
+                {t('legal.navPrivacy')}
+              </Link>
+              <Link to="/legal/consent" className="text-sm text-fg-muted hover:text-fg transition-colors font-light">
+                {t('legal.navConsent')}
+              </Link>
+              <Link to="/legal/cross-border" className="text-sm text-fg-muted hover:text-fg transition-colors font-light">
+                {t('legal.navCrossBorder')}
+              </Link>
+              <Link to="/legal/cookies" className="text-sm text-fg-muted hover:text-fg transition-colors font-light">
+                {t('legal.navCookies')}
+              </Link>
+            </nav>
           </div>
         </div>
       </footer>

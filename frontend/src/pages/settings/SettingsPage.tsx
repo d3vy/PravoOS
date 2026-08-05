@@ -8,8 +8,9 @@ import { useLanguage } from '../../hooks/useLanguage'
 import { LANGUAGE_LABELS } from '../../i18n/config'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { PrivacyTab } from './PrivacyTab'
 
-type SettingsTab = 'notifications' | 'integrations' | 'language'
+type SettingsTab = 'notifications' | 'integrations' | 'language' | 'privacy'
 
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation()
@@ -19,6 +20,7 @@ export default function SettingsPage(): JSX.Element {
     { id: 'notifications', label: t('settings.tabNotifications') },
     { id: 'integrations', label: t('settings.tabIntegrations') },
     { id: 'language', label: t('settings.tabLanguage') },
+    { id: 'privacy', label: t('settings.tabPrivacy') },
   ]
 
   return (
@@ -48,6 +50,7 @@ export default function SettingsPage(): JSX.Element {
         )}
         {activeTab === 'integrations' && <IntegrationsTab />}
         {activeTab === 'language' && <LanguageTab />}
+        {activeTab === 'privacy' && <PrivacyTab />}
       </div>
     </div>
   )

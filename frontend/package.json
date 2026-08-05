@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "sync-legal": "node scripts/sync-legal.mjs",
+    "predev": "npm run sync-legal",
+    "prebuild": "npm run sync-legal",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
