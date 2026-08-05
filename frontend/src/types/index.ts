@@ -56,6 +56,68 @@ export interface ApplyRequest {
   fullName: string
   specialization: string
   phone: string
+  personalDataConsent: boolean
+  crossBorderConsent: boolean
+  marketingConsent: boolean
+  consentPolicyVersion: string
+}
+
+export type ConsentPurpose = 'PERSONAL_DATA' | 'CROSS_BORDER_TRANSFER' | 'MARKETING'
+
+export type SubjectRequestType = 'ACCESS' | 'ERASURE' | 'CONSENT_WITHDRAWAL'
+
+export type SubjectRequestStatus = 'PENDING' | 'COMPLETED' | 'REJECTED'
+
+export interface PrivacyPolicyResponse {
+  policyVersion: string
+  operator: string
+}
+
+export interface ConsentResponse {
+  id: string
+  purpose: ConsentPurpose
+  mandatory: boolean
+  policyVersion: string
+  grantedAt: string
+  revokedAt: string | null
+  source: string
+}
+
+export interface SubjectRequestResponse {
+  id: string
+  userId: string | null
+  subjectRef: string
+  type: SubjectRequestType
+  status: SubjectRequestStatus
+  requestedAt: string
+  dueAt: string
+  completedAt: string | null
+  note: string | null
+}
+
+export interface PersonalDataSessionRecord {
+  ipAddress: string | null
+  userAgent: string | null
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+export interface PersonalDataExportResponse {
+  userId: string
+  email: string
+  role: string
+  status: string
+  registeredAt: string
+  fullName: string | null
+  specialization: string | null
+  phone: string | null
+  preferredLanguage: string | null
+  telegramLinked: boolean
+  consents: ConsentResponse[]
+  sessions: PersonalDataSessionRecord[]
+  requests: SubjectRequestResponse[]
+  operator: string
+  exportedAt: string
 }
 
 export interface ApplicationResponse {
