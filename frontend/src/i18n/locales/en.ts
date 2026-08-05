@@ -546,6 +546,13 @@ const en = {
     passwordPlaceholderOptional: 'Leave empty to keep unchanged',
     specializationLabel: 'Specialization',
     specializationPlaceholder: 'Corporate law',
+    consentPersonalData:
+      'I give <0>consent to the processing of personal data</0> and have read the <1>personal data processing policy</1>',
+    consentCrossBorder:
+      'I give separate <0>consent to cross-border transfer</0> of de-identified data for AI features',
+    consentMarketing: 'I agree to receive product news and mailings',
+    consentPersonalDataRequired: 'Registration is not possible without this consent',
+    consentCrossBorderRequired: 'AI features are unavailable without this consent',
   },
   editApplication: {
     saveError: 'Could not save changes. Please try again later.',
@@ -818,6 +825,7 @@ const en = {
     tabNotifications: 'Notifications',
     tabIntegrations: 'Integrations',
     tabLanguage: 'Language',
+    tabPrivacy: 'My data',
     loginTitle: 'Account sign-in',
     loginDesc: 'Where to send a notification about a sign-in from a new device.',
     caseMsgTitle: 'Case messages',
@@ -1410,6 +1418,75 @@ const en = {
     submit: 'Submit application',
     alreadyHaveAccess: 'Already have access?',
     login: 'Log in',
+    errorConsentRequired:
+      'Please tick the mandatory consents — without them we may not process your data.',
+  },
+  legal: {
+    navLabel: 'Legal documents',
+    navPrivacy: 'Personal data policy',
+    navConsent: 'Processing consent',
+    navCrossBorder: 'Cross-border transfer',
+    navCookies: 'Cookies',
+    contactHint: 'Send personal data questions to the address listed in the policy.',
+  },
+  cookieBanner: {
+    title: 'Cookies',
+    description:
+      'We use strictly necessary cookies for sign-in and interface settings, and — with your consent — analytics cookies for error diagnostics. Details are in the <0>cookie policy</0>.',
+    accept: 'Accept all',
+    decline: 'Necessary only',
+  },
+  privacy: {
+    consentsTitle: 'Consents',
+    consentsDesc:
+      'Shows which consents are active and when they were given. Withdrawal takes effect immediately.',
+    purpose: {
+      PERSONAL_DATA: 'Personal data processing',
+      CROSS_BORDER_TRANSFER: 'Cross-border transfer (AI features)',
+      MARKETING: 'News and mailings',
+    },
+    mandatoryTag: '· mandatory',
+    grantedAt: 'Given {{date}}, policy revision {{version}}',
+    notGranted: 'Not given',
+    grant: 'Give consent',
+    revoke: 'Withdraw',
+    revokeError: 'Could not withdraw the consent. Please try again later.',
+    mandatoryRevokeError:
+      'This consent is mandatory — the service cannot operate without it. To stop processing, delete your account.',
+    cookiesTitle: 'Cookies',
+    cookiesDesc: 'Strictly necessary cookies cannot be disabled — sign-in does not work without them.',
+    cookiesAnalytics: 'Analytics cookies: interface error diagnostics',
+    cookiesUndecided: '(no choice made yet)',
+    cookiesPolicyLink: 'Cookie policy →',
+    exportTitle: 'Export my data',
+    exportDesc:
+      'A file with all personal data the service stores about you: profile, consents, sign-in history, requests.',
+    exportAction: 'Download data',
+    exportDone: 'File exported',
+    requestsTitle: 'My requests',
+    requestsDesc: 'Log of data subject requests and response deadlines.',
+    requestsEmpty: 'No requests yet.',
+    requestMeta: 'Submitted {{requested}} · due {{due}}',
+    requestType: {
+      ACCESS: 'Data access',
+      ERASURE: 'Data erasure',
+      CONSENT_WITHDRAWAL: 'Consent withdrawal',
+    },
+    requestStatus: {
+      PENDING: 'In progress',
+      COMPLETED: 'Completed',
+      REJECTED: 'Rejected',
+    },
+    eraseTitle: 'Delete account',
+    eraseDesc:
+      'Your account and personal data will be deleted. Some records are kept longer where the law requires it — see the policy for retention periods.',
+    eraseAction: 'Delete account',
+    eraseConfirmHint: 'This cannot be undone. Confirm with your password.',
+    erasePasswordLabel: 'Password',
+    eraseConfirm: 'Delete permanently',
+    eraseAccepted: 'Request accepted',
+    legalHint: 'The full list of data, purposes and retention periods is',
+    legalLink: 'in the personal data policy',
   },
   applicationStatus: {
     statusPendingLabel: 'Under review',
