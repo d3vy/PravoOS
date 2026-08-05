@@ -34,6 +34,13 @@ public final class SecurityUtils {
     return List.of();
   }
 
+  public static AiProcessingMode currentAiProcessingMode(Authentication authentication) {
+    if (authentication != null && authentication.getDetails() instanceof OrgContext orgContext) {
+      return orgContext.aiProcessingMode();
+    }
+    return AiProcessingMode.DEFAULT;
+  }
+
   public static Optional<PlanLimits> currentPlanLimits(Authentication authentication) {
     if (authentication != null && authentication.getDetails() instanceof OrgContext orgContext) {
       return Optional.ofNullable(orgContext.planLimits());
