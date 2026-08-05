@@ -20,12 +20,13 @@ import { WorkflowProcessSection } from '../../components/cases/WorkflowProcessSe
 import { ResponsesSection } from '../../components/cases/ResponsesSection'
 import { CaseTimeSection } from '../../components/cases/CaseTimeSection'
 import { CaseTasksSection } from '../../components/cases/CaseTasksSection'
-import { ArbitrSection } from '../../components/cases/ArbitrSection'
+import { CourtSection } from '../../components/cases/CourtSection'
+import { CaseEmailSection } from '../../components/cases/CaseEmailSection'
 import { CaseChatSection } from '../../components/cases/CaseChatSection'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { DOCUMENT_POLLING_INTERVAL_MS } from '../../components/cases/caseFormatting'
 
-const TAB_IDS = ['overview', 'documents', 'ask', 'analysis', 'time', 'tasks', 'messages'] as const
+const TAB_IDS = ['overview', 'documents', 'ask', 'analysis', 'time', 'tasks', 'emails', 'messages'] as const
 type TabId = (typeof TAB_IDS)[number]
 
 function resolveInitialTab(param: string | null, hash: string): TabId {
@@ -128,6 +129,7 @@ export default function CaseDetailPage(): JSX.Element {
     { id: 'analysis', label: t('caseDetail.tabAnalysis'), badge: responses.length },
     { id: 'time', label: t('caseDetail.tabTime') },
     { id: 'tasks', label: t('caseDetail.tabTasks') },
+    { id: 'emails', label: t('caseDetail.tabEmails') },
     { id: 'messages', label: t('caseDetail.tabMessages') },
   ]
 
@@ -179,9 +181,11 @@ export default function CaseDetailPage(): JSX.Element {
           {activeTab === 'tasks' && (
             <>
               <CaseTasksSection caseId={caseId} />
-              <ArbitrSection caseItem={caseItem} />
+              <CourtSection caseItem={caseItem} />
             </>
           )}
+
+          {activeTab === 'emails' && <CaseEmailSection caseId={caseId} />}
 
           {activeTab === 'messages' && (
             <CaseMessageThread

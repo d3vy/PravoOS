@@ -52,14 +52,14 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
   @Query(
       """
-            SELECT c.arbitrJudge AS name,
+            SELECT c.judgeName AS name,
                    COUNT(DISTINCT c.id) AS totalCases,
                    COUNT(DISTINCT CASE WHEN c.status = :wonStatus THEN c.id END) AS wonCases,
                    COUNT(DISTINCT CASE WHEN c.status = :lostStatus THEN c.id END) AS lostCases
             FROM Case c
-            WHERE c.arbitrJudge IN :names
+            WHERE c.judgeName IN :names
               AND (c.lawyerId = :lawyerId OR c.orgId IN :orgIds)
-            GROUP BY c.arbitrJudge
+            GROUP BY c.judgeName
             """)
   List<OutcomeStatView> judgeStatistics(
       @Param("names") Collection<String> names,
@@ -143,7 +143,9 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
   List<Case> findByExpiresAt(LocalDate expiresAt);
 
-  List<Case> findByArbitrCaseNumberIsNotNull();
+  List<Case> findByCourtCaseNumberIsNotNull();
+
+  List<Case> findByLawyerIdAndCourtCaseNumberIsNotNull(UUID lawyerId);
 
   @Query(
       """

@@ -7,10 +7,13 @@ import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.core.internal.service.CitationExtractor.ExtractedCitation;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.LegislationRef;
-import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
 import com.pravoos.ai.shared.config.CitationCheckProperties;
+import com.pravoos.ai.shared.court.CourtCaseNumberParser;
+import com.pravoos.ai.shared.court.CourtCaseProvider;
+import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
 import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.format.DateTimeFormatter;
@@ -33,7 +36,7 @@ public class CitationCheckService {
       DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
   private final CitationExtractor citationExtractor;
-  private final ArbitrCaseProvider arbitrCaseProvider;
+  private final CourtCaseProviderRegistry courtCaseProviderRegistry;
   private final DocumentAccess documentAccess;
   private final AiResponseRepository aiResponseRepository;
   private final CitationCheckProperties properties;
@@ -41,13 +44,13 @@ public class CitationCheckService {
 
   public CitationCheckService(
       CitationExtractor citationExtractor,
-      ArbitrCaseProvider arbitrCaseProvider,
+      CourtCaseProviderRegistry courtCaseProviderRegistry,
       DocumentAccess documentAccess,
       AiResponseRepository aiResponseRepository,
       CitationCheckProperties properties,
       MeterRegistry registry) {
     this.citationExtractor = citationExtractor;
-    this.arbitrCaseProvider = arbitrCaseProvider;
+    this.courtCaseProviderRegistry = courtCaseProviderRegistry;
     this.documentAccess = documentAccess;
     this.aiResponseRepository = aiResponseRepository;
     this.properties = properties;
@@ -72,7 +75,7 @@ public class CitationCheckService {
         case COURT_CASE -> {
           boolean lookupBudgetLeft = courtLookups < properties.maxCourtCaseLookups();
           checks.add(checkCourtCase(citation, lookupBudgetLeft));
-          if (lookupBudgetLeft && arbitrCaseProvider.isEnabled()) {
+          if (lookupBudgetLeft && courtCaseProviderRegistry.hasAnyEnabled()) {
             courtLookups++;
           }
         }
@@ -106,9 +109,14 @@ public class CitationCheckService {
 
   private CitationCheck checkCourtCase(ExtractedCitation citation, boolean lookupBudgetLeft) {
     String number = citation.core();
-    if (!arbitrCaseProvider.isEnabled()) {
+    CourtSystem system = CourtCaseNumberParser.detectOrDefault(number, CourtSystem.ARBITR);
+    Optional<CourtCaseProvider> provider = courtCaseProviderRegistry.enabledFor(system);
+    if (provider.isEmpty()) {
       return citationOf(
-          citation, number, CitationStatus.UNVERIFIED, "Проверка через КАД.Арбитр недоступна");
+          citation,
+          number,
+          CitationStatus.UNVERIFIED,
+          "Проверка через " + system.getDisplayName() + " недоступна");
     }
     if (!lookupBudgetLeft) {
       return citationOf(
@@ -118,21 +126,27 @@ public class CitationCheckService {
           "Превышен лимит проверок дел за один запрос");
     }
     try {
-      boolean found = arbitrCaseProvider.fetchCase(number).isPresent();
+      boolean found = provider.get().fetchCase(number).isPresent();
       return found
-          ? citationOf(citation, number, CitationStatus.VERIFIED, "Дело найдено в КАД.Арбитр")
+          ? citationOf(
+              citation,
+              number,
+              CitationStatus.VERIFIED,
+              "Дело найдено в " + system.getDisplayName())
           : citationOf(
               citation,
               number,
               CitationStatus.NOT_FOUND,
-              "Дело не найдено в КАД.Арбитр — проверьте номер, возможна ошибка");
+              "Дело не найдено в "
+                  + system.getDisplayName()
+                  + " — проверьте номер, возможна ошибка");
     } catch (RuntimeException e) {
-      log.warn("КАД.Арбитр lookup failed for case {}: {}", number, e.getMessage());
+      log.warn("{} lookup failed for case {}: {}", system.getDisplayName(), number, e.getMessage());
       return citationOf(
           citation,
           number,
           CitationStatus.UNVERIFIED,
-          "Ошибка обращения к КАД.Арбитр, повторите позже");
+          "Ошибка обращения к " + system.getDisplayName() + ", повторите позже");
     }
   }
 

@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.model.entity;
 
 import com.pravoos.ai.shared.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -44,14 +45,18 @@ public class Case {
   @Column(name = "expires_at")
   private LocalDate expiresAt;
 
-  @Column(name = "arbitr_case_number", length = 50)
-  private String arbitrCaseNumber;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "court_system", nullable = false, length = 30)
+  private CourtSystem courtSystem = CourtSystem.ARBITR;
 
-  @Column(name = "arbitr_case_guid", length = 40)
-  private String arbitrCaseGuid;
+  @Column(name = "court_case_number", length = 50)
+  private String courtCaseNumber;
 
-  @Column(name = "arbitr_judge", length = 300)
-  private String arbitrJudge;
+  @Column(name = "court_case_guid", length = 40)
+  private String courtCaseGuid;
+
+  @Column(name = "judge_name", length = 300)
+  private String judgeName;
 
   @Column(name = "default_hourly_rate")
   private BigDecimal defaultHourlyRate;
@@ -140,28 +145,36 @@ public class Case {
     this.expiresAt = expiresAt;
   }
 
-  public String getArbitrCaseNumber() {
-    return arbitrCaseNumber;
+  public CourtSystem getCourtSystem() {
+    return courtSystem;
   }
 
-  public void setArbitrCaseNumber(String arbitrCaseNumber) {
-    this.arbitrCaseNumber = arbitrCaseNumber;
+  public void setCourtSystem(CourtSystem courtSystem) {
+    this.courtSystem = courtSystem;
   }
 
-  public String getArbitrCaseGuid() {
-    return arbitrCaseGuid;
+  public String getCourtCaseNumber() {
+    return courtCaseNumber;
   }
 
-  public void setArbitrCaseGuid(String arbitrCaseGuid) {
-    this.arbitrCaseGuid = arbitrCaseGuid;
+  public void setCourtCaseNumber(String courtCaseNumber) {
+    this.courtCaseNumber = courtCaseNumber;
   }
 
-  public String getArbitrJudge() {
-    return arbitrJudge;
+  public String getCourtCaseGuid() {
+    return courtCaseGuid;
   }
 
-  public void setArbitrJudge(String arbitrJudge) {
-    this.arbitrJudge = arbitrJudge;
+  public void setCourtCaseGuid(String courtCaseGuid) {
+    this.courtCaseGuid = courtCaseGuid;
+  }
+
+  public String getJudgeName() {
+    return judgeName;
+  }
+
+  public void setJudgeName(String judgeName) {
+    this.judgeName = judgeName;
   }
 
   public BigDecimal getDefaultHourlyRate() {

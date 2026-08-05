@@ -186,12 +186,12 @@ public class CaseController {
             SecurityUtils.currentOrgIds(authentication)));
   }
 
-  @PostMapping("/{caseId}/arbitr/sync")
-  public ResponseEntity<List<CaseHearingEventResponse>> syncArbitr(
+  @PostMapping("/{caseId}/court/sync")
+  public ResponseEntity<List<CaseHearingEventResponse>> syncCourt(
       @PathVariable UUID caseId, Authentication authentication) {
     UUID lawyerId = SecurityUtils.currentUserId(authentication);
     return ResponseEntity.ok(
-        caseService.syncArbitr(caseId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+        caseService.syncCourt(caseId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
   }
 
   @PostMapping("/{caseId}/workflows/{workflowId}/run")

@@ -12,8 +12,9 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepositor
 import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
-import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
-import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
+import com.pravoos.ai.shared.court.CourtCaseData;
+import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import com.pravoos.ai.shared.service.OutboxEventService;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
@@ -27,24 +28,24 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ArbitrSyncServiceTest {
+class CourtSyncServiceTest {
 
-  @Mock private ArbitrCaseProvider arbitrCaseProvider;
+  @Mock private CourtCaseProviderRegistry courtCaseProviderRegistry;
   @Mock private CaseRepository caseRepository;
   @Mock private CaseHearingEventRepository hearingEventRepository;
   @Mock private CasePartyRepository casePartyRepository;
   @Mock private CaseTaskRepository caseTaskRepository;
   @Mock private OutboxEventService outboxEventService;
 
-  private ArbitrSyncService service;
+  private CourtSyncService service;
 
   private final UUID caseId = UUID.randomUUID();
 
   @BeforeEach
   void setUp() {
     service =
-        new ArbitrSyncService(
-            arbitrCaseProvider,
+        new CourtSyncService(
+            courtCaseProviderRegistry,
             caseRepository,
             hearingEventRepository,
             casePartyRepository,
@@ -71,8 +72,32 @@ class ArbitrSyncServiceTest {
     }
   }
 
-  private ArbitrCaseData dataWithHearingDate(LocalDate hearingDate) {
-    return new ArbitrCaseData("А40-1/2026", null, hearingDate, null, List.of(), List.of());
+  private CourtCaseData dataWithHearingDate(LocalDate hearingDate) {
+    return new CourtCaseData("А40-1/2026", null, hearingDate, null, List.of(), List.of());
+  }
+
+  @Test
+  void skipsSync_whenProviderForCourtSystemIsDisabled() {
+    Case caseEntity = caseEntity(null);
+    caseEntity.setCourtCaseNumber("2-1234/2024");
+    caseEntity.setCourtSystem(CourtSystem.GENERAL_JURISDICTION);
+    when(caseRepository.findById(caseId)).thenReturn(java.util.Optional.of(caseEntity));
+    when(courtCaseProviderRegistry.enabledFor(CourtSystem.GENERAL_JURISDICTION))
+        .thenReturn(java.util.Optional.empty());
+
+    service.syncCase(caseId);
+
+    verify(hearingEventRepository, never()).save(any());
+  }
+
+  @Test
+  void skipsSync_whenCaseHasNoCourtNumber() {
+    Case caseEntity = caseEntity(null);
+    when(caseRepository.findById(caseId)).thenReturn(java.util.Optional.of(caseEntity));
+
+    service.syncCase(caseId);
+
+    verify(courtCaseProviderRegistry, never()).enabledFor(any());
   }
 
   @Test

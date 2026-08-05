@@ -1,5 +1,6 @@
 package com.pravoos.ai.practice.internal.dto;
 
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -15,5 +16,6 @@ public record UpdateCaseRequest(
     LocalDate filingDeadline,
     LocalDate nextHearingDate,
     LocalDate expiresAt,
-    @Size(max = 50) String arbitrCaseNumber,
+    @Size(max = 50) String courtCaseNumber,
+    CourtSystem courtSystem,
     @DecimalMin("0.0") @Digits(integer = 10, fraction = 2) BigDecimal defaultHourlyRate) {}

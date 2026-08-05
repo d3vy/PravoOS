@@ -129,8 +129,8 @@ export const casesApi = {
     return response.data
   },
 
-  syncArbitr: async (caseId: string): Promise<CaseHearingEvent[]> => {
-    const response = await apiClient.post<CaseHearingEvent[]>(`/api/ai/cases/${caseId}/arbitr/sync`)
+  syncCourt: async (caseId: string): Promise<CaseHearingEvent[]> => {
+    const response = await apiClient.post<CaseHearingEvent[]>(`/api/ai/cases/${caseId}/court/sync`)
     return response.data
   },
 

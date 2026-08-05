@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.arbitr.dto;
+package com.pravoos.ai.shared.court.arbitr.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

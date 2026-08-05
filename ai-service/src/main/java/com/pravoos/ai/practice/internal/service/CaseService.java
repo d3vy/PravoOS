@@ -16,11 +16,13 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
+import com.pravoos.ai.shared.court.CourtCaseNumberParser;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.CaseTransferNotAllowedException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import com.pravoos.ai.shared.exception.OrganizationAccessException;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import com.pravoos.ai.shared.model.enums.DeadlineType;
 import com.pravoos.ai.shared.util.ClientNameMatch;
 import com.pravoos.ai.shared.util.LikePattern;
@@ -48,7 +50,7 @@ public class CaseService {
   private final CaseHearingEventRepository hearingEventRepository;
   private final CasePartyRepository casePartyRepository;
   private final SignatureRequestRepository signatureRequestRepository;
-  private final ArbitrSyncService arbitrSyncService;
+  private final CourtSyncService courtSyncService;
   private final UserServiceClient userServiceClient;
 
   public CaseService(
@@ -59,7 +61,7 @@ public class CaseService {
       CaseHearingEventRepository hearingEventRepository,
       CasePartyRepository casePartyRepository,
       SignatureRequestRepository signatureRequestRepository,
-      ArbitrSyncService arbitrSyncService,
+      CourtSyncService courtSyncService,
       UserServiceClient userServiceClient) {
     this.caseRepository = caseRepository;
     this.clientRepository = clientRepository;
@@ -68,7 +70,7 @@ public class CaseService {
     this.hearingEventRepository = hearingEventRepository;
     this.casePartyRepository = casePartyRepository;
     this.signatureRequestRepository = signatureRequestRepository;
-    this.arbitrSyncService = arbitrSyncService;
+    this.courtSyncService = courtSyncService;
     this.userServiceClient = userServiceClient;
   }
 
@@ -85,7 +87,7 @@ public class CaseService {
     caseEntity.setFilingDeadline(request.filingDeadline());
     caseEntity.setNextHearingDate(request.nextHearingDate());
     caseEntity.setExpiresAt(request.expiresAt());
-    caseEntity.setArbitrCaseNumber(normalizeArbitrNumber(request.arbitrCaseNumber()));
+    applyCourtNumber(caseEntity, request.courtCaseNumber(), request.courtSystem());
     caseEntity.setDefaultHourlyRate(request.defaultHourlyRate());
 
     Case saved = caseRepository.save(caseEntity);
@@ -110,7 +112,7 @@ public class CaseService {
     caseEntity.setFilingDeadline(request.filingDeadline());
     caseEntity.setNextHearingDate(request.nextHearingDate());
     caseEntity.setExpiresAt(request.expiresAt());
-    applyArbitrNumber(caseEntity, request.arbitrCaseNumber());
+    applyCourtNumber(caseEntity, request.courtCaseNumber(), request.courtSystem());
     caseEntity.setDefaultHourlyRate(request.defaultHourlyRate());
 
     log.info(
@@ -125,9 +127,9 @@ public class CaseService {
     return fetchHearingEvents(caseId);
   }
 
-  public List<CaseHearingEventResponse> syncArbitr(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+  public List<CaseHearingEventResponse> syncCourt(UUID caseId, UUID lawyerId, List<UUID> orgIds) {
     requireVisibleCase(caseId, lawyerId, orgIds);
-    arbitrSyncService.syncCase(caseId);
+    courtSyncService.syncCase(caseId);
     return fetchHearingEvents(caseId);
   }
 
@@ -137,22 +139,26 @@ public class CaseService {
         .toList();
   }
 
-  private void applyArbitrNumber(Case caseEntity, String requestedNumber) {
-    String normalized = normalizeArbitrNumber(requestedNumber);
-    if (!Objects.equals(normalized, caseEntity.getArbitrCaseNumber())) {
-      caseEntity.setArbitrCaseGuid(null);
-      caseEntity.setArbitrJudge(null);
-      casePartyRepository.deleteByCaseId(caseEntity.getId());
+  private void applyCourtNumber(
+      Case caseEntity, String requestedNumber, CourtSystem requestedSystem) {
+    String normalized = CourtCaseNumberParser.normalize(requestedNumber);
+    if (!Objects.equals(normalized, caseEntity.getCourtCaseNumber())) {
+      caseEntity.setCourtCaseGuid(null);
+      caseEntity.setJudgeName(null);
+      if (caseEntity.getId() != null) {
+        casePartyRepository.deleteByCaseId(caseEntity.getId());
+      }
     }
-    caseEntity.setArbitrCaseNumber(normalized);
+    caseEntity.setCourtCaseNumber(normalized);
+    caseEntity.setCourtSystem(resolveCourtSystem(normalized, requestedSystem, caseEntity));
   }
 
-  private String normalizeArbitrNumber(String value) {
-    if (value == null) {
-      return null;
+  private CourtSystem resolveCourtSystem(
+      String normalizedNumber, CourtSystem requestedSystem, Case caseEntity) {
+    if (requestedSystem != null) {
+      return requestedSystem;
     }
-    String trimmed = value.trim();
-    return trimmed.isEmpty() ? null : trimmed;
+    return CourtCaseNumberParser.detectOrDefault(normalizedNumber, caseEntity.getCourtSystem());
   }
 
   @Transactional(readOnly = true)

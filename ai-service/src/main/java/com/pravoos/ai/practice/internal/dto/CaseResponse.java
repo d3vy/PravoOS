@@ -2,6 +2,7 @@ package com.pravoos.ai.practice.internal.dto;
 
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,12 +21,12 @@ public record CaseResponse(
     LocalDate filingDeadline,
     LocalDate nextHearingDate,
     LocalDate expiresAt,
-    String arbitrCaseNumber,
-    String arbitrCardUrl,
+    CourtSystem courtSystem,
+    String courtSystemName,
+    String courtCaseNumber,
+    String courtCardUrl,
     BigDecimal defaultHourlyRate,
     LocalDateTime createdAt) {
-  private static final String KAD_CARD_BASE_URL = "https://kad.arbitr.ru/Card/";
-
   public static CaseResponse from(Case caseEntity, String clientName) {
     return new CaseResponse(
         caseEntity.getId(),
@@ -40,10 +41,10 @@ public record CaseResponse(
         caseEntity.getFilingDeadline(),
         caseEntity.getNextHearingDate(),
         caseEntity.getExpiresAt(),
-        caseEntity.getArbitrCaseNumber(),
-        caseEntity.getArbitrCaseGuid() == null
-            ? null
-            : KAD_CARD_BASE_URL + caseEntity.getArbitrCaseGuid(),
+        caseEntity.getCourtSystem(),
+        caseEntity.getCourtSystem().getDisplayName(),
+        caseEntity.getCourtCaseNumber(),
+        caseEntity.getCourtSystem().cardUrl(caseEntity.getCourtCaseGuid()),
         caseEntity.getDefaultHourlyRate(),
         caseEntity.getCreatedAt());
   }

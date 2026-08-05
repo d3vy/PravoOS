@@ -6,10 +6,11 @@ import type { CaseHearingEvent, CaseResponse } from '../../types'
 import { Button } from '../ui/Button'
 import { Spinner } from '../ui/Spinner'
 
-export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Element {
+export function CourtSection({ caseItem }: { caseItem: CaseResponse }): JSX.Element {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const hasNumber = Boolean(caseItem.arbitrCaseNumber)
+  const hasNumber = Boolean(caseItem.courtCaseNumber)
+  const systemName = t(`court.systems.${caseItem.courtSystem}`)
 
   const { data: hearings = [], isLoading } = useQuery<CaseHearingEvent[]>({
     queryKey: ['case-hearings', caseItem.id],
@@ -18,7 +19,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
   })
 
   const syncMutation = useMutation({
-    mutationFn: () => casesApi.syncArbitr(caseItem.id),
+    mutationFn: () => casesApi.syncCourt(caseItem.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['case-hearings', caseItem.id] })
       queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
@@ -29,7 +30,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-fg">
-          {t('arbitr.title')}
+          {t('court.title', { system: systemName })}
         </h2>
         {hasNumber && (
           <Button
@@ -38,36 +39,36 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
             loading={syncMutation.isPending}
             onClick={() => syncMutation.mutate()}
           >
-            {t('arbitr.syncButton')}
+            {t('court.syncButton')}
           </Button>
         )}
       </div>
 
       {!hasNumber ? (
         <p className="text-sm text-fg-muted">
-          {t('arbitr.noNumberHint')}
+          {t('court.noNumberHint')}
         </p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
             <span className="text-fg-muted">
-              {t('arbitr.numberLabel')} <span className="text-fg font-medium">{caseItem.arbitrCaseNumber}</span>
+              {t('court.numberLabel')} <span className="text-fg font-medium">{caseItem.courtCaseNumber}</span>
             </span>
-            {caseItem.arbitrCardUrl && (
+            {caseItem.courtCardUrl && (
               <a
-                href={caseItem.arbitrCardUrl}
+                href={caseItem.courtCardUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="text-accent hover:underline"
               >
-                {t('arbitr.openOnKad')}
+                {t('court.openCard')}
               </a>
             )}
           </div>
 
           {syncMutation.isError && (
             <p className="text-sm text-danger mb-3">
-              {t('arbitr.syncError')}
+              {t('court.syncError')}
             </p>
           )}
 
@@ -75,7 +76,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
             <Spinner size="md" />
           ) : hearings.length === 0 ? (
             <p className="text-sm text-fg-muted">
-              {t('arbitr.emptyEvents')}
+              {t('court.emptyEvents')}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -86,7 +87,7 @@ export function ArbitrSection({ caseItem }: { caseItem: CaseResponse }): JSX.Ele
                 >
                   <div className="flex items-center justify-between gap-3 mb-0.5">
                     <span className="text-sm font-medium text-fg">
-                      {event.eventType ?? t('arbitr.eventFallback')}
+                      {event.eventType ?? t('court.eventFallback')}
                     </span>
                     <span className="text-xs text-fg-muted shrink-0">
                       {event.eventDate ? new Date(event.eventDate).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US') : ''}

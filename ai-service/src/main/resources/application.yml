@@ -172,8 +172,23 @@ arbitr:
   api:
     base-url: ${ARBITR_API_BASE_URL:https://parser-api.com/parser/arbitr_api/details_by_number}
     key: ${ARBITR_API_KEY:}
+
+court:
   poll:
-    cron: ${ARBITR_POLL_CRON:0 0 */6 * * *}
+    cron: ${COURT_POLL_CRON:${ARBITR_POLL_CRON:0 0 */6 * * *}}
+
+mailbox:
+  imap:
+    connect-timeout: ${MAILBOX_IMAP_CONNECT_TIMEOUT:10s}
+    read-timeout: ${MAILBOX_IMAP_READ_TIMEOUT:30s}
+    max-per-user: ${MAILBOX_MAX_PER_USER:5}
+  sync:
+    cron: ${MAILBOX_SYNC_CRON:0 */10 * * * *}
+    max-messages-per-run: ${MAILBOX_SYNC_MAX_MESSAGES:100}
+    max-body-length: ${MAILBOX_SYNC_MAX_BODY_LENGTH:100000}
+  attachments:
+    max-per-message: ${MAILBOX_ATTACHMENT_MAX_PER_MESSAGE:10}
+    max-bytes: ${MAILBOX_ATTACHMENT_MAX_BYTES:26214400}
 
 signature:
   default-expiry-days: ${SIGNATURE_EXPIRY_DAYS:30}

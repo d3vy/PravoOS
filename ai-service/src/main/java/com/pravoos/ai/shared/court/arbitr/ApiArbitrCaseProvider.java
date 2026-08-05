@@ -1,8 +1,11 @@
-package com.pravoos.ai.shared.arbitr;
+package com.pravoos.ai.shared.court.arbitr;
 
-import com.pravoos.ai.shared.arbitr.dto.ArbitrApiResponse;
 import com.pravoos.ai.shared.config.ArbitrProperties;
-import com.pravoos.ai.shared.exception.ArbitrException;
+import com.pravoos.ai.shared.court.CourtCaseData;
+import com.pravoos.ai.shared.court.CourtCaseProvider;
+import com.pravoos.ai.shared.court.arbitr.dto.ArbitrApiResponse;
+import com.pravoos.ai.shared.exception.CourtIntegrationException;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -20,7 +23,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
-public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
+public class ApiArbitrCaseProvider implements CourtCaseProvider {
 
   private static final Logger log = LoggerFactory.getLogger(ApiArbitrCaseProvider.class);
 
@@ -33,26 +36,30 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
   }
 
   @Override
+  public CourtSystem system() {
+    return CourtSystem.ARBITR;
+  }
+
+  @Override
   public boolean isEnabled() {
     return true;
   }
 
   @Override
-  public Optional<ArbitrCaseData> fetchCase(String arbitrCaseNumber) {
-    if (arbitrCaseNumber == null || arbitrCaseNumber.isBlank()) {
+  public Optional<CourtCaseData> fetchCase(String caseNumber) {
+    if (caseNumber == null || caseNumber.isBlank()) {
       return Optional.empty();
     }
-    ArbitrApiResponse response = requestDetails(arbitrCaseNumber.trim());
+    ArbitrApiResponse response = requestDetails(caseNumber.trim());
     if (response == null) {
       return Optional.empty();
     }
     if (response.success() == null || response.success() != 1) {
-      log.info(
-          "КАД.Арбитр: Success != 1 по делу {} (error={})", arbitrCaseNumber, response.error());
+      log.info("КАД.Арбитр: Success != 1 по делу {} (error={})", caseNumber, response.error());
       return Optional.empty();
     }
     if (response.cases() == null || response.cases().isEmpty()) {
-      log.info("КАД.Арбитр: дело {} не найдено", arbitrCaseNumber);
+      log.info("КАД.Арбитр: дело {} не найдено", caseNumber);
       return Optional.empty();
     }
     return Optional.of(mapToCaseData(response.cases().get(0)));
@@ -72,22 +79,23 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
           .body(ArbitrApiResponse.class);
     } catch (RestClientResponseException e) {
       log.error("КАД.Арбитр API вернул {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-      throw new ArbitrException("КАД.Арбитр API вернул статус " + e.getStatusCode().value());
+      throw new CourtIntegrationException(
+          "КАД.Арбитр API вернул статус " + e.getStatusCode().value());
     } catch (RestClientException e) {
       log.error("Ошибка вызова КАД.Арбитр API по делу {}: {}", caseNumber, e.getMessage());
-      throw new ArbitrException("Ошибка вызова КАД.Арбитр API: " + e.getMessage(), e);
+      throw new CourtIntegrationException("Ошибка вызова КАД.Арбитр API: " + e.getMessage(), e);
     }
   }
 
-  private ArbitrCaseData mapToCaseData(ArbitrApiResponse.Case caseDto) {
-    List<ArbitrCaseData.ArbitrEvent> events = new ArrayList<>();
+  private CourtCaseData mapToCaseData(ArbitrApiResponse.Case caseDto) {
+    List<CourtCaseData.CourtEvent> events = new ArrayList<>();
     for (ArbitrApiResponse.CaseInstance instance : safe(caseDto.caseInstances())) {
       String courtName = instance.court() != null ? instance.court().name() : null;
       for (ArbitrApiResponse.InstanceEvent event : safe(instance.instanceEvents())) {
         events.add(toEvent(event, courtName));
       }
     }
-    return new ArbitrCaseData(
+    return new CourtCaseData(
         caseDto.caseNumber(),
         caseDto.caseId(),
         resolveNextHearingDate(caseDto),
@@ -120,19 +128,19 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
     return judge == null ? null : judge.name();
   }
 
-  private List<ArbitrCaseData.ArbitrParty> resolveParties(ArbitrApiResponse.Case caseDto) {
-    List<ArbitrCaseData.ArbitrParty> parties = new ArrayList<>();
+  private List<CourtCaseData.CourtParty> resolveParties(ArbitrApiResponse.Case caseDto) {
+    List<CourtCaseData.CourtParty> parties = new ArrayList<>();
     for (ArbitrApiResponse.Side side : safe(caseDto.sides())) {
       if (side.name() == null || side.name().isBlank()) {
         continue;
       }
       String role = side.type() == null || side.type().isBlank() ? null : side.type().trim();
-      parties.add(new ArbitrCaseData.ArbitrParty(side.name().trim(), role));
+      parties.add(new CourtCaseData.CourtParty(side.name().trim(), role));
     }
     return parties;
   }
 
-  private ArbitrCaseData.ArbitrEvent toEvent(
+  private CourtCaseData.CourtEvent toEvent(
       ArbitrApiResponse.InstanceEvent event, String courtName) {
     LocalDate date = parseIsoDate(event.date());
     String description =
@@ -144,7 +152,7 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
         event.id() != null && !event.id().isBlank()
             ? event.id()
             : fallbackSourceEventId(courtName, event.date(), event.eventTypeName());
-    return new ArbitrCaseData.ArbitrEvent(
+    return new CourtCaseData.CourtEvent(
         sourceEventId, date, event.eventTypeName(), description, courtName);
   }
 
@@ -192,7 +200,7 @@ public class ApiArbitrCaseProvider implements ArbitrCaseProvider {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       return HexFormat.of().formatHex(digest.digest(key.getBytes(StandardCharsets.UTF_8)));
     } catch (NoSuchAlgorithmException e) {
-      throw new ArbitrException("SHA-256 недоступен в среде выполнения", e);
+      throw new CourtIntegrationException("SHA-256 недоступен в среде выполнения", e);
     }
   }
 

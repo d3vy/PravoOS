@@ -12,12 +12,14 @@ import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.LegislationRef;
-import com.pravoos.ai.shared.arbitr.ArbitrCaseData;
-import com.pravoos.ai.shared.arbitr.ArbitrCaseProvider;
 import com.pravoos.ai.shared.config.CitationCheckProperties;
+import com.pravoos.ai.shared.court.CourtCaseData;
+import com.pravoos.ai.shared.court.CourtCaseProvider;
+import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
 import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
 import com.pravoos.ai.shared.model.enums.CitationType;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CitationCheckServiceTest {
 
-  @Mock private ArbitrCaseProvider arbitrCaseProvider;
+  @Mock private CourtCaseProvider arbitrCaseProvider;
   @Mock private DocumentAccess documentAccess;
   @Mock private AiResponseRepository aiResponseRepository;
 
@@ -40,10 +42,11 @@ class CitationCheckServiceTest {
   @BeforeEach
   void setUp() {
     CitationExtractor extractor = new CitationExtractor(new LegalActRegistry());
+    when(arbitrCaseProvider.system()).thenReturn(CourtSystem.ARBITR);
     service =
         new CitationCheckService(
             extractor,
-            arbitrCaseProvider,
+            new CourtCaseProviderRegistry(List.of(arbitrCaseProvider)),
             documentAccess,
             aiResponseRepository,
             new CitationCheckProperties(100, 25),
@@ -56,7 +59,7 @@ class CitationCheckServiceTest {
     when(arbitrCaseProvider.fetchCase("А40-12345/2024"))
         .thenReturn(
             Optional.of(
-                new ArbitrCaseData("А40-12345/2024", "guid", null, null, List.of(), List.of())));
+                new CourtCaseData("А40-12345/2024", "guid", null, null, List.of(), List.of())));
 
     CitationCheckResult result = service.check("Дело А40-12345/2024.", UUID.randomUUID());
 
