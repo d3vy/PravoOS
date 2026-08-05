@@ -4,6 +4,9 @@ import com.pravoos.llm.domain.EmbeddingResult;
 import com.pravoos.llm.domain.LlmResult;
 import com.pravoos.llm.domain.LlmUsage;
 import com.pravoos.llm.openai.OpenAiEngine;
+import com.pravoos.llm.pii.PromptPiiRedactor;
+import com.pravoos.llm.pii.RedactionSession;
+import com.pravoos.llm.pii.StreamRestorer;
 import com.pravoos.llm.web.dto.CompleteRequest;
 import com.pravoos.llm.web.dto.EmbedBatchRequest;
 import com.pravoos.llm.web.dto.EmbedRequest;
@@ -30,41 +33,67 @@ public class LlmController {
 
   private final OpenAiEngine engine;
   private final AsyncTaskExecutor taskExecutor;
+  private final PromptPiiRedactor piiRedactor;
 
-  public LlmController(OpenAiEngine engine, AsyncTaskExecutor taskExecutor) {
+  public LlmController(
+      OpenAiEngine engine, AsyncTaskExecutor taskExecutor, PromptPiiRedactor piiRedactor) {
     this.engine = engine;
     this.taskExecutor = taskExecutor;
+    this.piiRedactor = piiRedactor;
   }
 
   @PostMapping("/complete")
   public LlmResult complete(@Valid @RequestBody CompleteRequest request) {
-    return engine.complete(
-        request.systemPrompt(), request.history(), request.userMessage(), request.options());
+    RedactionSession session = piiRedactor.newSession();
+    LlmResult result =
+        engine.complete(
+            piiRedactor.redact(request.systemPrompt(), session),
+            piiRedactor.redact(request.history(), session),
+            piiRedactor.redact(request.userMessage(), session),
+            request.options());
+    piiRedactor.recordSession(session);
+    return new LlmResult(session.restore(result.content()), result.usage());
   }
 
   @PostMapping("/embed")
   public EmbedResponse embed(@Valid @RequestBody EmbedRequest request) {
-    return new EmbedResponse(engine.embed(request.text()));
+    RedactionSession session = piiRedactor.newSession();
+    EmbedResponse response =
+        new EmbedResponse(engine.embed(piiRedactor.redactForEmbedding(request.text(), session)));
+    piiRedactor.recordSession(session);
+    return response;
   }
 
   @PostMapping("/embed-batch")
   public EmbeddingResult embedBatch(@Valid @RequestBody EmbedBatchRequest request) {
-    return engine.embedBatch(request.texts());
+    RedactionSession session = piiRedactor.newSession();
+    EmbeddingResult result =
+        engine.embedBatch(
+            request.texts().stream()
+                .map(text -> piiRedactor.redactForEmbedding(text, session))
+                .toList());
+    piiRedactor.recordSession(session);
+    return result;
   }
 
   @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public SseEmitter stream(@Valid @RequestBody CompleteRequest request) {
     SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
+    RedactionSession session = piiRedactor.newSession();
     taskExecutor.execute(
         () -> {
           try {
+            StreamRestorer restorer =
+                new StreamRestorer(session, token -> sendToken(emitter, token));
             LlmUsage usage =
                 engine.streamComplete(
-                    request.systemPrompt(),
-                    request.history(),
-                    request.userMessage(),
+                    piiRedactor.redact(request.systemPrompt(), session),
+                    piiRedactor.redact(request.history(), session),
+                    piiRedactor.redact(request.userMessage(), session),
                     request.options(),
-                    token -> sendToken(emitter, token));
+                    restorer);
+            restorer.flush();
+            piiRedactor.recordSession(session);
             emitter.send(SseEmitter.event().name("usage").data(usage, MediaType.APPLICATION_JSON));
             emitter.complete();
           } catch (Exception e) {
