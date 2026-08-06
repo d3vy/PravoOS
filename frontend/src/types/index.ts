@@ -48,6 +48,7 @@ export interface SessionResponse {
   userAgent?: string
   createdAt: string
   lastUsedAt?: string
+  current?: boolean
 }
 
 export interface ApplyRequest {
@@ -155,6 +156,7 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   conversationId: string
+  messageId: string
   answer: string
   sources: string[]
   followUps: string[]
@@ -250,6 +252,7 @@ export interface CaseResponse {
   courtSystemName: string
   courtCaseNumber: string | null
   courtCardUrl: string | null
+  defaultHourlyRate: number | null
   createdAt: string
 }
 
@@ -316,6 +319,7 @@ export interface CreateCaseRequest {
   expiresAt?: string | null
   courtCaseNumber?: string | null
   courtSystem?: CourtSystem | null
+  defaultHourlyRate?: number | null
 }
 
 export interface UpdateCaseRequest {
@@ -327,6 +331,7 @@ export interface UpdateCaseRequest {
   expiresAt?: string | null
   courtCaseNumber?: string | null
   courtSystem?: CourtSystem | null
+  defaultHourlyRate?: number | null
 }
 
 export type OrgRole = 'OWNER' | 'MANAGER' | 'MEMBER'
@@ -453,6 +458,8 @@ export interface InvoiceResponse {
   dueDate: string | null
   currency: string
   subtotal: number
+  vatRate: number | null
+  vatAmount: number
   total: number
   notes: string | null
   lines: InvoiceLineResponse[]
@@ -473,6 +480,24 @@ export interface InvoiceSummary {
   createdAt: string
 }
 
+export interface BillingProfileRequest {
+  name: string
+  inn?: string | null
+  kpp?: string | null
+  ogrn?: string | null
+  legalAddress?: string | null
+  bankName?: string | null
+  bankBic?: string | null
+  bankAccount?: string | null
+  corrAccount?: string | null
+  email?: string | null
+  phone?: string | null
+}
+
+export interface BillingProfileResponse extends BillingProfileRequest {
+  updatedAt: string
+}
+
 export interface InvoicePaymentResponse {
   invoiceId: string
   confirmationUrl: string
@@ -483,6 +508,7 @@ export interface CreateInvoiceRequest {
   caseId?: string | null
   timeEntryIds?: string[] | null
   dueDate?: string | null
+  vatRate?: number | null
   notes?: string | null
 }
 
@@ -781,6 +807,12 @@ export interface ContractReviewDto {
 }
 
 export type DiffChangeType = 'ADDED' | 'REMOVED' | 'MODIFIED'
+export type DiffSegmentType = 'EQUAL' | 'REMOVED' | 'ADDED'
+
+export interface DiffSegment {
+  type: DiffSegmentType
+  text: string
+}
 
 export interface DiffChange {
   order: number
@@ -789,6 +821,7 @@ export interface DiffChange {
   revisedText: string
   riskLevel: ContractRiskLevel | null
   comment: string | null
+  segments: DiffSegment[]
 }
 
 export interface DocumentComparisonDto {
@@ -807,7 +840,7 @@ export interface DocumentComparisonDto {
 }
 
 export type CitationType = 'COURT_CASE' | 'STATUTE'
-export type CitationStatus = 'VERIFIED' | 'NOT_FOUND' | 'UNVERIFIED'
+export type CitationStatus = 'VERIFIED' | 'NOT_FOUND' | 'OUTDATED' | 'UNVERIFIED'
 
 export interface CitationCheck {
   raw: string
@@ -822,6 +855,7 @@ export interface CitationCheckResult {
   total: number
   verified: number
   notFound: number
+  outdated: number
   unverified: number
 }
 
@@ -1097,11 +1131,15 @@ export type SignatureStatus = 'PENDING' | 'SIGNED' | 'DECLINED' | 'CANCELED' | '
 
 export type SignatureProviderType = 'SIMPLE' | 'DETACHED_CMS' | 'DIADOC'
 
+export type SignatureSignerRole = 'CLIENT' | 'LAWYER'
+
 export interface SignatureRequestResponse {
   id: string
   documentId: string
   caseId: string
   provider: SignatureProviderType
+  signerRole: SignatureSignerRole
+  signerLawyerId: string | null
   status: SignatureStatus
   documentHash: string
   message: string | null
