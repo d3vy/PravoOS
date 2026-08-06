@@ -13,7 +13,10 @@ public class PiiCryptoHolder implements ApplicationContextAware {
 
   @Override
   public void setApplicationContext(ApplicationContext context) throws BeansException {
-    applicationContext = context;
+    synchronized (PiiCryptoHolder.class) {
+      applicationContext = context;
+      encryptor = null;
+    }
   }
 
   public static PiiEncryptor encryptor() {
@@ -21,12 +24,16 @@ public class PiiCryptoHolder implements ApplicationContextAware {
     if (current != null) {
       return current;
     }
-    ApplicationContext context = applicationContext;
-    if (context == null) {
-      throw new IllegalStateException("PII crypto context is not initialized yet");
+    synchronized (PiiCryptoHolder.class) {
+      if (encryptor != null) {
+        return encryptor;
+      }
+      ApplicationContext context = applicationContext;
+      if (context == null) {
+        throw new IllegalStateException("PII crypto context is not initialized yet");
+      }
+      encryptor = context.getBean(PiiEncryptor.class);
+      return encryptor;
     }
-    current = context.getBean(PiiEncryptor.class);
-    encryptor = current;
-    return current;
   }
 }
