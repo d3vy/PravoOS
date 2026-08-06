@@ -56,6 +56,7 @@ function makeCase(overrides: Partial<CaseResponse>): CaseResponse {
     courtSystemName: 'КАД.Арбитр',
     courtCaseNumber: null,
     courtCardUrl: null,
+    defaultHourlyRate: null,
     createdAt: new Date().toISOString(),
     ...overrides,
   }

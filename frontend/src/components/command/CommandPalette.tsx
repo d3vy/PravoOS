@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -116,10 +116,13 @@ export function CommandPalette(): JSX.Element | null {
   })
 
   const close = (): void => setOpen(false)
-  const run = (action: () => void): void => {
-    setOpen(false)
-    action()
-  }
+  const run = useCallback(
+    (action: () => void): void => {
+      setOpen(false)
+      action()
+    },
+    [setOpen],
+  )
 
   const actionGroup = useMemo<CommandGroup>(() => {
     const sectionNavItems: CommandItem[] = lawyerNavSections.flatMap((section) =>
@@ -199,7 +202,7 @@ export function CommandPalette(): JSX.Element | null {
       },
     ]
     return { title: t('command.actions'), items: [...quickItems, ...navItems] }
-  }, [navigate, toggleTheme, lawyerNavSections, lawyerAccountLinks, t])
+  }, [navigate, toggleTheme, lawyerNavSections, lawyerAccountLinks, t, run])
 
   const recentGroup = useMemo<CommandGroup | null>(() => {
     if (debouncedQuery.length >= MIN_SEARCH_LENGTH || recentEntities.length === 0) return null
@@ -212,7 +215,7 @@ export function CommandPalette(): JSX.Element | null {
         run(() => navigate(entity.type === 'case' ? `/cases/${entity.id}` : `/clients/${entity.id}`)),
     }))
     return { title: t('command.recent'), items }
-  }, [debouncedQuery, recentEntities, navigate, t])
+  }, [debouncedQuery, recentEntities, navigate, t, run])
 
   const groups = useMemo<CommandGroup[]>(() => {
     const filteredActions: CommandGroup = {
@@ -294,7 +297,17 @@ export function CommandPalette(): JSX.Element | null {
       }
     }
     return result
-  }, [actionGroup, debouncedQuery, searchEnabled, searchResults, recentGroup, navigate, startTimer, t])
+  }, [
+    actionGroup,
+    debouncedQuery,
+    searchEnabled,
+    searchResults,
+    recentGroup,
+    navigate,
+    startTimer,
+    t,
+    run,
+  ])
 
   const timerGroups = useMemo<CommandGroup[]>(() => {
     const cases = (openCases ?? []).filter((c) => OPEN_CASE_STATUSES.has(c.status))
@@ -311,7 +324,7 @@ export function CommandPalette(): JSX.Element | null {
         }),
     }))
     return [{ title: t('command.startTimer'), items: items.filter((item) => matches(query, item)) }]
-  }, [openCases, startTimer, t, query])
+  }, [openCases, startTimer, t, query, run])
 
   const activeGroups = mode === 'timer-case-picker' ? timerGroups : groups
   const flatItems = useMemo(() => activeGroups.flatMap((group) => group.items), [activeGroups])
