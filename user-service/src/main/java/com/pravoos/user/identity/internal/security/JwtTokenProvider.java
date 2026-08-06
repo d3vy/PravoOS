@@ -31,9 +31,13 @@ public class JwtTokenProvider {
       List<UUID> orgIds,
       List<UUID> clientIds,
       PlanClaim plan,
-      AiProcessingMode aiProcessingMode) {
+      AiProcessingMode aiProcessingMode,
+      UUID sessionId) {
     var builder =
         Jwts.builder().subject(userId.toString()).claim("email", email).claim("role", role.name());
+    if (sessionId != null) {
+      builder.claim("sid", sessionId.toString());
+    }
     if (orgIds != null && !orgIds.isEmpty()) {
       builder.claim("orgs", orgIds.stream().map(UUID::toString).toList());
     }

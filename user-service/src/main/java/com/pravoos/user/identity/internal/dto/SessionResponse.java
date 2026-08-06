@@ -10,4 +10,5 @@ public record SessionResponse(
     String ipAddress,
     String userAgent,
     LocalDateTime createdAt,
-    LocalDateTime lastUsedAt) {}
+    LocalDateTime lastUsedAt,
+    boolean current) {}

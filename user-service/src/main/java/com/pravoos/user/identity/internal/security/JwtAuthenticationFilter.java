@@ -19,6 +19,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+  public static final String SESSION_ID_ATTRIBUTE = "pravoos.sessionId";
+
   private final JwtVerifier jwtVerifier;
   private final TokenDenylistService tokenDenylistService;
 
@@ -46,6 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
+        request.setAttribute(SESSION_ID_ATTRIBUTE, claims.get("sid", String.class));
       }
     }
 

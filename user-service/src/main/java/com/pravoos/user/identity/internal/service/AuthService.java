@@ -6,6 +6,7 @@ import com.pravoos.user.billing.api.PlanClaimProvider;
 import com.pravoos.user.identity.api.AiProcessingModeProvider;
 import com.pravoos.user.identity.api.OrgMembershipProvider;
 import com.pravoos.user.identity.api.PortalAccessProvider;
+import com.pravoos.user.identity.internal.dto.IssuedRefreshToken;
 import com.pravoos.user.identity.internal.dto.LoginRequest;
 import com.pravoos.user.identity.internal.dto.LoginResult;
 import com.pravoos.user.identity.internal.dto.TokenResponse;
@@ -231,6 +232,7 @@ public class AuthService {
             ? null
             : planClaimProvider.effectivePlanFor(user.getId()).orElse(null);
     AiProcessingMode aiProcessingMode = aiProcessingModeProvider.resolveMode(user.getId());
+    IssuedRefreshToken refreshToken = refreshTokenService.issue(user.getId(), ipAddress, userAgent);
     String accessToken =
         jwtTokenProvider.generateToken(
             user.getId(),
@@ -239,9 +241,9 @@ public class AuthService {
             orgIds,
             clientIds,
             plan,
-            aiProcessingMode);
-    String refreshToken = refreshTokenService.issue(user.getId(), ipAddress, userAgent);
+            aiProcessingMode,
+            refreshToken.sessionId());
     return new TokenResponse(
-        accessToken, refreshToken, user.getId(), user.getEmail(), user.getRole());
+        accessToken, refreshToken.rawToken(), user.getId(), user.getEmail(), user.getRole());
   }
 }

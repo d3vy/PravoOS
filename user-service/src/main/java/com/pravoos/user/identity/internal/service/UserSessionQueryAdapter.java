@@ -17,7 +17,7 @@ public class UserSessionQueryAdapter implements UserSessionQuery {
 
   @Override
   public List<UserSessionSnapshot> activeSessions(UUID userId) {
-    return refreshTokenService.listActiveSessions(userId).stream()
+    return refreshTokenService.listActiveSessions(userId, null).stream()
         .map(
             session ->
                 new UserSessionSnapshot(

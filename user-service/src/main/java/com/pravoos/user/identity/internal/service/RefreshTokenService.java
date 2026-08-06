@@ -1,6 +1,7 @@
 package com.pravoos.user.identity.internal.service;
 
 import com.pravoos.user.identity.internal.config.JwtProperties;
+import com.pravoos.user.identity.internal.dto.IssuedRefreshToken;
 import com.pravoos.user.identity.internal.dto.SessionResponse;
 import com.pravoos.user.identity.internal.model.entity.RefreshToken;
 import com.pravoos.user.identity.internal.repository.RefreshTokenRepository;
@@ -44,7 +45,7 @@ public class RefreshTokenService {
   }
 
   @Transactional
-  public String issue(UUID userId, String ipAddress, String userAgent) {
+  public IssuedRefreshToken issue(UUID userId, String ipAddress, String userAgent) {
     String rawToken = generateRawToken();
     LocalDateTime now = LocalDateTime.now();
     RefreshToken refreshToken = new RefreshToken();
@@ -54,8 +55,8 @@ public class RefreshTokenService {
     refreshToken.setIpAddress(ipAddress);
     refreshToken.setUserAgent(userAgent);
     refreshToken.setLastUsedAt(now);
-    refreshTokenRepository.save(refreshToken);
-    return rawToken;
+    RefreshToken saved = refreshTokenRepository.save(refreshToken);
+    return new IssuedRefreshToken(rawToken, saved.getId());
   }
 
   @Transactional(readOnly = true)
@@ -66,7 +67,7 @@ public class RefreshTokenService {
   }
 
   @Transactional(readOnly = true)
-  public List<SessionResponse> listActiveSessions(UUID userId) {
+  public List<SessionResponse> listActiveSessions(UUID userId, UUID currentSessionId) {
     return refreshTokenRepository
         .findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
             userId, LocalDateTime.now())
@@ -78,7 +79,8 @@ public class RefreshTokenService {
                     token.getIpAddress(),
                     token.getUserAgent(),
                     token.getCreatedAt(),
-                    token.getLastUsedAt()))
+                    token.getLastUsedAt(),
+                    token.getId().equals(currentSessionId)))
         .toList();
   }
 

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.pravoos.user.identity.internal.config.JwtProperties;
+import com.pravoos.user.identity.internal.dto.IssuedRefreshToken;
 import com.pravoos.user.identity.internal.dto.SessionResponse;
 import com.pravoos.user.identity.internal.model.entity.RefreshToken;
 import com.pravoos.user.identity.internal.repository.RefreshTokenRepository;
@@ -48,13 +49,23 @@ class RefreshTokenServiceTest {
   @Test
   void issueStoresHashedTokenAndReturnsRawToken() {
     UUID userId = UUID.randomUUID();
+    UUID sessionId = UUID.randomUUID();
     ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
+        .thenAnswer(
+            invocation -> {
+              RefreshToken token = invocation.getArgument(0);
+              token.setId(sessionId);
+              return token;
+            });
 
-    String rawToken = service.issue(userId, "203.0.113.7", "JUnit-UA");
+    IssuedRefreshToken issued = service.issue(userId, "203.0.113.7", "JUnit-UA");
+    String rawToken = issued.rawToken();
 
     verify(refreshTokenRepository).save(captor.capture());
     RefreshToken saved = captor.getValue();
     assertThat(rawToken).isNotBlank();
+    assertThat(issued.sessionId()).isEqualTo(sessionId);
     assertThat(saved.getUserId()).isEqualTo(userId);
     assertThat(saved.getTokenHash()).isEqualTo(tokenHasher.sha256Hex(rawToken));
     assertThat(saved.getTokenHash()).isNotEqualTo(rawToken);
@@ -167,7 +178,7 @@ class RefreshTokenServiceTest {
             eq(userId), any()))
         .thenReturn(List.of(session));
 
-    List<SessionResponse> sessions = service.listActiveSessions(userId);
+    List<SessionResponse> sessions = service.listActiveSessions(userId, null);
 
     assertThat(sessions).hasSize(1);
     SessionResponse response = sessions.get(0);
@@ -183,7 +194,7 @@ class RefreshTokenServiceTest {
             eq(userId), any()))
         .thenReturn(List.of());
 
-    assertThat(service.listActiveSessions(userId)).isEmpty();
+    assertThat(service.listActiveSessions(userId, null)).isEmpty();
   }
 
   @Test

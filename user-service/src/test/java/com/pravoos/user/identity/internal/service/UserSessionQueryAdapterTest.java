@@ -25,21 +25,22 @@ class UserSessionQueryAdapterTest {
     LocalDateTime createdAt = LocalDateTime.of(2026, 1, 1, 10, 0);
     LocalDateTime lastUsedAt = LocalDateTime.of(2026, 1, 2, 11, 30);
     SessionResponse session =
-        new SessionResponse(UUID.randomUUID(), "10.0.0.1", "Mozilla/5.0", createdAt, lastUsedAt);
-    when(refreshTokenService.listActiveSessions(userId)).thenReturn(List.of(session));
+        new SessionResponse(
+            UUID.randomUUID(), "10.0.0.1", "Mozilla/5.0", createdAt, lastUsedAt, false);
+    when(refreshTokenService.listActiveSessions(userId, null)).thenReturn(List.of(session));
 
     UserSessionQueryAdapter target = new UserSessionQueryAdapter(refreshTokenService);
     List<UserSessionSnapshot> result = target.activeSessions(userId);
 
     assertThat(result)
         .containsExactly(new UserSessionSnapshot("10.0.0.1", "Mozilla/5.0", createdAt, lastUsedAt));
-    verify(refreshTokenService).listActiveSessions(userId);
+    verify(refreshTokenService).listActiveSessions(userId, null);
   }
 
   @Test
   void returnsEmptyListWhenNoActiveSessions() {
     UUID userId = UUID.randomUUID();
-    when(refreshTokenService.listActiveSessions(userId)).thenReturn(List.of());
+    when(refreshTokenService.listActiveSessions(userId, null)).thenReturn(List.of());
 
     UserSessionQueryAdapter target = new UserSessionQueryAdapter(refreshTokenService);
     List<UserSessionSnapshot> result = target.activeSessions(userId);
@@ -56,15 +57,17 @@ class UserSessionQueryAdapterTest {
             "10.0.0.1",
             "Chrome",
             LocalDateTime.of(2026, 1, 1, 9, 0),
-            LocalDateTime.of(2026, 1, 1, 9, 5));
+            LocalDateTime.of(2026, 1, 1, 9, 5),
+            false);
     SessionResponse second =
         new SessionResponse(
             UUID.randomUUID(),
             "10.0.0.2",
             "Safari",
             LocalDateTime.of(2026, 1, 2, 9, 0),
-            LocalDateTime.of(2026, 1, 2, 9, 5));
-    when(refreshTokenService.listActiveSessions(userId)).thenReturn(List.of(first, second));
+            LocalDateTime.of(2026, 1, 2, 9, 5),
+            false);
+    when(refreshTokenService.listActiveSessions(userId, null)).thenReturn(List.of(first, second));
 
     UserSessionQueryAdapter target = new UserSessionQueryAdapter(refreshTokenService);
     List<UserSessionSnapshot> result = target.activeSessions(userId);

@@ -39,7 +39,8 @@ class JwtTokenProviderTest {
             null,
             null,
             null,
-            AiProcessingMode.RU_ONLY);
+            AiProcessingMode.RU_ONLY,
+            null);
     Claims claims = parse(token);
 
     assertThat(claims.getSubject()).isEqualTo(userId.toString());
@@ -54,7 +55,14 @@ class JwtTokenProviderTest {
     long before = System.currentTimeMillis();
     String token =
         provider.generateToken(
-            userId, "user@pravoos.com", UserRole.ADMIN, null, null, null, AiProcessingMode.RU_ONLY);
+            userId,
+            "user@pravoos.com",
+            UserRole.ADMIN,
+            null,
+            null,
+            null,
+            AiProcessingMode.RU_ONLY,
+            null);
     long after = System.currentTimeMillis();
     Claims claims = parse(token);
 
@@ -76,7 +84,8 @@ class JwtTokenProviderTest {
             List.of(),
             null,
             null,
-            AiProcessingMode.RU_ONLY);
+            AiProcessingMode.RU_ONLY,
+            null);
     Claims claims = parse(token);
 
     assertThat(claims.get("orgs")).isNull();
@@ -97,7 +106,8 @@ class JwtTokenProviderTest {
             List.of(orgId),
             List.of(clientId),
             null,
-            AiProcessingMode.RU_ONLY);
+            AiProcessingMode.RU_ONLY,
+            null);
     Claims claims = parse(token);
 
     List<?> orgs = claims.get("orgs", List.class);
@@ -120,7 +130,8 @@ class JwtTokenProviderTest {
             null,
             null,
             plan,
-            AiProcessingMode.RU_ONLY);
+            AiProcessingMode.RU_ONLY,
+            null);
     Claims claims = parse(token);
 
     Map<String, Object> planClaim = claims.get("plan", Map.class);
@@ -139,7 +150,8 @@ class JwtTokenProviderTest {
             null,
             null,
             null,
-            AiProcessingMode.RU_ONLY);
+            AiProcessingMode.RU_ONLY,
+            null);
     Claims claims = parse(token);
 
     assertThat(claims.get("plan")).isNull();
@@ -157,7 +169,8 @@ class JwtTokenProviderTest {
             null,
             null,
             null,
-            AiProcessingMode.RU_ONLY);
+            AiProcessingMode.RU_ONLY,
+            null);
     Claims claims = parse(token);
 
     assertThat(claims.get("aiMode", String.class)).isEqualTo("RU_ONLY");
@@ -176,7 +189,8 @@ class JwtTokenProviderTest {
             null,
             null,
             null,
-            AiProcessingMode.DISABLED);
+            AiProcessingMode.DISABLED,
+            null);
     Claims claims = parse(token);
 
     assertThat(claims.get("aiMode", String.class)).isEqualTo("DISABLED");
@@ -195,7 +209,8 @@ class JwtTokenProviderTest {
             null,
             null,
             null,
-            AiProcessingMode.CROSS_BORDER);
+            AiProcessingMode.CROSS_BORDER,
+            null);
     Claims claims = parse(token);
 
     assertThat(claims.get("aiMode", String.class)).isEqualTo("CROSS_BORDER");
@@ -207,10 +222,29 @@ class JwtTokenProviderTest {
     UUID userId = UUID.randomUUID();
 
     String token =
-        provider.generateToken(userId, "user@pravoos.com", UserRole.LAWYER, null, null, null, null);
+        provider.generateToken(
+            userId, "user@pravoos.com", UserRole.LAWYER, null, null, null, null, null);
     Claims claims = parse(token);
 
     assertThat(claims.get("aiMode", String.class)).isEqualTo(AiProcessingMode.DEFAULT.name());
+  }
+
+  @Test
+  void sessionIdIsCarriedAsSidClaimAndOmittedWhenAbsent() {
+    UUID userId = UUID.randomUUID();
+    UUID sessionId = UUID.randomUUID();
+
+    Claims withSession =
+        parse(
+            provider.generateToken(
+                userId, "user@pravoos.com", UserRole.LAWYER, null, null, null, null, sessionId));
+    Claims withoutSession =
+        parse(
+            provider.generateToken(
+                userId, "user@pravoos.com", UserRole.LAWYER, null, null, null, null, null));
+
+    assertThat(withSession.get("sid", String.class)).isEqualTo(sessionId.toString());
+    assertThat(withoutSession.get("sid", String.class)).isNull();
   }
 
   private Claims parse(String token) {

@@ -9,6 +9,7 @@ import com.pravoos.user.billing.api.PlanClaimProvider;
 import com.pravoos.user.identity.api.AiProcessingModeProvider;
 import com.pravoos.user.identity.api.OrgMembershipProvider;
 import com.pravoos.user.identity.api.PortalAccessProvider;
+import com.pravoos.user.identity.internal.dto.IssuedRefreshToken;
 import com.pravoos.user.identity.internal.dto.LoginRequest;
 import com.pravoos.user.identity.internal.dto.LoginResult;
 import com.pravoos.user.identity.internal.dto.TokenResponse;
@@ -44,6 +45,7 @@ class AuthServiceTest {
   private static final String HASH = "$2a$10$hash";
   private static final String IP = "203.0.113.9";
   private static final String UA = "JUnit-UA";
+  private static final UUID SESSION_ID = UUID.randomUUID();
 
   @Mock private UserRepository userRepository;
   @Mock private OrgMembershipProvider orgMembershipProvider;
@@ -93,9 +95,17 @@ class AuthServiceTest {
     when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
     when(jwtTokenProvider.generateToken(
-            eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any(), any()))
+            eq(user.getId()),
+            eq(EMAIL),
+            eq(UserRole.LAWYER),
+            anyList(),
+            anyList(),
+            any(),
+            any(),
+            eq(SESSION_ID)))
         .thenReturn("access");
-    when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+    when(refreshTokenService.issue(user.getId(), IP, UA))
+        .thenReturn(new IssuedRefreshToken("refresh", SESSION_ID));
 
     LoginResult result = authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
 
@@ -118,7 +128,8 @@ class AuthServiceTest {
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
     when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(false);
-    when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+    when(refreshTokenService.issue(user.getId(), IP, UA))
+        .thenReturn(new IssuedRefreshToken("refresh", SESSION_ID));
 
     authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
 
@@ -138,7 +149,8 @@ class AuthServiceTest {
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
     when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(false);
-    when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+    when(refreshTokenService.issue(user.getId(), IP, UA))
+        .thenReturn(new IssuedRefreshToken("refresh", SESSION_ID));
 
     authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
 
@@ -160,7 +172,8 @@ class AuthServiceTest {
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
     when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(false);
-    when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+    when(refreshTokenService.issue(user.getId(), IP, UA))
+        .thenReturn(new IssuedRefreshToken("refresh", SESSION_ID));
 
     authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
 
@@ -183,7 +196,8 @@ class AuthServiceTest {
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
     when(mfaService.isMfaEnabled(user.getId())).thenReturn(false);
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
-    when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+    when(refreshTokenService.issue(user.getId(), IP, UA))
+        .thenReturn(new IssuedRefreshToken("refresh", SESSION_ID));
 
     authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA);
 
@@ -218,9 +232,17 @@ class AuthServiceTest {
     when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
     when(jwtTokenProvider.generateToken(
-            eq(user.getId()), eq(EMAIL), eq(UserRole.LAWYER), anyList(), anyList(), any(), any()))
+            eq(user.getId()),
+            eq(EMAIL),
+            eq(UserRole.LAWYER),
+            anyList(),
+            anyList(),
+            any(),
+            any(),
+            eq(SESSION_ID)))
         .thenReturn("access");
-    when(refreshTokenService.issue(user.getId(), IP, UA)).thenReturn("refresh");
+    when(refreshTokenService.issue(user.getId(), IP, UA))
+        .thenReturn(new IssuedRefreshToken("refresh", SESSION_ID));
 
     TokenResponse response = authService.completeMfaLogin("challenge-token", "123456", IP, UA);
 

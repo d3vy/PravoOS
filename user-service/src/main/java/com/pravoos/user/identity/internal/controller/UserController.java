@@ -8,6 +8,7 @@ import com.pravoos.user.identity.internal.dto.SessionResponse;
 import com.pravoos.user.identity.internal.dto.UpdateLanguageRequest;
 import com.pravoos.user.identity.internal.dto.UpdateNotificationSettingsRequest;
 import com.pravoos.user.identity.internal.dto.UpdateProfileRequest;
+import com.pravoos.user.identity.internal.security.JwtAuthenticationFilter;
 import com.pravoos.user.identity.internal.service.RefreshTokenService;
 import com.pravoos.user.identity.internal.service.UserService;
 import jakarta.validation.Valid;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -77,9 +79,24 @@ public class UserController {
   }
 
   @GetMapping("/sessions")
-  public ResponseEntity<List<SessionResponse>> listSessions(Authentication authentication) {
+  public ResponseEntity<List<SessionResponse>> listSessions(
+      Authentication authentication,
+      @RequestAttribute(name = JwtAuthenticationFilter.SESSION_ID_ATTRIBUTE, required = false)
+          String currentSessionId) {
     return ResponseEntity.ok(
-        refreshTokenService.listActiveSessions(SecurityUtils.currentUserId(authentication)));
+        refreshTokenService.listActiveSessions(
+            SecurityUtils.currentUserId(authentication), parseSessionId(currentSessionId)));
+  }
+
+  private UUID parseSessionId(String rawSessionId) {
+    if (rawSessionId == null || rawSessionId.isBlank()) {
+      return null;
+    }
+    try {
+      return UUID.fromString(rawSessionId);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   @DeleteMapping("/sessions/{sessionId}")
