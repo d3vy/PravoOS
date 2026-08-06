@@ -10,6 +10,7 @@ import { CitationDrawer } from '../../components/review/CitationDrawer'
 import { NewReviewDialog } from '../../components/review/NewReviewDialog'
 import { ReviewTable } from '../../components/review/ReviewTable'
 import { useToast } from '../../hooks/useToast'
+import { PageHeader } from '../../components/ui/PageHeader'
 import type {
   CreateTabularReviewRequest,
   TabularReviewCellDto,
@@ -83,41 +84,35 @@ export default function TabularReviewPage(): JSX.Element {
             <SkeletonList count={4} />
           ) : (
             <>
-              <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => navigate(caseId ? `/review?caseId=${caseId}` : '/review')}
-                    className="mb-2 text-sm text-fg-muted transition-colors hover:text-fg"
-                  >
-                    {t('review.backToList')}
-                  </button>
-                  <h1 className="text-3xl font-semibold text-fg [overflow-wrap:anywhere]">{review.title}</h1>
-                  <p className="mt-1 text-sm text-fg-muted">
-                    {t('review.progress', { filled: review.filledCells, total: review.totalCells })}
-                    {' · '}
-                    {t(`review.status.${review.status}`)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    loading={exportMutation.isPending}
-                    onClick={() => exportMutation.mutate('xlsx')}
-                  >
-                    {t('review.exportXlsx')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    loading={exportMutation.isPending}
-                    onClick={() => exportMutation.mutate('docx')}
-                  >
-                    {t('review.exportDocx')}
-                  </Button>
-                </div>
-              </div>
+              <PageHeader
+                breadcrumbs={[
+                  { label: t('review.title'), to: caseId ? `/review?caseId=${caseId}` : '/review' },
+                  { label: review.title },
+                ]}
+                title={review.title}
+                description={`${t('review.progress', { filled: review.filledCells, total: review.totalCells })} · ${t(`review.status.${review.status}`)}`}
+                className="mb-6"
+                actions={
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={exportMutation.isPending}
+                      onClick={() => exportMutation.mutate('xlsx')}
+                    >
+                      {t('review.exportXlsx')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={exportMutation.isPending}
+                      onClick={() => exportMutation.mutate('docx')}
+                    >
+                      {t('review.exportDocx')}
+                    </Button>
+                  </>
+                }
+              />
 
               {review.errorMessage && (
                 <p role="alert" className="mb-4 rounded-lg bg-danger-soft px-4 py-3 text-sm text-danger">
@@ -146,18 +141,18 @@ export default function TabularReviewPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
-        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="mb-1 text-3xl font-semibold text-fg">{t('review.title')}</h1>
-            <p className="text-sm text-fg-muted">{t('review.subtitle')}</p>
-          </div>
-          <Button variant="primary" size="sm" onClick={() => setDialogOpen(true)}>
-            {t('review.newReview')}
-          </Button>
-        </div>
+        <PageHeader
+          title={t('review.title')}
+          description={t('review.subtitle')}
+          actions={
+            <Button variant="primary" size="sm" onClick={() => setDialogOpen(true)}>
+              {t('review.newReview')}
+            </Button>
+          }
+        />
 
         {!caseId ? (
-          <EmptyState
+          <EmptyState illustration="documents"
             title={t('review.pickCaseTitle')}
             description={t('review.pickCaseDescription')}
             action={{ label: t('review.newReview'), onClick: () => setDialogOpen(true) }}
@@ -165,7 +160,7 @@ export default function TabularReviewPage(): JSX.Element {
         ) : reviewsLoading ? (
           <SkeletonList count={4} />
         ) : reviews.length === 0 ? (
-          <EmptyState
+          <EmptyState illustration="documents"
             title={t('review.emptyTitle')}
             description={t('review.emptyDescription')}
             action={{ label: t('review.newReview'), onClick: () => setDialogOpen(true) }}

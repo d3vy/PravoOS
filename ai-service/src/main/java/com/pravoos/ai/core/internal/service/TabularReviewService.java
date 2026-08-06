@@ -67,13 +67,12 @@ public class TabularReviewService {
   @Transactional
   public TabularReviewDto create(
       CreateTabularReviewRequest request, UUID lawyerId, List<UUID> orgIds) {
-    caseAccessProvider.assertCaseVisible(request.caseId(), lawyerId, orgIds);
-    llmQuotaService.assertWithinQuota(lawyerId);
+    caseAccessProvider.assertCaseOwned(request.caseId(), lawyerId);
 
     List<String> questions = normalizeQuestions(request.questions());
     List<UUID> documentIds = normalizeDocumentIds(request.documentIds());
-    List<DocumentRef> documents =
-        resolveCaseDocuments(documentIds, request.caseId(), lawyerId, orgIds);
+    List<DocumentRef> documents = resolveCaseDocuments(documentIds, request.caseId(), lawyerId);
+    llmQuotaService.assertQuotaHeadroom(lawyerId, documents.size());
 
     TabularReview review = new TabularReview();
     review.setCaseId(request.caseId());
@@ -129,6 +128,7 @@ public class TabularReviewService {
   @Transactional
   public void delete(UUID reviewId, UUID lawyerId, List<UUID> orgIds) {
     TabularReview review = requireVisibleReview(reviewId, lawyerId, orgIds);
+    caseAccessProvider.assertCaseOwned(review.getCaseId(), lawyerId);
     reviewRepository.delete(review);
   }
 
@@ -179,7 +179,7 @@ public class TabularReviewService {
   }
 
   private List<DocumentRef> resolveCaseDocuments(
-      List<UUID> documentIds, UUID caseId, UUID lawyerId, List<UUID> orgIds) {
+      List<UUID> documentIds, UUID caseId, UUID lawyerId) {
     List<DocumentRef> documents = new ArrayList<>();
     for (UUID documentId : documentIds) {
       DocumentRef document = documentAccess.findForReview(documentId);
@@ -192,7 +192,6 @@ public class TabularReviewService {
         throw new TabularReviewFailedException(
             "Все документы разбора должны относиться к одному делу");
       }
-      caseAccessProvider.assertCaseVisible(document.caseId(), lawyerId, orgIds);
       documents.add(document);
     }
     return documents;

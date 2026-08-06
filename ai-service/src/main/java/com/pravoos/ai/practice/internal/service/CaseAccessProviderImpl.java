@@ -27,6 +27,11 @@ public class CaseAccessProviderImpl implements CaseAccessProvider {
   }
 
   @Override
+  public void assertCaseOwned(UUID caseId, UUID lawyerId) {
+    caseService.requireOwnedCase(caseId, lawyerId);
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public Set<UUID> retainCasesOwnedBy(Set<UUID> caseIds, UUID lawyerId) {
     if (caseIds == null || caseIds.isEmpty()) {

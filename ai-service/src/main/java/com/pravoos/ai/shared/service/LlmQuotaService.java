@@ -63,6 +63,34 @@ public class LlmQuotaService {
     }
   }
 
+  public void assertQuotaHeadroom(UUID lawyerId, int requestedCalls) {
+    if (requestedCalls <= 1) {
+      assertWithinQuota(lawyerId);
+      return;
+    }
+    PlanLimits limits = planLimitsProvider.currentLimits();
+    if (limits.quotaDisabled() || limits.dailyRequests() <= 0) {
+      assertWithinQuota(lawyerId);
+      return;
+    }
+    try {
+      long requests = readCounter(requestKey(lawyerId));
+      if (requests + requestedCalls > limits.dailyRequests()) {
+        log.warn(
+            "LLM daily request quota headroom too small for lawyer {} on plan {} ({}+{}/{})",
+            lawyerId,
+            limits.code(),
+            requests,
+            requestedCalls,
+            limits.dailyRequests());
+        throw new LlmQuotaExceededException();
+      }
+    } catch (DataAccessException ex) {
+      log.warn("Redis unavailable during LLM quota headroom check, allowing", ex);
+    }
+    assertWithinQuota(lawyerId);
+  }
+
   public void recordUsage(UUID lawyerId, long totalTokens) {
     if (planLimitsProvider.currentLimits().quotaDisabled()) {
       return;
