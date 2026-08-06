@@ -5,6 +5,7 @@ import type { CitationCheck, CitationCheckResult, CitationStatus } from '../../t
 export const CITATION_STATUS_TONE: Record<CitationStatus, string> = {
   VERIFIED: 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:bg-emerald-500/10',
   NOT_FOUND: 'border-red-300 text-red-700 bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:bg-red-500/10',
+  OUTDATED: 'border-orange-300 text-orange-700 bg-orange-50 dark:border-orange-500/40 dark:text-orange-400 dark:bg-orange-500/10',
   UNVERIFIED: 'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-500/40 dark:text-amber-400 dark:bg-amber-500/10',
 }
 
@@ -15,6 +16,7 @@ export function citationSummary(result: CitationCheckResult): string {
         total: result.total,
         verified: result.verified,
         notFound: result.notFound,
+        outdated: result.outdated,
         unverified: result.unverified,
       })
 }

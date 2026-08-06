@@ -7,6 +7,7 @@ import com.pravoos.ai.llm.api.LlmOptions;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.shared.exception.LlmException;
 import com.pravoos.ai.shared.exception.NonLegalQueryException;
+import com.pravoos.ai.shared.model.enums.TrustMetric;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
@@ -39,6 +40,7 @@ public class LegalDomainGuard {
             """;
 
   private final LlmClient llmClient;
+  private final TrustMetricsRecorder trustMetricsRecorder;
   private final boolean failOpen;
   private final Cache<String, Boolean> verdictCache;
   private final Counter passCounter;
@@ -48,9 +50,11 @@ public class LegalDomainGuard {
 
   public LegalDomainGuard(
       LlmClient llmClient,
+      TrustMetricsRecorder trustMetricsRecorder,
       @Value("${llm.guard.fail-open:true}") boolean failOpen,
       MeterRegistry registry) {
     this.llmClient = llmClient;
+    this.trustMetricsRecorder = trustMetricsRecorder;
     this.failOpen = failOpen;
     this.verdictCache =
         Caffeine.newBuilder().maximumSize(CACHE_MAX_SIZE).expireAfterWrite(CACHE_TTL).build();
@@ -103,9 +107,11 @@ public class LegalDomainGuard {
   private void enforce(boolean legal) {
     if (legal) {
       passCounter.increment();
+      trustMetricsRecorder.record(TrustMetric.GUARD_PASS);
       return;
     }
     blockCounter.increment();
+    trustMetricsRecorder.record(TrustMetric.GUARD_BLOCK);
     log.info("Non-legal query blocked by guard classifier");
     throw new NonLegalQueryException();
   }

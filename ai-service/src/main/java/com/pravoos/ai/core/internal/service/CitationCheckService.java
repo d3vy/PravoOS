@@ -5,15 +5,15 @@ import com.pravoos.ai.core.internal.dto.CitationCheckResult;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.core.internal.service.CitationExtractor.ExtractedCitation;
+import com.pravoos.ai.court.api.CourtCaseLookup;
+import com.pravoos.ai.court.api.CourtCaseNumberParser;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.LegislationRef;
 import com.pravoos.ai.shared.config.CitationCheckProperties;
-import com.pravoos.ai.shared.court.CourtCaseNumberParser;
-import com.pravoos.ai.shared.court.CourtCaseProvider;
-import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
 import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
 import com.pravoos.ai.shared.model.enums.CourtSystem;
+import com.pravoos.ai.shared.model.enums.TrustMetric;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.format.DateTimeFormatter;
@@ -36,24 +36,27 @@ public class CitationCheckService {
       DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
   private final CitationExtractor citationExtractor;
-  private final CourtCaseProviderRegistry courtCaseProviderRegistry;
+  private final CourtCaseLookup courtCaseLookup;
   private final DocumentAccess documentAccess;
   private final AiResponseRepository aiResponseRepository;
   private final CitationCheckProperties properties;
+  private final TrustMetricsRecorder trustMetricsRecorder;
   private final Map<CitationStatus, Counter> statusCounters;
 
   public CitationCheckService(
       CitationExtractor citationExtractor,
-      CourtCaseProviderRegistry courtCaseProviderRegistry,
+      CourtCaseLookup courtCaseLookup,
       DocumentAccess documentAccess,
       AiResponseRepository aiResponseRepository,
       CitationCheckProperties properties,
+      TrustMetricsRecorder trustMetricsRecorder,
       MeterRegistry registry) {
     this.citationExtractor = citationExtractor;
-    this.courtCaseProviderRegistry = courtCaseProviderRegistry;
+    this.courtCaseLookup = courtCaseLookup;
     this.documentAccess = documentAccess;
     this.aiResponseRepository = aiResponseRepository;
     this.properties = properties;
+    this.trustMetricsRecorder = trustMetricsRecorder;
     this.statusCounters = new EnumMap<>(CitationStatus.class);
     for (CitationStatus status : CitationStatus.values()) {
       statusCounters.put(
@@ -75,14 +78,18 @@ public class CitationCheckService {
         case COURT_CASE -> {
           boolean lookupBudgetLeft = courtLookups < properties.maxCourtCaseLookups();
           checks.add(checkCourtCase(citation, lookupBudgetLeft));
-          if (lookupBudgetLeft && courtCaseProviderRegistry.hasAnyEnabled()) {
+          if (lookupBudgetLeft && courtCaseLookup.hasAnyEnabled()) {
             courtLookups++;
           }
         }
         case STATUTE -> checks.add(checkStatute(citation));
       }
     }
-    checks.forEach(check -> statusCounters.get(check.status()).increment());
+    checks.forEach(
+        check -> {
+          statusCounters.get(check.status()).increment();
+          trustMetricsRecorder.record(TrustMetric.forCitation(check.status()));
+        });
     log.info(
         "Citation check for lawyer {}: {} citation(s) ({} court lookups)",
         lawyerId,
@@ -110,8 +117,7 @@ public class CitationCheckService {
   private CitationCheck checkCourtCase(ExtractedCitation citation, boolean lookupBudgetLeft) {
     String number = citation.core();
     CourtSystem system = CourtCaseNumberParser.detectOrDefault(number, CourtSystem.ARBITR);
-    Optional<CourtCaseProvider> provider = courtCaseProviderRegistry.enabledFor(system);
-    if (provider.isEmpty()) {
+    if (!courtCaseLookup.isEnabled(system)) {
       return citationOf(
           citation,
           number,
@@ -126,7 +132,7 @@ public class CitationCheckService {
           "Превышен лимит проверок дел за один запрос");
     }
     try {
-      boolean found = provider.get().fetchCase(number).isPresent();
+      boolean found = courtCaseLookup.fetchCase(system, number).isPresent();
       return found
           ? citationOf(
               citation,
@@ -168,6 +174,29 @@ public class CitationCheckService {
           normalized,
           CitationStatus.VERIFIED,
           "Норма подтверждена по актуальной редакции законодательства");
+    }
+
+    Optional<LegislationRef> superseded =
+        documentAccess.supersededLegislation(citation.core(), citation.actCanonical());
+    if (superseded.isPresent()) {
+      LegislationRef ref = superseded.get();
+      String outdatedNormalized =
+          "ст. "
+              + citation.core()
+              + " "
+              + ref.actCanonical()
+              + (ref.editionDate() != null
+                  ? ", ред. от " + EDITION_DATE_FORMAT.format(ref.editionDate())
+                  : "");
+      return citationOf(
+          citation,
+          outdatedNormalized,
+          CitationStatus.OUTDATED,
+          "В базе только устаревшая редакция"
+              + (ref.editionDate() != null
+                  ? " от " + EDITION_DATE_FORMAT.format(ref.editionDate())
+                  : "")
+              + " — сверьтесь с действующей редакцией");
     }
 
     String normalized =

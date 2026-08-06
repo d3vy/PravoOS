@@ -5,6 +5,7 @@ import { aiStatsApi } from '../../api/aiStats'
 import { adminApi } from '../../api/admin'
 import type { AiResponseDto, AiStatsResponse, ClientStatsResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 export default function AiStatsPage(): JSX.Element {
   const { t } = useTranslation()
@@ -34,12 +35,7 @@ export default function AiStatsPage(): JSX.Element {
 
   return (
     <div className="p-6 lg:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-fg mb-1">{t('aiStats.title')}</h1>
-        <p className="text-sm text-fg-muted">
-          {t('aiStats.subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('aiStats.title')} description={t('aiStats.subtitle')} />
 
       {clientStats && (
         <div className="mb-8">

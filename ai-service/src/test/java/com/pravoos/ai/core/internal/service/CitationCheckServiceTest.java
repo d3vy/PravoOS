@@ -10,12 +10,11 @@ import static org.mockito.Mockito.*;
 import com.pravoos.ai.core.internal.dto.CitationCheckResult;
 import com.pravoos.ai.core.internal.model.entity.AiResponse;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
+import com.pravoos.ai.court.api.CourtCaseData;
+import com.pravoos.ai.court.api.CourtCaseLookup;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.LegislationRef;
 import com.pravoos.ai.shared.config.CitationCheckProperties;
-import com.pravoos.ai.shared.court.CourtCaseData;
-import com.pravoos.ai.shared.court.CourtCaseProvider;
-import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
 import com.pravoos.ai.shared.exception.AiResponseNotFoundException;
 import com.pravoos.ai.shared.model.enums.CitationStatus;
 import com.pravoos.ai.shared.model.enums.CitationType;
@@ -33,30 +32,31 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CitationCheckServiceTest {
 
-  @Mock private CourtCaseProvider arbitrCaseProvider;
+  @Mock private CourtCaseLookup courtCaseLookup;
   @Mock private DocumentAccess documentAccess;
   @Mock private AiResponseRepository aiResponseRepository;
+  @Mock private TrustMetricsRecorder trustMetricsRecorder;
 
   private CitationCheckService service;
 
   @BeforeEach
   void setUp() {
     CitationExtractor extractor = new CitationExtractor(new LegalActRegistry());
-    when(arbitrCaseProvider.system()).thenReturn(CourtSystem.ARBITR);
     service =
         new CitationCheckService(
             extractor,
-            new CourtCaseProviderRegistry(List.of(arbitrCaseProvider)),
+            courtCaseLookup,
             documentAccess,
             aiResponseRepository,
             new CitationCheckProperties(100, 25),
+            trustMetricsRecorder,
             new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
   }
 
   @Test
   void verifiesCourtCaseFoundInArbitr() {
-    when(arbitrCaseProvider.isEnabled()).thenReturn(true);
-    when(arbitrCaseProvider.fetchCase("А40-12345/2024"))
+    when(courtCaseLookup.isEnabled(CourtSystem.ARBITR)).thenReturn(true);
+    when(courtCaseLookup.fetchCase(CourtSystem.ARBITR, "А40-12345/2024"))
         .thenReturn(
             Optional.of(
                 new CourtCaseData("А40-12345/2024", "guid", null, null, List.of(), List.of())));
@@ -71,8 +71,8 @@ class CitationCheckServiceTest {
 
   @Test
   void flagsCourtCaseNotFound() {
-    when(arbitrCaseProvider.isEnabled()).thenReturn(true);
-    when(arbitrCaseProvider.fetchCase(anyString())).thenReturn(Optional.empty());
+    when(courtCaseLookup.isEnabled(CourtSystem.ARBITR)).thenReturn(true);
+    when(courtCaseLookup.fetchCase(any(), anyString())).thenReturn(Optional.empty());
 
     CitationCheckResult result = service.check("Дело А40-99999/2024.", UUID.randomUUID());
 
@@ -82,7 +82,7 @@ class CitationCheckServiceTest {
 
   @Test
   void marksCourtCaseUnverifiedWhenArbitrDisabled() {
-    when(arbitrCaseProvider.isEnabled()).thenReturn(false);
+    when(courtCaseLookup.isEnabled(CourtSystem.ARBITR)).thenReturn(false);
 
     CitationCheckResult result = service.check("Дело А40-1/2024.", UUID.randomUUID());
 
@@ -107,6 +107,28 @@ class CitationCheckServiceTest {
             c -> {
               assertThat(c.status()).isEqualTo(CitationStatus.VERIFIED);
               assertThat(c.normalized()).contains("ред. от 08.08.2024");
+            });
+  }
+
+  @Test
+  void marksStatuteOutdatedWhenOnlySupersededEditionIsLoaded() {
+    when(documentAccess.currentLegislation(anyString(), any())).thenReturn(Optional.empty());
+    when(documentAccess.supersededLegislation(eq("61.2"), any()))
+        .thenReturn(
+            Optional.of(
+                new LegislationRef("Закон о банкротстве", "61.2", LocalDate.of(2020, 1, 15))));
+
+    CitationCheckResult result =
+        service.check("Согласно ст. 61.2 Закона о банкротстве.", UUID.randomUUID());
+
+    assertThat(result.outdated()).isEqualTo(1);
+    assertThat(result.citations())
+        .filteredOn(c -> c.type() == CitationType.STATUTE)
+        .singleElement()
+        .satisfies(
+            c -> {
+              assertThat(c.status()).isEqualTo(CitationStatus.OUTDATED);
+              assertThat(c.detail()).contains("15.01.2020");
             });
   }
 

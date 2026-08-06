@@ -5,9 +5,9 @@ import com.pravoos.ai.core.internal.dto.AiStatsResponse;
 import com.pravoos.ai.core.internal.dto.WorkflowStat;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.search.Search;
+import com.pravoos.ai.shared.model.enums.TrustMetric;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,11 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminStatsService {
 
   private final AiResponseRepository aiResponseRepository;
-  private final MeterRegistry meterRegistry;
+  private final TrustMetricsRecorder trustMetricsRecorder;
 
-  public AdminStatsService(AiResponseRepository aiResponseRepository, MeterRegistry meterRegistry) {
+  public AdminStatsService(
+      AiResponseRepository aiResponseRepository, TrustMetricsRecorder trustMetricsRecorder) {
     this.aiResponseRepository = aiResponseRepository;
-    this.meterRegistry = meterRegistry;
+    this.trustMetricsRecorder = trustMetricsRecorder;
   }
 
   @Transactional(readOnly = true)
@@ -29,13 +30,15 @@ public class AdminStatsService {
     long positive = aiResponseRepository.countPositive();
     long negative = aiResponseRepository.countNegative();
 
-    long guardPassed = counter("pravoos.guard", "result", "pass");
-    long guardRefusals = counter("pravoos.guard", "result", "block");
-    long citationsVerified = counter("pravoos.citation.checks", "status", "verified");
+    Map<TrustMetric, Long> trust = trustMetricsRecorder.totals();
+    long guardPassed = trust.get(TrustMetric.GUARD_PASS);
+    long guardRefusals = trust.get(TrustMetric.GUARD_BLOCK);
+    long citationsVerified = trust.get(TrustMetric.CITATION_VERIFIED);
     long citationsChecked =
-        citationsVerified
-            + counter("pravoos.citation.checks", "status", "not_found")
-            + counter("pravoos.citation.checks", "status", "unverified");
+        trust.entrySet().stream()
+            .filter(entry -> entry.getKey().isCitation())
+            .mapToLong(Map.Entry::getValue)
+            .sum();
 
     List<WorkflowStat> workflows =
         aiResponseRepository.aggregateByWorkflow().stream().map(this::toWorkflowStat).toList();
@@ -50,11 +53,6 @@ public class AdminStatsService {
         citationsChecked,
         citationsVerified,
         workflows);
-  }
-
-  private long counter(String name, String tagKey, String tagValue) {
-    var counter = Search.in(meterRegistry).name(name).tag(tagKey, tagValue).counter();
-    return counter == null ? 0L : (long) counter.count();
   }
 
   @Transactional(readOnly = true)
