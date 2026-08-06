@@ -8,6 +8,7 @@ import type { BillingPlan, BillingStatus, PaymentRecord, PaymentStatus, Subscrip
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { useConfirm } from '../../hooks/useConfirm'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const STATUS_LABEL_KEY: Record<SubscriptionStatus, string> = {
   TRIALING: 'billing.statusTrialing',
@@ -112,12 +113,11 @@ export default function BillingPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-fg mb-1">{t('billing.title')}</h1>
-          <p className="text-sm text-fg-muted">
-            {t('billing.subtitle')}
-          </p>
-        </div>
+        <PageHeader
+          title={t('billing.title')}
+          description={t('billing.subtitle')}
+          className="mb-6"
+        />
 
         {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 

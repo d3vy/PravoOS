@@ -19,6 +19,15 @@ public final class BillingAmounts {
         .divide(MINUTES_PER_HOUR, MONEY_SCALE, RoundingMode.HALF_UP);
   }
 
+  public static BigDecimal vatAmount(BigDecimal subtotal, BigDecimal vatRate) {
+    if (subtotal == null || vatRate == null || vatRate.signum() <= 0) {
+      return BigDecimal.ZERO.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+    }
+    return subtotal
+        .multiply(vatRate)
+        .divide(BigDecimal.valueOf(100), MONEY_SCALE, RoundingMode.HALF_UP);
+  }
+
   public static BigDecimal normalize(BigDecimal amount) {
     BigDecimal value = amount == null ? BigDecimal.ZERO : amount;
     return value.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
