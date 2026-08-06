@@ -16,4 +16,17 @@ export const documentComparisonsApi = {
     })
     return response.data
   },
+
+  downloadDocx: async (comparisonId: string, fileName: string): Promise<void> => {
+    const response = await apiClient.get<Blob>(
+      `/api/ai/document-comparisons/${comparisonId}/export.docx`,
+      { responseType: 'blob' },
+    )
+    const url = window.URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    link.click()
+    window.URL.revokeObjectURL(url)
+  },
 }

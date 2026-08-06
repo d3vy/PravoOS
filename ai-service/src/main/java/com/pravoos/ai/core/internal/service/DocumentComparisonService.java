@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.internal.dto.DiffChange;
+import com.pravoos.ai.core.internal.dto.DiffSegment;
 import com.pravoos.ai.core.internal.dto.DocumentComparisonDto;
 import com.pravoos.ai.core.internal.model.entity.DocumentComparison;
 import com.pravoos.ai.core.internal.repository.jpa.DocumentComparisonRepository;
@@ -16,6 +17,7 @@ import com.pravoos.ai.shared.exception.ContractReviewFailedException;
 import com.pravoos.ai.shared.exception.DocumentComparisonNotFoundException;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.model.enums.ContractRiskLevel;
+import com.pravoos.ai.shared.model.enums.DiffChangeType;
 import com.pravoos.ai.shared.service.LlmQuotaService;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -164,16 +166,27 @@ public class DocumentComparisonService {
       if (maxChanges > 0 && result.size() >= maxChanges) {
         break;
       }
+      String baseText = truncateText(change.baseText(), maxChars);
+      String revisedText = truncateText(change.revisedText(), maxChars);
       result.add(
           new DiffChange(
               result.size() + 1,
               change.type(),
-              truncateText(change.baseText(), maxChars),
-              truncateText(change.revisedText(), maxChars),
+              baseText,
+              revisedText,
               null,
-              null));
+              null,
+              inlineSegments(change.type(), baseText, revisedText)));
     }
     return result;
+  }
+
+  private List<DiffSegment> inlineSegments(
+      DiffChangeType type, String baseText, String revisedText) {
+    if (type != DiffChangeType.MODIFIED) {
+      return List.of();
+    }
+    return textDiffService.inlineSegments(baseText, revisedText);
   }
 
   private String truncateText(String value, int max) {
