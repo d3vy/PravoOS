@@ -43,6 +43,12 @@ public class Invoice {
   @Column(nullable = false)
   private BigDecimal subtotal = BigDecimal.ZERO;
 
+  @Column(name = "vat_rate")
+  private BigDecimal vatRate;
+
+  @Column(name = "vat_amount", nullable = false)
+  private BigDecimal vatAmount = BigDecimal.ZERO;
+
   @Column(nullable = false)
   private BigDecimal total = BigDecimal.ZERO;
 
@@ -139,6 +145,22 @@ public class Invoice {
 
   public BigDecimal getTotal() {
     return total;
+  }
+
+  public BigDecimal getVatRate() {
+    return vatRate;
+  }
+
+  public void setVatRate(BigDecimal vatRate) {
+    this.vatRate = vatRate;
+  }
+
+  public BigDecimal getVatAmount() {
+    return vatAmount;
+  }
+
+  public void setVatAmount(BigDecimal vatAmount) {
+    this.vatAmount = vatAmount;
   }
 
   public void setTotal(BigDecimal total) {

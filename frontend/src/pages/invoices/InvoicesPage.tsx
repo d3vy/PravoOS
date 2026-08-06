@@ -13,11 +13,13 @@ import { DataTable, type DataTableColumn, type SortRule } from '../../components
 import { TableToolbar } from '../../components/ui/TableToolbar'
 import { SavedViewBar } from '../../components/ui/SavedViewBar'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
+import { BillingProfileCard } from '../../components/invoices/BillingProfileCard'
 import { formatMoney } from '../../utils/billing'
 import { useDensity } from '../../hooks/useDensity'
 import { useSavedViews, type SavedView } from '../../hooks/useSavedViews'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
 import { useToast } from '../../hooks/useToast'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 type StatusFilter = InvoiceStatus | 'ALL'
 
@@ -153,12 +155,9 @@ export default function InvoicesPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-fg mb-1">{t('invoices.title')}</h1>
-          <p className="text-sm text-fg-muted">
-            {t('invoices.subtitle')}
-          </p>
-        </div>
+        <PageHeader title={t('invoices.title')} description={t('invoices.subtitle')} />
+
+        <BillingProfileCard />
 
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <SavedViewBar
@@ -211,7 +210,7 @@ export default function InvoicesPage(): JSX.Element {
             visibleColumnIds={preferences.visibleColumnIds}
             groupBy={preferences.groupBy}
             density={density}
-            emptyState={<EmptyState description={t('invoices.emptyHint')} />}
+            emptyState={<EmptyState illustration="invoices" description={t('invoices.emptyHint')} />}
           />
         )}
 

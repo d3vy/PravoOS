@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
 import { formatDuration, formatMoney } from '../../utils/billing'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const NEXT_STATUS: Partial<Record<InvoiceStatus, { to: InvoiceStatus; labelKey: string; variant: 'primary' | 'secondary' }[]>> = {
   DRAFT: [
@@ -74,31 +75,28 @@ export default function InvoiceDetailPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-3xl">
-        <button
-          onClick={() => navigate('/invoices')}
-          className="text-sm text-fg-muted hover:text-accent mb-4"
-        >
-          {t('invoices.backToAll')}
-        </button>
-
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-semibold text-fg">
-                {t('invoices.invoiceNumber', { number: invoice.number })}
-              </h1>
-              <InvoiceStatusBadge status={invoice.status} />
-            </div>
-            <p className="text-sm text-fg-muted">
+        <PageHeader
+          size="md"
+          className="mb-6"
+          breadcrumbs={[
+            { label: t('nav.invoices'), to: '/invoices' },
+            { label: t('invoices.invoiceNumber', { number: invoice.number }) },
+          ]}
+          title={t('invoices.invoiceNumber', { number: invoice.number })}
+          titleSuffix={<InvoiceStatusBadge status={invoice.status} />}
+          description={
+            <>
               {invoice.clientName ?? t('invoices.clientDeleted')} ·{' '}
               {new Date(invoice.issueDate).toLocaleDateString(locale)}
               {invoice.dueDate && ` · ${t('invoices.dueBy', { date: new Date(invoice.dueDate).toLocaleDateString(locale) })}`}
-            </p>
-          </div>
-          <Button variant="secondary" size="sm" onClick={() => invoicesApi.exportPdf(invoiceId, invoice.number)}>
-            {t('invoices.downloadPdf')}
-          </Button>
-        </div>
+            </>
+          }
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => invoicesApi.exportPdf(invoiceId, invoice.number)}>
+              {t('invoices.downloadPdf')}
+            </Button>
+          }
+        />
 
         <div className="rounded-xl border border-line overflow-hidden mb-6">
           <table className="w-full text-sm">
@@ -127,6 +125,24 @@ export default function InvoiceDetailPage(): JSX.Element {
               ))}
             </tbody>
             <tfoot>
+              <tr className="border-t border-line">
+                <td className="px-4 py-2.5 text-fg-muted" colSpan={3}>
+                  {t('invoices.subtotal')}
+                </td>
+                <td className="px-4 py-2.5 text-right text-fg-muted tabular-nums">
+                  {formatMoney(invoice.subtotal, invoice.currency)}
+                </td>
+              </tr>
+              <tr className="border-t border-line">
+                <td className="px-4 py-2.5 text-fg-muted" colSpan={3}>
+                  {invoice.vatRate
+                    ? t('invoices.vatWithRate', { rate: invoice.vatRate })
+                    : t('invoices.vatNone')}
+                </td>
+                <td className="px-4 py-2.5 text-right text-fg-muted tabular-nums">
+                  {formatMoney(invoice.vatAmount, invoice.currency)}
+                </td>
+              </tr>
               <tr className="border-t border-line bg-surface">
                 <td className="px-4 py-3 font-semibold text-fg" colSpan={3}>
                   {t('invoices.totalDue')}

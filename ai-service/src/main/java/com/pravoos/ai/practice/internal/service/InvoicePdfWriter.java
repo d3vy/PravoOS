@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.service;
 import com.pravoos.ai.practice.internal.dto.InvoiceExportModel;
 import com.pravoos.ai.practice.internal.dto.InvoiceExportModel.ClientBlock;
 import com.pravoos.ai.practice.internal.dto.InvoiceExportModel.LineRow;
+import com.pravoos.ai.practice.internal.dto.InvoiceExportModel.SupplierBlock;
 import com.pravoos.ai.shared.exception.CaseExportException;
 import com.pravoos.ai.shared.util.ExportDateFormatter;
 import java.awt.Color;
@@ -56,6 +57,11 @@ public class InvoicePdfWriter {
       renderer.muted(headerMeta(model));
       renderer.gap(10f);
 
+      if (model.supplier() != null) {
+        renderSupplier(renderer, model.supplier());
+        renderer.gap(8f);
+      }
+
       renderClient(renderer, model.client());
       renderer.gap(8f);
 
@@ -85,6 +91,27 @@ public class InvoicePdfWriter {
       builder.append("  ·  Оплатить до: ").append(ExportDateFormatter.formatDate(model.dueDate()));
     }
     return builder.toString();
+  }
+
+  private void renderSupplier(Renderer renderer, SupplierBlock supplier) throws IOException {
+    renderer.heading("Исполнитель");
+    renderer.labeled("Наименование", supplier.name());
+    labelIfPresent(renderer, "ИНН", supplier.inn());
+    labelIfPresent(renderer, "КПП", supplier.kpp());
+    labelIfPresent(renderer, "ОГРН/ОГРНИП", supplier.ogrn());
+    labelIfPresent(renderer, "Адрес", supplier.legalAddress());
+    labelIfPresent(renderer, "Банк", supplier.bankName());
+    labelIfPresent(renderer, "БИК", supplier.bankBic());
+    labelIfPresent(renderer, "Расчётный счёт", supplier.bankAccount());
+    labelIfPresent(renderer, "Корр. счёт", supplier.corrAccount());
+    labelIfPresent(renderer, "Email", supplier.email());
+    labelIfPresent(renderer, "Телефон", supplier.phone());
+  }
+
+  private void labelIfPresent(Renderer renderer, String label, String value) throws IOException {
+    if (isPresent(value)) {
+      renderer.labeled(label, value);
+    }
   }
 
   private void renderClient(Renderer renderer, ClientBlock client) throws IOException {
@@ -118,6 +145,13 @@ public class InvoicePdfWriter {
   private void renderTotals(Renderer renderer, InvoiceExportModel model) throws IOException {
     renderer.totalLine("Всего времени", formatHours(model.totalMinutes()));
     renderer.totalLine("Сумма", formatMoney(model.subtotal()) + " " + model.currency());
+    if (model.vatRate() != null && model.vatRate().signum() > 0) {
+      renderer.totalLine(
+          "НДС " + formatRate(model.vatRate()) + "%",
+          formatMoney(model.vatAmount()) + " " + model.currency());
+    } else {
+      renderer.totalLine("НДС", "не облагается");
+    }
     renderer.grandTotal("Итого к оплате", formatMoney(model.total()) + " " + model.currency());
   }
 
@@ -131,6 +165,10 @@ public class InvoicePdfWriter {
       return hours + " ч";
     }
     return hours + " ч " + rest + " мин";
+  }
+
+  private String formatRate(BigDecimal rate) {
+    return rate.stripTrailingZeros().toPlainString();
   }
 
   private String formatMoney(BigDecimal amount) {

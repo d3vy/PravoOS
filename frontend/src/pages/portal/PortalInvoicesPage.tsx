@@ -9,6 +9,7 @@ import { portalApi } from '../../api/portal'
 import { formatMoney } from '../../utils/billing'
 import i18n from '../../i18n'
 import type { InvoiceSummary } from '../../types'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 function formatDate(value: string | null): string {
   const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
@@ -24,7 +25,7 @@ export default function PortalInvoicesPage(): JSX.Element {
 
   return (
     <PortalLayout>
-      <h1 className="text-2xl font-semibold text-fg mb-6">{t('portalInvoices.title')}</h1>
+      <PageHeader size="md" title={t('portalInvoices.title')} className="mb-6" />
 
       {isLoading && (
         <div className="flex justify-center py-16">
@@ -39,7 +40,7 @@ export default function PortalInvoicesPage(): JSX.Element {
       )}
 
       {!isLoading && !isError && invoices.length === 0 && (
-        <EmptyState description={t('portalInvoices.empty')} />
+        <EmptyState illustration="invoices" description={t('portalInvoices.empty')} />
       )}
 
       {!isLoading && !isError && invoices.length > 0 && (

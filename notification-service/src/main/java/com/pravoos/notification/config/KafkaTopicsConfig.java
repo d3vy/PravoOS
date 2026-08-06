@@ -45,6 +45,11 @@ public class KafkaTopicsConfig {
   }
 
   @Bean
+  public NewTopic invoicePaidDltTopic() {
+    return topic("invoice.paid.DLT");
+  }
+
+  @Bean
   public NewTopic lawyerDigestMorningDltTopic() {
     return topic("lawyer.digest.morning.DLT");
   }

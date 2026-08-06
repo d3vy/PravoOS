@@ -87,6 +87,13 @@ public class KafkaConsumerConfig {
   }
 
   @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, InvoicePaidKafkaPayload>
+      invoicePaidKafkaListenerContainerFactory(
+          KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
+    return listenerFactory(InvoicePaidKafkaPayload.class, deadLetterKafkaTemplate);
+  }
+
+  @Bean
   public ConcurrentKafkaListenerContainerFactory<String, LawyerDigestKafkaPayload>
       lawyerDigestKafkaListenerContainerFactory(
           KafkaTemplate<String, Object> deadLetterKafkaTemplate) {

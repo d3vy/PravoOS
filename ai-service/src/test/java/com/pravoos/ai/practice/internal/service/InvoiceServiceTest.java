@@ -38,6 +38,9 @@ class InvoiceServiceTest {
   @Mock private ClientService clientService;
   @Mock private InvoicePdfWriter invoicePdfWriter;
 
+  @Mock private BillingProfileService billingProfileService;
+  @Mock private InvoicePaidPublisher invoicePaidPublisher;
+
   private InvoiceService service;
 
   private final UUID lawyerId = UUID.randomUUID();
@@ -53,7 +56,9 @@ class InvoiceServiceTest {
             clientRepository,
             clientService,
             numberGenerator,
-            invoicePdfWriter);
+            invoicePdfWriter,
+            billingProfileService,
+            invoicePaidPublisher);
     lenient()
         .when(invoiceRepository.saveAndFlush(any(Invoice.class)))
         .thenAnswer(
@@ -73,7 +78,8 @@ class InvoiceServiceTest {
     when(timeEntryRepository.lockBillableForClient(clientId)).thenReturn(List.of(first, second));
 
     CreateInvoiceRequest request =
-        new CreateInvoiceRequest(clientId, null, null, LocalDate.of(2026, 8, 1), "Оплата услуг");
+        new CreateInvoiceRequest(
+            clientId, null, null, LocalDate.of(2026, 8, 1), null, "Оплата услуг");
     InvoiceResponse response = service.create(request, lawyerId);
 
     assertThat(response.lines()).hasSize(2);
@@ -84,11 +90,27 @@ class InvoiceServiceTest {
   }
 
   @Test
+  void create_addsVatOnTopOfSubtotal() {
+    when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
+    when(timeEntryRepository.lockBillableForClient(clientId))
+        .thenReturn(List.of(entry(60, new BigDecimal("1000"))));
+
+    CreateInvoiceRequest request =
+        new CreateInvoiceRequest(clientId, null, null, null, new BigDecimal("20"), null);
+    InvoiceResponse response = service.create(request, lawyerId);
+
+    assertThat(response.subtotal()).isEqualByComparingTo("1000.00");
+    assertThat(response.vatRate()).isEqualByComparingTo("20");
+    assertThat(response.vatAmount()).isEqualByComparingTo("200.00");
+    assertThat(response.total()).isEqualByComparingTo("1200.00");
+  }
+
+  @Test
   void create_throwsWhenNoBillableTime() {
     when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
     when(timeEntryRepository.lockBillableForClient(clientId)).thenReturn(List.of());
 
-    CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, null, null, null);
+    CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, null, null, null, null);
     assertThatThrownBy(() -> service.create(request, lawyerId))
         .isInstanceOf(NoBillableTimeException.class);
     verify(invoiceRepository, never()).saveAndFlush(any());
@@ -105,7 +127,7 @@ class InvoiceServiceTest {
     List<UUID> ids = List.of(valid.getId(), foreignClient.getId(), alreadyInvoiced.getId());
     when(timeEntryRepository.lockBillableByIds(ids, lawyerId, clientId)).thenReturn(List.of(valid));
 
-    CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, ids, null, null);
+    CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, ids, null, null, null);
     InvoiceResponse response = service.create(request, lawyerId);
 
     assertThat(response.lines()).hasSize(1);
@@ -133,6 +155,28 @@ class InvoiceServiceTest {
 
     assertThatThrownBy(() -> service.updateStatus(invoice.getId(), lawyerId, InvoiceStatus.ISSUED))
         .isInstanceOf(InvoiceStateException.class);
+  }
+
+  @Test
+  void updateStatus_paidPublishesNotification() {
+    Invoice invoice = savedInvoice(InvoiceStatus.ISSUED);
+    when(invoiceRepository.findByIdAndLawyerId(invoice.getId(), lawyerId))
+        .thenReturn(Optional.of(invoice));
+
+    service.updateStatus(invoice.getId(), lawyerId, InvoiceStatus.PAID);
+
+    verify(invoicePaidPublisher).publish(invoice);
+  }
+
+  @Test
+  void updateStatus_cancelDoesNotPublishPaidNotification() {
+    Invoice invoice = savedInvoice(InvoiceStatus.ISSUED);
+    when(invoiceRepository.findByIdAndLawyerId(invoice.getId(), lawyerId))
+        .thenReturn(Optional.of(invoice));
+
+    service.updateStatus(invoice.getId(), lawyerId, InvoiceStatus.CANCELED);
+
+    verify(invoicePaidPublisher, never()).publish(any());
   }
 
   @Test

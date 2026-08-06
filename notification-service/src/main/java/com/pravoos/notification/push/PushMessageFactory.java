@@ -4,6 +4,7 @@ import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
+import com.pravoos.notification.event.InvoicePaidKafkaPayload;
 import com.pravoos.notification.event.LawyerDigestKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import java.util.ArrayList;
@@ -55,6 +56,14 @@ public class PushMessageFactory {
             payload.clientName(), payload.totalFormatted(), payload.daysOverdue()),
         "/invoices/" + payload.invoiceId(),
         "invoice-overdue-" + payload.invoiceId() + "-" + payload.daysOverdue());
+  }
+
+  public PushMessage invoicePaid(InvoicePaidKafkaPayload payload) {
+    return PushMessage.of(
+        "Счёт № " + payload.invoiceNumber() + " оплачен",
+        payload.clientName() + " — " + payload.totalFormatted(),
+        "/invoices/" + payload.invoiceId(),
+        "invoice-paid-" + payload.invoiceId());
   }
 
   public PushMessage morningDigest(LawyerDigestKafkaPayload payload) {

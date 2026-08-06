@@ -29,14 +29,17 @@ public class InvoicePaymentService {
   private final InvoiceRepository invoiceRepository;
   private final InvoicePaymentRepository invoicePaymentRepository;
   private final YooKassaInvoiceClient yooKassaInvoiceClient;
+  private final InvoicePaidPublisher invoicePaidPublisher;
 
   public InvoicePaymentService(
       InvoiceRepository invoiceRepository,
       InvoicePaymentRepository invoicePaymentRepository,
-      YooKassaInvoiceClient yooKassaInvoiceClient) {
+      YooKassaInvoiceClient yooKassaInvoiceClient,
+      InvoicePaidPublisher invoicePaidPublisher) {
     this.invoiceRepository = invoiceRepository;
     this.invoicePaymentRepository = invoicePaymentRepository;
     this.yooKassaInvoiceClient = yooKassaInvoiceClient;
+    this.invoicePaidPublisher = invoicePaidPublisher;
   }
 
   @Transactional
@@ -85,6 +88,7 @@ public class InvoicePaymentService {
               .orElseThrow(() -> new InvoiceNotFoundException(invoicePayment.getInvoiceId()));
       if (invoice.getStatus().canTransitionTo(InvoiceStatus.PAID)) {
         invoice.setStatus(InvoiceStatus.PAID);
+        invoicePaidPublisher.publish(invoice);
       }
       log.info("Payment {} succeeded for invoice {}", providerPaymentId, invoice.getId());
     } else if (snapshot.canceled()) {

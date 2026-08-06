@@ -38,6 +38,8 @@ class InvoicePaymentServiceTest {
   @Mock private InvoicePaymentRepository invoicePaymentRepository;
   @Mock private YooKassaInvoiceClient yooKassaInvoiceClient;
 
+  @Mock private InvoicePaidPublisher invoicePaidPublisher;
+
   private InvoicePaymentService service;
 
   private final UUID lawyerId = UUID.randomUUID();
@@ -47,7 +49,10 @@ class InvoicePaymentServiceTest {
   void setUp() {
     service =
         new InvoicePaymentService(
-            invoiceRepository, invoicePaymentRepository, yooKassaInvoiceClient);
+            invoiceRepository,
+            invoicePaymentRepository,
+            yooKassaInvoiceClient,
+            invoicePaidPublisher);
   }
 
   @Test

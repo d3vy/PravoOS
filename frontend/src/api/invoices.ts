@@ -1,6 +1,13 @@
 import apiClient from './client'
 import { DEFAULT_PAGE_SIZE, readTotal, type Page } from './pagination'
-import type { CreateInvoiceRequest, InvoiceResponse, InvoiceStatus, InvoiceSummary } from '../types'
+import type {
+  BillingProfileRequest,
+  BillingProfileResponse,
+  CreateInvoiceRequest,
+  InvoiceResponse,
+  InvoiceStatus,
+  InvoiceSummary,
+} from '../types'
 import i18n from '../i18n'
 
 export const invoicesApi = {
@@ -34,6 +41,18 @@ export const invoicesApi = {
 
   remove: async (invoiceId: string): Promise<void> => {
     await apiClient.delete(`/api/ai/invoices/${invoiceId}`)
+  },
+
+  getBillingProfile: async (): Promise<BillingProfileResponse | null> => {
+    const response = await apiClient.get<BillingProfileResponse | ''>('/api/ai/billing-profile')
+    return response.status === 204 || !response.data
+      ? null
+      : (response.data as BillingProfileResponse)
+  },
+
+  saveBillingProfile: async (data: BillingProfileRequest): Promise<BillingProfileResponse> => {
+    const response = await apiClient.put<BillingProfileResponse>('/api/ai/billing-profile', data)
+    return response.data
   },
 
   exportPdf: async (invoiceId: string, number: string): Promise<void> => {

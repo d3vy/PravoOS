@@ -45,6 +45,8 @@ public class InvoiceService {
   private final ClientService clientService;
   private final InvoiceNumberGenerator invoiceNumberGenerator;
   private final InvoicePdfWriter invoicePdfWriter;
+  private final BillingProfileService billingProfileService;
+  private final InvoicePaidPublisher invoicePaidPublisher;
 
   public InvoiceService(
       InvoiceRepository invoiceRepository,
@@ -52,13 +54,17 @@ public class InvoiceService {
       ClientRepository clientRepository,
       ClientService clientService,
       InvoiceNumberGenerator invoiceNumberGenerator,
-      InvoicePdfWriter invoicePdfWriter) {
+      InvoicePdfWriter invoicePdfWriter,
+      BillingProfileService billingProfileService,
+      InvoicePaidPublisher invoicePaidPublisher) {
     this.invoiceRepository = invoiceRepository;
     this.timeEntryRepository = timeEntryRepository;
     this.clientRepository = clientRepository;
     this.clientService = clientService;
     this.invoiceNumberGenerator = invoiceNumberGenerator;
     this.invoicePdfWriter = invoicePdfWriter;
+    this.billingProfileService = billingProfileService;
+    this.invoicePaidPublisher = invoicePaidPublisher;
   }
 
   @Transactional
@@ -88,8 +94,12 @@ public class InvoiceService {
       invoice.addLine(line);
       subtotal = subtotal.add(amount);
     }
-    invoice.setSubtotal(BillingAmounts.normalize(subtotal));
-    invoice.setTotal(BillingAmounts.normalize(subtotal));
+    BigDecimal normalizedSubtotal = BillingAmounts.normalize(subtotal);
+    BigDecimal vatAmount = BillingAmounts.vatAmount(normalizedSubtotal, request.vatRate());
+    invoice.setSubtotal(normalizedSubtotal);
+    invoice.setVatRate(request.vatRate());
+    invoice.setVatAmount(vatAmount);
+    invoice.setTotal(BillingAmounts.normalize(normalizedSubtotal.add(vatAmount)));
 
     Invoice saved = persistWithUniqueNumber(invoice, lawyerId);
     for (TimeEntry entry : entries) {
@@ -140,6 +150,9 @@ public class InvoiceService {
       timeEntryRepository.releaseByInvoiceId(invoiceId);
     }
     invoice.setStatus(target);
+    if (target == InvoiceStatus.PAID) {
+      invoicePaidPublisher.publish(invoice);
+    }
     log.info("Invoice {} moved {} -> {} by lawyer {}", invoiceId, current, target, lawyerId);
     return InvoiceResponse.from(invoice, clientName(invoice.getClientId()));
   }
@@ -229,12 +242,35 @@ public class InvoiceService {
         invoice.getIssueDate(),
         invoice.getDueDate(),
         invoice.getCurrency(),
+        supplierBlock(invoice.getLawyerId()),
         clientBlock,
         rows,
         totalMinutes,
         invoice.getSubtotal(),
+        invoice.getVatRate(),
+        invoice.getVatAmount(),
         invoice.getTotal(),
         invoice.getNotes());
+  }
+
+  private InvoiceExportModel.SupplierBlock supplierBlock(UUID lawyerId) {
+    return billingProfileService
+        .findEntity(lawyerId)
+        .map(
+            profile ->
+                new InvoiceExportModel.SupplierBlock(
+                    profile.getName(),
+                    profile.getInn(),
+                    profile.getKpp(),
+                    profile.getOgrn(),
+                    profile.getLegalAddress(),
+                    profile.getBankName(),
+                    profile.getBankBic(),
+                    profile.getBankAccount(),
+                    profile.getCorrAccount(),
+                    profile.getEmail(),
+                    profile.getPhone()))
+        .orElse(null);
   }
 
   private Map<UUID, String> clientNames(List<UUID> clientIds) {

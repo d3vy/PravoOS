@@ -1,0 +1,2 @@
+ALTER TABLE invoices ADD COLUMN vat_rate NUMERIC(5, 2);
+ALTER TABLE invoices ADD COLUMN vat_amount NUMERIC(12, 2) NOT NULL DEFAULT 0;

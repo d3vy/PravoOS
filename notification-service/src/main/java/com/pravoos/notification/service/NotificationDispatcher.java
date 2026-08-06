@@ -7,6 +7,7 @@ import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
+import com.pravoos.notification.event.InvoicePaidKafkaPayload;
 import com.pravoos.notification.event.LawyerDigestKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import com.pravoos.notification.push.PushMessageFactory;
@@ -72,6 +73,10 @@ public class NotificationDispatcher {
   public void dispatchInvoiceOverdue(InvoiceOverdueKafkaPayload payload) {
     pushNotificationService.notifyUser(
         payload.lawyerId(), pushMessageFactory.invoiceOverdue(payload));
+  }
+
+  public void dispatchInvoicePaid(InvoicePaidKafkaPayload payload) {
+    pushNotificationService.notifyUser(payload.lawyerId(), pushMessageFactory.invoicePaid(payload));
   }
 
   public void dispatchMorningDigest(LawyerDigestKafkaPayload payload) {
