@@ -136,10 +136,6 @@ export default function CaseDetailPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
-        <Link to="/cases" className="text-sm text-fg-muted hover:text-accent mb-4 inline-block">
-          {t('caseDetail.backToCases')}
-        </Link>
-
         <CaseHeaderSection caseItem={caseItem} />
 
         <CaseTabsNav tabs={tabs} activeTab={activeTab} onSelect={selectTab} />
