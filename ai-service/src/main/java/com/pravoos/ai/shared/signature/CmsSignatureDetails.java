@@ -10,4 +10,5 @@ public record CmsSignatureDetails(
     LocalDateTime certificateValidFrom,
     LocalDateTime certificateValidTo,
     String signatureAlgorithm,
-    LocalDateTime signingTime) {}
+    LocalDateTime signingTime,
+    boolean chainVerified) {}

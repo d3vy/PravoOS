@@ -1,9 +1,15 @@
 import apiClient from './client'
-import type { SignatureProviderType, SignatureRequestResponse } from '../types'
+import type {
+  SignatureProviderType,
+  SignatureRequestResponse,
+  SignatureSignerRole,
+} from '../types'
 
 export interface CreateSignatureRequest {
   documentId: string
   provider?: SignatureProviderType
+  signerRole?: SignatureSignerRole
+  signerLawyerId?: string
   message?: string
   expiresInDays?: number
 }
@@ -42,6 +48,45 @@ export const signaturesApi = {
       { responseType: 'blob' }
     )
     downloadBlob(response.data, `signature-${signatureId}.sig`)
+  },
+
+  sign: async (
+    caseId: string,
+    signatureId: string,
+    signerName: string
+  ): Promise<SignatureRequestResponse> => {
+    const response = await apiClient.post<SignatureRequestResponse>(
+      `/api/ai/cases/${caseId}/signatures/${signatureId}/sign`,
+      { signerName, consent: true }
+    )
+    return response.data
+  },
+
+  signWithCms: async (
+    caseId: string,
+    signatureId: string,
+    file: File
+  ): Promise<SignatureRequestResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post<SignatureRequestResponse>(
+      `/api/ai/cases/${caseId}/signatures/${signatureId}/sign-cms`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return response.data
+  },
+
+  decline: async (
+    caseId: string,
+    signatureId: string,
+    reason: string
+  ): Promise<SignatureRequestResponse> => {
+    const response = await apiClient.post<SignatureRequestResponse>(
+      `/api/ai/cases/${caseId}/signatures/${signatureId}/decline`,
+      { reason }
+    )
+    return response.data
   },
 
   cancel: async (caseId: string, signatureId: string): Promise<SignatureRequestResponse> => {

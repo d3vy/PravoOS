@@ -156,12 +156,14 @@ public class LawyerDataCleanupService {
     int contacts = clientContactRepository.deleteByLawyerId(lawyerId);
     int clients = clientRepository.deleteByLawyerId(lawyerId);
     int templates = documentTemplateRepository.deleteByLawyerId(lawyerId);
+    int orphanedSignatures = signatureRequestRepository.cancelPendingBySignerLawyer(lawyerId);
     int signatures = signatureRequestRepository.deleteByRequestedBy(lawyerId);
     int savedViews = savedViewRepository.deleteByLawyerId(lawyerId);
     log.info(
         "Deleted {} time entries, {} invoices, {} workflow runs, {} analyses, {} tasks, {} drafts, "
             + "{} parties, {} cases, {} workflow definitions, {} contacts, {} clients, {} templates "
-            + "{} signature requests and {} saved views for lawyer {}",
+            + "{} signature requests (plus {} canceled where the lawyer was the signer) "
+            + "and {} saved views for lawyer {}",
         timeEntries,
         invoices,
         workflowRuns,
@@ -175,6 +177,7 @@ public class LawyerDataCleanupService {
         clients,
         templates,
         signatures,
+        orphanedSignatures,
         savedViews,
         lawyerId);
   }

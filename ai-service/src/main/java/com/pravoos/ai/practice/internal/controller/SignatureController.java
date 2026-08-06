@@ -1,13 +1,20 @@
 package com.pravoos.ai.practice.internal.controller;
 
 import com.pravoos.ai.practice.internal.dto.CreateSignatureRequestDto;
+import com.pravoos.ai.practice.internal.dto.DeclineSignatureRequest;
+import com.pravoos.ai.practice.internal.dto.SignDocumentRequest;
 import com.pravoos.ai.practice.internal.dto.SignatureRequestResponse;
+import com.pravoos.ai.practice.internal.dto.SignerContext;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.service.CaseService;
 import com.pravoos.ai.practice.internal.service.SignatureService;
 import com.pravoos.ai.practice.internal.service.SignatureService.SignatureFileDownload;
+import com.pravoos.ai.shared.exception.InvalidSignatureFileException;
+import com.pravoos.ai.shared.util.ClientIpResolver;
 import com.pravoos.common.web.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.core.io.ByteArrayResource;
@@ -18,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/ai/cases/{caseId}/signatures")
@@ -52,11 +60,7 @@ public class SignatureController {
   @GetMapping("/{signatureId}/protocol")
   public ResponseEntity<Resource> exportProtocol(
       @PathVariable UUID caseId, @PathVariable UUID signatureId, Authentication authentication) {
-    Case caseEntity =
-        caseService.requireVisibleCase(
-            caseId,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication));
+    Case caseEntity = visibleCase(caseId, authentication);
     byte[] protocol = signatureService.exportProtocol(caseEntity, signatureId);
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_PDF)
@@ -70,11 +74,7 @@ public class SignatureController {
   @GetMapping("/{signatureId}/signature-file")
   public ResponseEntity<Resource> downloadSignatureFile(
       @PathVariable UUID caseId, @PathVariable UUID signatureId, Authentication authentication) {
-    Case caseEntity =
-        caseService.requireVisibleCase(
-            caseId,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication));
+    Case caseEntity = visibleCase(caseId, authentication);
     SignatureFileDownload download =
         signatureService.downloadSignatureFile(caseEntity, signatureId);
     return ResponseEntity.ok()
@@ -85,10 +85,76 @@ public class SignatureController {
         .body(new ByteArrayResource(download.content()));
   }
 
+  @PostMapping("/{signatureId}/sign")
+  public ResponseEntity<SignatureRequestResponse> sign(
+      @PathVariable UUID caseId,
+      @PathVariable UUID signatureId,
+      @Valid @RequestBody SignDocumentRequest request,
+      Authentication authentication,
+      HttpServletRequest httpRequest) {
+    Case caseEntity = visibleCase(caseId, authentication);
+    return ResponseEntity.ok(
+        signatureService.signAsLawyer(
+            caseEntity, signatureId, request, signerContext(authentication, httpRequest)));
+  }
+
+  @PostMapping("/{signatureId}/sign-cms")
+  public ResponseEntity<SignatureRequestResponse> signWithCms(
+      @PathVariable UUID caseId,
+      @PathVariable UUID signatureId,
+      @RequestParam("file") MultipartFile file,
+      Authentication authentication,
+      HttpServletRequest httpRequest) {
+    Case caseEntity = visibleCase(caseId, authentication);
+    return ResponseEntity.ok(
+        signatureService.signWithCmsAsLawyer(
+            caseEntity,
+            signatureId,
+            readBytes(file),
+            file.getOriginalFilename(),
+            signerContext(authentication, httpRequest)));
+  }
+
+  @PostMapping("/{signatureId}/decline")
+  public ResponseEntity<SignatureRequestResponse> decline(
+      @PathVariable UUID caseId,
+      @PathVariable UUID signatureId,
+      @Valid @RequestBody DeclineSignatureRequest request,
+      Authentication authentication,
+      HttpServletRequest httpRequest) {
+    Case caseEntity = visibleCase(caseId, authentication);
+    return ResponseEntity.ok(
+        signatureService.declineAsLawyer(
+            caseEntity, signatureId, request.reason(), signerContext(authentication, httpRequest)));
+  }
+
   @PostMapping("/{signatureId}/cancel")
   public ResponseEntity<SignatureRequestResponse> cancel(
       @PathVariable UUID caseId, @PathVariable UUID signatureId, Authentication authentication) {
     UUID lawyerId = SecurityUtils.currentUserId(authentication);
     return ResponseEntity.ok(signatureService.cancel(caseId, signatureId, lawyerId));
+  }
+
+  private Case visibleCase(UUID caseId, Authentication authentication) {
+    return caseService.requireVisibleCase(
+        caseId,
+        SecurityUtils.currentUserId(authentication),
+        SecurityUtils.currentOrgIds(authentication));
+  }
+
+  private byte[] readBytes(MultipartFile file) {
+    try {
+      return file.getBytes();
+    } catch (IOException ex) {
+      throw new InvalidSignatureFileException("не удалось прочитать загруженный файл");
+    }
+  }
+
+  private SignerContext signerContext(
+      Authentication authentication, HttpServletRequest httpRequest) {
+    return new SignerContext(
+        SecurityUtils.currentUserId(authentication),
+        ClientIpResolver.resolve(httpRequest),
+        httpRequest.getHeader(HttpHeaders.USER_AGENT));
   }
 }

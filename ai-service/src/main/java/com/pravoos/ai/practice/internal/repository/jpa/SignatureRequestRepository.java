@@ -21,6 +21,12 @@ public interface SignatureRequestRepository extends JpaRepository<SignatureReque
   Optional<SignatureRequest> findByDocumentIdAndSignerClientIdAndStatus(
       UUID documentId, UUID signerClientId, SignatureStatus status);
 
+  Optional<SignatureRequest> findByDocumentIdAndSignerLawyerIdAndStatus(
+      UUID documentId, UUID signerLawyerId, SignatureStatus status);
+
+  List<SignatureRequest> findBySignerLawyerIdAndStatusOrderByCreatedAtDesc(
+      UUID signerLawyerId, SignatureStatus status);
+
   List<SignatureRequest> findByStatusAndExpiresAtBefore(
       SignatureStatus status, LocalDateTime moment);
 
@@ -29,4 +35,10 @@ public interface SignatureRequestRepository extends JpaRepository<SignatureReque
   @Modifying
   @Query("DELETE FROM SignatureRequest s WHERE s.requestedBy = :lawyerId")
   int deleteByRequestedBy(@Param("lawyerId") UUID lawyerId);
+
+  @Modifying
+  @Query(
+      "UPDATE SignatureRequest s SET s.status = com.pravoos.ai.shared.model.enums.SignatureStatus.CANCELED "
+          + "WHERE s.signerLawyerId = :lawyerId AND s.status = com.pravoos.ai.shared.model.enums.SignatureStatus.PENDING")
+  int cancelPendingBySignerLawyer(@Param("lawyerId") UUID lawyerId);
 }

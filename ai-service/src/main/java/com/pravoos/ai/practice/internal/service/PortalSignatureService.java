@@ -7,6 +7,7 @@ import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.SignatureRequest;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
 import com.pravoos.ai.shared.exception.PravoosException;
+import com.pravoos.ai.shared.model.enums.SignatureSignerRole;
 import com.pravoos.ai.shared.model.enums.SignatureStatus;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -51,6 +52,7 @@ public class PortalSignatureService {
     portalCaseService.requireClientCase(caseId, clientIds);
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
     return signatureRequestRepository.findByCaseIdOrderByCreatedAtDesc(caseId).stream()
+        .filter(request -> request.getSignerRole() == SignatureSignerRole.CLIENT)
         .map(request -> SignatureRequestResponse.from(request, now))
         .toList();
   }
@@ -97,6 +99,13 @@ public class PortalSignatureService {
                         "Запрос на подпись не найден",
                         HttpStatus.NOT_FOUND,
                         "SIGNATURE_NOT_FOUND"));
+    if (signatureRequest.getSignerRole() != SignatureSignerRole.CLIENT
+        || signatureRequest.getSignerClientId() == null
+        || clientIds == null
+        || !clientIds.contains(signatureRequest.getSignerClientId())) {
+      throw new PravoosException(
+          "Запрос на подпись не найден", HttpStatus.NOT_FOUND, "SIGNATURE_NOT_FOUND");
+    }
     return portalCaseService.requireClientCase(signatureRequest.getCaseId(), clientIds);
   }
 }

@@ -2,6 +2,7 @@ package com.pravoos.ai.practice.internal.dto;
 
 import com.pravoos.ai.practice.internal.model.entity.SignatureRequest;
 import com.pravoos.ai.shared.model.enums.SignatureProviderType;
+import com.pravoos.ai.shared.model.enums.SignatureSignerRole;
 import com.pravoos.ai.shared.model.enums.SignatureStatus;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,6 +12,8 @@ public record SignatureRequestResponse(
     UUID documentId,
     UUID caseId,
     SignatureProviderType provider,
+    SignatureSignerRole signerRole,
+    UUID signerLawyerId,
     SignatureStatus status,
     String documentHash,
     String message,
@@ -34,6 +37,8 @@ public record SignatureRequestResponse(
         request.getDocumentId(),
         request.getCaseId(),
         request.getProvider(),
+        request.getSignerRole(),
+        request.getSignerLawyerId(),
         effectiveStatus(request, now),
         request.getDocumentHash(),
         request.getMessage(),

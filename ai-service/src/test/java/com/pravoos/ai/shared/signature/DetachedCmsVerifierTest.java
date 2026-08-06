@@ -3,20 +3,36 @@ package com.pravoos.ai.shared.signature;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.pravoos.ai.shared.config.SignatureProperties;
 import com.pravoos.ai.shared.exception.InvalidSignatureFileException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class DetachedCmsVerifierTest {
 
-  private final DetachedCmsVerifier verifier = new DetachedCmsVerifier();
+  @TempDir Path trustedCaDirectory;
+
+  private final DetachedCmsVerifier verifier = verifierWithTrustedCaPath(null);
 
   private final byte[] document =
       "Договор оказания юридических услуг №42".getBytes(StandardCharsets.UTF_8);
+
+  private static DetachedCmsVerifier verifierWithTrustedCaPath(String trustedCaPath) {
+    SignatureProperties properties =
+        new SignatureProperties(
+            30,
+            new SignatureProperties.Diadoc(null, null),
+            new SignatureProperties.Cms(trustedCaPath));
+    return new DetachedCmsVerifier(new CertificateChainValidator(new TrustedCaStore(properties)));
+  }
 
   @Test
   void verify_returnsCertificateDetails_forValidDetachedSignature() {
@@ -76,5 +92,40 @@ class DetachedCmsVerifierTest {
     assertThatThrownBy(() -> verifier.verify(new byte[0], document))
         .isInstanceOf(InvalidSignatureFileException.class)
         .hasMessageContaining("пуст");
+  }
+
+  @Test
+  void verify_reportsChainNotVerified_whenTrustedCaListIsNotConfigured() {
+    byte[] signature = CmsTestSignatures.detachedSignature(document, "Иванов Иван");
+
+    assertThat(verifier.verify(signature, document).chainVerified()).isFalse();
+  }
+
+  @Test
+  void verify_reportsChainVerified_whenCertificateChainsToTrustedCa() throws IOException {
+    CmsTestSignatures.IssuedSignature issued =
+        CmsTestSignatures.signatureIssuedByCa(document, "Иванов Иван Иванович");
+    Files.writeString(trustedCaDirectory.resolve("test-ca.pem"), issued.caCertificatePem());
+
+    CmsSignatureDetails details =
+        verifierWithTrustedCaPath(trustedCaDirectory.toString())
+            .verify(issued.container(), document);
+
+    assertThat(details.chainVerified()).isTrue();
+    assertThat(details.signerCommonName()).isEqualTo("Иванов Иван Иванович");
+  }
+
+  @Test
+  void verify_rejectsCertificateOutsideTrustedCaList() throws IOException {
+    CmsTestSignatures.IssuedSignature trusted =
+        CmsTestSignatures.signatureIssuedByCa(document, "Доверенный подписант");
+    Files.writeString(trustedCaDirectory.resolve("test-ca.pem"), trusted.caCertificatePem());
+    byte[] selfSigned = CmsTestSignatures.detachedSignature(document, "Самозванец");
+
+    DetachedCmsVerifier strictVerifier = verifierWithTrustedCaPath(trustedCaDirectory.toString());
+
+    assertThatThrownBy(() -> strictVerifier.verify(selfSigned, document))
+        .isInstanceOf(InvalidSignatureFileException.class)
+        .hasMessageContaining("аккредитованного УЦ");
   }
 }

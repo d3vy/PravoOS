@@ -53,6 +53,7 @@ public class SignatureProtocolPdfWriter {
       renderer.heading("Подпись");
       renderer.labeled("Вид подписи", providerLabel(model));
       renderer.labeled("Подписант", model.signerName());
+      renderer.labeled("Сторона подписания", signerRoleLabel(model));
       renderer.labeled("Запрос создан", timestamp(model.requestedAt()));
       renderer.labeled("Подписано", timestamp(model.signedAt()));
       if (model.declaredSigningTime() != null) {
@@ -88,6 +89,13 @@ public class SignatureProtocolPdfWriter {
     }
   }
 
+  private String signerRoleLabel(SignatureProtocolModel model) {
+    return switch (model.signerRole()) {
+      case CLIENT -> "Клиент";
+      case LAWYER -> "Юрист (исполнитель)";
+    };
+  }
+
   private String providerLabel(SignatureProtocolModel model) {
     return switch (model.provider()) {
       case SIMPLE -> "Простая электронная подпись (ст. 5 63-ФЗ)";
@@ -99,9 +107,15 @@ public class SignatureProtocolPdfWriter {
 
   private String footnote(SignatureProtocolModel model) {
     if (model.isQualified()) {
+      String chainNote =
+          model.chainVerified()
+              ? "Цепочка сертификата проверена до корневого сертификата из доверенного списка "
+                  + "аккредитованных удостоверяющих центров, настроенного в системе."
+              : "Проверка сертификата по цепочке аккредитованного удостоверяющего центра "
+                  + "в область проверки не входит.";
       return "Протокол сформирован PravoOS автоматически. Криптографическая проверка подписи выполнена "
-          + "против содержимого документа с указанным хешем. Проверка сертификата по цепочке "
-          + "аккредитованного удостоверяющего центра в область проверки не входит.";
+          + "против содержимого документа с указанным хешем. "
+          + chainNote;
     }
     return "Протокол сформирован PravoOS автоматически. Подписант идентифицирован по учётной записи "
         + "клиентского портала; зафиксированы IP-адрес, браузер и время подтверждения.";

@@ -3,6 +3,8 @@ package com.pravoos.ai.practice.internal.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.pravoos.ai.document.api.DocumentCommand;
@@ -17,11 +19,15 @@ import com.pravoos.ai.practice.internal.model.entity.SignatureRequest;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
 import com.pravoos.ai.shared.config.SignatureProperties;
 import com.pravoos.ai.shared.exception.PravoosException;
+import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
 import com.pravoos.ai.shared.model.enums.SignatureProviderType;
+import com.pravoos.ai.shared.model.enums.SignatureSignerRole;
 import com.pravoos.ai.shared.model.enums.SignatureStatus;
+import com.pravoos.ai.shared.signature.CertificateChainValidator;
 import com.pravoos.ai.shared.signature.CmsTestSignatures;
 import com.pravoos.ai.shared.signature.DetachedCmsVerifier;
 import com.pravoos.ai.shared.signature.NoopDiadocSignatureProvider;
+import com.pravoos.ai.shared.signature.TrustedCaStore;
 import com.pravoos.ai.shared.util.Sha256;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -54,13 +60,13 @@ class SignatureServiceTest {
   @BeforeEach
   void setUp() {
     SignatureProperties properties =
-        new SignatureProperties(30, new SignatureProperties.Diadoc(null, null));
+        new SignatureProperties(30, new SignatureProperties.Diadoc(null, null), null);
     service =
         new SignatureService(
             signatureRequestRepository,
             caseService,
             documentCommand,
-            new DetachedCmsVerifier(),
+            new DetachedCmsVerifier(new CertificateChainValidator(new TrustedCaStore(properties))),
             caseMessageService,
             new SignatureProtocolPdfWriter(),
             List.of(new NoopDiadocSignatureProvider()),
@@ -71,13 +77,24 @@ class SignatureServiceTest {
     Case caseEntity = new Case();
     setCaseId(caseEntity, caseId);
     caseEntity.setTitle("Дело о взыскании");
+    caseEntity.setLawyerId(lawyerId);
     caseEntity.setClientId(client);
     return caseEntity;
   }
 
   private CreateSignatureRequestDto simpleRequest() {
     return new CreateSignatureRequestDto(
-        documentId, SignatureProviderType.SIMPLE, "Подпишите", null);
+        documentId, SignatureProviderType.SIMPLE, null, null, "Подпишите", null);
+  }
+
+  private CreateSignatureRequestDto lawyerRequest(UUID signerLawyerId) {
+    return new CreateSignatureRequestDto(
+        documentId,
+        SignatureProviderType.SIMPLE,
+        SignatureSignerRole.LAWYER,
+        signerLawyerId,
+        "Подпишите со стороны исполнителя",
+        null);
   }
 
   @Test
@@ -111,7 +128,8 @@ class SignatureServiceTest {
   void create_rejectsDisabledExternalProvider() {
     when(caseService.requireOwnedCase(caseId, lawyerId)).thenReturn(caseWithClient(clientId));
     CreateSignatureRequestDto request =
-        new CreateSignatureRequestDto(documentId, SignatureProviderType.DIADOC, null, null);
+        new CreateSignatureRequestDto(
+            documentId, SignatureProviderType.DIADOC, null, null, null, null);
 
     assertThatThrownBy(() -> service.create(caseId, request, lawyerId))
         .isInstanceOf(PravoosException.class)
@@ -370,6 +388,171 @@ class SignatureServiceTest {
         .hasFieldOrPropertyWithValue("code", "SIGNATURE_NOT_SIGNED");
   }
 
+  @Test
+  void create_forLawyerSigner_usesCaseScopedDocumentAndDefaultsToCaseOwner() {
+    when(caseService.requireOwnedCase(caseId, lawyerId)).thenReturn(caseWithClient(clientId));
+    when(documentCommand.caseContentSha256(documentId, caseId)).thenReturn("hash-v1");
+    when(documentCommand.caseRef(documentId, caseId)).thenReturn(documentRef());
+    when(signatureRequestRepository.findByDocumentIdAndSignerLawyerIdAndStatus(
+            documentId, lawyerId, SignatureStatus.PENDING))
+        .thenReturn(Optional.empty());
+    when(signatureRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    SignatureRequestResponse response = service.create(caseId, lawyerRequest(null), lawyerId);
+
+    assertThat(response.signerRole()).isEqualTo(SignatureSignerRole.LAWYER);
+    assertThat(response.signerLawyerId()).isEqualTo(lawyerId);
+    verify(documentCommand, never()).clientVisibleRef(any(), any());
+    verifyNoInteractions(caseMessageService);
+  }
+
+  @Test
+  void create_forLawyerSigner_rejectsSignerOutsideCase() {
+    Case caseEntity = caseWithClient(clientId);
+    UUID outsider = UUID.randomUUID();
+    when(caseService.requireOwnedCase(caseId, lawyerId)).thenReturn(caseEntity);
+    when(caseService.isCaseParticipant(caseEntity, outsider)).thenReturn(false);
+
+    assertThatThrownBy(() -> service.create(caseId, lawyerRequest(outsider), lawyerId))
+        .isInstanceOf(PravoosException.class)
+        .hasFieldOrPropertyWithValue("code", "SIGNER_NOT_CASE_MEMBER");
+    verify(signatureRequestRepository, never()).save(any());
+  }
+
+  @Test
+  void create_forLawyerSigner_allowsCaseWithoutClient() {
+    when(caseService.requireOwnedCase(caseId, lawyerId)).thenReturn(caseWithClient(null));
+    when(documentCommand.caseContentSha256(documentId, caseId)).thenReturn("hash-v1");
+    when(documentCommand.caseRef(documentId, caseId)).thenReturn(documentRef());
+    when(signatureRequestRepository.findByDocumentIdAndSignerLawyerIdAndStatus(
+            documentId, lawyerId, SignatureStatus.PENDING))
+        .thenReturn(Optional.empty());
+    when(signatureRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    assertThat(service.create(caseId, lawyerRequest(null), lawyerId).status())
+        .isEqualTo(SignatureStatus.PENDING);
+  }
+
+  @Test
+  void signAsLawyer_recordsEvidenceForDesignatedSigner() {
+    SignatureRequest pending = lawyerPendingRequest(lawyerId);
+    when(signatureRequestRepository.findById(pending.getId())).thenReturn(Optional.of(pending));
+    when(documentCommand.caseContentSha256(documentId, caseId)).thenReturn("hash-v1");
+    when(signatureRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    SignatureRequestResponse response =
+        service.signAsLawyer(
+            caseWithClient(clientId),
+            pending.getId(),
+            new SignDocumentRequest("Смирнова Анна", true),
+            new SignerContext(lawyerId, "198.51.100.4", "Mozilla"));
+
+    assertThat(response.status()).isEqualTo(SignatureStatus.SIGNED);
+    assertThat(response.signerName()).isEqualTo("Смирнова Анна");
+    verify(caseMessageService)
+        .postSystemMessage(any(), eq(MessageAuthorRole.LAWYER), eq(lawyerId), contains("юристом"));
+  }
+
+  @Test
+  void signAsLawyer_rejectsAnotherLawyer() {
+    SignatureRequest pending = lawyerPendingRequest(UUID.randomUUID());
+    when(signatureRequestRepository.findById(pending.getId())).thenReturn(Optional.of(pending));
+
+    assertThatThrownBy(
+            () ->
+                service.signAsLawyer(
+                    caseWithClient(clientId),
+                    pending.getId(),
+                    new SignDocumentRequest("Смирнова Анна", true),
+                    new SignerContext(lawyerId, "ip", "ua")))
+        .isInstanceOf(PravoosException.class)
+        .hasFieldOrPropertyWithValue("code", "SIGNATURE_SIGNER_MISMATCH");
+    verify(signatureRequestRepository, never()).save(any());
+  }
+
+  @Test
+  void signAsLawyer_rejectsClientSignerRequest() {
+    SignatureRequest pending =
+        pendingRequest("hash-v1", LocalDateTime.now(ZoneOffset.UTC).plusDays(5));
+    when(signatureRequestRepository.findById(pending.getId())).thenReturn(Optional.of(pending));
+
+    assertThatThrownBy(
+            () ->
+                service.signAsLawyer(
+                    caseWithClient(clientId),
+                    pending.getId(),
+                    new SignDocumentRequest("Смирнова Анна", true),
+                    new SignerContext(lawyerId, "ip", "ua")))
+        .isInstanceOf(PravoosException.class)
+        .hasFieldOrPropertyWithValue("code", "SIGNATURE_SIGNER_ROLE_MISMATCH");
+  }
+
+  @Test
+  void sign_rejectsLawyerSignerRequestFromClientPath() {
+    SignatureRequest pending = lawyerPendingRequest(lawyerId);
+    when(signatureRequestRepository.findById(pending.getId())).thenReturn(Optional.of(pending));
+
+    assertThatThrownBy(
+            () ->
+                service.sign(
+                    caseWithClient(clientId),
+                    pending.getId(),
+                    new SignDocumentRequest("Иванов Иван", true),
+                    new SignerContext(UUID.randomUUID(), "ip", "ua")))
+        .isInstanceOf(PravoosException.class)
+        .hasFieldOrPropertyWithValue("code", "SIGNATURE_SIGNER_ROLE_MISMATCH");
+  }
+
+  @Test
+  void signWithCmsAsLawyer_verifiesContainerAgainstCaseDocument() {
+    byte[] content = "Договор".getBytes(StandardCharsets.UTF_8);
+    SignatureRequest pending = lawyerPendingRequest(lawyerId);
+    pending.setProvider(SignatureProviderType.DETACHED_CMS);
+    pending.setDocumentHash(Sha256.hex(content));
+    when(signatureRequestRepository.findById(pending.getId())).thenReturn(Optional.of(pending));
+    when(documentCommand.loadCaseContent(documentId, caseId)).thenReturn(documentContent(content));
+    when(signatureRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    SignatureRequestResponse response =
+        service.signWithCmsAsLawyer(
+            caseWithClient(clientId),
+            pending.getId(),
+            CmsTestSignatures.detachedSignature(content, "Смирнова Анна"),
+            "contract.sig",
+            new SignerContext(lawyerId, "ip", "ua"));
+
+    assertThat(response.status()).isEqualTo(SignatureStatus.SIGNED);
+    assertThat(response.hasSignatureFile()).isTrue();
+    verify(documentCommand, never()).loadClientContent(any(), any());
+  }
+
+  @Test
+  void declineAsLawyer_marksRequestDeclined() {
+    SignatureRequest pending = lawyerPendingRequest(lawyerId);
+    when(signatureRequestRepository.findById(pending.getId())).thenReturn(Optional.of(pending));
+    when(signatureRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    SignatureRequestResponse response =
+        service.declineAsLawyer(
+            caseWithClient(clientId),
+            pending.getId(),
+            "Нужна правка формулировки",
+            new SignerContext(lawyerId, "ip", "ua"));
+
+    assertThat(response.status()).isEqualTo(SignatureStatus.DECLINED);
+    verify(caseMessageService)
+        .postSystemMessage(any(), eq(MessageAuthorRole.LAWYER), eq(lawyerId), contains("Юрист"));
+  }
+
+  private SignatureRequest lawyerPendingRequest(UUID signerLawyerId) {
+    SignatureRequest request =
+        pendingRequest("hash-v1", LocalDateTime.now(ZoneOffset.UTC).plusDays(5));
+    request.setSignerRole(SignatureSignerRole.LAWYER);
+    request.setSignerClientId(null);
+    request.setSignerLawyerId(signerLawyerId);
+    return request;
+  }
+
   private DocumentContent documentContent(byte[] content) {
     return new DocumentContent(
         new ByteArrayResource(content), "contract.pdf", "pdf", content.length);
@@ -390,6 +573,7 @@ class SignatureServiceTest {
     setId(request, UUID.randomUUID());
     request.setCaseId(caseId);
     request.setDocumentId(documentId);
+    request.setSignerRole(SignatureSignerRole.CLIENT);
     request.setSignerClientId(clientId);
     request.setProvider(SignatureProviderType.SIMPLE);
     request.setStatus(SignatureStatus.PENDING);

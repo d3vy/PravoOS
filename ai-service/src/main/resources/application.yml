@@ -197,6 +197,8 @@ signature:
   diadoc:
     base-url: ${DIADOC_API_BASE_URL:https://diadoc-api.kontur.ru}
     api-key: ${DIADOC_API_KEY:}
+  cms:
+    trusted-ca-path: ${SIGNATURE_TRUSTED_CA_PATH:}
 
 invoice:
   overdue:

@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.dto;
 
 import com.pravoos.ai.shared.model.enums.SignatureProviderType;
+import com.pravoos.ai.shared.model.enums.SignatureSignerRole;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ public record SignatureProtocolModel(
     String documentTitle,
     String documentHash,
     SignatureProviderType provider,
+    SignatureSignerRole signerRole,
     String signerName,
     String signerIp,
     String signerUserAgent,
@@ -22,7 +24,8 @@ public record SignatureProtocolModel(
     String certificateSerial,
     LocalDateTime certificateValidFrom,
     LocalDateTime certificateValidTo,
-    String signatureAlgorithm) {
+    String signatureAlgorithm,
+    boolean chainVerified) {
   public boolean isQualified() {
     return provider == SignatureProviderType.DETACHED_CMS;
   }

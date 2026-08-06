@@ -17,6 +17,7 @@ import com.pravoos.ai.shared.exception.InvalidSignatureFileException;
 import com.pravoos.ai.shared.exception.PravoosException;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
 import com.pravoos.ai.shared.model.enums.SignatureProviderType;
+import com.pravoos.ai.shared.model.enums.SignatureSignerRole;
 import com.pravoos.ai.shared.model.enums.SignatureStatus;
 import com.pravoos.ai.shared.signature.CmsSignatureDetails;
 import com.pravoos.ai.shared.signature.DetachedCmsVerifier;
@@ -72,36 +73,28 @@ public class SignatureService {
   public SignatureRequestResponse create(
       UUID caseId, CreateSignatureRequestDto request, UUID lawyerId) {
     Case caseEntity = caseService.requireOwnedCase(caseId, lawyerId);
-    UUID signerClientId = caseEntity.getClientId();
-    if (signerClientId == null) {
-      throw new PravoosException(
-          "У дела не указан клиент — некому подписывать документ",
-          HttpStatus.UNPROCESSABLE_ENTITY,
-          "CASE_HAS_NO_CLIENT");
-    }
-
+    SignatureSignerRole signerRole = request.signerRoleOrDefault();
     SignatureProviderType provider = request.providerOrDefault();
     requireProviderEnabled(provider);
 
-    DocumentRef document = documentCommand.clientVisibleRef(request.documentId(), caseId);
-    String documentHash = documentCommand.contentSha256(request.documentId(), caseId);
+    UUID signerClientId =
+        signerRole == SignatureSignerRole.CLIENT ? requireCaseClient(caseEntity) : null;
+    UUID signerLawyerId =
+        signerRole == SignatureSignerRole.LAWYER
+            ? resolveSignerLawyer(caseEntity, request.signerLawyerId())
+            : null;
 
-    signatureRequestRepository
-        .findByDocumentIdAndSignerClientIdAndStatus(
-            request.documentId(), signerClientId, SignatureStatus.PENDING)
-        .ifPresent(
-            existing -> {
-              throw new PravoosException(
-                  "По этому документу уже есть ожидающий запрос на подпись",
-                  HttpStatus.CONFLICT,
-                  "SIGNATURE_ALREADY_PENDING");
-            });
+    DocumentRef document = documentRef(signerRole, request.documentId(), caseId);
+    String documentHash = documentHash(signerRole, request.documentId(), caseId);
+    requireNoPendingRequest(request.documentId(), signerRole, signerClientId, signerLawyerId);
 
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
     SignatureRequest signatureRequest = new SignatureRequest();
     signatureRequest.setDocumentId(request.documentId());
     signatureRequest.setCaseId(caseId);
+    signatureRequest.setSignerRole(signerRole);
     signatureRequest.setSignerClientId(signerClientId);
+    signatureRequest.setSignerLawyerId(signerLawyerId);
     signatureRequest.setRequestedBy(lawyerId);
     signatureRequest.setProvider(provider);
     signatureRequest.setStatus(SignatureStatus.PENDING);
@@ -110,14 +103,28 @@ public class SignatureService {
     signatureRequest.setExpiresAt(now.plusDays(resolveExpiryDays(request.expiresInDays())));
 
     SignatureRequest saved = signatureRequestRepository.save(signatureRequest);
-    notifyClientRequested(caseEntity, saved, document.title(), lawyerId);
+    if (signerRole == SignatureSignerRole.CLIENT) {
+      notifyClientRequested(caseEntity, saved, document.title(), lawyerId);
+    }
     log.info(
-        "Signature request {} created for document {} of case {} by lawyer {}",
+        "Signature request {} created for document {} of case {} by lawyer {} (signer role {})",
         saved.getId(),
         request.documentId(),
         caseId,
-        lawyerId);
+        lawyerId,
+        signerRole);
     return SignatureRequestResponse.from(saved, now);
+  }
+
+  @Transactional(readOnly = true)
+  public List<SignatureRequestResponse> findPendingForLawyer(UUID lawyerId) {
+    LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+    return signatureRequestRepository
+        .findBySignerLawyerIdAndStatusOrderByCreatedAtDesc(lawyerId, SignatureStatus.PENDING)
+        .stream()
+        .filter(request -> !request.isExpired(now))
+        .map(request -> SignatureRequestResponse.from(request, now))
+        .toList();
   }
 
   @Transactional(readOnly = true)
@@ -143,10 +150,51 @@ public class SignatureService {
   public SignatureRequestResponse sign(
       Case caseEntity, UUID signatureId, SignDocumentRequest request, SignerContext signer) {
     SignatureRequest signatureRequest = requirePendingRequest(caseEntity.getId(), signatureId);
+    requireSignerRole(signatureRequest, SignatureSignerRole.CLIENT);
+    return applySimpleSignature(caseEntity, signatureRequest, request, signer);
+  }
+
+  @Transactional
+  public SignatureRequestResponse signAsLawyer(
+      Case caseEntity, UUID signatureId, SignDocumentRequest request, SignerContext signer) {
+    SignatureRequest signatureRequest = requirePendingRequest(caseEntity.getId(), signatureId);
+    requireDesignatedLawyer(signatureRequest, signer.userId());
+    return applySimpleSignature(caseEntity, signatureRequest, request, signer);
+  }
+
+  @Transactional
+  public SignatureRequestResponse signWithCmsAsLawyer(
+      Case caseEntity,
+      UUID signatureId,
+      byte[] signatureFile,
+      String signatureFileName,
+      SignerContext signer) {
+    SignatureRequest signatureRequest = requirePendingRequest(caseEntity.getId(), signatureId);
+    requireDesignatedLawyer(signatureRequest, signer.userId());
+    return applyCmsSignature(
+        caseEntity, signatureRequest, signatureFile, signatureFileName, signer);
+  }
+
+  @Transactional
+  public SignatureRequestResponse declineAsLawyer(
+      Case caseEntity, UUID signatureId, String reason, SignerContext signer) {
+    SignatureRequest signatureRequest = requirePendingRequest(caseEntity.getId(), signatureId);
+    requireDesignatedLawyer(signatureRequest, signer.userId());
+    return applyDecline(caseEntity, signatureRequest, reason, signer);
+  }
+
+  private SignatureRequestResponse applySimpleSignature(
+      Case caseEntity,
+      SignatureRequest signatureRequest,
+      SignDocumentRequest request,
+      SignerContext signer) {
     requireProvider(signatureRequest, SignatureProviderType.SIMPLE);
     requireUnmodifiedDocument(
         signatureRequest,
-        documentCommand.contentSha256(signatureRequest.getDocumentId(), caseEntity.getId()));
+        documentHash(
+            signatureRequest.getSignerRole(),
+            signatureRequest.getDocumentId(),
+            caseEntity.getId()));
 
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
     String signerName = request.signerName().trim();
@@ -159,12 +207,12 @@ public class SignatureService {
     signatureRequest.setSignedAt(now);
 
     SignatureRequest saved = signatureRequestRepository.save(signatureRequest);
-    notifyLawyerSigned(caseEntity, saved, signer.userId());
+    notifySigned(caseEntity, saved, signer.userId());
     log.info(
-        "Signature request {} signed by user {} (client {})",
-        signatureId,
+        "Signature request {} signed by user {} as {}",
+        saved.getId(),
         signer.userId(),
-        signatureRequest.getSignerClientId());
+        saved.getSignerRole());
     return SignatureRequestResponse.from(saved, now);
   }
 
@@ -176,10 +224,23 @@ public class SignatureService {
       String signatureFileName,
       SignerContext signer) {
     SignatureRequest signatureRequest = requirePendingRequest(caseEntity.getId(), signatureId);
+    requireSignerRole(signatureRequest, SignatureSignerRole.CLIENT);
+    return applyCmsSignature(
+        caseEntity, signatureRequest, signatureFile, signatureFileName, signer);
+  }
+
+  private SignatureRequestResponse applyCmsSignature(
+      Case caseEntity,
+      SignatureRequest signatureRequest,
+      byte[] signatureFile,
+      String signatureFileName,
+      SignerContext signer) {
     requireProvider(signatureRequest, SignatureProviderType.DETACHED_CMS);
     assertSignatureFileSize(signatureFile);
 
-    byte[] content = readDocumentContent(signatureRequest.getDocumentId(), caseEntity.getId());
+    byte[] content =
+        readDocumentContent(
+            signatureRequest.getSignerRole(), signatureRequest.getDocumentId(), caseEntity.getId());
     requireUnmodifiedDocument(signatureRequest, Sha256.hex(content));
 
     CmsSignatureDetails details = detachedCmsVerifier.verify(signatureFile, content);
@@ -200,14 +261,16 @@ public class SignatureService {
     signatureRequest.setCertificateValidFrom(details.certificateValidFrom());
     signatureRequest.setCertificateValidTo(details.certificateValidTo());
     signatureRequest.setDeclaredSigningTime(details.signingTime());
+    signatureRequest.setChainVerified(details.chainVerified() ? Boolean.TRUE : null);
     signatureRequest.setSignedAt(now);
 
     SignatureRequest saved = signatureRequestRepository.save(signatureRequest);
-    notifyLawyerSigned(caseEntity, saved, signer.userId());
+    notifySigned(caseEntity, saved, signer.userId());
     log.info(
-        "Signature request {} signed with detached CMS by user {} (cert {})",
-        signatureId,
+        "Signature request {} signed with detached CMS by user {} as {} (cert {})",
+        saved.getId(),
         signer.userId(),
+        saved.getSignerRole(),
         details.certificateSerial());
     return SignatureRequestResponse.from(saved, now);
   }
@@ -216,12 +279,22 @@ public class SignatureService {
   public SignatureRequestResponse decline(
       Case caseEntity, UUID signatureId, String reason, SignerContext signer) {
     SignatureRequest signatureRequest = requirePendingRequest(caseEntity.getId(), signatureId);
+    requireSignerRole(signatureRequest, SignatureSignerRole.CLIENT);
+    return applyDecline(caseEntity, signatureRequest, reason, signer);
+  }
+
+  private SignatureRequestResponse applyDecline(
+      Case caseEntity, SignatureRequest signatureRequest, String reason, SignerContext signer) {
     signatureRequest.setStatus(SignatureStatus.DECLINED);
     signatureRequest.setDeclineReason(truncate(reason, 1000));
     signatureRequest.setSignerUserId(signer.userId());
     SignatureRequest saved = signatureRequestRepository.save(signatureRequest);
-    notifyLawyerDeclined(caseEntity, saved, signer.userId());
-    log.info("Signature request {} declined by user {}", signatureId, signer.userId());
+    notifyDeclined(caseEntity, saved, signer.userId());
+    log.info(
+        "Signature request {} declined by user {} as {}",
+        saved.getId(),
+        signer.userId(),
+        saved.getSignerRole());
     return SignatureRequestResponse.from(saved, LocalDateTime.now(ZoneOffset.UTC));
   }
 
@@ -229,7 +302,8 @@ public class SignatureService {
   public byte[] exportProtocol(Case caseEntity, UUID signatureId) {
     SignatureRequest signatureRequest = requireSignedRequest(caseEntity.getId(), signatureId);
     DocumentRef document =
-        documentCommand.clientVisibleRef(signatureRequest.getDocumentId(), caseEntity.getId());
+        documentRef(
+            signatureRequest.getSignerRole(), signatureRequest.getDocumentId(), caseEntity.getId());
     return signatureProtocolPdfWriter.write(
         toProtocolModel(caseEntity, signatureRequest, document.title()));
   }
@@ -261,6 +335,7 @@ public class SignatureService {
         documentTitle,
         request.getDocumentHash(),
         request.getProvider(),
+        request.getSignerRole(),
         request.getSignerName(),
         request.getSignerIp(),
         request.getSignerUserAgent(),
@@ -273,11 +348,71 @@ public class SignatureService {
         request.getCertificateSerial(),
         request.getCertificateValidFrom(),
         request.getCertificateValidTo(),
-        request.getSignatureAlgorithm());
+        request.getSignatureAlgorithm(),
+        Boolean.TRUE.equals(request.getChainVerified()));
   }
 
-  private byte[] readDocumentContent(UUID documentId, UUID caseId) {
-    DocumentContent content = documentCommand.loadClientContent(documentId, caseId);
+  private UUID requireCaseClient(Case caseEntity) {
+    UUID clientId = caseEntity.getClientId();
+    if (clientId == null) {
+      throw new PravoosException(
+          "У дела не указан клиент — некому подписывать документ",
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "CASE_HAS_NO_CLIENT");
+    }
+    return clientId;
+  }
+
+  private UUID resolveSignerLawyer(Case caseEntity, UUID requestedSignerLawyerId) {
+    if (requestedSignerLawyerId == null) {
+      return caseEntity.getLawyerId();
+    }
+    if (!caseService.isCaseParticipant(caseEntity, requestedSignerLawyerId)) {
+      throw new PravoosException(
+          "Подписант не имеет доступа к делу",
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "SIGNER_NOT_CASE_MEMBER");
+    }
+    return requestedSignerLawyerId;
+  }
+
+  private void requireNoPendingRequest(
+      UUID documentId, SignatureSignerRole signerRole, UUID signerClientId, UUID signerLawyerId) {
+    boolean pendingExists =
+        signerRole == SignatureSignerRole.CLIENT
+            ? signatureRequestRepository
+                .findByDocumentIdAndSignerClientIdAndStatus(
+                    documentId, signerClientId, SignatureStatus.PENDING)
+                .isPresent()
+            : signatureRequestRepository
+                .findByDocumentIdAndSignerLawyerIdAndStatus(
+                    documentId, signerLawyerId, SignatureStatus.PENDING)
+                .isPresent();
+    if (pendingExists) {
+      throw new PravoosException(
+          "По этому документу уже есть ожидающий запрос на подпись",
+          HttpStatus.CONFLICT,
+          "SIGNATURE_ALREADY_PENDING");
+    }
+  }
+
+  private DocumentRef documentRef(SignatureSignerRole signerRole, UUID documentId, UUID caseId) {
+    return signerRole == SignatureSignerRole.CLIENT
+        ? documentCommand.clientVisibleRef(documentId, caseId)
+        : documentCommand.caseRef(documentId, caseId);
+  }
+
+  private String documentHash(SignatureSignerRole signerRole, UUID documentId, UUID caseId) {
+    return signerRole == SignatureSignerRole.CLIENT
+        ? documentCommand.contentSha256(documentId, caseId)
+        : documentCommand.caseContentSha256(documentId, caseId);
+  }
+
+  private byte[] readDocumentContent(SignatureSignerRole signerRole, UUID documentId, UUID caseId) {
+    DocumentContent content =
+        signerRole == SignatureSignerRole.CLIENT
+            ? documentCommand.loadClientContent(documentId, caseId)
+            : documentCommand.loadCaseContent(documentId, caseId);
     try {
       return content.resource().getContentAsByteArray();
     } catch (IOException ex) {
@@ -308,6 +443,30 @@ public class SignatureService {
           "Документ был изменён после создания запроса на подпись",
           HttpStatus.CONFLICT,
           "DOCUMENT_MODIFIED");
+    }
+  }
+
+  private void requireSignerRole(SignatureRequest signatureRequest, SignatureSignerRole expected) {
+    if (signatureRequest.getSignerRole() != expected) {
+      throw new PravoosException(
+          "Этот запрос предназначен другой стороне подписания",
+          HttpStatus.CONFLICT,
+          "SIGNATURE_SIGNER_ROLE_MISMATCH");
+    }
+  }
+
+  private void requireDesignatedLawyer(SignatureRequest signatureRequest, UUID lawyerId) {
+    requireSignerRole(signatureRequest, SignatureSignerRole.LAWYER);
+    if (!lawyerId.equals(signatureRequest.getSignerLawyerId())) {
+      log.warn(
+          "Lawyer {} attempted to act on signature {} designated to {}",
+          lawyerId,
+          signatureRequest.getId(),
+          signatureRequest.getSignerLawyerId());
+      throw new PravoosException(
+          "Подписать документ может только назначенный подписант",
+          HttpStatus.FORBIDDEN,
+          "SIGNATURE_SIGNER_MISMATCH");
     }
   }
 
@@ -392,28 +551,47 @@ public class SignatureService {
         caseEntity, MessageAuthorRole.LAWYER, lawyerId, body.toString());
   }
 
-  private void notifyLawyerSigned(Case caseEntity, SignatureRequest request, UUID signerUserId) {
+  private void notifySigned(Case caseEntity, SignatureRequest request, UUID signerUserId) {
     String kind =
         request.getProvider() == SignatureProviderType.DETACHED_CMS
             ? "квалифицированной электронной подписью"
             : "простой электронной подписью";
     caseMessageService.postSystemMessage(
         caseEntity,
-        MessageAuthorRole.CLIENT,
+        authorRoleOf(request),
         signerUserId,
-        "Документ подписан " + kind + ": " + request.getSignerName());
+        "Документ подписан "
+            + signerSideLabel(request)
+            + " "
+            + kind
+            + ": "
+            + request.getSignerName());
   }
 
-  private void notifyLawyerDeclined(Case caseEntity, SignatureRequest request, UUID signerUserId) {
+  private void notifyDeclined(Case caseEntity, SignatureRequest request, UUID signerUserId) {
     String reason =
         request.getDeclineReason() == null || request.getDeclineReason().isBlank()
             ? "без указания причины"
             : request.getDeclineReason();
     caseMessageService.postSystemMessage(
         caseEntity,
-        MessageAuthorRole.CLIENT,
+        authorRoleOf(request),
         signerUserId,
-        "Клиент отклонил подписание документа: " + reason);
+        signerSideNominative(request) + " отклонил подписание документа: " + reason);
+  }
+
+  private MessageAuthorRole authorRoleOf(SignatureRequest request) {
+    return request.getSignerRole() == SignatureSignerRole.LAWYER
+        ? MessageAuthorRole.LAWYER
+        : MessageAuthorRole.CLIENT;
+  }
+
+  private String signerSideLabel(SignatureRequest request) {
+    return request.getSignerRole() == SignatureSignerRole.LAWYER ? "юристом" : "клиентом";
+  }
+
+  private String signerSideNominative(SignatureRequest request) {
+    return request.getSignerRole() == SignatureSignerRole.LAWYER ? "Юрист" : "Клиент";
   }
 
   private int resolveExpiryDays(Integer requested) {
@@ -443,7 +621,10 @@ public class SignatureService {
         + "владельцем сертификата "
         + resolveCertificateSignerName(details)
         + " в соответствии со ст. 6 Федерального закона от 06.04.2011 № 63-ФЗ «Об электронной подписи». "
-        + "Подпись математически проверена против содержимого документа.";
+        + "Подпись математически проверена против содержимого документа."
+        + (details.chainVerified()
+            ? " Цепочка сертификата проверена до доверенного аккредитованного удостоверяющего центра."
+            : "");
   }
 
   private String truncate(String value, int maxLength) {

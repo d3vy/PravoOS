@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.cms.Attribute;
 import org.bouncycastle.asn1.cms.CMSAttributes;
@@ -47,6 +48,12 @@ public class DetachedCmsVerifier {
     }
   }
 
+  private final CertificateChainValidator certificateChainValidator;
+
+  public DetachedCmsVerifier(CertificateChainValidator certificateChainValidator) {
+    this.certificateChainValidator = certificateChainValidator;
+  }
+
   public CmsSignatureDetails verify(byte[] signatureFile, byte[] documentContent) {
     if (signatureFile == null || signatureFile.length == 0) {
       throw new InvalidSignatureFileException("файл пуст");
@@ -58,6 +65,8 @@ public class DetachedCmsVerifier {
     LocalDateTime signingTime = extractSigningTime(signer);
     assertCertificateValid(certificate, signingTime);
     assertSignatureMatches(signer, certificate);
+    boolean chainVerified =
+        certificateChainValidator.validate(certificate, allCertificates(signedData), signingTime);
 
     return new CmsSignatureDetails(
         commonName(certificate.getSubject()),
@@ -67,7 +76,12 @@ public class DetachedCmsVerifier {
         toLocalDateTime(certificate.getNotBefore()),
         toLocalDateTime(certificate.getNotAfter()),
         algorithmName(signer),
-        signingTime);
+        signingTime,
+        chainVerified);
+  }
+
+  private List<X509CertificateHolder> allCertificates(CMSSignedData signedData) {
+    return List.copyOf(signedData.getCertificates().getMatches(null));
   }
 
   private byte[] decode(byte[] signatureFile) {

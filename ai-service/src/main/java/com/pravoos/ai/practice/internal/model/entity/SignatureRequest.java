@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.model.entity;
 
 import com.pravoos.ai.shared.model.enums.SignatureProviderType;
+import com.pravoos.ai.shared.model.enums.SignatureSignerRole;
 import com.pravoos.ai.shared.model.enums.SignatureStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -21,8 +22,13 @@ public class SignatureRequest {
   @Column(nullable = false)
   private UUID caseId;
 
-  @Column(nullable = false)
-  private UUID signerClientId;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  private SignatureSignerRole signerRole;
+
+  @Column private UUID signerClientId;
+
+  @Column private UUID signerLawyerId;
 
   @Column(nullable = false)
   private UUID requestedBy;
@@ -82,6 +88,8 @@ public class SignatureRequest {
 
   @Column private LocalDateTime declaredSigningTime;
 
+  @Column private Boolean chainVerified;
+
   @Column private LocalDateTime signedAt;
 
   @Column(length = 1000)
@@ -130,12 +138,28 @@ public class SignatureRequest {
     this.caseId = caseId;
   }
 
+  public SignatureSignerRole getSignerRole() {
+    return signerRole;
+  }
+
+  public void setSignerRole(SignatureSignerRole signerRole) {
+    this.signerRole = signerRole;
+  }
+
   public UUID getSignerClientId() {
     return signerClientId;
   }
 
   public void setSignerClientId(UUID signerClientId) {
     this.signerClientId = signerClientId;
+  }
+
+  public UUID getSignerLawyerId() {
+    return signerLawyerId;
+  }
+
+  public void setSignerLawyerId(UUID signerLawyerId) {
+    this.signerLawyerId = signerLawyerId;
   }
 
   public UUID getRequestedBy() {
@@ -296,6 +320,14 @@ public class SignatureRequest {
 
   public void setDeclaredSigningTime(LocalDateTime declaredSigningTime) {
     this.declaredSigningTime = declaredSigningTime;
+  }
+
+  public Boolean getChainVerified() {
+    return chainVerified;
+  }
+
+  public void setChainVerified(Boolean chainVerified) {
+    this.chainVerified = chainVerified;
   }
 
   public LocalDateTime getSignedAt() {
