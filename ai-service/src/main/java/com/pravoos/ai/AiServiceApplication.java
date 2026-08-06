@@ -18,7 +18,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
   DocumentProperties.class,
   DocumentSummaryProperties.class,
   JwtProperties.class,
-  ArbitrProperties.class,
   FileCryptoProperties.class,
   MalwareScanProperties.class,
   UploadGuardProperties.class,

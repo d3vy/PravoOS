@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.court;
+package com.pravoos.ai.court.api;
 
 import java.time.LocalDate;
 import java.util.List;

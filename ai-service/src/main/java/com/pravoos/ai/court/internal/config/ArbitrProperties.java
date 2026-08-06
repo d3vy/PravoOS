@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.config;
+package com.pravoos.ai.court.internal.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

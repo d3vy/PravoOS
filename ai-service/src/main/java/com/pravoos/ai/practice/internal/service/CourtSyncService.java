@@ -1,5 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
+import com.pravoos.ai.court.api.CourtCaseData;
+import com.pravoos.ai.court.api.CourtCaseLookup;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
 import com.pravoos.ai.practice.internal.model.entity.CaseParty;
@@ -8,9 +10,6 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepositor
 import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
-import com.pravoos.ai.shared.court.CourtCaseData;
-import com.pravoos.ai.shared.court.CourtCaseProvider;
-import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
 import com.pravoos.ai.shared.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.ai.shared.service.OutboxEventService;
 import java.time.LocalDate;
@@ -33,7 +32,7 @@ public class CourtSyncService {
   private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
   private static final int PREPARATION_DAYS_BEFORE_HEARING = 3;
 
-  private final CourtCaseProviderRegistry courtCaseProviderRegistry;
+  private final CourtCaseLookup courtCaseLookup;
   private final CaseRepository caseRepository;
   private final CaseHearingEventRepository hearingEventRepository;
   private final CasePartyRepository casePartyRepository;
@@ -42,14 +41,14 @@ public class CourtSyncService {
   private final CourtSyncService self;
 
   public CourtSyncService(
-      CourtCaseProviderRegistry courtCaseProviderRegistry,
+      CourtCaseLookup courtCaseLookup,
       CaseRepository caseRepository,
       CaseHearingEventRepository hearingEventRepository,
       CasePartyRepository casePartyRepository,
       CaseTaskRepository caseTaskRepository,
       OutboxEventService outboxEventService,
       @Lazy CourtSyncService self) {
-    this.courtCaseProviderRegistry = courtCaseProviderRegistry;
+    this.courtCaseLookup = courtCaseLookup;
     this.caseRepository = caseRepository;
     this.hearingEventRepository = hearingEventRepository;
     this.casePartyRepository = casePartyRepository;
@@ -66,9 +65,7 @@ public class CourtSyncService {
       return;
     }
 
-    Optional<CourtCaseProvider> provider =
-        courtCaseProviderRegistry.enabledFor(caseEntity.getCourtSystem());
-    if (provider.isEmpty()) {
+    if (!courtCaseLookup.isEnabled(caseEntity.getCourtSystem())) {
       log.debug(
           "Синхронизация дела {} пропущена: провайдер {} не подключён",
           caseId,
@@ -76,7 +73,8 @@ public class CourtSyncService {
       return;
     }
 
-    Optional<CourtCaseData> fetched = provider.get().fetchCase(caseEntity.getCourtCaseNumber());
+    Optional<CourtCaseData> fetched =
+        courtCaseLookup.fetchCase(caseEntity.getCourtSystem(), caseEntity.getCourtCaseNumber());
     if (fetched.isEmpty()) {
       return;
     }

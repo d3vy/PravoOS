@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.court;
+package com.pravoos.ai.court.api;
 
 import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.util.ArrayList;

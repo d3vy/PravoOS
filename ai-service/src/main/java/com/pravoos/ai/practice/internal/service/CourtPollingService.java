@@ -1,8 +1,8 @@
 package com.pravoos.ai.practice.internal.service;
 
+import com.pravoos.ai.court.api.CourtCaseLookup;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
-import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
 import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.util.List;
 import java.util.Set;
@@ -18,15 +18,15 @@ public class CourtPollingService {
 
   private static final Logger log = LoggerFactory.getLogger(CourtPollingService.class);
 
-  private final CourtCaseProviderRegistry courtCaseProviderRegistry;
+  private final CourtCaseLookup courtCaseLookup;
   private final CaseRepository caseRepository;
   private final CourtSyncService courtSyncService;
 
   public CourtPollingService(
-      CourtCaseProviderRegistry courtCaseProviderRegistry,
+      CourtCaseLookup courtCaseLookup,
       CaseRepository caseRepository,
       CourtSyncService courtSyncService) {
-    this.courtCaseProviderRegistry = courtCaseProviderRegistry;
+    this.courtCaseLookup = courtCaseLookup;
     this.caseRepository = caseRepository;
     this.courtSyncService = courtSyncService;
   }
@@ -37,7 +37,7 @@ public class CourtPollingService {
       lockAtLeastFor = "PT1M",
       lockAtMostFor = "PT2H")
   public void pollTrackedCases() {
-    Set<CourtSystem> enabledSystems = courtCaseProviderRegistry.enabledSystems();
+    Set<CourtSystem> enabledSystems = courtCaseLookup.enabledSystems();
     if (enabledSystems.isEmpty()) {
       return;
     }

@@ -6,14 +6,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.pravoos.ai.court.api.CourtCaseData;
+import com.pravoos.ai.court.api.CourtCaseLookup;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.CaseTask;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
-import com.pravoos.ai.shared.court.CourtCaseData;
-import com.pravoos.ai.shared.court.CourtCaseProviderRegistry;
 import com.pravoos.ai.shared.model.enums.CourtSystem;
 import com.pravoos.ai.shared.service.OutboxEventService;
 import java.lang.reflect.Field;
@@ -30,7 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class CourtSyncServiceTest {
 
-  @Mock private CourtCaseProviderRegistry courtCaseProviderRegistry;
+  @Mock private CourtCaseLookup courtCaseLookup;
   @Mock private CaseRepository caseRepository;
   @Mock private CaseHearingEventRepository hearingEventRepository;
   @Mock private CasePartyRepository casePartyRepository;
@@ -45,7 +45,7 @@ class CourtSyncServiceTest {
   void setUp() {
     service =
         new CourtSyncService(
-            courtCaseProviderRegistry,
+            courtCaseLookup,
             caseRepository,
             hearingEventRepository,
             casePartyRepository,
@@ -82,8 +82,7 @@ class CourtSyncServiceTest {
     caseEntity.setCourtCaseNumber("2-1234/2024");
     caseEntity.setCourtSystem(CourtSystem.GENERAL_JURISDICTION);
     when(caseRepository.findById(caseId)).thenReturn(java.util.Optional.of(caseEntity));
-    when(courtCaseProviderRegistry.enabledFor(CourtSystem.GENERAL_JURISDICTION))
-        .thenReturn(java.util.Optional.empty());
+    when(courtCaseLookup.isEnabled(CourtSystem.GENERAL_JURISDICTION)).thenReturn(false);
 
     service.syncCase(caseId);
 
@@ -97,7 +96,7 @@ class CourtSyncServiceTest {
 
     service.syncCase(caseId);
 
-    verify(courtCaseProviderRegistry, never()).enabledFor(any());
+    verify(courtCaseLookup, never()).isEnabled(any());
   }
 
   @Test

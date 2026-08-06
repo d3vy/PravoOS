@@ -1,5 +1,6 @@
 package com.pravoos.ai.practice.internal.service;
 
+import com.pravoos.ai.court.api.CourtCaseNumberParser;
 import com.pravoos.ai.document.api.DocumentCommand;
 import com.pravoos.ai.document.api.DocumentQuery;
 import com.pravoos.ai.document.api.DocumentResponse;
@@ -16,7 +17,6 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
-import com.pravoos.ai.shared.court.CourtCaseNumberParser;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.CaseTransferNotAllowedException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
@@ -286,6 +286,14 @@ public class CaseService {
       throw new CaseNotFoundException(caseId);
     }
     return caseEntity;
+  }
+
+  public boolean isCaseParticipant(Case caseEntity, UUID lawyerId) {
+    if (caseEntity.getLawyerId().equals(lawyerId)) {
+      return true;
+    }
+    return caseEntity.getOrgId() != null
+        && userServiceClient.isOrgMember(caseEntity.getOrgId(), lawyerId);
   }
 
   public Case requireVisibleCase(UUID caseId, UUID lawyerId, List<UUID> orgIds) {

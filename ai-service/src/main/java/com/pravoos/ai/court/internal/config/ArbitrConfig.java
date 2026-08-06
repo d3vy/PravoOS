@@ -1,18 +1,20 @@
-package com.pravoos.ai.shared.config;
+package com.pravoos.ai.court.internal.config;
 
-import com.pravoos.ai.shared.court.CourtCaseProvider;
-import com.pravoos.ai.shared.court.NoopCourtCaseProvider;
-import com.pravoos.ai.shared.court.arbitr.ApiArbitrCaseProvider;
+import com.pravoos.ai.court.internal.CourtCaseProvider;
+import com.pravoos.ai.court.internal.NoopCourtCaseProvider;
+import com.pravoos.ai.court.internal.arbitr.ApiArbitrCaseProvider;
 import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
+@EnableConfigurationProperties(ArbitrProperties.class)
 public class ArbitrConfig {
 
   private static final Logger log = LoggerFactory.getLogger(ArbitrConfig.class);

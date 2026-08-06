@@ -1,9 +1,9 @@
-package com.pravoos.ai.shared.court.arbitr;
+package com.pravoos.ai.court.internal.arbitr;
 
-import com.pravoos.ai.shared.config.ArbitrProperties;
-import com.pravoos.ai.shared.court.CourtCaseData;
-import com.pravoos.ai.shared.court.CourtCaseProvider;
-import com.pravoos.ai.shared.court.arbitr.dto.ArbitrApiResponse;
+import com.pravoos.ai.court.api.CourtCaseData;
+import com.pravoos.ai.court.internal.CourtCaseProvider;
+import com.pravoos.ai.court.internal.arbitr.dto.ArbitrApiResponse;
+import com.pravoos.ai.court.internal.config.ArbitrProperties;
 import com.pravoos.ai.shared.exception.CourtIntegrationException;
 import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.nio.charset.StandardCharsets;

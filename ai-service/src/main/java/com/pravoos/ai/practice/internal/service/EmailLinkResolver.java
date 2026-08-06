@@ -1,5 +1,6 @@
 package com.pravoos.ai.practice.internal.service;
 
+import com.pravoos.ai.court.api.CourtCaseNumberParser;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.practice.internal.model.entity.EmailMessage;
@@ -7,7 +8,6 @@ import com.pravoos.ai.practice.internal.model.entity.Mailbox;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.EmailMessageRepository;
-import com.pravoos.ai.shared.court.CourtCaseNumberParser;
 import com.pravoos.ai.shared.mail.EmailAddresses;
 import com.pravoos.ai.shared.model.enums.EmailLinkSource;
 import java.util.LinkedHashMap;
