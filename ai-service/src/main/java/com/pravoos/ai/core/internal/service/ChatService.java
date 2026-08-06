@@ -140,16 +140,20 @@ public class ChatService {
         completion.usage().promptTokens(),
         completion.usage().completionTokens());
 
-    Conversation persisted =
+    PersistedExchange persisted =
         persistExchange(
             conversation, isNewConversation, request.message(), parsed.answer(), context.sources());
 
     log.info(
         "Chat response generated for conversation: {} ({} source(s))",
-        persisted.getId(),
+        persisted.conversation().getId(),
         context.sources().size());
     return new ChatResponse(
-        persisted.getId(), parsed.answer(), context.sources(), parsed.followUps());
+        persisted.conversation().getId(),
+        persisted.assistantMessageId(),
+        parsed.answer(),
+        context.sources(),
+        parsed.followUps());
   }
 
   public SseEmitter chatStream(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
@@ -214,7 +218,7 @@ public class ChatService {
       llmQuotaService.recordUsage(lawyerId, usage.totalTokens());
 
       FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(accumulator.rawContent());
-      Conversation persisted =
+      PersistedExchange persisted =
           persistExchange(
               conversation,
               isNewConversation,
@@ -224,7 +228,7 @@ public class ChatService {
 
       log.info(
           "Chat stream completed for conversation {} ({} source(s), {} tokens)",
-          persisted.getId(),
+          persisted.conversation().getId(),
           context.sources().size(),
           usage.totalTokens());
       emitter.send(
@@ -232,7 +236,11 @@ public class ChatService {
               .name("done")
               .data(
                   new ChatResponse(
-                      persisted.getId(), parsed.answer(), context.sources(), parsed.followUps())));
+                      persisted.conversation().getId(),
+                      persisted.assistantMessageId(),
+                      parsed.answer(),
+                      context.sources(),
+                      parsed.followUps())));
       emitter.complete();
     } catch (StreamAbortedException e) {
       log.info("Chat stream aborted by client for lawyer {}", lawyerId);
@@ -417,7 +425,7 @@ public class ChatService {
     return result.isBlank() ? chunk.documentTitle() : result;
   }
 
-  private Conversation persistExchange(
+  private PersistedExchange persistExchange(
       Conversation conversation,
       boolean isNewConversation,
       String userMessage,
@@ -427,9 +435,13 @@ public class ChatService {
         isNewConversation ? conversationRepository.save(conversation) : conversation;
     messageRepository.save(
         new Message(persisted.getId(), MessageRole.USER, userMessage, List.of()));
-    messageRepository.save(new Message(persisted.getId(), MessageRole.ASSISTANT, answer, sources));
-    return persisted;
+    Message assistantMessage =
+        messageRepository.save(
+            new Message(persisted.getId(), MessageRole.ASSISTANT, answer, sources));
+    return new PersistedExchange(persisted, assistantMessage.getId());
   }
+
+  private record PersistedExchange(Conversation conversation, String assistantMessageId) {}
 
   private record PreparedContext(
       String systemPrompt, List<String> sources, List<LlmMessage> history) {}

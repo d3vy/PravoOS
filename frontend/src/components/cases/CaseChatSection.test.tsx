@@ -88,6 +88,7 @@ describe('CaseChatSection', () => {
         callbacks.onToken('поставки — 10 дней.')
         callbacks.onDone({
           conversationId: 'conv-new',
+          messageId: 'msg-new',
           answer: 'Срок поставки — 10 дней.',
           sources: ['Материалы дела: Договор'],
           followUps: ['Какая неустойка предусмотрена?'],

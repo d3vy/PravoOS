@@ -90,6 +90,7 @@ class CaseChatContextTest {
     when(llmClient.complete(anyString(), anyList(), anyString()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(caseContextProvider.loadContext(eq(caseId), eq(lawyerId), anyList()))
         .thenReturn(new CaseContext("Карточка дела", "Хронология", "Задачи"));
     when(ragService.buildCaseSystemPrompt(

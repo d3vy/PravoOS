@@ -161,7 +161,7 @@ export default function ChatPage(): JSX.Element {
             prev.map((m) =>
               m.id === streamingId
                 ? {
-                    id: `assistant-${baseId}`,
+                    id: data.messageId ?? `assistant-${baseId}`,
                     role: 'ASSISTANT' as const,
                     content: data.answer,
                     sources: data.sources,
@@ -229,17 +229,26 @@ export default function ChatPage(): JSX.Element {
     uploadMutation.mutate(file)
   }
 
-  const lastAssistantFollowUps = (() => {
+  const lastSettledAssistant = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'ASSISTANT' && !messages[i].isStreaming) {
-        return messages[i].followUps ?? []
+        return messages[i]
       }
     }
-    return []
+    return null
   })()
+
+  const lastAssistantFollowUps = lastSettledAssistant?.followUps ?? []
+
+  const liveAnnouncement = isSending
+    ? t('chat.a11yGenerating')
+    : lastSettledAssistant?.content ?? ''
 
   return (
     <div className="h-[calc(100vh-64px)] bg-bg flex flex-col">
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {liveAnnouncement}
+      </p>
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         {!sidebarOpen && (

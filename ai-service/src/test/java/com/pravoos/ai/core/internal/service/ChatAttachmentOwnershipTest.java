@@ -87,6 +87,7 @@ class ChatAttachmentOwnershipTest {
     when(llmClient.complete(anyString(), anyList(), anyString()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
     service.chat(
         new ChatRequest(null, "Проверь договор", List.of(documentId), null, null),

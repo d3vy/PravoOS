@@ -115,7 +115,7 @@ export function ScopedChatPanel({
               prev.map((m) =>
                 m.id === streamingId
                   ? {
-                      id: `assistant-${baseId}`,
+                      id: data.messageId ?? `assistant-${baseId}`,
                       role: 'ASSISTANT' as const,
                       content: data.answer,
                       sources: data.sources,

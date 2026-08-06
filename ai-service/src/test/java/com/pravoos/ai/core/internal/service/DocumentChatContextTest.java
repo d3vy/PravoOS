@@ -95,6 +95,7 @@ class DocumentChatContextTest {
     when(llmClient.complete(anyString(), anyList(), anyString()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt())).thenReturn(List.of());
     when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
         .thenReturn(DocumentChunkMatches.empty());
