@@ -42,8 +42,7 @@ class MfaChallengeServiceTest {
     String token = service.createChallenge(userId);
 
     assertThat(token).isNotBlank();
-    verify(valueOperations)
-        .set("mfa_challenge:" + token, userId.toString(), Duration.ofMinutes(5));
+    verify(valueOperations).set("mfa_challenge:" + token, userId.toString(), Duration.ofMinutes(5));
   }
 
   @Test

@@ -3,7 +3,6 @@ package com.pravoos.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -152,7 +151,8 @@ class AdminServiceTest {
     verify(tokenDenylistService).revokeAccessTokensFor(userId);
 
     ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-    verify(outboxEventService).enqueue(eq("lawyer.deleted"), eq(userId.toString()), payloadCaptor.capture());
+    verify(outboxEventService)
+        .enqueue(eq("lawyer.deleted"), eq(userId.toString()), payloadCaptor.capture());
     LawyerDeletedKafkaPayload payload = (LawyerDeletedKafkaPayload) payloadCaptor.getValue();
     assertThat(payload.userId()).isEqualTo(userId);
     assertThat(payload.orgCaseOwners()).isEqualTo(orgCaseOwners);

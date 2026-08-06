@@ -38,8 +38,7 @@ class LoginAttemptServiceTest {
 
   @BeforeEach
   void setUp() {
-    properties =
-        new BruteForceProperties(5, Duration.ofMinutes(15), Duration.ofMinutes(10), true);
+    properties = new BruteForceProperties(5, Duration.ofMinutes(15), Duration.ofMinutes(10), true);
     service = new LoginAttemptService(redisTemplate, properties);
   }
 
