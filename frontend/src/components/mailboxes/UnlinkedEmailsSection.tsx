@@ -50,7 +50,7 @@ export function UnlinkedEmailsSection(): JSX.Element {
   }
 
   if (emails.length === 0) {
-    return <EmptyState description={t('emails.unlinkedEmpty')} />
+    return <EmptyState illustration="mail" description={t('emails.unlinkedEmpty')} />
   }
 
   return (

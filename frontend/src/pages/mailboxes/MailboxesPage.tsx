@@ -12,6 +12,7 @@ import { useToast } from '../../hooks/useToast'
 import { MailboxStatusBadge } from '../../components/mailboxes/MailboxStatusBadge'
 import { MailboxForm } from '../../components/mailboxes/MailboxForm'
 import { UnlinkedEmailsSection } from '../../components/mailboxes/UnlinkedEmailsSection'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 type Tab = 'mailboxes' | 'unlinked'
 
@@ -41,12 +42,26 @@ export default function MailboxesPage(): JSX.Element {
     queryClient.invalidateQueries({ queryKey: ['mailboxes'] })
   }
 
+  const testMutation = useMutation({
+    mutationFn: mailboxesApi.test,
+    onSuccess: (result) => {
+      invalidate()
+      if (result.success) {
+        toast.success(t('mailboxes.testSuccess'))
+      } else {
+        toast.error(result.message ?? t('mailboxes.testFailed'))
+      }
+    },
+    onError: () => toast.error(t('mailboxes.testFailed')),
+  })
+
   const createMutation = useMutation({
     mutationFn: mailboxesApi.create,
-    onSuccess: () => {
+    onSuccess: (created) => {
       invalidate()
       setShowCreate(false)
       setFormError(null)
+      testMutation.mutate(created.id)
     },
     onError: () => setFormError(t('mailboxes.createError')),
   })
@@ -60,19 +75,6 @@ export default function MailboxesPage(): JSX.Element {
       setFormError(null)
     },
     onError: () => setFormError(t('mailboxes.updateError')),
-  })
-
-  const testMutation = useMutation({
-    mutationFn: mailboxesApi.test,
-    onSuccess: (result) => {
-      invalidate()
-      if (result.success) {
-        toast.success(t('mailboxes.testSuccess'))
-      } else {
-        toast.error(result.message ?? t('mailboxes.testFailed'))
-      }
-    },
-    onError: () => toast.error(t('mailboxes.testFailed')),
   })
 
   const syncMutation = useMutation({
@@ -110,17 +112,18 @@ export default function MailboxesPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-3xl">
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-semibold text-fg mb-1">{t('mailboxes.title')}</h1>
-            <p className="text-sm text-fg-muted">{t('mailboxes.subtitle')}</p>
-          </div>
-          {tab === 'mailboxes' && (
-            <Button size="sm" onClick={() => setShowCreate(true)}>
-              {t('mailboxes.addMailbox')}
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          title={t('mailboxes.title')}
+          description={t('mailboxes.subtitle')}
+          className="mb-6"
+          actions={
+            tab === 'mailboxes' && (
+              <Button size="sm" onClick={() => setShowCreate(true)}>
+                {t('mailboxes.addMailbox')}
+              </Button>
+            )
+          }
+        />
 
         <div className="flex gap-1 border-b border-line mb-6">
           {tabs.map((item) => (
@@ -141,7 +144,7 @@ export default function MailboxesPage(): JSX.Element {
           isLoading ? (
             <SkeletonList count={3} />
           ) : mailboxes.length === 0 ? (
-            <EmptyState
+            <EmptyState illustration="mail"
               description={t('mailboxes.empty')}
               action={{ label: t('mailboxes.addMailbox'), onClick: () => setShowCreate(true) }}
             />

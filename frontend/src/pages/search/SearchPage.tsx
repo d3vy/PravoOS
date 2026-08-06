@@ -6,6 +6,7 @@ import { searchApi } from '../../api/search'
 import type { GlobalSearchResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import { CaseStatusBadge } from '../../components/ui/Badge'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const MIN_QUERY_LENGTH = 2
 
@@ -38,10 +39,11 @@ export default function SearchPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-3xl">
-        <h1 className="text-3xl font-semibold text-fg mb-1">{t('search.title')}</h1>
-        <p className="text-sm text-fg-muted mb-6">
-          {t('search.subtitle')}
-        </p>
+        <PageHeader
+          title={t('search.title')}
+          description={t('search.subtitle')}
+          className="mb-6"
+        />
 
         <input
           type="search"

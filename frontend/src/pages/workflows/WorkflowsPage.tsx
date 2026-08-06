@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { useConfirm } from '../../hooks/useConfirm'
+import { PageHeader } from '../../components/ui/PageHeader'
 import type {
   DraftTypeInfo,
   SaveWorkflowDefinitionRequest,
@@ -61,20 +62,18 @@ export default function WorkflowsPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div>
-            <p className="eyebrow mb-1">{t('workflowBuilder.eyebrow')}</p>
-            <h1 className="text-3xl font-semibold text-fg">{t('workflowBuilder.title')}</h1>
-            <p className="text-sm text-fg-muted mt-1">
-              {t('workflowBuilder.subtitle')}
-            </p>
-          </div>
-          {editor === null && (
-            <Button size="sm" onClick={() => setEditor({ mode: 'new' })}>
-              {t('workflowBuilder.newProcess')}
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          eyebrow={t('workflowBuilder.eyebrow')}
+          title={t('workflowBuilder.title')}
+          description={t('workflowBuilder.subtitle')}
+          actions={
+            editor === null && (
+              <Button size="sm" onClick={() => setEditor({ mode: 'new' })}>
+                {t('workflowBuilder.newProcess')}
+              </Button>
+            )
+          }
+        />
 
         {editor !== null && (
           <WorkflowEditor

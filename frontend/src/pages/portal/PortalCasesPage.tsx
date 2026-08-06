@@ -8,6 +8,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { portalApi } from '../../api/portal'
 import i18n from '../../i18n'
 import type { PortalCaseResponse } from '../../types'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 function formatDate(value: string | null): string {
   const locale = i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US'
@@ -23,7 +24,7 @@ export default function PortalCasesPage(): JSX.Element {
 
   return (
     <PortalLayout>
-      <h1 className="text-2xl font-semibold text-fg mb-6">{t('portalCases.title')}</h1>
+      <PageHeader size="md" title={t('portalCases.title')} className="mb-6" />
 
       {isLoading && (
         <div className="flex justify-center py-16">
@@ -38,7 +39,7 @@ export default function PortalCasesPage(): JSX.Element {
       )}
 
       {!isLoading && !isError && cases.length === 0 && (
-        <EmptyState description={t('portalCases.empty')} />
+        <EmptyState illustration="cases" description={t('portalCases.empty')} />
       )}
 
       {!isLoading && !isError && cases.length > 0 && (

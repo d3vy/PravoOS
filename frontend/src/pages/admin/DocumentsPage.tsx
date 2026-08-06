@@ -17,6 +17,7 @@ import { DocumentSummaryCard } from '../../components/documents/DocumentSummaryC
 import { TableToolbar } from '../../components/ui/TableToolbar'
 import { useDensity } from '../../hooks/useDensity'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
@@ -127,7 +128,7 @@ export default function DocumentsPage(): JSX.Element {
         if (fileInputRef.current) fileInputRef.current.value = ''
       }
     },
-    [queryClient]
+    [queryClient, t]
   )
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>): void => {
@@ -162,12 +163,7 @@ export default function DocumentsPage(): JSX.Element {
 
   return (
     <div className="p-6 lg:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-fg mb-1">{t('documents.title')}</h1>
-        <p className="text-sm text-fg-muted">
-          {t('documents.subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('documents.title')} description={t('documents.subtitle')} />
 
       {/* Upload zone */}
       <div
@@ -288,7 +284,7 @@ export default function DocumentsPage(): JSX.Element {
                   isDeleting={deleteMutation.isPending && deleteMutation.variables === doc.id}
                 />
               )}
-              emptyState={<EmptyState description={t('documents.empty')} />}
+              emptyState={<EmptyState illustration="documents" description={t('documents.empty')} />}
             />
           </>
         )}

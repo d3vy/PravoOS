@@ -9,6 +9,7 @@ import { LANGUAGE_LABELS } from '../../i18n/config'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { PrivacyTab } from './PrivacyTab'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 type SettingsTab = 'notifications' | 'integrations' | 'language' | 'privacy'
 
@@ -26,7 +27,7 @@ export default function SettingsPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-lg">
-        <h1 className="text-3xl font-semibold text-fg mb-6">{t('settings.title')}</h1>
+        <PageHeader title={t('settings.title')} className="mb-6" />
 
         <div className="flex gap-1 border-b border-line mb-8">
           {tabs.map((tab) => (

@@ -6,6 +6,7 @@ import { casesApi } from '../../api/cases'
 import type { CaseThreadResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import i18n from '../../i18n'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 function formatTimestamp(value: string): string {
   const date = new Date(value)
@@ -31,12 +32,7 @@ export default function MessagesPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-3xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-fg mb-1">{t('messages.title')}</h1>
-          <p className="text-sm text-fg-muted">
-            {t('messages.subtitle')}
-          </p>
-        </div>
+        <PageHeader title={t('messages.title')} description={t('messages.subtitle')} />
 
         {isLoading ? (
           <div className="flex justify-center py-16">

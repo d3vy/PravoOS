@@ -21,6 +21,7 @@ import { useToast } from '../../hooks/useToast'
 import { useDensity } from '../../hooks/useDensity'
 import { useSavedViews, type SavedView } from '../../hooks/useSavedViews'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const TABLE_KEY = 'clients'
 const DEFAULT_COLUMN_IDS = ['name', 'type', 'phone', 'email', 'caseCount']
@@ -67,7 +68,7 @@ export default function ClientsPage(): JSX.Element {
     queryFn: () => clientsApi.list(page, MAX_PAGE_SIZE),
     placeholderData: keepPreviousData,
   })
-  const clientsOnPage = clientsPage?.items ?? []
+  const clientsOnPage = useMemo(() => clientsPage?.items ?? [], [clientsPage])
   const total = clientsPage?.total ?? 0
 
   const { data: organizations = [] } = useQuery<Organization[]>({
@@ -223,17 +224,15 @@ export default function ClientsPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold text-fg mb-1">{t('clients.title')}</h1>
-            <p className="text-sm text-fg-muted">
-              {t('clients.subtitle')}
-            </p>
-          </div>
-          <Button variant="primary" onClick={() => setShowForm(true)}>
-            {t('clients.newClient')}
-          </Button>
-        </div>
+        <PageHeader
+          title={t('clients.title')}
+          description={t('clients.subtitle')}
+          actions={
+            <Button variant="primary" onClick={() => setShowForm(true)}>
+              {t('clients.newClient')}
+            </Button>
+          }
+        />
 
         <Modal open={showForm} onClose={() => setShowForm(false)} title={t('clients.newClient')}>
           <ClientForm
@@ -294,9 +293,9 @@ export default function ClientsPage(): JSX.Element {
             density={density}
             emptyState={
               normalizedSearch ? (
-                <EmptyState description={t('clients.notFound')} />
+                <EmptyState illustration="clients" description={t('clients.notFound')} />
               ) : (
-                <EmptyState
+                <EmptyState illustration="clients"
                   title={t('clients.emptyTitle')}
                   description={t('clients.emptyDescription')}
                   action={{ label: t('clients.newClient'), onClick: () => setShowForm(true) }}

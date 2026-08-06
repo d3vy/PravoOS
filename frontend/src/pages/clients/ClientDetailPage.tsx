@@ -12,6 +12,7 @@ import { ClientContactsSection } from '../../components/clients/ClientContactsSe
 import { ClientEmailSection } from '../../components/clients/ClientEmailSection'
 import { ClientPortalSection } from '../../components/clients/ClientPortalSection'
 import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 export default function ClientDetailPage(): JSX.Element {
   const { t } = useTranslation()
@@ -89,36 +90,31 @@ export default function ClientDetailPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
-        <Link
-          to="/clients"
-          className="text-sm text-fg-muted hover:text-accent mb-4 inline-block"
-        >
-          {t('clientDetail.backToClients')}
-        </Link>
-
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-3xl font-semibold text-fg">{client.name}</h1>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-surface border border-line text-fg-muted">
-                {client.typeName}
-              </span>
-            </div>
-            <p className="text-xs text-fg-muted">
-              {t('clientDetail.addedOn', { date: new Date(client.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US') })}
-            </p>
-          </div>
-          {!isEditing && (
-            <div className="flex gap-2 shrink-0">
-              <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
-                {t('clientDetail.edit')}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowDeleteDialog(true)}>
-                {t('clientDetail.delete')}
-              </Button>
-            </div>
-          )}
-        </div>
+        <PageHeader
+          breadcrumbs={[
+            { label: t('nav.clients'), to: '/clients' },
+            { label: client.name },
+          ]}
+          title={client.name}
+          titleSuffix={
+            <span className="text-xs px-2 py-0.5 rounded-full bg-surface border border-line text-fg-muted">
+              {client.typeName}
+            </span>
+          }
+          description={t('clientDetail.addedOn', { date: new Date(client.createdAt).toLocaleDateString(i18n.language.startsWith('ru') ? 'ru-RU' : 'en-US') })}
+          actions={
+            !isEditing && (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
+                  {t('clientDetail.edit')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowDeleteDialog(true)}>
+                  {t('clientDetail.delete')}
+                </Button>
+              </>
+            )
+          }
+        />
 
         {isEditing ? (
           <section className="mb-10 p-6 rounded-xl bg-surface border border-line">

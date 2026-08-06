@@ -7,6 +7,7 @@ import { casesApi } from '../../api/cases'
 import type { CaseDraftDto, CaseDraftVersionDto } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const AI_PRESET_KEYS: { labelKey: string; instructionKey: string }[] = [
   { labelKey: 'draftEditor.presetStrengthenLabel', instructionKey: 'draftEditor.presetStrengthenInstruction' },
@@ -145,26 +146,32 @@ export default function DraftEditorPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-          <div>
-            <Link to={`/cases/${caseId}`} className="text-xs text-accent">
-              {t('draftEditor.backToCase')}
-            </Link>
-            <h1 className="text-lg font-semibold text-fg mt-1">{draft.title}</h1>
-            <p className="text-xs text-fg-muted">
+        <PageHeader
+          size="md"
+          className="mb-6"
+          breadcrumbs={[
+            { label: t('nav.cases'), to: '/cases' },
+            { label: t('draftEditor.caseCrumb'), to: `/cases/${caseId}` },
+            { label: draft.title },
+          ]}
+          title={draft.title}
+          description={
+            <>
               {draft.draftTypeName}
               {draft.updatedAt && t('draftEditor.changedAt', { date: new Date(draft.updatedAt).toLocaleString(locale()) })}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowVersions((v) => !v)}>
-              {t('draftEditor.versionHistory')}
-            </Button>
-            <Button variant="secondary" size="sm" loading={downloading} onClick={() => void handleDownload()}>
-              {t('draftEditor.downloadDocx')}
-            </Button>
-          </div>
-        </div>
+            </>
+          }
+          actions={
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setShowVersions((v) => !v)}>
+                {t('draftEditor.versionHistory')}
+              </Button>
+              <Button variant="secondary" size="sm" loading={downloading} onClick={() => void handleDownload()}>
+                {t('draftEditor.downloadDocx')}
+              </Button>
+            </>
+          }
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col gap-3">

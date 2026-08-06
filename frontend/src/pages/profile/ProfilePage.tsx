@@ -12,6 +12,7 @@ import type {
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 export default function ProfilePage(): JSX.Element {
   const { t } = useTranslation()
@@ -45,9 +46,7 @@ export default function ProfilePage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-lg">
-        <h1 className="text-3xl font-semibold text-fg mb-8">
-          {t('profile.title')}
-        </h1>
+        <PageHeader title={t('profile.title')} />
         <ProfileForm profile={profile} queryClient={queryClient} />
         <div className="mt-10 pt-8 border-t border-line">
           <TelegramSection profile={profile} queryClient={queryClient} />
@@ -261,6 +260,11 @@ function SessionRow({
       <div className="min-w-0">
         <p className="text-sm text-fg truncate">
           {session.userAgent ?? t('profile.unknownDevice')}
+          {session.current && (
+            <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-xs text-accent">
+              {t('profile.currentSession')}
+            </span>
+          )}
         </p>
         <p className="text-xs text-fg-muted truncate">
           IP: {session.ipAddress ?? '—'} · {t('profile.loginAt')} {new Date(session.createdAt).toLocaleString(locale)}

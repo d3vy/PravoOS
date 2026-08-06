@@ -9,6 +9,7 @@ import { casesApi } from '../../api/cases'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import type { CalendarEvent, CalendarEventType } from '../../types'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 type ViewMode = 'month' | 'week'
 
@@ -126,15 +127,16 @@ export default function CalendarPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow mb-1">{t('calendar.eyebrow')}</p>
-            <h1 className="text-3xl font-semibold text-fg">{t('calendar.title')}</h1>
-          </div>
-          <Button variant="secondary" size="sm" onClick={handleExport}>
-            {t('calendar.exportIcal')}
-          </Button>
-        </div>
+        <PageHeader
+          eyebrow={t('calendar.eyebrow')}
+          title={t('calendar.title')}
+          className="mb-6"
+          actions={
+            <Button variant="secondary" size="sm" onClick={handleExport}>
+              {t('calendar.exportIcal')}
+            </Button>
+          }
+        />
 
         <div className="card-elevated p-4 mb-6 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1 rounded-lg border border-line p-1">

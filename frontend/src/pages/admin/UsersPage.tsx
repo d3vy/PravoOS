@@ -14,6 +14,7 @@ import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
 import { TableToolbar } from '../../components/ui/TableToolbar'
 import { useDensity } from '../../hooks/useDensity'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 export default function UsersPage(): JSX.Element {
   const { t } = useTranslation()
@@ -129,41 +130,38 @@ export default function UsersPage(): JSX.Element {
 
   return (
     <div className="p-6 lg:p-8">
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold text-fg mb-1">{t('adminUsers.title')}</h1>
-          <p className="text-sm text-fg-muted">
-            {selectedCount > 0 ? t('adminUsers.selectPrompt') : t('adminUsers.subtitle')}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <TableToolbar
-            columns={columns}
-            visibleColumnIds={preferences.visibleColumnIds}
-            onToggleColumn={toggleColumn}
-            groupBy={preferences.groupBy}
-            onGroupByChange={setGroupBy}
-            density={density}
-            onDensityToggle={toggleDensity}
-          />
-          {selectedCount > 0 && (
-            <>
-              <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
-                {t('adminUsers.cancel')}
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                loading={deleteMutation.isPending}
-                onClick={() => setConfirmOpen(true)}
-              >
-                {t('adminUsers.delete')} ({selectedCount})
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title={t('adminUsers.title')}
+        description={selectedCount > 0 ? t('adminUsers.selectPrompt') : t('adminUsers.subtitle')}
+        actions={
+          <>
+            <TableToolbar
+              columns={columns}
+              visibleColumnIds={preferences.visibleColumnIds}
+              onToggleColumn={toggleColumn}
+              groupBy={preferences.groupBy}
+              onGroupByChange={setGroupBy}
+              density={density}
+              onDensityToggle={toggleDensity}
+            />
+            {selectedCount > 0 && (
+              <>
+                <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
+                  {t('adminUsers.cancel')}
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  loading={deleteMutation.isPending}
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  {t('adminUsers.delete')} ({selectedCount})
+                </Button>
+              </>
+            )}
+          </>
+        }
+      />
 
       <AnimatePresence>
         {deleteError && (
@@ -196,7 +194,7 @@ export default function UsersPage(): JSX.Element {
           onToggleAll={toggleSelectAll}
           selectionLabel={(row) => row.fullName ?? row.email}
           density={density}
-          emptyState={<EmptyState description={t('adminUsers.empty')} />}
+          emptyState={<EmptyState illustration="users" description={t('adminUsers.empty')} />}
         />
       )}
 

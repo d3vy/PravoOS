@@ -12,6 +12,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { useDensity } from '../../hooks/useDensity'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
 import type { TemplateResponse } from '../../types'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const PLACEHOLDERS = [
   '{{client_name}}',
@@ -83,17 +84,17 @@ export default function TemplatesPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8 max-w-4xl">
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div>
-            <p className="eyebrow mb-1">{t('templates.eyebrow')}</p>
-            <h1 className="text-3xl font-semibold text-fg">{t('templates.title')}</h1>
-          </div>
-          {editor === null && (
-            <Button size="sm" onClick={() => setEditor({ mode: 'new' })}>
-              {t('templates.newTemplate')}
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          eyebrow={t('templates.eyebrow')}
+          title={t('templates.title')}
+          actions={
+            editor === null && (
+              <Button size="sm" onClick={() => setEditor({ mode: 'new' })}>
+                {t('templates.newTemplate')}
+              </Button>
+            )
+          }
+        />
 
         {editor !== null && (
           <TemplateEditor
@@ -150,7 +151,7 @@ export default function TemplatesPage(): JSX.Element {
                   </Button>
                 </>
               )}
-              emptyState={<EmptyState description={t('templates.empty')} />}
+              emptyState={<EmptyState illustration="templates" description={t('templates.empty')} />}
             />
           </>
         )}

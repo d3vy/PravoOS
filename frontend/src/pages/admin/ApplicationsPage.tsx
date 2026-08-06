@@ -15,6 +15,7 @@ import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
 import { TableToolbar } from '../../components/ui/TableToolbar'
 import { useDensity } from '../../hooks/useDensity'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 type Tab = 'all' | 'pending'
 
@@ -207,12 +208,10 @@ export default function ApplicationsPage(): JSX.Element {
 
   return (
     <div className="p-6 lg:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-fg mb-1">{t('adminApplications.title')}</h1>
-        <p className="text-sm text-fg-muted">
-          {t('adminApplications.subtitle')}
-        </p>
-      </div>
+      <PageHeader
+        title={t('adminApplications.title')}
+        description={t('adminApplications.subtitle')}
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-bg rounded-lg w-fit mb-6 border border-line">
@@ -318,7 +317,7 @@ export default function ApplicationsPage(): JSX.Element {
             ) : null
           }
           emptyState={
-            <EmptyState
+            <EmptyState illustration="users"
               description={
                 activeTab === 'pending' ? t('adminApplications.emptyPending') : t('adminApplications.emptyAll')
               }

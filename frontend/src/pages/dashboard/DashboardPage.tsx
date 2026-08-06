@@ -10,6 +10,7 @@ import type { DashboardResponse } from '../../types'
 import type { TFunction } from 'i18next'
 import { WidgetGrid } from './widgets/WidgetGrid'
 import { WidgetPickerModal } from './widgets/WidgetPickerModal'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 export function greeting(hour: number, t: TFunction): string {
   if (hour >= 5 && hour < 12) return t('dashboard.greetingMorning')
@@ -30,22 +31,23 @@ export default function DashboardPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
-        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="eyebrow mb-1">{t('dashboard.eyebrow')}</p>
-            <h1 className="text-3xl font-semibold text-fg">{t('dashboard.title')}</h1>
-          </div>
-          {!isLoading && !isError && (
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={toggleDensity}>
-                {density === 'compact' ? t('dashboard.densityComfortable') : t('dashboard.densityCompact')}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
-                {t('dashboard.widgetsCustomize')}
-              </Button>
-            </div>
-          )}
-        </div>
+        <PageHeader
+          eyebrow={t('dashboard.eyebrow')}
+          title={t('dashboard.title')}
+          actions={
+            !isLoading &&
+            !isError && (
+              <>
+                <Button variant="secondary" size="sm" onClick={toggleDensity}>
+                  {density === 'compact' ? t('dashboard.densityComfortable') : t('dashboard.densityCompact')}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+                  {t('dashboard.widgetsCustomize')}
+                </Button>
+              </>
+            )
+          }
+        />
 
         {isLoading && <DashboardSkeleton />}
 

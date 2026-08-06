@@ -10,6 +10,7 @@ import { PortalSignatureSection } from '../../components/portal/PortalSignatureS
 import { portalApi } from '../../api/portal'
 import i18n from '../../i18n'
 import type { DocumentResponse, PortalCaseDetailResponse } from '../../types'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt']
 
@@ -177,12 +178,16 @@ export default function PortalCaseDetailPage(): JSX.Element {
 
       {caseData && (
         <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="text-2xl font-semibold text-fg">
-              {caseData.title}
-            </h1>
-            <CaseStatusBadge status={caseData.status} />
-          </div>
+          <PageHeader
+            size="md"
+            className=""
+            breadcrumbs={[
+              { label: t('portalCases.title'), to: '/portal/cases' },
+              { label: caseData.title },
+            ]}
+            title={caseData.title}
+            titleSuffix={<CaseStatusBadge status={caseData.status} />}
+          />
 
           {caseData.description && (
             <p className="text-fg-muted leading-relaxed whitespace-pre-line">
