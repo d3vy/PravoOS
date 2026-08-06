@@ -21,4 +21,10 @@ public interface DocumentCommand {
   DocumentRef clientVisibleRef(UUID documentId, UUID caseId);
 
   String contentSha256(UUID documentId, UUID caseId);
+
+  DocumentContent loadCaseContent(UUID documentId, UUID caseId);
+
+  DocumentRef caseRef(UUID documentId, UUID caseId);
+
+  String caseContentSha256(UUID documentId, UUID caseId);
 }

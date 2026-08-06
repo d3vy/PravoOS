@@ -105,6 +105,26 @@ class DocumentAccessImpl implements DocumentAccess {
     return matches.size() == 1 ? Optional.of(toLegislationRef(matches.get(0))) : Optional.empty();
   }
 
+  @Override
+  public Optional<LegislationRef> supersededLegislation(String articleNumber, String actCanonical) {
+    if (articleNumber == null || articleNumber.isBlank()) {
+      return Optional.empty();
+    }
+    String article = articleNumber.trim();
+    if (actCanonical != null && !actCanonical.isBlank()) {
+      return documentRepository
+          .findFirstByDocumentKindAndActCanonicalAndArticleNumberAndSupersededTrueOrderByEditionDateDesc(
+              DocumentKind.LEGISLATION, actCanonical.trim(), article)
+          .map(this::toLegislationRef);
+    }
+    List<Document> matches =
+        documentRepository
+            .findByDocumentKindAndArticleNumberAndSupersededTrueOrderByEditionDateDesc(
+                DocumentKind.LEGISLATION, article);
+    boolean singleAct = matches.stream().map(Document::getActCanonical).distinct().count() == 1L;
+    return singleAct ? Optional.of(toLegislationRef(matches.get(0))) : Optional.empty();
+  }
+
   private LegislationRef toLegislationRef(Document document) {
     return new LegislationRef(
         document.getActCanonical(), document.getArticleNumber(), document.getEditionDate());

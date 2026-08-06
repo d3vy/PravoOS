@@ -353,13 +353,49 @@ public class DocumentService {
 
   @Transactional(readOnly = true)
   public String contentSha256(UUID documentId, UUID caseId) {
-    Document document = requireClientVisibleDocument(documentId, caseId);
+    return decryptedSha256(requireClientVisibleDocument(documentId, caseId));
+  }
+
+  @Transactional(readOnly = true)
+  public DocumentContent loadCaseContent(UUID documentId, UUID caseId) {
+    return buildContent(requireCaseDocument(documentId, caseId));
+  }
+
+  @Transactional(readOnly = true)
+  public DocumentRef caseRef(UUID documentId, UUID caseId) {
+    Document document = requireCaseDocument(documentId, caseId);
+    return new DocumentRef(
+        document.getId(), document.getCaseId(), document.getUploadedBy(), document.getTitle());
+  }
+
+  @Transactional(readOnly = true)
+  public String caseContentSha256(UUID documentId, UUID caseId) {
+    return decryptedSha256(requireCaseDocument(documentId, caseId));
+  }
+
+  private String decryptedSha256(Document document) {
     Path path = Paths.get(document.getFilePath());
     if (!Files.isReadable(path)) {
       log.warn("Document {} has missing file on disk: {}", document.getId(), path);
       throw new DocumentNotFoundException(document.getId());
     }
     return Sha256.hex(fileCryptoService.decryptFile(path));
+  }
+
+  private Document requireCaseDocument(UUID documentId, UUID caseId) {
+    Document document =
+        documentRepository
+            .findById(documentId)
+            .orElseThrow(() -> new DocumentNotFoundException(documentId));
+    if (!caseId.equals(document.getCaseId())) {
+      log.warn(
+          "Case document access denied: doc {} (case {}) for requested case {}",
+          documentId,
+          document.getCaseId(),
+          caseId);
+      throw new DocumentNotFoundException(documentId);
+    }
+    return document;
   }
 
   private Document requireClientVisibleDocument(UUID documentId, UUID caseId) {

@@ -19,6 +19,13 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
   Optional<Document> findByDocumentKindAndActCanonicalAndArticleNumberAndSupersededFalse(
       DocumentKind documentKind, String actCanonical, String articleNumber);
 
+  Optional<Document>
+      findFirstByDocumentKindAndActCanonicalAndArticleNumberAndSupersededTrueOrderByEditionDateDesc(
+          DocumentKind documentKind, String actCanonical, String articleNumber);
+
+  List<Document> findByDocumentKindAndArticleNumberAndSupersededTrueOrderByEditionDateDesc(
+      DocumentKind documentKind, String articleNumber);
+
   List<Document> findByDocumentKindAndArticleNumberAndSupersededFalse(
       DocumentKind documentKind, String articleNumber);
 

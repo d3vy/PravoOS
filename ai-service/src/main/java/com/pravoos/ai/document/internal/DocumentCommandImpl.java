@@ -62,4 +62,19 @@ public class DocumentCommandImpl implements DocumentCommand {
   public String contentSha256(UUID documentId, UUID caseId) {
     return documentService.contentSha256(documentId, caseId);
   }
+
+  @Override
+  public DocumentContent loadCaseContent(UUID documentId, UUID caseId) {
+    return documentService.loadCaseContent(documentId, caseId);
+  }
+
+  @Override
+  public DocumentRef caseRef(UUID documentId, UUID caseId) {
+    return documentService.caseRef(documentId, caseId);
+  }
+
+  @Override
+  public String caseContentSha256(UUID documentId, UUID caseId) {
+    return documentService.caseContentSha256(documentId, caseId);
+  }
 }

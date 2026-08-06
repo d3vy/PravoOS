@@ -24,4 +24,6 @@ public interface DocumentAccess {
   boolean knowledgeBaseMentions(String needle);
 
   Optional<LegislationRef> currentLegislation(String articleNumber, String actCanonical);
+
+  Optional<LegislationRef> supersededLegislation(String articleNumber, String actCanonical);
 }
