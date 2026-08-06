@@ -48,6 +48,27 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (!id.includes('node_modules')) return undefined
+          if (
+            /[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run[\\/]router)[\\/]/.test(
+              id
+            )
+          )
+            return 'react'
+          if (id.includes('/node_modules/@sentry')) return 'sentry'
+          if (id.includes('/node_modules/framer-motion') || id.includes('/node_modules/motion'))
+            return 'motion'
+          if (id.includes('i18next')) return 'i18n'
+          if (id.includes('/node_modules/@tanstack')) return 'query'
+          return 'vendor'
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
