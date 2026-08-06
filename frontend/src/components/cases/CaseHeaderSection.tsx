@@ -13,6 +13,7 @@ import { Input } from '../ui/Input'
 import { CaseStatusSelect } from './CaseStatusSelect'
 import { DateField } from './DateField'
 import { useConfirm } from '../../hooks/useConfirm'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX.Element {
   const { t } = useTranslation()
@@ -26,6 +27,9 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
   const [nextHearingDate, setNextHearingDate] = useState(caseItem.nextHearingDate ?? '')
   const [expiresAt, setExpiresAt] = useState(caseItem.expiresAt ?? '')
   const [courtCaseNumber, setCourtCaseNumber] = useState(caseItem.courtCaseNumber ?? '')
+  const [defaultHourlyRate, setDefaultHourlyRate] = useState(
+    caseItem.defaultHourlyRate != null ? String(caseItem.defaultHourlyRate) : ''
+  )
   const [transferTo, setTransferTo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState<'docx' | 'pdf' | null>(null)
@@ -119,6 +123,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
         nextHearingDate: nextHearingDate || null,
         expiresAt: expiresAt || null,
         courtCaseNumber: courtCaseNumber.trim() || null,
+        defaultHourlyRate: defaultHourlyRate.trim() ? Number(defaultHourlyRate) : null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['case', caseItem.id] })
@@ -145,6 +150,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
     setNextHearingDate(caseItem.nextHearingDate ?? '')
     setExpiresAt(caseItem.expiresAt ?? '')
     setCourtCaseNumber(caseItem.courtCaseNumber ?? '')
+    setDefaultHourlyRate(caseItem.defaultHourlyRate != null ? String(caseItem.defaultHourlyRate) : '')
     setError(null)
     setIsEditing(false)
   }
@@ -191,6 +197,17 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
             maxLength={50}
             placeholder={t('cases.courtNumberPlaceholder')}
           />
+          <div>
+            <Input
+              label={t('cases.hourlyRateLabel')}
+              type="number"
+              min="0"
+              step="0.01"
+              value={defaultHourlyRate}
+              onChange={(e) => setDefaultHourlyRate(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-fg-muted">{t('cases.hourlyRateHint')}</p>
+          </div>
           {isOwner && (
             <div className="flex flex-col gap-4 pt-4 border-t border-line">
               <div>
@@ -263,32 +280,36 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
 
   return (
     <div className="mb-6">
-      <div className="flex items-start justify-between gap-4 mb-2">
-        <h1 className="text-3xl font-semibold text-fg">{caseItem.title}</h1>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
-            {t('common.edit')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            loading={exporting === 'docx'}
-            disabled={exporting !== null}
-            onClick={() => void handleExport('docx')}
-          >
-            {t('cases.exportDocx')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            loading={exporting === 'pdf'}
-            disabled={exporting !== null}
-            onClick={() => void handleExport('pdf')}
-          >
-            {t('cases.exportPdf')}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        className="mb-2"
+        breadcrumbs={[{ label: t('nav.cases'), to: '/cases' }, { label: caseItem.title }]}
+        title={caseItem.title}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
+              {t('common.edit')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={exporting === 'docx'}
+              disabled={exporting !== null}
+              onClick={() => void handleExport('docx')}
+            >
+              {t('cases.exportDocx')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={exporting === 'pdf'}
+              disabled={exporting !== null}
+              onClick={() => void handleExport('pdf')}
+            >
+              {t('cases.exportPdf')}
+            </Button>
+          </>
+        }
+      />
       <div className="flex items-center gap-3 mb-2">
         <CaseStatusSelect
           value={caseItem.status}

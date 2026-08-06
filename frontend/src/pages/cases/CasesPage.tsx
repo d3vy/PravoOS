@@ -26,6 +26,7 @@ import { useToast } from '../../hooks/useToast'
 import { useDensity } from '../../hooks/useDensity'
 import { useSavedViews, type SavedView } from '../../hooks/useSavedViews'
 import { useTablePreferences } from '../../hooks/useTablePreferences'
+import { PageHeader } from '../../components/ui/PageHeader'
 
 type ViewMode = 'table' | 'cards' | 'board'
 
@@ -72,6 +73,7 @@ export default function CasesPage(): JSX.Element {
   const [nextHearingDate, setNextHearingDate] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
   const [courtCaseNumber, setCourtCaseNumber] = useState('')
+  const [defaultHourlyRate, setDefaultHourlyRate] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('table')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
@@ -195,6 +197,7 @@ export default function CasesPage(): JSX.Element {
       setNextHearingDate('')
       setExpiresAt('')
       setCourtCaseNumber('')
+      setDefaultHourlyRate('')
       setFormError(null)
       toast.success(t('cases.createSuccess', { title: createdCase.title }))
     },
@@ -418,6 +421,7 @@ export default function CasesPage(): JSX.Element {
       nextHearingDate: nextHearingDate || undefined,
       expiresAt: expiresAt || undefined,
       courtCaseNumber: courtCaseNumber.trim() || undefined,
+      defaultHourlyRate: defaultHourlyRate.trim() ? Number(defaultHourlyRate) : undefined,
     })
   }
 
@@ -447,35 +451,34 @@ export default function CasesPage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-8">
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-semibold text-fg mb-1">{t('cases.title')}</h1>
-            <p className="text-sm text-fg-muted">
-              {t('cases.subtitle')}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex p-1 rounded-lg bg-surface border border-line">
-              {(['table', 'cards', 'board'] as ViewMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setView(mode)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    view === mode
-                      ? 'bg-bg text-fg shadow-sm'
-                      : 'text-fg-muted hover:text-fg'
-                  }`}
-                >
-                  {mode === 'table' ? t('cases.viewTable') : mode === 'cards' ? t('cases.viewList') : t('cases.viewBoard')}
-                </button>
-              ))}
-            </div>
-            <Button variant="primary" onClick={() => setShowForm(true)}>
-              {t('cases.newCase')}
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title={t('cases.title')}
+          description={t('cases.subtitle')}
+          className="mb-6"
+          actions={
+            <>
+              <div className="flex p-1 rounded-lg bg-surface border border-line">
+                {(['table', 'cards', 'board'] as ViewMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setView(mode)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      view === mode
+                        ? 'bg-bg text-fg shadow-sm'
+                        : 'text-fg-muted hover:text-fg'
+                    }`}
+                  >
+                    {mode === 'table' ? t('cases.viewTable') : mode === 'cards' ? t('cases.viewList') : t('cases.viewBoard')}
+                  </button>
+                ))}
+              </div>
+              <Button variant="primary" onClick={() => setShowForm(true)}>
+                {t('cases.newCase')}
+              </Button>
+            </>
+          }
+        />
 
         <Modal open={showForm} onClose={() => setShowForm(false)} title={t('cases.newCase')} size="lg">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -550,6 +553,17 @@ export default function CasesPage(): JSX.Element {
               maxLength={50}
               placeholder={t('cases.courtNumberPlaceholder')}
             />
+            <div>
+              <Input
+                label={t('cases.hourlyRateLabel')}
+                type="number"
+                min="0"
+                step="0.01"
+                value={defaultHourlyRate}
+                onChange={(e) => setDefaultHourlyRate(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-fg-muted">{t('cases.hourlyRateHint')}</p>
+            </div>
             {formError && <p className="text-sm text-danger">{formError}</p>}
             <div>
               <Button type="submit" variant="primary" loading={createMutation.isPending}>
@@ -664,29 +678,29 @@ export default function CasesPage(): JSX.Element {
             density={density}
             emptyState={
               debouncedSearch ? (
-                <EmptyState description={t('cases.notFound')} />
+                <EmptyState illustration="cases" description={t('cases.notFound')} />
               ) : statusFilter === 'ALL' ? (
-                <EmptyState
+                <EmptyState illustration="cases"
                   title={t('cases.emptyTitle')}
                   description={t('cases.emptyDescription')}
                   action={{ label: t('cases.createCase'), onClick: () => setShowForm(true) }}
                 />
               ) : (
-                <EmptyState description={t('cases.noStatusCases')} />
+                <EmptyState illustration="cases" description={t('cases.noStatusCases')} />
               )
             }
           />
         ) : cases.length === 0 ? (
           debouncedSearch ? (
-            <EmptyState description={t('cases.notFound')} />
+            <EmptyState illustration="cases" description={t('cases.notFound')} />
           ) : statusFilter === 'ALL' ? (
-            <EmptyState
+            <EmptyState illustration="cases"
               title={t('cases.emptyTitle')}
               description={t('cases.emptyDescription')}
               action={{ label: t('cases.createCase'), onClick: () => setShowForm(true) }}
             />
           ) : (
-            <EmptyState description={t('cases.noStatusCases')} />
+            <EmptyState illustration="cases" description={t('cases.noStatusCases')} />
           )
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -862,7 +876,9 @@ function BoardView({
   cases: CaseResponse[]
   onMove: (caseId: string, status: CaseStatus) => void
 }): JSX.Element {
+  const { t } = useTranslation()
   const [dragOver, setDragOver] = useState<CaseStatus | null>(null)
+  const [announcement, setAnnouncement] = useState('')
 
   const handleDrop = (status: CaseStatus, caseId: string): void => {
     setDragOver(null)
@@ -872,8 +888,23 @@ function BoardView({
     }
   }
 
+  const moveByKeyboard = (caseItem: CaseResponse, offset: number): void => {
+    const targetIndex = CASE_STATUS_ORDER.indexOf(caseItem.status) + offset
+    if (targetIndex < 0 || targetIndex >= CASE_STATUS_ORDER.length) {
+      return
+    }
+    const target = CASE_STATUS_ORDER[targetIndex]
+    onMove(caseItem.id, target)
+    setAnnouncement(
+      t('cases.kanbanMoved', { title: caseItem.title, status: caseStatusLabel(target) }),
+    )
+  }
+
   return (
     <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+      <p className="sr-only" aria-live="polite">
+        {announcement}
+      </p>
       {CASE_STATUS_ORDER.map((status) => {
         const columnCases = cases.filter((c) => c.status === status)
         return (
@@ -892,20 +923,32 @@ function BoardView({
             }`}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-fg">
+              <span className="text-xs font-semibold text-fg" id={`kanban-column-${status}`}>
                 {caseStatusLabel(status)}
               </span>
               <span className="text-xs text-fg-muted">{columnCases.length}</span>
             </div>
-            <div className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-2" aria-labelledby={`kanban-column-${status}`}>
               {columnCases.map((caseItem) => (
-                <div
+                <li
                   key={caseItem.id}
                   draggable
                   onDragStart={(e) => e.dataTransfer.setData('text/plain', caseItem.id)}
                   className="rounded-lg border border-line bg-bg p-3 cursor-grab active:cursor-grabbing"
                 >
-                  <Link to={`/cases/${caseItem.id}`} className="block">
+                  <Link
+                    to={`/cases/${caseItem.id}`}
+                    className="block"
+                    aria-keyshortcuts="ArrowLeft ArrowRight"
+                    title={t('cases.kanbanMoveHint')}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+                        return
+                      }
+                      e.preventDefault()
+                      moveByKeyboard(caseItem, e.key === 'ArrowRight' ? 1 : -1)
+                    }}
+                  >
                     <p className="text-sm font-medium text-fg line-clamp-2">
                       {caseItem.title}
                     </p>
@@ -915,9 +958,9 @@ function BoardView({
                       </p>
                     )}
                   </Link>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )
       })}

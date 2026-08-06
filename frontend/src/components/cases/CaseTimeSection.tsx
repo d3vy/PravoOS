@@ -27,6 +27,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
   const [rate, setRate] = useState('')
   const [activityDate, setActivityDate] = useState(todayIso())
   const [billable, setBillable] = useState(true)
+  const [vatRate, setVatRate] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const { data: summary, isLoading: summaryLoading } = useQuery<CaseTimeSummary>({
@@ -122,7 +123,12 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
   })
 
   const createInvoice = useMutation({
-    mutationFn: () => invoicesApi.create({ clientId: clientId as string, caseId }),
+    mutationFn: () =>
+      invoicesApi.create({
+        clientId: clientId as string,
+        caseId,
+        vatRate: vatRate.trim() ? Number(vatRate.replace(',', '.')) : undefined,
+      }),
     onSuccess: (invoice) => {
       invalidate()
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
@@ -155,6 +161,15 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
             </span>
           )}
         </h2>
+        <div className="flex items-center gap-2">
+        <input
+          value={vatRate}
+          onChange={(e) => setVatRate(e.target.value)}
+          inputMode="decimal"
+          placeholder={t('invoices.vatRateLabel')}
+          aria-label={t('invoices.vatRateLabel')}
+          className={fieldClass + ' w-44'}
+        />
         <Button
           variant="primary"
           size="sm"
@@ -165,6 +180,7 @@ export function CaseTimeSection({ caseId, clientId }: Props): JSX.Element {
         >
           {t('timeTracking.issueInvoice')}
         </Button>
+        </div>
       </div>
 
       {runningHere ? (
