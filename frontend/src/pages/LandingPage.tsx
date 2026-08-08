@@ -6,6 +6,9 @@ import { LandingHeader } from '../components/landing/LandingHeader'
 import { ChatDemo } from '../components/landing/ChatDemo'
 import { CaseMockup } from '../components/landing/CaseMockup'
 import { CalendarMockup } from '../components/landing/CalendarMockup'
+import { useCookieBannerStore } from '../store/cookieBannerStore'
+
+const reopenCookieBanner = (): void => useCookieBannerStore.getState().reopen()
 
 export default function LandingPage(): JSX.Element {
   const { t } = useTranslation()
@@ -338,6 +341,13 @@ export default function LandingPage(): JSX.Element {
               <Link to="/legal/cookies" className="text-sm text-white/50 hover:text-white transition-colors">
                 {t('legal.navCookies')}
               </Link>
+              <button
+                type="button"
+                onClick={reopenCookieBanner}
+                className="text-sm text-white/50 hover:text-white transition-colors"
+              >
+                {t('legal.navCookieSettings')}
+              </button>
             </nav>
           </div>
         </div>

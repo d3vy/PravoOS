@@ -78,4 +78,15 @@ class RedactionSessionTest {
 
     assertThat(restored).isEqualTo("a@example.com написал, ответ a@example.com отправлен");
   }
+
+  @Test
+  void restoreLeavesUnknownPlaceholdersAndDoesNotSubstituteInsideRestoredValues() {
+    RedactionSession session = new RedactionSession();
+    session.placeholderFor("NAME", "ссылка на [EMAIL_1]");
+    session.placeholderFor("EMAIL", "a@example.com");
+
+    String restored = session.restore("[NAME_1] и [PHONE_9]");
+
+    assertThat(restored).isEqualTo("ссылка на [EMAIL_1] и [PHONE_9]");
+  }
 }

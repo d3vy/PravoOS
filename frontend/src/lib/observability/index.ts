@@ -69,6 +69,7 @@ export function reportError(error: unknown, context: ErrorContext): void {
 }
 
 export function refreshErrorReportingConsent(): void {
+  sinks.forEach((sink) => sink.dispose?.())
   sinks = buildSinks()
 }
 

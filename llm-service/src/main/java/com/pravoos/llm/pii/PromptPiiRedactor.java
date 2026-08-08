@@ -16,10 +16,12 @@ public class PromptPiiRedactor {
   private static final Logger log = LoggerFactory.getLogger(PromptPiiRedactor.class);
 
   private final PiiRedactionProperties properties;
+  private final List<PiiPattern> enabledPatterns;
   private final Counter redactedCounter;
 
   public PromptPiiRedactor(PiiRedactionProperties properties, MeterRegistry meterRegistry) {
     this.properties = properties;
+    this.enabledPatterns = List.copyOf(properties.enabledCategories());
     this.redactedCounter = Counter.builder("pravoos.llm.pii.redacted").register(meterRegistry);
     if (!properties.isEnabled()) {
       log.warn(
@@ -41,10 +43,7 @@ public class PromptPiiRedactor {
       return text;
     }
     String redacted = text;
-    for (PiiPattern pii : PiiPattern.values()) {
-      if (!properties.isCategoryEnabled(pii)) {
-        continue;
-      }
+    for (PiiPattern pii : enabledPatterns) {
       redacted = replaceAll(redacted, pii, session);
     }
     return redacted;
@@ -72,13 +71,11 @@ public class PromptPiiRedactor {
     if (!matcher.find()) {
       return text;
     }
-    StringBuilder result = new StringBuilder();
-    matcher.reset();
-    while (matcher.find()) {
-      String value = matcher.group();
+    StringBuilder result = new StringBuilder(text.length());
+    do {
       matcher.appendReplacement(
-          result, Matcher.quoteReplacement(session.placeholderFor(pii.label(), value)));
-    }
+          result, Matcher.quoteReplacement(session.placeholderFor(pii.label(), matcher.group())));
+    } while (matcher.find());
     matcher.appendTail(result);
     return result.toString();
   }

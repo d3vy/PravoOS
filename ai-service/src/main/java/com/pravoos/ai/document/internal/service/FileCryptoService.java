@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
-import java.util.Arrays;
 import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -26,6 +25,7 @@ public class FileCryptoService {
   private static final int IV_LENGTH = 12;
   private static final int TAG_LENGTH_BITS = 128;
   private static final int KEY_LENGTH_BYTES = 32;
+  private static final int PREFIX_LENGTH = MAGIC.length + IV_LENGTH;
 
   private final SecretKey secretKey;
   private final SecureRandom secureRandom = new SecureRandom();
@@ -74,26 +74,25 @@ public class FileCryptoService {
 
     Cipher cipher = Cipher.getInstance(TRANSFORMATION);
     cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
-    byte[] ciphertext = cipher.doFinal(plaintext);
 
-    byte[] result = new byte[MAGIC.length + IV_LENGTH + ciphertext.length];
+    byte[] result = new byte[PREFIX_LENGTH + cipher.getOutputSize(plaintext.length)];
     System.arraycopy(MAGIC, 0, result, 0, MAGIC.length);
     System.arraycopy(iv, 0, result, MAGIC.length, IV_LENGTH);
-    System.arraycopy(ciphertext, 0, result, MAGIC.length + IV_LENGTH, ciphertext.length);
+    cipher.doFinal(plaintext, 0, plaintext.length, result, PREFIX_LENGTH);
     return result;
   }
 
   private byte[] decrypt(byte[] payload) throws GeneralSecurityException {
-    byte[] iv = Arrays.copyOfRange(payload, MAGIC.length, MAGIC.length + IV_LENGTH);
-    byte[] ciphertext = Arrays.copyOfRange(payload, MAGIC.length + IV_LENGTH, payload.length);
-
     Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-    cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(TAG_LENGTH_BITS, iv));
-    return cipher.doFinal(ciphertext);
+    cipher.init(
+        Cipher.DECRYPT_MODE,
+        secretKey,
+        new GCMParameterSpec(TAG_LENGTH_BITS, payload, MAGIC.length, IV_LENGTH));
+    return cipher.doFinal(payload, PREFIX_LENGTH, payload.length - PREFIX_LENGTH);
   }
 
   private boolean isEncrypted(byte[] payload) {
-    if (payload.length < MAGIC.length + IV_LENGTH) {
+    if (payload.length < PREFIX_LENGTH) {
       return false;
     }
     for (int i = 0; i < MAGIC.length; i++) {

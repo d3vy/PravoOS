@@ -2,8 +2,12 @@ package com.pravoos.llm.pii;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RedactionSession {
+
+  private static final Pattern PLACEHOLDER = Pattern.compile("\\[[A-Z]+_\\d+]");
 
   private final Map<String, String> placeholderByValue = new LinkedHashMap<>();
   private final Map<String, String> valueByPlaceholder = new LinkedHashMap<>();
@@ -36,10 +40,17 @@ public class RedactionSession {
     if (text == null || text.isEmpty() || valueByPlaceholder.isEmpty()) {
       return text;
     }
-    String restored = text;
-    for (Map.Entry<String, String> entry : valueByPlaceholder.entrySet()) {
-      restored = restored.replace(entry.getKey(), entry.getValue());
+    Matcher matcher = PLACEHOLDER.matcher(text);
+    if (!matcher.find()) {
+      return text;
     }
-    return restored;
+    StringBuilder restored = new StringBuilder(text.length());
+    do {
+      String original = valueByPlaceholder.get(matcher.group());
+      matcher.appendReplacement(
+          restored, Matcher.quoteReplacement(original == null ? matcher.group() : original));
+    } while (matcher.find());
+    matcher.appendTail(restored);
+    return restored.toString();
   }
 }

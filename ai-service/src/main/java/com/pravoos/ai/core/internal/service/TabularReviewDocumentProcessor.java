@@ -103,7 +103,7 @@ public class TabularReviewDocumentProcessor {
     for (Fragment fragment : fragments) {
       int length = fragment.content().length();
       if (used + length > limit && !kept.isEmpty()) {
-        break;
+        continue;
       }
       kept.add(fragment);
       used += length;

@@ -1492,6 +1492,7 @@ const ru = {
     navConsent: 'Согласие на обработку',
     navCrossBorder: 'Трансграничная передача',
     navCookies: 'Файлы cookie',
+    navCookieSettings: 'Настройки cookie',
     contactHint:
       'Вопросы по обработке персональных данных направляйте на адрес, указанный в политике.',
   },

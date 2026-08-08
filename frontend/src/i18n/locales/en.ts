@@ -1484,6 +1484,7 @@ const en = {
     navConsent: 'Processing consent',
     navCrossBorder: 'Cross-border transfer',
     navCookies: 'Cookies',
+    navCookieSettings: 'Cookie settings',
     contactHint: 'Send personal data questions to the address listed in the policy.',
   },
   cookieBanner: {

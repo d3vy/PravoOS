@@ -8,6 +8,7 @@ export interface CookieConsent {
   version: number
   analytics: boolean
   decidedAt: string
+  synced?: boolean
 }
 
 function isExpired(decidedAt: string, now: number): boolean {
@@ -26,24 +27,40 @@ export function readCookieConsent(now: number = Date.now()): CookieConsent | nul
     if (parsed.version !== COOKIE_INVENTORY_VERSION || isExpired(parsed.decidedAt, now)) {
       return null
     }
-    return { version: parsed.version, analytics: parsed.analytics, decidedAt: parsed.decidedAt }
+    return {
+      version: parsed.version,
+      analytics: parsed.analytics,
+      decidedAt: parsed.decidedAt,
+      synced: parsed.synced === true,
+    }
   } catch {
     return null
   }
 }
 
-export function storeCookieConsent(analytics: boolean): CookieConsent {
-  const consent: CookieConsent = {
-    version: COOKIE_INVENTORY_VERSION,
-    analytics,
-    decidedAt: new Date().toISOString(),
-  }
+function write(consent: CookieConsent): CookieConsent {
   try {
     localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(consent))
   } catch {
     return consent
   }
   return consent
+}
+
+export function storeCookieConsent(analytics: boolean): CookieConsent {
+  return write({
+    version: COOKIE_INVENTORY_VERSION,
+    analytics,
+    decidedAt: new Date().toISOString(),
+    synced: false,
+  })
+}
+
+export function markCookieConsentSynced(): void {
+  const consent = readCookieConsent()
+  if (consent && !consent.synced) {
+    write({ ...consent, synced: true })
+  }
 }
 
 export function analyticsAllowed(): boolean {

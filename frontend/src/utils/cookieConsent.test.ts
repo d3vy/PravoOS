@@ -4,6 +4,7 @@ import {
   COOKIE_CONSENT_TTL_MS,
   COOKIE_INVENTORY_VERSION,
   analyticsAllowed,
+  markCookieConsentSynced,
   readCookieConsent,
   storeCookieConsent,
 } from './cookieConsent'
@@ -56,7 +57,15 @@ describe('cookieConsent', () => {
       version: COOKIE_INVENTORY_VERSION,
       analytics: false,
       decidedAt,
+      synced: false,
     })
+  })
+
+  it('marks a stored decision as recorded on the server without altering it', () => {
+    const stored = storeCookieConsent(true)
+    markCookieConsentSynced()
+
+    expect(readCookieConsent()).toEqual({ ...stored, synced: true })
   })
 
   it('ignores malformed and unparsable payloads', () => {

@@ -8,17 +8,29 @@ interface SentrySinkOptions {
   release?: string
 }
 
+const SELF_MANAGED_INTEGRATIONS = new Set(['GlobalHandlers', 'BrowserApiErrors', 'Breadcrumbs'])
+
 export function createSentrySink({ dsn, environment, release }: SentrySinkOptions): ErrorSink {
-  Sentry.init({
+  const client = Sentry.init({
     dsn,
     environment,
     release: release || undefined,
     tracesSampleRate: 0,
     sendDefaultPii: false,
-    beforeSend(event) {
-      if (event.message) {
-        event.message = scrubPii(event.message)
+    autoSessionTracking: false,
+    integrations: (defaults) => [
+      ...defaults.filter((integration) => !SELF_MANAGED_INTEGRATIONS.has(integration.name)),
+      Sentry.breadcrumbsIntegration({ dom: false, console: false }),
+    ],
+    beforeBreadcrumb(breadcrumb) {
+      breadcrumb.message = scrubPii(breadcrumb.message)
+      if (typeof breadcrumb.data?.url === 'string') {
+        breadcrumb.data.url = scrubPii(breadcrumb.data.url)
       }
+      return breadcrumb
+    },
+    beforeSend(event) {
+      event.message = scrubPii(event.message)
       event.exception?.values?.forEach((value) => {
         value.value = scrubPii(value.value)
       })
@@ -41,6 +53,9 @@ export function createSentrySink({ dsn, environment, release }: SentrySinkOption
         })
         Sentry.captureException(error)
       })
+    },
+    dispose(): void {
+      void client?.close()
     },
   }
 }

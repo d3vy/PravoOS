@@ -9,8 +9,8 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Spinner } from '../../components/ui/Spinner'
 import { useToastStore } from '../../store/toastStore'
-import { readCookieConsent, storeCookieConsent } from '../../utils/cookieConsent'
-import { refreshErrorReportingConsent } from '../../lib/observability'
+import { readCookieConsent } from '../../utils/cookieConsent'
+import { applyCookieDecision } from '../../utils/applyCookieDecision'
 
 const CONSENT_ORDER: ConsentPurpose[] = ['PERSONAL_DATA', 'CROSS_BORDER_TRANSFER', 'MARKETING']
 
@@ -156,8 +156,7 @@ function CookieSection(): JSX.Element {
   }, [])
 
   const toggle = (value: boolean): void => {
-    storeCookieConsent(value)
-    refreshErrorReportingConsent()
+    applyCookieDecision(value)
     setAnalytics(value)
     setDecided(true)
   }

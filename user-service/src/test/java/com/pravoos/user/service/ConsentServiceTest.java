@@ -169,6 +169,13 @@ class ConsentServiceTest {
             });
   }
 
+  @Test
+  void onlyTheContractualPurposeIsMandatory() {
+    assertThat(ConsentPurpose.values())
+        .filteredOn(ConsentPurpose::isMandatory)
+        .containsExactly(ConsentPurpose.PERSONAL_DATA);
+  }
+
   private UserConsent consent(ConsentPurpose purpose, String version) {
     UserConsent consent = new UserConsent();
     consent.setUserId(USER_ID);

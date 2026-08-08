@@ -3,26 +3,29 @@ import { Trans, useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Button } from './ui/Button'
-import { readCookieConsent, storeCookieConsent } from '../utils/cookieConsent'
-import { refreshErrorReportingConsent } from '../lib/observability'
+import { readCookieConsent } from '../utils/cookieConsent'
+import { applyCookieDecision } from '../utils/applyCookieDecision'
+import { useCookieBannerStore } from '../store/cookieBannerStore'
 
 export function CookieBanner(): JSX.Element | null {
   const { t } = useTranslation()
-  const [visible, setVisible] = useState(false)
+  const [undecided, setUndecided] = useState(false)
+  const reopened = useCookieBannerStore((state) => state.reopened)
+  const close = useCookieBannerStore((state) => state.close)
 
   useEffect(() => {
-    setVisible(readCookieConsent() === null)
+    setUndecided(readCookieConsent() === null)
   }, [])
 
   const decide = (analytics: boolean): void => {
-    storeCookieConsent(analytics)
-    refreshErrorReportingConsent()
-    setVisible(false)
+    applyCookieDecision(analytics)
+    setUndecided(false)
+    close()
   }
 
   return (
     <AnimatePresence>
-      {visible && (
+      {(undecided || reopened) && (
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -45,10 +48,10 @@ export function CookieBanner(): JSX.Element | null {
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <Button variant="ghost" size="md" onClick={() => decide(false)}>
+              <Button variant="secondary" size="md" onClick={() => decide(false)}>
                 {t('cookieBanner.decline')}
               </Button>
-              <Button variant="primary" size="md" onClick={() => decide(true)}>
+              <Button variant="secondary" size="md" onClick={() => decide(true)}>
                 {t('cookieBanner.accept')}
               </Button>
             </div>

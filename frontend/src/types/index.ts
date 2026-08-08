@@ -63,7 +63,11 @@ export interface ApplyRequest {
   consentPolicyVersion: string
 }
 
-export type ConsentPurpose = 'PERSONAL_DATA' | 'CROSS_BORDER_TRANSFER' | 'MARKETING'
+export type ConsentPurpose =
+  | 'PERSONAL_DATA'
+  | 'CROSS_BORDER_TRANSFER'
+  | 'ANALYTICS_COOKIES'
+  | 'MARKETING'
 
 export type SubjectRequestType = 'ACCESS' | 'ERASURE' | 'CONSENT_WITHDRAWAL'
 

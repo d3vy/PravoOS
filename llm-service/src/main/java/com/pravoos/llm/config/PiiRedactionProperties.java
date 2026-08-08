@@ -22,7 +22,7 @@ public record PiiRedactionProperties(Boolean enabled, Boolean embeddings, String
     return enabledCategories().contains(pattern);
   }
 
-  private Set<PiiPattern> enabledCategories() {
+  public Set<PiiPattern> enabledCategories() {
     if (categories == null || categories.isBlank() || "all".equalsIgnoreCase(categories.trim())) {
       return EnumSet.allOf(PiiPattern.class);
     }

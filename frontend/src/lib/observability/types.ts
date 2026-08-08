@@ -19,4 +19,5 @@ export interface ErrorReport {
 export interface ErrorSink {
   readonly name: string
   send(report: ErrorReport, error: Error): void
+  dispose?(): void
 }
