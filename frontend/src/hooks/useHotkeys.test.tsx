@@ -25,6 +25,7 @@ vi.mock('react-router-dom', async () => {
 import { useHotkeys } from './useHotkeys'
 import { useCommandPaletteStore } from '../store/commandPaletteStore'
 import { useShortcutsDialogStore } from '../store/shortcutsDialogStore'
+import { useToastStore } from '../store/toastStore'
 
 function dispatchKey(key: string, options: Partial<KeyboardEventInit> = {}): void {
   window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options }))
@@ -46,6 +47,7 @@ describe('useHotkeys', () => {
     stopTimerMock.mockReset()
     useCommandPaletteStore.setState({ open: false })
     useShortcutsDialogStore.setState({ open: false })
+    useToastStore.setState({ toasts: [] })
     vi.useFakeTimers()
   })
 
@@ -108,7 +110,7 @@ describe('useHotkeys', () => {
     expect(useShortcutsDialogStore.getState().open).toBe(true)
   })
 
-  it('navigates to /cases?new=1 on "n" only while on the cases list route', () => {
+  it('navigates to /cases?new=1 on "n" while on the cases list route', () => {
     renderHook(() => useHotkeys(), { wrapper: makeWrapper('/cases') })
     act(() => {
       dispatchKey('n')
@@ -116,12 +118,21 @@ describe('useHotkeys', () => {
     expect(navigateMock).toHaveBeenCalledWith('/cases?new=1')
   })
 
-  it('ignores "n" when not on the cases list route', () => {
+  it('navigates to /cases?new=1 on "n" from any other route', () => {
     renderHook(() => useHotkeys(), { wrapper: makeWrapper('/clients') })
     act(() => {
       dispatchKey('n')
     })
-    expect(navigateMock).not.toHaveBeenCalled()
+    expect(navigateMock).toHaveBeenCalledWith('/cases?new=1')
+  })
+
+  it('ignores auto-repeated keydowns while a key is held', () => {
+    renderHook(() => useHotkeys(), { wrapper: makeWrapper('/dashboard') })
+    act(() => {
+      dispatchKey('g')
+      for (let i = 0; i < 20; i += 1) dispatchKey('g', { repeat: true })
+    })
+    expect(useToastStore.getState().toasts).toHaveLength(1)
   })
 
   it('ignores keydowns while a modifier key is held', () => {

@@ -29,13 +29,19 @@ interface ToastState {
 }
 
 const DEFAULT_DURATION = 4000
+const MAX_VISIBLE_TOASTS = 3
 
-export const useToastStore = create<ToastState>((set) => ({
+export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
   push: (toast) => {
+    const duplicate = get().toasts.find(
+      (existing) => existing.variant === toast.variant && existing.message === toast.message
+    )
+    if (duplicate) return duplicate.id
+
     const id = crypto.randomUUID()
     set((state) => ({
-      toasts: [...state.toasts, { id, duration: DEFAULT_DURATION, ...toast }],
+      toasts: [...state.toasts, { id, duration: DEFAULT_DURATION, ...toast }].slice(-MAX_VISIBLE_TOASTS),
     }))
     return id
   },

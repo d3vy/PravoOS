@@ -10,7 +10,6 @@ import { useShortcutsDialogStore } from '../store/shortcutsDialogStore'
 
 const SEQUENCE_TIMEOUT_MS = 900
 const CASE_ROUTE = /^\/cases\/([^/]+)$/
-const CASES_LIST_ROUTE = /^\/cases\/?$/
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -33,12 +32,17 @@ export function useHotkeys(): void {
   useEffect(() => {
     let pendingPrefix: string | null = null
     let pendingTimer: ReturnType<typeof setTimeout> | null = null
+    let pendingToastId: string | null = null
 
     const clearPending = (): void => {
       pendingPrefix = null
       if (pendingTimer) {
         clearTimeout(pendingTimer)
         pendingTimer = null
+      }
+      if (pendingToastId) {
+        toast.dismiss(pendingToastId)
+        pendingToastId = null
       }
     }
 
@@ -75,6 +79,7 @@ export function useHotkeys(): void {
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.metaKey || event.ctrlKey || event.altKey) return
+      if (event.repeat) return
       if (isTypingTarget(event.target)) return
 
       const key = event.key
@@ -98,12 +103,11 @@ export function useHotkeys(): void {
         event.preventDefault()
         pendingPrefix = 'g'
         pendingTimer = setTimeout(clearPending, SEQUENCE_TIMEOUT_MS)
-        toast.info(t('hotkeys.gPrefixActive'))
+        pendingToastId = toast.info(t('hotkeys.gPrefixActive'))
         return
       }
 
       if (key === 'n') {
-        if (!CASES_LIST_ROUTE.test(locationRef.current.pathname)) return
         event.preventDefault()
         navigate('/cases?new=1')
       } else if (key === 't') {

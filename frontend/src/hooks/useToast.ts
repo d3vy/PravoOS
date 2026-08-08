@@ -7,6 +7,7 @@ export interface UndoToastOptions {
 
 export function useToast() {
   const push = useToastStore((state) => state.push)
+  const dismiss = useToastStore((state) => state.dismiss)
 
   const success = useCallback((message: string, action?: ToastAction) => push({ variant: 'success', message, action }), [push])
   const error = useCallback((message: string, action?: ToastAction) => push({ variant: 'error', message, action }), [push])
@@ -22,5 +23,5 @@ export function useToast() {
     [push]
   )
 
-  return { success, error, info, undo }
+  return { success, error, info, undo, dismiss }
 }
