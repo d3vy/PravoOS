@@ -1,7 +1,15 @@
 import { Fragment, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 
 const INLINE_PATTERN = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g
 const LINK_PATTERN = /^\[([^\]]+)\]\(([^)]+)\)$/
+
+const PUBLISHED_DOCUMENT_ROUTES: Record<string, string> = {
+  'politika-obrabotki-pdn.md': '/legal/privacy',
+  'soglasie-na-obrabotku-pdn.md': '/legal/consent',
+  'soglasie-transgranichnaya-peredacha.md': '/legal/cross-border',
+  'politika-cookie.md': '/legal/cookies',
+}
 
 function renderInline(text: string): ReactNode {
   const parts = text.split(INLINE_PATTERN).filter((part) => part !== '')
@@ -34,6 +42,14 @@ function renderInline(text: string): ReactNode {
           >
             {label}
           </a>
+        )
+      }
+      const route = PUBLISHED_DOCUMENT_ROUTES[href]
+      if (route) {
+        return (
+          <Link key={index} to={route} className="text-accent hover:underline">
+            {label}
+          </Link>
         )
       }
       return <Fragment key={index}>{label}</Fragment>
@@ -90,6 +106,7 @@ export function LegalMarkdown({ source }: { source: string }): JSX.Element {
   let paragraph: string[] = []
   let listItems: string[] = []
   let tableRows: string[] = []
+  let quoteLines: string[] = []
 
   const flushParagraph = (): void => {
     if (paragraph.length === 0) return
@@ -121,10 +138,24 @@ export function LegalMarkdown({ source }: { source: string }): JSX.Element {
     tableRows = []
   }
 
+  const flushQuote = (): void => {
+    if (quoteLines.length === 0) return
+    blocks.push(
+      <blockquote
+        key={`quote-${blocks.length}`}
+        className="my-4 border-l-2 border-accent/50 pl-4 leading-relaxed text-fg-muted"
+      >
+        {renderInline(quoteLines.join(' '))}
+      </blockquote>,
+    )
+    quoteLines = []
+  }
+
   const flushAll = (): void => {
     flushParagraph()
     flushList()
     flushTable()
+    flushQuote()
   }
 
   for (const rawLine of lines) {
@@ -134,6 +165,15 @@ export function LegalMarkdown({ source }: { source: string }): JSX.Element {
       flushAll()
       continue
     }
+
+    if (line.startsWith('>')) {
+      flushParagraph()
+      flushList()
+      flushTable()
+      quoteLines.push(line.replace(/^>\s?/, ''))
+      continue
+    }
+    flushQuote()
 
     if (line.startsWith('|')) {
       flushParagraph()

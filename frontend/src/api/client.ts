@@ -1,10 +1,17 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { clearLocalSession } from '../store/session'
 import type { AuthResponse } from '../types'
 
 const baseURL = import.meta.env.VITE_API_URL || ''
 
 const REQUEST_TIMEOUT_MS = 30000
+const UPLOAD_TIMEOUT_MS = 300000
+
+export const multipartRequest = {
+  headers: { 'Content-Type': 'multipart/form-data' },
+  timeout: UPLOAD_TIMEOUT_MS,
+} as const
 
 const apiClient = axios.create({
   baseURL,
@@ -46,7 +53,7 @@ function runSingleFlightRefresh(): Promise<string> {
 }
 
 function redirectToLogin(): void {
-  useAuthStore.getState().clearAuth()
+  clearLocalSession()
   const publicPaths = ['/', '/login', '/apply']
   if (!publicPaths.includes(window.location.pathname)) {
     window.location.href = '/login'

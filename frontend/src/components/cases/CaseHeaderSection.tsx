@@ -157,7 +157,7 @@ export function CaseHeaderSection({ caseItem }: { caseItem: CaseResponse }): JSX
 
   if (isEditing) {
     return (
-      <section className="mb-6 p-6 rounded-xl bg-surface border border-line">
+      <section className="mb-6 p-6 rounded-2xl bg-surface border border-line">
         <div className="flex flex-col gap-4">
           <Input label={t('cases.titleLabel')} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={500} />
           <div>

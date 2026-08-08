@@ -1,4 +1,4 @@
-import apiClient from './client'
+import apiClient, { multipartRequest } from './client'
 import type {
   CaseMessageResponse,
   DocumentResponse,
@@ -34,7 +34,7 @@ export const portalApi = {
     const response = await apiClient.post<DocumentUploadResponse>(
       `/api/ai/portal/cases/${caseId}/documents`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      multipartRequest
     )
     return response.data
   },
@@ -86,7 +86,7 @@ export const portalApi = {
     const response = await apiClient.post<SignatureRequestResponse>(
       `/api/ai/portal/signatures/${signatureId}/sign-cms`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      multipartRequest
     )
     return response.data
   },

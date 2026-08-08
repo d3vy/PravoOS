@@ -38,7 +38,7 @@ const DEADLINE_OPTIONS = [
 ]
 
 const SELECT_CLASS =
-  'w-full px-3 py-2 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent'
+  'w-full px-3 py-2 rounded-xl border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent'
 const TEXTAREA_CLASS = `${SELECT_CLASS} resize-none`
 
 type EditorState = { mode: 'new' } | { mode: 'edit'; definition: WorkflowDefinitionDto } | null
@@ -229,7 +229,7 @@ function WorkflowEditor({
   }
 
   return (
-    <div className="mb-8 p-5 rounded-xl bg-surface border border-line">
+    <div className="mb-8 p-5 rounded-2xl bg-surface border border-line">
       <h2 className="text-sm font-semibold text-fg mb-4">
         {initial ? (readOnly ? t('workflowBuilder.editorViewTitle') : t('workflowBuilder.editorEditTitle')) : t('workflowBuilder.editorNewTitle')}
       </h2>

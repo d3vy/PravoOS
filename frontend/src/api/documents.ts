@@ -1,4 +1,4 @@
-import apiClient from './client'
+import apiClient, { multipartRequest } from './client'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, readTotal, type Page } from './pagination'
 import type {
   DocumentInsightResponse,
@@ -18,9 +18,7 @@ export const documentsApi = {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('title', title)
-    const response = await apiClient.post<DocumentUploadResponse>('/api/ai/documents', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const response = await apiClient.post<DocumentUploadResponse>('/api/ai/documents', formData, multipartRequest)
     return response.data
   },
 
@@ -71,7 +69,7 @@ export const documentsApi = {
     const response = await apiClient.post<DocumentUploadResponse>(
       '/api/ai/documents/legislation',
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      multipartRequest
     )
     return response.data
   },

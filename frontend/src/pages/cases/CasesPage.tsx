@@ -710,7 +710,7 @@ export default function CasesPage(): JSX.Element {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: index * 0.03 }}
-                className={`h-full p-5 rounded-xl bg-surface border transition-colors flex flex-col ${
+                className={`h-full p-5 rounded-2xl bg-surface border transition-colors flex flex-col ${
                   selectedIds.has(caseItem.id)
                     ? 'border-accent ring-1 ring-accent/40'
                     : 'border-line hover:border-accent/50'

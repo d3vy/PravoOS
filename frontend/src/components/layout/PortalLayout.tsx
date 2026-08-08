@@ -6,7 +6,7 @@ import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { LanguageSwitcher } from '../ui/LanguageSwitcher'
 import { SkipLink } from '../ui/SkipLink'
-import { authApi } from '../../api/auth'
+import { signOut } from '../../utils/signOut'
 import { useTranslation } from 'react-i18next'
 
 interface PortalLayoutProps {
@@ -14,7 +14,7 @@ interface PortalLayoutProps {
 }
 
 export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
-  const { user, clearAuth } = useAuthStore()
+  const user = useAuthStore((state) => state.user)
   const { t } = useTranslation()
   const location = useLocation()
 
@@ -24,12 +24,8 @@ export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
     }`
 
   const handleLogout = async (): Promise<void> => {
-    try {
-      await authApi.logout()
-    } finally {
-      clearAuth()
-      window.location.href = '/login'
-    }
+    await signOut()
+    window.location.href = '/login'
   }
 
   return (

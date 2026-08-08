@@ -9,15 +9,17 @@ interface AppWindowProps {
 export function AppWindow({ title = 'app.pravoos.ru', children, className = '' }: AppWindowProps): JSX.Element {
   return (
     <div
-      className={`rounded-2xl border border-line bg-surface shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden ${className}`}
+      className={`rounded-xl bg-[#F2F1ED] overflow-hidden ${className}`}
     >
-      <div className="flex items-center gap-2 px-4 h-10 border-b border-line bg-bg">
-        <span className="w-3 h-3 rounded-full bg-red-400/70" />
-        <span className="w-3 h-3 rounded-full bg-amber-400/70" />
-        <span className="w-3 h-3 rounded-full bg-emerald-400/70" />
-        <span className="ml-3 text-xs text-fg-muted truncate">{title}</span>
+      <div className="relative flex items-center justify-center px-4 h-9 border-b border-[#E8E7E2]">
+        <div className="absolute left-3 flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-[#DDDCD8]" />
+          <span className="w-3 h-3 rounded-full bg-[#DDDCD8]" />
+          <span className="w-3 h-3 rounded-full bg-[#DDDCD8]" />
+        </div>
+        <span className="text-xs text-[#63625C] truncate">{title}</span>
       </div>
-      <div className="bg-bg">{children}</div>
+      <div>{children}</div>
     </div>
   )
 }

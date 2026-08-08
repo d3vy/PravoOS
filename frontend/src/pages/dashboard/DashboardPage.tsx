@@ -164,7 +164,7 @@ function QuickStartCard(): JSX.Element | null {
           <Link
             key={step.to}
             to={step.to}
-            className="block p-4 rounded-xl border border-line hover:border-accent/50 transition-colors"
+            className="block p-4 rounded-2xl border border-line hover:border-accent/50 transition-colors"
           >
             <p className="text-sm font-medium text-fg mb-1">{step.title}</p>
             <p className="text-xs text-fg-muted">{step.description}</p>

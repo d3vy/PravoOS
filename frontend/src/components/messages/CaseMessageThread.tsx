@@ -66,7 +66,7 @@ export function CaseMessageThread({
     <section>
       <h2 className="text-lg font-semibold text-fg mb-3">{t('messageThread.title')}</h2>
 
-      <div className="card-elevated rounded-xl p-4">
+      <div className="card-elevated p-4">
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Spinner />

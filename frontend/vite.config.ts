@@ -73,5 +73,20 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     setupFiles: ['src/test/setup.ts'],
+    // v8 coverage instrumentation slows down slower async tests enough to trip the 5s default under --coverage
+    testTimeout: 10000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/sw.ts'],
+      // Порог поднимать постепенно по мере роста покрытия (см. testing.md, раздел 8)
+      thresholds: {
+        lines: 1,
+        statements: 1,
+        functions: 1,
+        branches: 1,
+      },
+    },
   },
 })

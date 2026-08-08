@@ -117,7 +117,7 @@ export default function ClientDetailPage(): JSX.Element {
         />
 
         {isEditing ? (
-          <section className="mb-10 p-6 rounded-xl bg-surface border border-line">
+          <section className="mb-10 p-6 rounded-2xl bg-surface border border-line">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-fg">{t('clientDetail.editingTitle')}</h2>
               <button
@@ -147,7 +147,7 @@ export default function ClientDetailPage(): JSX.Element {
             />
           </section>
         ) : (
-          <section className="mb-10 p-6 rounded-xl bg-surface border border-line">
+          <section className="mb-10 p-6 rounded-2xl bg-surface border border-line">
             <dl className="grid gap-4 sm:grid-cols-2">
               <DetailRow label={t('clientDetail.phone')} value={client.phone} />
               <DetailRow label="Email" value={client.email} />

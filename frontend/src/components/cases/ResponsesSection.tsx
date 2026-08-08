@@ -42,7 +42,7 @@ export function ResponsesSection({ caseId, responses }: { caseId: string; respon
               key={response.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-xl bg-surface border border-line"
+              className="p-5 rounded-2xl bg-surface border border-line"
             >
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-accent/10 text-accent">

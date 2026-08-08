@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/authStore'
 import { useMoreSheetStore } from '../../store/moreSheetStore'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
-import { authApi } from '../../api/auth'
+import { signOut } from '../../utils/signOut'
 import { useLawyerAccountLinks, useLawyerNavSections } from './lawyerNav'
 import { DashboardIcon, ClientsIcon, InvoiceIcon, SearchIcon } from './navIcons'
 
@@ -15,7 +15,7 @@ export function MoreSheet(): JSX.Element | null {
   const openCommandPalette = useCommandPaletteStore((state) => state.setOpen)
   const lawyerNavSections = useLawyerNavSections()
   const lawyerAccountLinks = useLawyerAccountLinks()
-  const { user, clearAuth } = useAuthStore()
+  const user = useAuthStore((state) => state.user)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -42,12 +42,7 @@ export function MoreSheet(): JSX.Element | null {
   ]
 
   const handleLogout = async (): Promise<void> => {
-    try {
-      await authApi.logout()
-    } catch {
-      // best-effort revocation; local session is cleared regardless
-    }
-    clearAuth()
+    await signOut()
     close()
     navigate('/')
   }

@@ -49,6 +49,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+        script: ['Caveat', 'cursive'],
       },
       borderWidth: {
         '3': '3px',

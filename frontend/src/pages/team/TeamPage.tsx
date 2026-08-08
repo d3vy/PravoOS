@@ -141,7 +141,7 @@ export default function TeamPage(): JSX.Element {
             )}
 
             {selectedOrg && (
-              <div className="flex flex-col gap-6 p-6 rounded-xl bg-surface border border-line">
+              <div className="flex flex-col gap-6 p-6 rounded-2xl bg-surface border border-line">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
                     <h2 className="text-xl font-semibold text-fg">{selectedOrg.name}</h2>
@@ -255,7 +255,7 @@ export default function TeamPage(): JSX.Element {
               </div>
             )}
 
-            <div className="p-6 rounded-xl bg-surface border border-line">
+            <div className="p-6 rounded-2xl bg-surface border border-line">
               <h3 className="text-sm font-medium text-fg mb-2">{t('team.createOrgTitle')}</h3>
               <div className="flex gap-2 flex-wrap items-end">
                 <div className="flex-1 min-w-[200px]">

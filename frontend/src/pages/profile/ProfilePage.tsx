@@ -155,7 +155,7 @@ function MfaSection({
           )}
         </div>
       ) : setup ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-line p-4 max-w-md">
+        <div className="flex flex-col gap-3 rounded-2xl border border-line p-4 max-w-md">
           <p className="text-sm text-fg">
             {t('profile.mfaSetupInstruction')}
           </p>
@@ -344,7 +344,7 @@ function TelegramSection({
           )}
 
           {link && (
-            <div className="flex flex-col gap-3 rounded-lg border border-line p-4">
+            <div className="flex flex-col gap-3 rounded-2xl border border-line p-4">
               <p className="text-sm text-fg">
                 {t('settings.botInstruction')}
               </p>

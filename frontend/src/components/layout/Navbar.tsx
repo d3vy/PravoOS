@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/authStore'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { useShortcutsDialogStore } from '../../store/shortcutsDialogStore'
-import { authApi } from '../../api/auth'
+import { signOut } from '../../utils/signOut'
 import { Button } from '../ui/Button'
 import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
@@ -14,7 +14,7 @@ import { useLawyerAccountLinks } from './lawyerNav'
 
 export function Navbar(): JSX.Element {
   const { t } = useTranslation()
-  const { user, clearAuth, isAuthenticated, effectiveRole } = useAuthStore()
+  const { user, isAuthenticated, effectiveRole } = useAuthStore()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
@@ -31,12 +31,7 @@ export function Navbar(): JSX.Element {
   }, [mobileMenuOpen])
 
   const handleLogout = async (): Promise<void> => {
-    try {
-      await authApi.logout()
-    } catch {
-      // best-effort revocation; local session is cleared regardless
-    }
-    clearAuth()
+    await signOut()
     setMobileMenuOpen(false)
     navigate('/')
   }

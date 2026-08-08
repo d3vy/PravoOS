@@ -9,7 +9,6 @@ import type { UserRole } from '../types'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
-import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 
 export default function LoginPage(): JSX.Element {
@@ -121,15 +120,12 @@ export default function LoginPage(): JSX.Element {
   }
 
   return (
-    <div className="auth-shell flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface">
+    <div className="bg-bg min-h-screen flex flex-col">
+      <header className="page-container flex items-center justify-between h-16 sm:h-20">
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <Logo />
         </Link>
-        <div className="flex items-center gap-2">
-          <LanguageSwitcher />
-          <ThemeToggle />
-        </div>
+        <LanguageSwitcher />
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -139,14 +135,14 @@ export default function LoginPage(): JSX.Element {
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="w-full max-w-md"
         >
-          <div className="card-elevated rounded-2xl p-8">
+          <div className="bg-surface rounded-2xl p-8 sm:p-10 shadow-card">
             {mfaToken ? (
               <>
                 <div className="mb-8">
-                  <h1 className="font-sans text-2xl font-bold text-fg mb-2 tracking-tight">
+                  <h1 className="font-display text-3xl text-fg mb-2 tracking-tight">
                     {t('auth.mfaTitle')}
                   </h1>
-                  <p className="text-sm text-fg-muted font-light">
+                  <p className="text-sm text-fg-muted">
                     {t('auth.mfaSubtitle')}
                   </p>
                 </div>
@@ -198,10 +194,10 @@ export default function LoginPage(): JSX.Element {
             ) : (
             <>
             <div className="mb-8">
-              <h1 className="font-sans text-2xl font-bold text-fg mb-2 tracking-tight">
+              <h1 className="font-display text-3xl text-fg mb-2 tracking-tight">
                 {t('auth.loginTitle')}
               </h1>
-              <p className="text-sm text-fg-muted font-light">
+              <p className="text-sm text-fg-muted">
                 {t('auth.loginSubtitle')}
               </p>
             </div>

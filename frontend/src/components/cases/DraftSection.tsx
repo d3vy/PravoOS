@@ -50,7 +50,7 @@ export function DraftSection({ caseId, drafts }: { caseId: string; drafts: CaseD
   }
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+    <section className="mb-10 p-5 rounded-2xl bg-surface border border-line">
       <h2 className="text-sm font-semibold text-fg mb-3">{t('draft.title')}</h2>
 
       <div className="flex flex-col gap-3">

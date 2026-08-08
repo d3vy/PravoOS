@@ -122,7 +122,7 @@ export default function BillingPage(): JSX.Element {
         {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
         {status && (
-          <div className="mb-8 p-6 rounded-xl bg-surface border border-line">
+          <div className="mb-8 p-6 rounded-2xl bg-surface border border-line">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-xs text-fg-muted mb-1">{t('billing.currentPlan')}</p>
@@ -170,7 +170,7 @@ export default function BillingPage(): JSX.Element {
             return (
               <div
                 key={plan.code}
-                className={`flex flex-col gap-3 p-5 rounded-xl border ${
+                className={`flex flex-col gap-3 p-5 rounded-2xl border ${
                   isCurrent
                     ? 'border-fg bg-surface'
                     : 'border-line'

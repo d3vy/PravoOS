@@ -93,7 +93,7 @@ function ConsentsSection(): JSX.Element {
         {CONSENT_ORDER.map((purpose) => {
           const consent = byPurpose.get(purpose)
           const active = consent != null && consent.revokedAt === null
-          const mandatory = consent?.mandatory ?? purpose !== 'MARKETING'
+          const mandatory = consent?.mandatory ?? purpose === 'PERSONAL_DATA'
           return (
             <div
               key={purpose}
@@ -168,7 +168,7 @@ function CookieSection(): JSX.Element {
         <h2 className="text-xl font-semibold text-fg">{t('privacy.cookiesTitle')}</h2>
         <p className="mt-1 text-sm text-fg-muted">{t('privacy.cookiesDesc')}</p>
       </div>
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-4">
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-surface p-4">
         <input
           type="checkbox"
           checked={analytics}
@@ -295,7 +295,7 @@ function ErasureSection(): JSX.Element {
       </div>
 
       {confirming ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-danger/30 bg-danger-soft p-4">
+        <div className="flex flex-col gap-3 rounded-2xl border border-danger/30 bg-danger-soft p-4">
           <p className="text-sm text-fg">{t('privacy.eraseConfirmHint')}</p>
           <Input
             id="erasePassword"

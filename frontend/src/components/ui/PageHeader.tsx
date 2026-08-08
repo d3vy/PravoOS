@@ -20,7 +20,7 @@ interface PageHeaderProps {
 
 const TITLE_SIZE = {
   md: 'text-2xl',
-  lg: 'text-3xl',
+  lg: 'text-3xl sm:text-4xl',
 } as const
 
 export function PageHeader({
@@ -67,7 +67,7 @@ export function PageHeader({
         <div className="min-w-0">
           {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className={`${TITLE_SIZE[size]} font-semibold text-fg [overflow-wrap:anywhere]`}>
+            <h1 className={`${TITLE_SIZE[size]} font-display tracking-tight text-fg [overflow-wrap:anywhere]`}>
               {title}
             </h1>
             {titleSuffix}

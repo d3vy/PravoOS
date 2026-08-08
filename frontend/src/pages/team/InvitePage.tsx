@@ -27,7 +27,7 @@ export default function InvitePage(): JSX.Element {
   return (
     <div className="bg-bg">
       <div className="page-container py-16 max-w-md">
-        <div className="p-8 rounded-xl bg-surface border border-line text-center">
+        <div className="p-8 rounded-2xl bg-surface border border-line text-center">
           {joined ? (
             <>
               <h1 className="text-xl font-semibold text-fg mb-2">

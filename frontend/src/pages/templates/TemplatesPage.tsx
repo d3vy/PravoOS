@@ -220,7 +220,7 @@ function TemplateEditor({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-6 p-6 rounded-xl bg-surface border border-line flex flex-col gap-4"
+      className="mb-6 p-6 rounded-2xl bg-surface border border-line flex flex-col gap-4"
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-fg">
@@ -244,7 +244,7 @@ function TemplateEditor({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={10}
-          className="w-full px-3 py-2.5 rounded-lg border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
+          className="w-full px-3 py-2.5 rounded-xl border border-line bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
         />
       </div>
 

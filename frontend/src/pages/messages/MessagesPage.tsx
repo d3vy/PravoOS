@@ -39,7 +39,7 @@ export default function MessagesPage(): JSX.Element {
             <Spinner />
           </div>
         ) : threads.length === 0 ? (
-          <div className="card-elevated rounded-xl p-10 text-center">
+          <div className="card-elevated p-10 text-center">
             <p className="text-fg-muted text-sm">
               {t('messages.empty')}
             </p>
@@ -61,7 +61,7 @@ export default function MessagesPage(): JSX.Element {
               >
                 <Link
                   to={`/cases/${thread.caseId}#messages`}
-                  className="card-elevated rounded-xl p-4 flex items-start gap-3 hover:border-accent/40 transition-colors"
+                  className="card-elevated p-4 flex items-start gap-3 hover:border-accent/40 transition-colors"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-0.5">

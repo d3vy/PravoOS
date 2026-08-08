@@ -1,4 +1,4 @@
-import apiClient, { refreshSession } from './client'
+import apiClient, { multipartRequest, refreshSession } from './client'
 import { MAX_PAGE_SIZE } from './pagination'
 import { useAuthStore } from '../store/authStore'
 import i18n from '../i18n'
@@ -147,9 +147,7 @@ export const chatApi = {
   uploadAttachment: async (file: File): Promise<DocumentUploadResponse> => {
     const formData = new FormData()
     formData.append('file', file)
-    const response = await apiClient.post<DocumentUploadResponse>('/api/ai/chat/attachments', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const response = await apiClient.post<DocumentUploadResponse>('/api/ai/chat/attachments', formData, multipartRequest)
     return response.data
   },
 }

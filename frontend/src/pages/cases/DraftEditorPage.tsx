@@ -218,7 +218,7 @@ export default function DraftEditorPage(): JSX.Element {
                 queryClient.invalidateQueries({ queryKey: ['case-drafts', caseId] })
               }} />
             ) : (
-              <section className="p-4 rounded-xl bg-surface border border-line">
+              <section className="p-4 rounded-2xl bg-surface border border-line">
                 <h2 className="text-sm font-semibold text-fg mb-1">{t('draftEditor.aiAssistant')}</h2>
                 <p className="text-xs text-fg-muted mb-3">
                   {hasSelection ? t('draftEditor.appliesToSelection') : t('draftEditor.appliesToDocument')}
@@ -313,7 +313,7 @@ function VersionsPanel({
   })
 
   return (
-    <section className="p-4 rounded-xl bg-surface border border-line">
+    <section className="p-4 rounded-2xl bg-surface border border-line">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-fg">{t('draftEditor.versionHistory')}</h2>
         <button onClick={onClose} className="text-xs text-fg-muted hover:text-fg">

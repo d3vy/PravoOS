@@ -126,7 +126,7 @@ export function NewReviewDialog({
             <select
               value={caseId ?? ''}
               onChange={(event) => onCaseChange(event.target.value)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <option value="">{t('review.casePlaceholder')}</option>
               {(casesPage?.items ?? []).map((caseItem) => (
@@ -147,7 +147,7 @@ export function NewReviewDialog({
             onChange={(event) => setTitle(event.target.value)}
             maxLength={300}
             placeholder={t('review.titlePlaceholder')}
-            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
         </label>
 
@@ -192,7 +192,7 @@ export function NewReviewDialog({
                 onChange={(event) => updateQuestion(index, event.target.value)}
                 maxLength={300}
                 placeholder={t(`review.questionPlaceholder${Math.min(index, 2)}`)}
-                className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               />
             ))}
           </div>

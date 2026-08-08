@@ -1,4 +1,4 @@
-import apiClient from './client'
+import apiClient, { multipartRequest } from './client'
 import { DEFAULT_PAGE_SIZE, readTotal, type Page } from './pagination'
 import type {
   AiResponseDto,
@@ -88,7 +88,7 @@ export const casesApi = {
     const response = await apiClient.post<DocumentUploadResponse>(
       `/api/ai/cases/${caseId}/documents`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      multipartRequest
     )
     return response.data
   },

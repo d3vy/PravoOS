@@ -1,4 +1,4 @@
-import apiClient from './client'
+import apiClient, { multipartRequest } from './client'
 import type {
   SignatureProviderType,
   SignatureRequestResponse,
@@ -72,7 +72,7 @@ export const signaturesApi = {
     const response = await apiClient.post<SignatureRequestResponse>(
       `/api/ai/cases/${caseId}/signatures/${signatureId}/sign-cms`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      multipartRequest
     )
     return response.data
   },

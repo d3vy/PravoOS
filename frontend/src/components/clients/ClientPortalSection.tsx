@@ -51,7 +51,7 @@ export function ClientPortalSection({ clientId, email }: ClientPortalSectionProp
   const hasEmail = email !== null && email.trim() !== ''
 
   return (
-    <section className="mb-10 p-6 rounded-xl bg-surface border border-line">
+    <section className="mb-10 p-6 rounded-2xl bg-surface border border-line">
       <div className="flex items-center justify-between gap-4 mb-2">
         <h2 className="text-sm font-semibold text-fg">{t('clientPortal.title')}</h2>
         {!isLoading && data && <StatusBadge status={data.status} />}

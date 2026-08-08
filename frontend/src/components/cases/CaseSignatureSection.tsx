@@ -94,7 +94,7 @@ export function CaseSignatureSection({
   }
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+    <section className="mb-10 p-5 rounded-2xl bg-surface border border-line">
       <h2 className="text-sm font-semibold text-fg mb-1">{t('signature.title')}</h2>
       <p className="text-xs text-fg-muted mb-3">
         {t('signature.hint')}

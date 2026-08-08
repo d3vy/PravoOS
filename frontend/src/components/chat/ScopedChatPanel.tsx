@@ -209,7 +209,7 @@ export function ScopedChatPanel({
         </div>
       )}
 
-      <div className="rounded-xl border border-line bg-surface">
+      <div className="rounded-2xl border border-line bg-surface">
         <div className="max-h-[520px] overflow-y-auto px-4 py-4 flex flex-col gap-5">
           {messagesLoading && activeConversationId !== null && messages.length === 0 ? (
             <div className="flex justify-center py-8">

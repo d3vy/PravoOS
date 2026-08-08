@@ -70,7 +70,7 @@ export function WorkflowProcessSection({ caseId }: { caseId: string }): JSX.Elem
   const selected = definitions.find((d) => d.id === selectedId)
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+    <section className="mb-10 p-5 rounded-2xl bg-surface border border-line">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-semibold text-fg">{t('process.title')}</h2>
         <Link to="/workflows" className="text-xs text-accent hover:underline">

@@ -75,7 +75,7 @@ export function ClientContactsSection({ clientId }: { clientId: string }): JSX.E
 
       <form
         onSubmit={handleAdd}
-        className="mb-4 p-4 rounded-xl bg-surface border border-line flex flex-col gap-3"
+        className="mb-4 p-4 rounded-2xl bg-surface border border-line flex flex-col gap-3"
       >
         <div className="flex flex-col sm:flex-row gap-3">
           <select

@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    --bg: 255 255 255;
-    --surface: 250 250 250;
-    --surface-2: 244 244 245;
-    --overlay: 255 255 255;
-    --line: 228 228 231;
-    --fg: 9 9 11;
-    --fg-muted: 100 100 110;
+    --bg: 247 247 244;
+    --surface: 242 241 237;
+    --surface-2: 230 229 224;
+    --overlay: 242 241 237;
+    --line: 232 231 226;
+    --fg: 26 15 10;
+    --fg-muted: 138 131 127;
 
-    --accent: 67 56 202;
-    --accent-solid: 79 70 229;
-    --accent-solid-hover: 67 56 202;
+    --accent: 116 92 68;
+    --accent-solid: 26 15 10;
+    --accent-solid-hover: 61 47 34;
     --accent-fg: 255 255 255;
 
     --success: 6 95 70;
@@ -26,22 +26,22 @@
     --info: 30 64 175;
     --info-soft: 219 234 254;
 
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px -4px rgba(0, 0, 0, 0.08);
+    --shadow-card: 0 1px 3px rgba(26, 15, 10, 0.06), 0 4px 16px -4px rgba(26, 15, 10, 0.1);
   }
 
   .dark {
-    --bg: 9 9 11;
-    --surface: 17 17 19;
-    --surface-2: 28 28 31;
-    --overlay: 17 17 19;
-    --line: 39 39 42;
-    --fg: 250 250 250;
-    --fg-muted: 161 161 170;
+    --bg: 26 15 10;
+    --surface: 33 20 14;
+    --surface-2: 44 29 20;
+    --overlay: 33 20 14;
+    --line: 61 44 33;
+    --fg: 245 240 233;
+    --fg-muted: 191 178 167;
 
-    --accent: 165 180 252;
-    --accent-solid: 79 70 229;
-    --accent-solid-hover: 99 102 241;
-    --accent-fg: 255 255 255;
+    --accent: 253 194 152;
+    --accent-solid: 253 194 152;
+    --accent-solid-hover: 255 212 181;
+    --accent-fg: 26 15 10;
 
     --success: 52 211 153;
     --success-soft: 6 46 38;
@@ -118,12 +118,12 @@
   }
 
   .card-elevated {
-    @apply bg-surface border border-line rounded-xl;
+    @apply bg-surface border border-line rounded-2xl;
     box-shadow: var(--shadow-card);
   }
 
   .input-base {
-    @apply w-full px-4 py-3 rounded-lg bg-bg
+    @apply w-full px-4 py-3 rounded-xl bg-bg
            border border-line text-fg placeholder-fg-muted
            focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent
            transition-all duration-150;

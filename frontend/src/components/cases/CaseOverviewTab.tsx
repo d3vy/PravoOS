@@ -38,7 +38,7 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
             key={stat.label}
             type="button"
             onClick={() => onNavigate(stat.tab)}
-            className="text-left p-4 rounded-xl bg-surface border border-line hover:border-accent/50 transition-colors"
+            className="text-left p-4 rounded-2xl bg-surface border border-line hover:border-accent/50 transition-colors"
           >
             <span className="block text-2xl font-semibold text-fg">{stat.value}</span>
             <span className="block text-xs text-fg-muted mt-0.5">{stat.label}</span>
@@ -114,7 +114,7 @@ export function CaseOverviewTab({ caseItem, documents, drafts, responses, onNavi
           <button
             type="button"
             onClick={() => onNavigate('analysis')}
-            className="block w-full text-left p-4 rounded-xl bg-surface border border-line hover:border-accent/50 transition-colors"
+            className="block w-full text-left p-4 rounded-2xl bg-surface border border-line hover:border-accent/50 transition-colors"
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-accent/10 text-accent">

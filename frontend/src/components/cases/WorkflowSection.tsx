@@ -42,7 +42,7 @@ export function WorkflowSection({ caseId }: { caseId: string }): JSX.Element {
   }
 
   return (
-    <section className="mb-10 p-5 rounded-xl bg-surface border border-line">
+    <section className="mb-10 p-5 rounded-2xl bg-surface border border-line">
       <h2 className="text-sm font-semibold text-fg mb-3">{t('workflow.runTitle')}</h2>
 
       <div className="flex gap-1 mb-4 p-1 rounded-lg bg-bg">

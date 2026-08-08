@@ -45,7 +45,7 @@ export function Button({
       whileTap={isDisabled ? {} : { scale: 0.99 }}
       transition={{ duration: 0.1 }}
       className={`
-        relative inline-flex items-center justify-center gap-2 rounded-lg font-medium
+        relative inline-flex items-center justify-center gap-2 rounded-full font-medium
         transition-colors duration-150 focus:outline-none focus-visible:ring-2
         focus-visible:ring-fg/30 focus-visible:ring-offset-2
         focus-visible:ring-offset-bg
