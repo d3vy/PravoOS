@@ -10,6 +10,7 @@ import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,7 @@ class RefreshTokenRepositoryIT {
   @Test
   void findByTokenHashReturnsMatchingToken() {
     User user = persistUser("token-owner@example.com");
-    persistToken(user.getId(), "hash-1", LocalDateTime.now().plusDays(1), null);
+    persistToken(user.getId(), "hash-1", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
 
     assertThat(refreshTokenRepository.findByTokenHash("hash-1")).isPresent();
     assertThat(refreshTokenRepository.findByTokenHash("missing-hash")).isEmpty();
@@ -68,22 +69,26 @@ class RefreshTokenRepositoryIT {
   void existsByUserIdAndIpAddressAndRevokedAtIsNullAndExpiresAtAfterMatchesOnlyActiveSession() {
     User user = persistUser("ip-check@example.com");
     RefreshToken active =
-        persistToken(user.getId(), "hash-active", LocalDateTime.now().plusDays(1), null);
+        persistToken(
+            user.getId(), "hash-active", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
     active.setIpAddress("1.2.3.4");
     refreshTokenRepository.saveAndFlush(active);
 
     RefreshToken revoked =
         persistToken(
-            user.getId(), "hash-revoked", LocalDateTime.now().plusDays(1), LocalDateTime.now());
+            user.getId(),
+            "hash-revoked",
+            LocalDateTime.now(ZoneOffset.UTC).plusDays(1),
+            LocalDateTime.now(ZoneOffset.UTC));
     revoked.setIpAddress("1.2.3.4");
     refreshTokenRepository.saveAndFlush(revoked);
 
     boolean existsForActiveIp =
         refreshTokenRepository.existsByUserIdAndIpAddressAndRevokedAtIsNullAndExpiresAtAfter(
-            user.getId(), "1.2.3.4", LocalDateTime.now());
+            user.getId(), "1.2.3.4", LocalDateTime.now(ZoneOffset.UTC));
     boolean existsForUnknownIp =
         refreshTokenRepository.existsByUserIdAndIpAddressAndRevokedAtIsNullAndExpiresAtAfter(
-            user.getId(), "9.9.9.9", LocalDateTime.now());
+            user.getId(), "9.9.9.9", LocalDateTime.now(ZoneOffset.UTC));
 
     assertThat(existsForActiveIp).isTrue();
     assertThat(existsForUnknownIp).isFalse();
@@ -92,18 +97,24 @@ class RefreshTokenRepositoryIT {
   @Test
   void findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDescExcludesInactive() {
     User user = persistUser("sessions@example.com");
-    persistToken(user.getId(), "hash-expired", LocalDateTime.now().minusDays(1), null);
     persistToken(
-        user.getId(), "hash-revoked", LocalDateTime.now().plusDays(1), LocalDateTime.now());
-    persistToken(user.getId(), "hash-active-older", LocalDateTime.now().plusDays(1), null);
+        user.getId(), "hash-expired", LocalDateTime.now(ZoneOffset.UTC).minusDays(1), null);
+    persistToken(
+        user.getId(),
+        "hash-revoked",
+        LocalDateTime.now(ZoneOffset.UTC).plusDays(1),
+        LocalDateTime.now(ZoneOffset.UTC));
+    persistToken(
+        user.getId(), "hash-active-older", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
     RefreshToken activeNewer =
-        persistToken(user.getId(), "hash-active-newer", LocalDateTime.now().plusDays(1), null);
-    activeNewer.setCreatedAt(LocalDateTime.now().plusMinutes(1));
+        persistToken(
+            user.getId(), "hash-active-newer", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
+    activeNewer.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(1));
     refreshTokenRepository.saveAndFlush(activeNewer);
 
     List<RefreshToken> active =
         refreshTokenRepository.findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
-            user.getId(), LocalDateTime.now());
+            user.getId(), LocalDateTime.now(ZoneOffset.UTC));
 
     assertThat(active)
         .extracting(RefreshToken::getTokenHash)
@@ -115,7 +126,8 @@ class RefreshTokenRepositoryIT {
     User owner = persistUser("owner@example.com");
     User stranger = persistUser("stranger@example.com");
     RefreshToken token =
-        persistToken(owner.getId(), "hash-own", LocalDateTime.now().plusDays(1), null);
+        persistToken(
+            owner.getId(), "hash-own", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
 
     assertThat(refreshTokenRepository.findByIdAndUserId(token.getId(), owner.getId())).isPresent();
     assertThat(refreshTokenRepository.findByIdAndUserId(token.getId(), stranger.getId())).isEmpty();
@@ -125,17 +137,18 @@ class RefreshTokenRepositoryIT {
   void revokeAllActiveByUserIdOnlyAffectsGivenUsersActiveTokens() {
     User user = persistUser("revoke-all@example.com");
     User otherUser = persistUser("other@example.com");
-    persistToken(user.getId(), "hash-a", LocalDateTime.now().plusDays(1), null);
-    persistToken(user.getId(), "hash-b", LocalDateTime.now().plusDays(1), null);
+    persistToken(user.getId(), "hash-a", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
+    persistToken(user.getId(), "hash-b", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
     RefreshToken alreadyRevoked =
         persistToken(
             user.getId(),
             "hash-c",
-            LocalDateTime.now().plusDays(1),
-            LocalDateTime.now().minusHours(1));
-    persistToken(otherUser.getId(), "hash-other", LocalDateTime.now().plusDays(1), null);
+            LocalDateTime.now(ZoneOffset.UTC).plusDays(1),
+            LocalDateTime.now(ZoneOffset.UTC).minusHours(1));
+    persistToken(
+        otherUser.getId(), "hash-other", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
 
-    LocalDateTime revokedAt = LocalDateTime.now();
+    LocalDateTime revokedAt = LocalDateTime.now(ZoneOffset.UTC);
     int updated = refreshTokenRepository.revokeAllActiveByUserId(user.getId(), revokedAt);
     entityManager.clear();
 
@@ -153,11 +166,14 @@ class RefreshTokenRepositoryIT {
   @Test
   void deleteByExpiresAtBeforeRemovesOnlyExpiredTokens() {
     User user = persistUser("cleanup@example.com");
-    persistToken(user.getId(), "hash-expired-1", LocalDateTime.now().minusDays(2), null);
-    persistToken(user.getId(), "hash-expired-2", LocalDateTime.now().minusHours(1), null);
-    persistToken(user.getId(), "hash-not-expired", LocalDateTime.now().plusDays(1), null);
+    persistToken(
+        user.getId(), "hash-expired-1", LocalDateTime.now(ZoneOffset.UTC).minusDays(2), null);
+    persistToken(
+        user.getId(), "hash-expired-2", LocalDateTime.now(ZoneOffset.UTC).minusHours(1), null);
+    persistToken(
+        user.getId(), "hash-not-expired", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
 
-    int deleted = refreshTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+    int deleted = refreshTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now(ZoneOffset.UTC));
 
     assertThat(deleted).isEqualTo(2);
     assertThat(refreshTokenRepository.findByTokenHash("hash-not-expired")).isPresent();

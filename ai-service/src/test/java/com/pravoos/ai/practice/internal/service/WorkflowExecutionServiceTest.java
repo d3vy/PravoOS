@@ -24,6 +24,7 @@ import com.pravoos.ai.shared.model.enums.WorkflowRunStatus;
 import com.pravoos.ai.shared.model.enums.WorkflowStepStatus;
 import com.pravoos.ai.shared.model.enums.WorkflowStepType;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -80,7 +81,7 @@ class WorkflowExecutionServiceTest {
         List.of(),
         null,
         null,
-        LocalDateTime.now(),
+        LocalDateTime.now(ZoneOffset.UTC),
         List.of());
   }
 
@@ -114,7 +115,7 @@ class WorkflowExecutionServiceTest {
                 "Исковое заявление",
                 "Заявление",
                 "текст",
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 null));
     when(caseTaskService.createFromChecklist(eq(caseId), any(), eq(lawyerId)))
         .thenReturn(List.of());
@@ -189,7 +190,7 @@ class WorkflowExecutionServiceTest {
   void failStuckRunsMarksStaleRunningAsFailed() {
     WorkflowRun stuck = new WorkflowRun();
     stuck.setStatus(WorkflowRunStatus.RUNNING);
-    stuck.setStartedAt(LocalDateTime.now().minusHours(1));
+    stuck.setStartedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1));
     when(runRepository.findByStatusAndStartedAtBefore(eq(WorkflowRunStatus.RUNNING), any()))
         .thenReturn(List.of(stuck));
 

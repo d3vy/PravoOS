@@ -153,8 +153,32 @@ class SecurityConfigTest {
 
   @Test
   @WithMockUser(roles = "CLIENT")
-  void authenticatedRequestToUnmatchedEndpointIsAllowedRegardlessOfRole() throws Exception {
+  void clientCannotReachUnmatchedEndpoint() throws Exception {
+    mockMvc.perform(get("/api/ai/whatever")).andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithMockUser(roles = "LAWYER")
+  void lawyerCanReachUnmatchedEndpoint() throws Exception {
     mockMvc.perform(get("/api/ai/whatever")).andExpect(status().isOk());
+  }
+
+  @Test
+  @WithMockUser(roles = "ADMIN")
+  void adminCanReachUnmatchedEndpoint() throws Exception {
+    mockMvc.perform(get("/api/ai/whatever")).andExpect(status().isOk());
+  }
+
+  @Test
+  @WithMockUser(roles = "LAWYER")
+  void lawyerCanAccessDashboardEndpoint() throws Exception {
+    mockMvc.perform(get("/api/ai/dashboard")).andExpect(status().isOk());
+  }
+
+  @Test
+  @WithMockUser(roles = "CLIENT")
+  void clientCannotAccessDashboardEndpoint() throws Exception {
+    mockMvc.perform(get("/api/ai/dashboard")).andExpect(status().isForbidden());
   }
 
   @Configuration
@@ -229,6 +253,11 @@ class SecurityConfigTest {
 
     @GetMapping("/api/ai/saved-views")
     String savedViews() {
+      return "ok";
+    }
+
+    @GetMapping("/api/ai/dashboard")
+    String dashboard() {
       return "ok";
     }
 

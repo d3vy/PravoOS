@@ -47,6 +47,16 @@ class PrivacyControllerTest {
   }
 
   @Test
+  void revokeIsAllowedForCrossBorderTransferConsent() {
+    UUID userId = UUID.randomUUID();
+    when(authentication.getPrincipal()).thenReturn(userId.toString());
+
+    controller.revoke(ConsentPurpose.CROSS_BORDER_TRANSFER, authentication);
+
+    verify(consentService).revoke(userId, ConsentPurpose.CROSS_BORDER_TRANSFER);
+  }
+
+  @Test
   void revokeDelegatesToServiceForOptionalPurpose() {
     UUID userId = UUID.randomUUID();
     when(authentication.getPrincipal()).thenReturn(userId.toString());

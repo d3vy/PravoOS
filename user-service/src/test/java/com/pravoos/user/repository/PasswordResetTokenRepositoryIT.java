@@ -9,6 +9,7 @@ import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +56,7 @@ class PasswordResetTokenRepositoryIT {
   @Test
   void findByTokenHashReturnsMatchingToken() {
     User user = persistUser("reset-owner@example.com");
-    persistToken(user.getId(), "hash-1", LocalDateTime.now().plusHours(1), null);
+    persistToken(user.getId(), "hash-1", LocalDateTime.now(ZoneOffset.UTC).plusHours(1), null);
 
     assertThat(passwordResetTokenRepository.findByTokenHash("hash-1")).isPresent();
     assertThat(passwordResetTokenRepository.findByTokenHash("missing-hash")).isEmpty();
@@ -65,14 +66,21 @@ class PasswordResetTokenRepositoryIT {
   void invalidateActiveByUserIdOnlyMarksActiveTokensAsUsed() {
     User user = persistUser("invalidate@example.com");
     User otherUser = persistUser("other@example.com");
-    persistToken(user.getId(), "hash-active-1", LocalDateTime.now().plusHours(1), null);
-    persistToken(user.getId(), "hash-active-2", LocalDateTime.now().plusHours(1), null);
     persistToken(
-        user.getId(), "hash-already-used", LocalDateTime.now().plusHours(1), LocalDateTime.now());
-    persistToken(user.getId(), "hash-expired", LocalDateTime.now().minusHours(1), null);
-    persistToken(otherUser.getId(), "hash-other-user", LocalDateTime.now().plusHours(1), null);
+        user.getId(), "hash-active-1", LocalDateTime.now(ZoneOffset.UTC).plusHours(1), null);
+    persistToken(
+        user.getId(), "hash-active-2", LocalDateTime.now(ZoneOffset.UTC).plusHours(1), null);
+    persistToken(
+        user.getId(),
+        "hash-already-used",
+        LocalDateTime.now(ZoneOffset.UTC).plusHours(1),
+        LocalDateTime.now(ZoneOffset.UTC));
+    persistToken(
+        user.getId(), "hash-expired", LocalDateTime.now(ZoneOffset.UTC).minusHours(1), null);
+    persistToken(
+        otherUser.getId(), "hash-other-user", LocalDateTime.now(ZoneOffset.UTC).plusHours(1), null);
 
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
     int updated = passwordResetTokenRepository.invalidateActiveByUserId(user.getId(), now);
 
     assertThat(updated).isEqualTo(2);
@@ -96,11 +104,15 @@ class PasswordResetTokenRepositoryIT {
   @Test
   void deleteByExpiresAtBeforeRemovesOnlyExpiredTokens() {
     User user = persistUser("cleanup@example.com");
-    persistToken(user.getId(), "hash-expired-1", LocalDateTime.now().minusDays(2), null);
-    persistToken(user.getId(), "hash-expired-2", LocalDateTime.now().minusHours(1), null);
-    persistToken(user.getId(), "hash-not-expired", LocalDateTime.now().plusDays(1), null);
+    persistToken(
+        user.getId(), "hash-expired-1", LocalDateTime.now(ZoneOffset.UTC).minusDays(2), null);
+    persistToken(
+        user.getId(), "hash-expired-2", LocalDateTime.now(ZoneOffset.UTC).minusHours(1), null);
+    persistToken(
+        user.getId(), "hash-not-expired", LocalDateTime.now(ZoneOffset.UTC).plusDays(1), null);
 
-    int deleted = passwordResetTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+    int deleted =
+        passwordResetTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now(ZoneOffset.UTC));
 
     assertThat(deleted).isEqualTo(2);
     assertThat(passwordResetTokenRepository.findByTokenHash("hash-not-expired")).isPresent();

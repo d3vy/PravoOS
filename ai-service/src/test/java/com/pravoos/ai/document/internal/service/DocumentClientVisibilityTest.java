@@ -42,7 +42,7 @@ class DocumentClientVisibilityTest {
         new DocumentService(
             documentRepository,
             documentChunkRepository,
-            eventPublisher,
+            new DocumentUploadWriter(documentRepository, eventPublisher),
             properties,
             fileCryptoService,
             malwareScanClient,

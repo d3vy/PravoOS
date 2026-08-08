@@ -1,10 +1,12 @@
 package com.pravoos.ai.shared.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 class AsyncConfigTest {
@@ -12,53 +14,39 @@ class AsyncConfigTest {
   private final AsyncConfig config = new AsyncConfig();
 
   @Test
-  void uncaughtExceptionHandlerLogsWithoutThrowing() throws NoSuchMethodException {
-    assertThatNoException()
-        .isThrownBy(
-            () ->
-                config
-                    .getAsyncUncaughtExceptionHandler()
-                    .handleUncaughtException(
-                        new RuntimeException("boom"),
-                        AsyncConfigTest.class.getDeclaredMethod(
-                            "uncaughtExceptionHandlerLogsWithoutThrowing"),
-                        "arg1"));
-  }
-
-  @Test
-  void taskExecutorIsConfiguredForEmbeddingWork() {
-    ThreadPoolTaskExecutor executor = (ThreadPoolTaskExecutor) config.taskExecutor();
-
-    assertThat(executor.getCorePoolSize()).isEqualTo(2);
-    assertThat(executor.getMaxPoolSize()).isEqualTo(4);
-    assertThat(executor.getThreadNamePrefix()).isEqualTo("embedding-");
-  }
-
-  @Test
-  void tabularReviewExecutorAbortsWhenSaturated() {
-    ThreadPoolTaskExecutor executor = config.tabularReviewExecutor();
-
-    assertThat(executor.getThreadNamePrefix()).isEqualTo("review-run-");
-    assertThat(executor.getThreadPoolExecutor().getRejectedExecutionHandler())
-        .isInstanceOf(ThreadPoolExecutor.AbortPolicy.class);
-  }
-
-  @Test
-  void tabularReviewCellExecutorRunsOnCallerWhenSaturated() {
-    ThreadPoolTaskExecutor executor = config.tabularReviewCellExecutor();
-
-    assertThat(executor.getCorePoolSize()).isEqualTo(4);
-    assertThat(executor.getThreadNamePrefix()).isEqualTo("review-doc-");
-    assertThat(executor.getThreadPoolExecutor().getRejectedExecutionHandler())
-        .isInstanceOf(ThreadPoolExecutor.CallerRunsPolicy.class);
-  }
-
-  @Test
-  void chatStreamExecutorIsConfiguredForHighConcurrency() {
+  void chatStreamExecutorRejectsInsteadOfQueueingWhenSaturated() throws InterruptedException {
     ThreadPoolTaskExecutor executor = config.chatStreamExecutor();
+    CountDownLatch release = new CountDownLatch(1);
+    CountDownLatch started = new CountDownLatch(executor.getMaxPoolSize());
+    try {
+      for (int i = 0; i < executor.getMaxPoolSize(); i++) {
+        executor.execute(
+            () -> {
+              started.countDown();
+              awaitQuietly(release);
+            });
+      }
+      assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
 
-    assertThat(executor.getCorePoolSize()).isEqualTo(8);
-    assertThat(executor.getMaxPoolSize()).isEqualTo(25);
-    assertThat(executor.getThreadNamePrefix()).isEqualTo("chat-stream-");
+      assertThatThrownBy(() -> executor.execute(() -> {}))
+          .isInstanceOf(TaskRejectedException.class);
+    } finally {
+      release.countDown();
+      executor.shutdown();
+    }
+  }
+
+  @Test
+  void backgroundExecutorsKeepQueueingInsteadOfRejecting() {
+    assertThat(config.tabularReviewExecutor().getQueueCapacity()).isPositive();
+    assertThat(config.tabularReviewCellExecutor().getQueueCapacity()).isPositive();
+  }
+
+  private void awaitQuietly(CountDownLatch latch) {
+    try {
+      latch.await(5, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 }

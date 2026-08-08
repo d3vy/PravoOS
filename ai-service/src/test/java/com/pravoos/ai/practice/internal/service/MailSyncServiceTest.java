@@ -25,6 +25,7 @@ import com.pravoos.ai.shared.mail.MailboxSyncCursor;
 import com.pravoos.ai.shared.model.enums.EmailDirection;
 import com.pravoos.ai.shared.model.enums.MailboxStatus;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -55,10 +56,10 @@ class MailSyncServiceTest {
     service =
         new MailSyncService(
             mailboxRepository,
-            emailMessageRepository,
             mailboxReader,
             new MailSyncProperties(50, 1000),
-            emailLinkingService);
+            emailLinkingService,
+            new MailSyncWriter(mailboxRepository, emailMessageRepository));
     mailbox = new Mailbox();
     mailbox.setUserId(userId);
     mailbox.setEmailAddress("lawyer@pravoos.ru");
@@ -154,7 +155,7 @@ class MailSyncServiceTest {
                         List.of("client@example.com"),
                         List.of(),
                         "Текст",
-                        LocalDateTime.now(),
+                        LocalDateTime.now(ZoneOffset.UTC),
                         0,
                         null,
                         List.of()))));
@@ -183,7 +184,7 @@ class MailSyncServiceTest {
                         List.of("lawyer@pravoos.ru"),
                         List.of(),
                         "Текст",
-                        LocalDateTime.now(),
+                        LocalDateTime.now(ZoneOffset.UTC),
                         1,
                         "<second@example.com>",
                         List.of("<root@example.com>", "<second@example.com>")))));
@@ -247,7 +248,7 @@ class MailSyncServiceTest {
         List.of("lawyer@pravoos.ru"),
         List.of(),
         "Текст письма",
-        LocalDateTime.now(),
+        LocalDateTime.now(ZoneOffset.UTC),
         0,
         null,
         List.of());

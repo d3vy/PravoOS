@@ -102,6 +102,44 @@ class TextDiffServiceTest {
   }
 
   @Test
+  void oversizedDocumentsFallBackToASingleReplacementInsteadOfAllocatingTheMatrix() {
+    String base = paragraphs("Пункт базы ", 2100);
+    String revised = paragraphs("Пункт ревизии ", 2100);
+
+    List<DiffChange> changes = textDiffService.diff(base, revised);
+
+    assertThat(changes)
+        .singleElement()
+        .satisfies(
+            change -> {
+              assertThat(change.type()).isEqualTo(DiffChangeType.MODIFIED);
+              assertThat(change.baseText()).isEqualTo(base);
+              assertThat(change.revisedText()).isEqualTo(revised);
+            });
+  }
+
+  @Test
+  void aSharedHeaderDoesNotCountTowardsTheOversizeLimit() {
+    String header = paragraphs("Общая шапка ", 2100);
+
+    List<DiffChange> changes = textDiffService.diff(header + "\nБыло", header + "\nСтало");
+
+    assertThat(changes)
+        .singleElement()
+        .satisfies(
+            change -> {
+              assertThat(change.baseText()).isEqualTo("Было");
+              assertThat(change.revisedText()).isEqualTo("Стало");
+            });
+  }
+
+  private String paragraphs(String prefix, int count) {
+    return java.util.stream.IntStream.range(0, count)
+        .mapToObj(i -> prefix + i)
+        .collect(Collectors.joining("\n"));
+  }
+
+  @Test
   void inlineSegmentsAreEmptyWhenOneSideIsBlank() {
     assertThat(textDiffService.inlineSegments("", "Новый пункт.")).isEmpty();
   }

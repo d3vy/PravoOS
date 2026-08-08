@@ -13,6 +13,7 @@ import com.pravoos.user.privacy.internal.model.enums.ConsentPurpose;
 import com.pravoos.user.privacy.internal.repository.UserConsentRepository;
 import com.pravoos.user.privacy.internal.service.ConsentService;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,7 +48,8 @@ class ConsentServiceTest {
         .thenReturn(Optional.empty());
 
     service.recordSignupConsent(
-        USER_ID, new SignupConsent("2.0", true, false, LocalDateTime.now(), "1.2.3.4", "UA"));
+        USER_ID,
+        new SignupConsent("2.0", true, false, LocalDateTime.now(ZoneOffset.UTC), "1.2.3.4", "UA"));
 
     ArgumentCaptor<UserConsent> captor = ArgumentCaptor.forClass(UserConsent.class);
     verify(consentRepository, times(2)).save(captor.capture());
@@ -64,7 +66,8 @@ class ConsentServiceTest {
         .thenReturn(Optional.of(consent(ConsentPurpose.PERSONAL_DATA, "2.0")));
 
     service.recordSignupConsent(
-        USER_ID, new SignupConsent("2.0", false, false, LocalDateTime.now(), null, null));
+        USER_ID,
+        new SignupConsent("2.0", false, false, LocalDateTime.now(ZoneOffset.UTC), null, null));
 
     verify(consentRepository, never()).save(any());
   }
@@ -171,7 +174,7 @@ class ConsentServiceTest {
     consent.setUserId(USER_ID);
     consent.setPurpose(purpose);
     consent.setPolicyVersion(version);
-    consent.setGrantedAt(LocalDateTime.now());
+    consent.setGrantedAt(LocalDateTime.now(ZoneOffset.UTC));
     consent.setSource("SIGNUP");
     return consent;
   }

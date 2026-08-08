@@ -3,7 +3,6 @@ package com.pravoos.ai.core.internal.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -27,12 +26,13 @@ import org.mockito.quality.Strictness;
 class TrustMetricsRecorderTest {
 
   @Mock private AiTrustCounterRepository trustCounterRepository;
+  @Mock private TrustCounterWriter trustCounterWriter;
 
   private TrustMetricsRecorder recorder;
 
   @BeforeEach
   void setUp() {
-    recorder = new TrustMetricsRecorder(trustCounterRepository, null);
+    recorder = new TrustMetricsRecorder(trustCounterRepository, trustCounterWriter);
   }
 
   @Test
@@ -43,15 +43,15 @@ class TrustMetricsRecorderTest {
 
     recorder.flush();
 
-    verify(trustCounterRepository).addDelta(any(LocalDate.class), eq("GUARD_PASS"), eq(2L));
-    verify(trustCounterRepository).addDelta(any(LocalDate.class), eq("GUARD_BLOCK"), eq(1L));
+    verify(trustCounterWriter).addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_PASS), eq(2L));
+    verify(trustCounterWriter).addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_BLOCK), eq(1L));
   }
 
   @Test
   void flushWithoutRecordedEventsTouchesNothing() {
     recorder.flush();
 
-    verifyNoInteractions(trustCounterRepository);
+    verifyNoInteractions(trustCounterWriter);
   }
 
   @Test
@@ -60,19 +60,36 @@ class TrustMetricsRecorderTest {
     recorder.flush();
     recorder.flush();
 
-    verify(trustCounterRepository).addDelta(any(LocalDate.class), eq("CITATION_VERIFIED"), eq(1L));
+    verify(trustCounterWriter)
+        .addDelta(any(LocalDate.class), eq(TrustMetric.CITATION_VERIFIED), eq(1L));
   }
 
   @Test
   void failedFlushKeepsDeltaForTheNextAttempt() {
     doThrow(new IllegalStateException("db down"))
-        .when(trustCounterRepository)
-        .addDelta(any(LocalDate.class), anyString(), anyLong());
+        .when(trustCounterWriter)
+        .addDelta(any(LocalDate.class), any(TrustMetric.class), anyLong());
     recorder.record(TrustMetric.GUARD_BLOCK);
 
     recorder.flush();
 
     assertThat(recorder.totals()).containsEntry(TrustMetric.GUARD_BLOCK, 1L);
+  }
+
+  @Test
+  void failureOfOneMetricDoesNotDiscardTheOthers() {
+    doThrow(new IllegalStateException("db down"))
+        .when(trustCounterWriter)
+        .addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_BLOCK), anyLong());
+    recorder.record(TrustMetric.GUARD_BLOCK);
+    recorder.record(TrustMetric.GUARD_PASS);
+
+    recorder.flush();
+
+    verify(trustCounterWriter).addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_PASS), eq(1L));
+    assertThat(recorder.totals())
+        .containsEntry(TrustMetric.GUARD_BLOCK, 1L)
+        .containsEntry(TrustMetric.GUARD_PASS, 0L);
   }
 
   @Test

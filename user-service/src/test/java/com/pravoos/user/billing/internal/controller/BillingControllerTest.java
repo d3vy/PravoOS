@@ -19,6 +19,7 @@ import com.pravoos.user.billing.internal.service.PaymentService;
 import com.pravoos.user.billing.internal.service.SubscriptionService;
 import com.pravoos.user.shared.exception.GlobalExceptionHandler;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,7 +62,7 @@ class BillingControllerTest {
                 "Профи",
                 SubscriptionStatus.ACTIVE,
                 null,
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 false,
                 100,
                 50_000L,
@@ -125,7 +126,7 @@ class BillingControllerTest {
                 "Профи",
                 SubscriptionStatus.ACTIVE,
                 null,
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 true,
                 100,
                 50_000L,
@@ -150,8 +151,8 @@ class BillingControllerTest {
                     99000,
                     PaymentStatus.SUCCEEDED,
                     null,
-                    LocalDateTime.now(),
-                    LocalDateTime.now())));
+                    LocalDateTime.now(ZoneOffset.UTC),
+                    LocalDateTime.now(ZoneOffset.UTC))));
 
     mockMvc
         .perform(get("/api/user/billing/payments").principal(authentication))

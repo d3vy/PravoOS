@@ -25,6 +25,7 @@ import com.pravoos.user.shared.exception.GlobalExceptionHandler;
 import com.pravoos.user.shared.exception.NotOrganizationMemberException;
 import com.pravoos.user.shared.exception.OrganizationAccessDeniedException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +64,8 @@ class OrganizationControllerTest {
   void createReturns201WithCreatedOrganization() throws Exception {
     when(authentication.getPrincipal()).thenReturn(userId.toString());
     OrganizationResponse response =
-        new OrganizationResponse(orgId, "ACME", userId, OrgRole.OWNER, 1, LocalDateTime.now());
+        new OrganizationResponse(
+            orgId, "ACME", userId, OrgRole.OWNER, 1, LocalDateTime.now(ZoneOffset.UTC));
     when(organizationService.create(userId, new CreateOrganizationRequest("ACME")))
         .thenReturn(response);
 
@@ -95,7 +97,7 @@ class OrganizationControllerTest {
         .thenReturn(
             List.of(
                 new OrganizationResponse(
-                    orgId, "ACME", userId, OrgRole.OWNER, 1, LocalDateTime.now())));
+                    orgId, "ACME", userId, OrgRole.OWNER, 1, LocalDateTime.now(ZoneOffset.UTC))));
 
     mockMvc
         .perform(get("/api/user/org").principal(authentication))
@@ -122,7 +124,7 @@ class OrganizationControllerTest {
         .thenReturn(
             List.of(
                 new OrganizationMemberResponse(
-                    userId, "u@b.com", "U B", OrgRole.MEMBER, LocalDateTime.now())));
+                    userId, "u@b.com", "U B", OrgRole.MEMBER, LocalDateTime.now(ZoneOffset.UTC))));
 
     mockMvc
         .perform(get("/api/user/org/{orgId}/members", orgId).principal(authentication))
@@ -137,7 +139,11 @@ class OrganizationControllerTest {
     when(organizationService.changeMemberRole(userId, orgId, targetUserId, OrgRole.MANAGER))
         .thenReturn(
             new OrganizationMemberResponse(
-                targetUserId, "u@b.com", "U B", OrgRole.MANAGER, LocalDateTime.now()));
+                targetUserId,
+                "u@b.com",
+                "U B",
+                OrgRole.MANAGER,
+                LocalDateTime.now(ZoneOffset.UTC)));
 
     mockMvc
         .perform(
@@ -205,8 +211,8 @@ class OrganizationControllerTest {
                 "new@example.com",
                 OrgRole.MEMBER,
                 InviteStatus.PENDING,
-                LocalDateTime.now().plusDays(7),
-                LocalDateTime.now()));
+                LocalDateTime.now(ZoneOffset.UTC).plusDays(7),
+                LocalDateTime.now(ZoneOffset.UTC)));
 
     mockMvc
         .perform(
@@ -243,8 +249,8 @@ class OrganizationControllerTest {
                     "new@example.com",
                     OrgRole.MEMBER,
                     InviteStatus.PENDING,
-                    LocalDateTime.now().plusDays(7),
-                    LocalDateTime.now())));
+                    LocalDateTime.now(ZoneOffset.UTC).plusDays(7),
+                    LocalDateTime.now(ZoneOffset.UTC))));
 
     mockMvc
         .perform(get("/api/user/org/{orgId}/invites", orgId).principal(authentication))
@@ -272,7 +278,7 @@ class OrganizationControllerTest {
     when(inviteService.accept(userId, "invite-token"))
         .thenReturn(
             new OrganizationResponse(
-                orgId, "ACME", userId, OrgRole.MEMBER, 2, LocalDateTime.now()));
+                orgId, "ACME", userId, OrgRole.MEMBER, 2, LocalDateTime.now(ZoneOffset.UTC)));
 
     mockMvc
         .perform(

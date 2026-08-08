@@ -10,6 +10,7 @@ import com.pravoos.user.push.internal.model.entity.PushSubscription;
 import com.pravoos.user.push.internal.repository.PushSubscriptionRepository;
 import com.pravoos.user.push.internal.service.PushSubscriptionService;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -59,7 +60,8 @@ class PushSubscriptionServiceTest {
   void register_reassignsExistingEndpoint_toCurrentUser() {
     UUID previousOwner = UUID.randomUUID();
     UUID newOwner = UUID.randomUUID();
-    PushSubscription existing = subscription(previousOwner, ENDPOINT, LocalDateTime.now());
+    PushSubscription existing =
+        subscription(previousOwner, ENDPOINT, LocalDateTime.now(ZoneOffset.UTC));
     when(pushSubscriptionRepository.findByEndpoint(ENDPOINT)).thenReturn(Optional.of(existing));
     when(pushSubscriptionRepository.countByUserId(newOwner)).thenReturn(1L);
 
@@ -81,7 +83,10 @@ class PushSubscriptionServiceTest {
         IntStream.range(0, 12)
             .mapToObj(
                 index ->
-                    subscription(userId, ENDPOINT + index, LocalDateTime.now().minusDays(index)))
+                    subscription(
+                        userId,
+                        ENDPOINT + index,
+                        LocalDateTime.now(ZoneOffset.UTC).minusDays(index)))
             .toList();
     when(pushSubscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId))
         .thenReturn(newestFirst);
@@ -128,7 +133,7 @@ class PushSubscriptionServiceTest {
   void subscriptionsOf_mapsKeysForDelivery() {
     UUID userId = UUID.randomUUID();
     when(pushSubscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId))
-        .thenReturn(List.of(subscription(userId, ENDPOINT, LocalDateTime.now())));
+        .thenReturn(List.of(subscription(userId, ENDPOINT, LocalDateTime.now(ZoneOffset.UTC))));
 
     List<PushSubscriptionView> views = service.subscriptionsOf(userId);
 

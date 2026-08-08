@@ -1,6 +1,10 @@
 package com.pravoos.ai.practice.internal.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.pravoos.ai.practice.internal.dto.ConflictHit;
@@ -13,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -55,7 +60,7 @@ class ConflictCheckServiceTest {
   void matchesExistingCasePartyByNameSubstring() {
     UUID lawyerId = UUID.randomUUID();
     UUID caseId = UUID.randomUUID();
-    when(casePartyRepository.findByLawyerId(lawyerId))
+    when(casePartyRepository.searchConflicts(eq(lawyerId), anyString(), anyInt(), anyInt()))
         .thenReturn(List.of(party(caseId, "Спор о поставке", "ООО \"Ромашка\"", "Ответчик")));
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of());
 
@@ -70,15 +75,17 @@ class ConflictCheckServiceTest {
   }
 
   @Test
-  void matchIsCaseInsensitiveAndIgnoresExtraWhitespace() {
+  void normalizesTheQueryBeforeHandingItToTheRepository() {
     UUID lawyerId = UUID.randomUUID();
-    when(casePartyRepository.findByLawyerId(lawyerId))
-        .thenReturn(List.of(party(UUID.randomUUID(), "Дело", "Иван   Иванов", "Истец")));
+    ArgumentCaptor<String> query = ArgumentCaptor.forClass(String.class);
+    when(casePartyRepository.searchConflicts(eq(lawyerId), anyString(), anyInt(), anyInt()))
+        .thenReturn(List.of());
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of());
 
-    List<ConflictHit> hits = service().check(lawyerId, "иван иванов", null);
+    service().check(lawyerId, "  Иван   ИВАНОВ ", null);
 
-    assertThat(hits).hasSize(1);
+    verify(casePartyRepository).searchConflicts(eq(lawyerId), query.capture(), anyInt(), anyInt());
+    assertThat(query.getValue()).isEqualTo("иван иванов");
   }
 
   @Test
@@ -87,7 +94,8 @@ class ConflictCheckServiceTest {
     Client client = new Client();
     client.setLawyerId(lawyerId);
     client.setName("Петров Пётр");
-    when(casePartyRepository.findByLawyerId(lawyerId)).thenReturn(List.of());
+    when(casePartyRepository.searchConflicts(eq(lawyerId), anyString(), anyInt(), anyInt()))
+        .thenReturn(List.of());
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of(client));
 
     List<ConflictHit> hits = service().check(lawyerId, "Петров Пётр", null);
@@ -104,7 +112,8 @@ class ConflictCheckServiceTest {
     client.setLawyerId(lawyerId);
     client.setName("ООО Вектор");
     client.setInn("7701234567");
-    when(casePartyRepository.findByLawyerId(lawyerId)).thenReturn(List.of());
+    when(casePartyRepository.searchConflicts(eq(lawyerId), anyString(), anyInt(), anyInt()))
+        .thenReturn(List.of());
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of(client));
 
     List<ConflictHit> hits = service().check(lawyerId, "7701234567", null);
@@ -123,7 +132,8 @@ class ConflictCheckServiceTest {
     Field idField = Client.class.getDeclaredField("id");
     idField.setAccessible(true);
     idField.set(client, clientId);
-    when(casePartyRepository.findByLawyerId(lawyerId)).thenReturn(List.of());
+    when(casePartyRepository.searchConflicts(eq(lawyerId), anyString(), anyInt(), anyInt()))
+        .thenReturn(List.of());
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of(client));
 
     List<ConflictHit> hits = service().check(lawyerId, "Сидоров Сидор", clientId);
@@ -134,9 +144,12 @@ class ConflictCheckServiceTest {
   @Test
   void returnsNoHitsWhenNothingMatches() {
     UUID lawyerId = UUID.randomUUID();
-    when(casePartyRepository.findByLawyerId(lawyerId))
-        .thenReturn(List.of(party(UUID.randomUUID(), "Дело", "ООО Альфа", "Истец")));
-    when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of());
+    Client client = new Client();
+    client.setLawyerId(lawyerId);
+    client.setName("ООО Альфа");
+    when(casePartyRepository.searchConflicts(eq(lawyerId), anyString(), anyInt(), anyInt()))
+        .thenReturn(List.of());
+    when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of(client));
 
     List<ConflictHit> hits = service().check(lawyerId, "Совершенно другое имя", null);
 

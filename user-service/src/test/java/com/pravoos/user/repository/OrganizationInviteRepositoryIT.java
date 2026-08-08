@@ -14,6 +14,7 @@ import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -68,7 +69,7 @@ class OrganizationInviteRepositoryIT {
     invite.setTokenHash(tokenHash);
     invite.setInvitedBy(persistUser());
     invite.setStatus(status);
-    invite.setExpiresAt(LocalDateTime.now().plusDays(7));
+    invite.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(7));
     return organizationInviteRepository.saveAndFlush(invite);
   }
 
@@ -86,7 +87,7 @@ class OrganizationInviteRepositoryIT {
     UUID orgId = persistOrganization(persistUser());
     OrganizationInvite older =
         persistInvite(orgId, "older@example.com", "hash-older", InviteStatus.PENDING);
-    older.setExpiresAt(LocalDateTime.now().plusDays(1));
+    older.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     organizationInviteRepository.saveAndFlush(older);
 
     OrganizationInvite newer =
@@ -131,7 +132,7 @@ class OrganizationInviteRepositoryIT {
             "expired@example.com",
             "hash-expired",
             InviteStatus.PENDING);
-    expired.setExpiresAt(LocalDateTime.now().minusDays(1));
+    expired.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     organizationInviteRepository.saveAndFlush(expired);
 
     OrganizationInvite fresh =
@@ -141,7 +142,8 @@ class OrganizationInviteRepositoryIT {
             "hash-fresh",
             InviteStatus.PENDING);
 
-    int deleted = organizationInviteRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+    int deleted =
+        organizationInviteRepository.deleteByExpiresAtBefore(LocalDateTime.now(ZoneOffset.UTC));
 
     assertThat(deleted).isEqualTo(1);
     assertThat(organizationInviteRepository.findById(expired.getId())).isEmpty();

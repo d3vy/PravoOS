@@ -28,10 +28,20 @@ class WebhookIpAllowlistTest {
   }
 
   @Test
-  void usesFirstForwardedForEntryBehindProxies() {
-    assertThat(allowlist(YOOKASSA_RANGES).permits(requestFrom("10.0.0.7", "185.71.76.5, 10.0.0.3")))
+  void usesGatewaySuppliedClientIpBehindProxies() {
+    assertThat(allowlist(YOOKASSA_RANGES).permits(requestFrom("10.0.0.7", null, "185.71.76.5")))
         .isTrue();
-    assertThat(allowlist(YOOKASSA_RANGES).permits(requestFrom("185.71.76.5", "8.8.8.8, 10.0.0.3")))
+    assertThat(allowlist(YOOKASSA_RANGES).permits(requestFrom("10.0.0.7", null, "8.8.8.8")))
+        .isFalse();
+  }
+
+  @Test
+  void ignoresClientSuppliedForwardedForHeader() {
+    assertThat(
+            allowlist(YOOKASSA_RANGES)
+                .permits(requestFrom("10.0.0.7", "185.71.76.5, 10.0.0.3", "8.8.8.8")))
+        .isFalse();
+    assertThat(allowlist(YOOKASSA_RANGES).permits(requestFrom("10.0.0.7", "185.71.76.5", null)))
         .isFalse();
   }
 
@@ -46,10 +56,18 @@ class WebhookIpAllowlistTest {
   }
 
   private MockHttpServletRequest requestFrom(String remoteAddr, String forwardedFor) {
+    return requestFrom(remoteAddr, forwardedFor, null);
+  }
+
+  private MockHttpServletRequest requestFrom(
+      String remoteAddr, String forwardedFor, String gatewayClientIp) {
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.setRemoteAddr(remoteAddr);
     if (forwardedFor != null) {
       request.addHeader("X-Forwarded-For", forwardedFor);
+    }
+    if (gatewayClientIp != null) {
+      request.addHeader("X-Client-Ip", gatewayClientIp);
     }
     return request;
   }

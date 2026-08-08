@@ -47,12 +47,14 @@ class InvoicePaymentServiceTest {
 
   @BeforeEach
   void setUp() {
+    InvoicePaymentWriter invoicePaymentWriter =
+        new InvoicePaymentWriter(invoiceRepository, invoicePaymentRepository, invoicePaidPublisher);
     service =
         new InvoicePaymentService(
             invoiceRepository,
             invoicePaymentRepository,
             yooKassaInvoiceClient,
-            invoicePaidPublisher);
+            invoicePaymentWriter);
   }
 
   @Test

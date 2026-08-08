@@ -24,6 +24,7 @@ import com.pravoos.user.shared.security.TokenHasher;
 import com.pravoos.user.shared.service.OutboxEventService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -121,7 +122,8 @@ class ApplicationServiceTest {
     when(passwordEncoder.encode(request.password())).thenReturn("hashed-password");
     when(emailVerificationService.generateToken())
         .thenReturn("raw-verification-token", "raw-status-token");
-    when(emailVerificationService.tokenExpiry()).thenReturn(LocalDateTime.now().plusHours(24));
+    when(emailVerificationService.tokenExpiry())
+        .thenReturn(LocalDateTime.now(ZoneOffset.UTC).plusHours(24));
     when(tokenHasher.sha256Hex("raw-verification-token")).thenReturn("hashed-verification-token");
     when(applicationRepository.save(any(LawyerApplication.class)))
         .thenAnswer(
@@ -162,7 +164,8 @@ class ApplicationServiceTest {
     when(userRepository.existsByEmail(any())).thenReturn(false);
     when(emailVerificationService.generateToken())
         .thenReturn("token-for-verification", "token-for-status");
-    when(emailVerificationService.tokenExpiry()).thenReturn(LocalDateTime.now().plusHours(24));
+    when(emailVerificationService.tokenExpiry())
+        .thenReturn(LocalDateTime.now(ZoneOffset.UTC).plusHours(24));
     when(tokenHasher.sha256Hex("token-for-verification")).thenReturn("hashed-token");
     when(applicationRepository.save(any(LawyerApplication.class)))
         .thenAnswer(

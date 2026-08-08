@@ -18,6 +18,7 @@ import com.pravoos.user.shared.exception.InvalidPasswordResetTokenException;
 import com.pravoos.user.shared.security.TokenHasher;
 import com.pravoos.user.shared.service.EmailRateLimiter;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,7 +71,8 @@ class PasswordResetServiceTest {
     User user = new User();
     user.setId(userId);
     user.setEmail("lawyer@example.com");
-    PasswordResetToken token = resetToken(userId, null, LocalDateTime.now().plusHours(1));
+    PasswordResetToken token =
+        resetToken(userId, null, LocalDateTime.now(ZoneOffset.UTC).plusHours(1));
     when(passwordResetTokenRepository.findByTokenHash(tokenHasher.sha256Hex(RAW_TOKEN)))
         .thenReturn(Optional.of(token));
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -100,7 +102,10 @@ class PasswordResetServiceTest {
   void resetPasswordThrowsForAlreadyUsedToken() {
     UUID userId = UUID.randomUUID();
     PasswordResetToken token =
-        resetToken(userId, LocalDateTime.now().minusMinutes(5), LocalDateTime.now().plusHours(1));
+        resetToken(
+            userId,
+            LocalDateTime.now(ZoneOffset.UTC).minusMinutes(5),
+            LocalDateTime.now(ZoneOffset.UTC).plusHours(1));
     when(passwordResetTokenRepository.findByTokenHash(tokenHasher.sha256Hex(RAW_TOKEN)))
         .thenReturn(Optional.of(token));
 
@@ -114,7 +119,8 @@ class PasswordResetServiceTest {
   @Test
   void resetPasswordThrowsForExpiredToken() {
     UUID userId = UUID.randomUUID();
-    PasswordResetToken token = resetToken(userId, null, LocalDateTime.now().minusMinutes(1));
+    PasswordResetToken token =
+        resetToken(userId, null, LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1));
     when(passwordResetTokenRepository.findByTokenHash(tokenHasher.sha256Hex(RAW_TOKEN)))
         .thenReturn(Optional.of(token));
 

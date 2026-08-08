@@ -12,6 +12,7 @@ import com.pravoos.user.collaboration.internal.service.TelegramLinkService;
 import com.pravoos.user.shared.exception.GlobalExceptionHandler;
 import com.pravoos.user.shared.exception.ProfileNotFoundException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class TelegramUserControllerTest {
   @Test
   void createTelegramLinkCodeReturnsCode() throws Exception {
     when(authentication.getPrincipal()).thenReturn(userId.toString());
-    LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(15);
+    LocalDateTime expiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
     when(telegramLinkService.createLinkCode(userId))
         .thenReturn(new TelegramLinkResponse("abc123", "https://t.me/bot?start=abc123", expiresAt));
 

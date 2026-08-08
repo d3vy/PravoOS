@@ -11,6 +11,7 @@ import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -57,7 +58,7 @@ class ClientPortalInviteRepositoryIT {
     invite.setTokenHash(tokenHash);
     invite.setStatus(status);
     invite.setUserId(userId);
-    invite.setExpiresAt(LocalDateTime.now().plusDays(7));
+    invite.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(7));
     return clientPortalInviteRepository.saveAndFlush(invite);
   }
 
@@ -150,7 +151,7 @@ class ClientPortalInviteRepositoryIT {
   void findFirstByClientIdAndStatusOrderByCreatedAtDescReturnsMostRecent() {
     UUID clientId = UUID.randomUUID();
     ClientPortalInvite older = persistInvite(clientId, "hash-older", InviteStatus.PENDING, null);
-    older.setExpiresAt(LocalDateTime.now().plusDays(1));
+    older.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     clientPortalInviteRepository.saveAndFlush(older);
 
     ClientPortalInvite newer = persistInvite(clientId, "hash-newer", InviteStatus.PENDING, null);
@@ -168,7 +169,7 @@ class ClientPortalInviteRepositoryIT {
   void deleteByStatusNotAndExpiresAtBeforeRemovesExpiredNonAcceptedInvites() {
     ClientPortalInvite expiredPending =
         persistInvite(UUID.randomUUID(), "hash-expired-pending", InviteStatus.PENDING, null);
-    expiredPending.setExpiresAt(LocalDateTime.now().minusDays(1));
+    expiredPending.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     clientPortalInviteRepository.saveAndFlush(expiredPending);
 
     ClientPortalInvite expiredAccepted =
@@ -177,7 +178,7 @@ class ClientPortalInviteRepositoryIT {
             "hash-expired-accepted",
             InviteStatus.ACCEPTED,
             persistUser(UserRole.CLIENT));
-    expiredAccepted.setExpiresAt(LocalDateTime.now().minusDays(1));
+    expiredAccepted.setExpiresAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     clientPortalInviteRepository.saveAndFlush(expiredAccepted);
 
     ClientPortalInvite freshPending =
@@ -185,7 +186,7 @@ class ClientPortalInviteRepositoryIT {
 
     int deleted =
         clientPortalInviteRepository.deleteByStatusNotAndExpiresAtBefore(
-            InviteStatus.ACCEPTED, LocalDateTime.now());
+            InviteStatus.ACCEPTED, LocalDateTime.now(ZoneOffset.UTC));
 
     assertThat(deleted).isEqualTo(1);
     assertThat(clientPortalInviteRepository.findById(expiredPending.getId())).isEmpty();

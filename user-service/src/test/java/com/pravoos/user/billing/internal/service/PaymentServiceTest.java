@@ -21,6 +21,7 @@ import com.pravoos.user.billing.internal.repository.PaymentRepository;
 import com.pravoos.user.billing.internal.repository.PlanRepository;
 import com.pravoos.user.shared.exception.PravoosException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -192,7 +193,7 @@ class PaymentServiceTest {
     payment.setAmountKopecks(1000);
     payment.setStatus(status);
     if (status == PaymentStatus.SUCCEEDED) {
-      payment.setPaidAt(LocalDateTime.now());
+      payment.setPaidAt(LocalDateTime.now(ZoneOffset.UTC));
     }
     return payment;
   }

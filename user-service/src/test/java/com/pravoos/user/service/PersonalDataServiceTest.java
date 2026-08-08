@@ -22,6 +22,7 @@ import com.pravoos.user.privacy.internal.service.ConsentService;
 import com.pravoos.user.privacy.internal.service.PersonalDataService;
 import com.pravoos.user.shared.exception.InvalidCredentialsException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,7 +70,9 @@ class PersonalDataServiceTest {
     when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user()));
     when(userSessionQuery.activeSessions(USER_ID))
         .thenReturn(
-            List.of(new UserSessionSnapshot("1.2.3.4", "Chrome", LocalDateTime.now(), null)));
+            List.of(
+                new UserSessionSnapshot(
+                    "1.2.3.4", "Chrome", LocalDateTime.now(ZoneOffset.UTC), null)));
     when(consentService.list(USER_ID)).thenReturn(List.of());
     when(subjectRequestRepository.findByUserIdOrderByRequestedAtDesc(USER_ID))
         .thenReturn(List.of());
@@ -128,7 +131,7 @@ class PersonalDataServiceTest {
 
     verify(accountEraser, never()).erase(any());
     assertThat(response.status()).isEqualTo(SubjectRequestStatus.PENDING);
-    assertThat(response.dueAt()).isAfter(LocalDateTime.now().plusDays(29));
+    assertThat(response.dueAt()).isAfter(LocalDateTime.now(ZoneOffset.UTC).plusDays(29));
   }
 
   @Test
@@ -136,7 +139,7 @@ class PersonalDataServiceTest {
     SubjectRequest request = new SubjectRequest();
     request.setUserId(USER_ID);
     request.setType(SubjectRequestType.ERASURE);
-    request.setDueAt(LocalDateTime.now().plusDays(30));
+    request.setDueAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(30));
     UUID requestId = UUID.randomUUID();
     when(subjectRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
 

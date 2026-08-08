@@ -10,6 +10,7 @@ import com.pravoos.user.identity.repository.LawyerProfileRepository;
 import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.shared.config.PiiCryptoConfig;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -107,14 +108,14 @@ class UserRepositoryIT {
   @Test
   void countByRoleAndStatusAndCreatedAtAfterExcludesOlderUsers() {
     User olderUser = persistUser("older@example.com", UserRole.LAWYER, UserStatus.ACTIVE, true);
-    olderUser.setCreatedAt(LocalDateTime.now().minusDays(10));
+    olderUser.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(10));
     userRepository.saveAndFlush(olderUser);
 
     persistUser("newer@example.com", UserRole.LAWYER, UserStatus.ACTIVE, true);
 
     long recentCount =
         userRepository.countByRoleAndStatusAndCreatedAtAfter(
-            UserRole.LAWYER, UserStatus.ACTIVE, LocalDateTime.now().minusDays(1));
+            UserRole.LAWYER, UserStatus.ACTIVE, LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
 
     assertThat(recentCount).isEqualTo(1);
   }
@@ -136,11 +137,11 @@ class UserRepositoryIT {
   @Test
   void findByRoleAndStatusWithProfilePageableOrdersByCreatedAtDesc() {
     User first = persistUser("first@example.com", UserRole.LAWYER, UserStatus.ACTIVE, true);
-    first.setCreatedAt(LocalDateTime.now().minusDays(2));
+    first.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(2));
     userRepository.saveAndFlush(first);
 
     User second = persistUser("second@example.com", UserRole.LAWYER, UserStatus.ACTIVE, true);
-    second.setCreatedAt(LocalDateTime.now().minusDays(1));
+    second.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     userRepository.saveAndFlush(second);
 
     List<User> result =

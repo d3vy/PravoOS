@@ -23,6 +23,7 @@ import com.pravoos.user.identity.internal.service.RefreshTokenService;
 import com.pravoos.user.identity.internal.service.UserService;
 import com.pravoos.user.shared.exception.GlobalExceptionHandler;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -204,8 +205,8 @@ class UserControllerTest {
                     sessionId,
                     "203.0.113.5",
                     "Mozilla/5.0",
-                    LocalDateTime.now(),
-                    LocalDateTime.now(),
+                    LocalDateTime.now(ZoneOffset.UTC),
+                    LocalDateTime.now(ZoneOffset.UTC),
                     true)));
 
     mockMvc

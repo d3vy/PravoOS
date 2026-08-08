@@ -18,6 +18,7 @@ import com.pravoos.user.collaboration.internal.service.ClientPortalInviteService
 import com.pravoos.user.shared.exception.GlobalExceptionHandler;
 import com.pravoos.user.shared.exception.TooManyRequestsException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -107,7 +108,7 @@ class InternalPortalInviteControllerTest {
   @Test
   void statusReturnsPendingWithEmailAndExpiry() throws Exception {
     UUID clientId = UUID.randomUUID();
-    LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
+    LocalDateTime expiresAt = LocalDateTime.now(ZoneOffset.UTC).plusDays(7);
     when(clientPortalInviteService.status(clientId))
         .thenReturn(PortalInviteStatusResponse.pending("client@example.com", expiresAt));
 

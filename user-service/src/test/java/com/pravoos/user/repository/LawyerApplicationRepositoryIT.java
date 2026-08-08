@@ -7,6 +7,7 @@ import com.pravoos.user.registration.internal.model.enums.ApplicationStatus;
 import com.pravoos.user.registration.internal.repository.LawyerApplicationRepository;
 import com.pravoos.user.shared.config.PiiCryptoConfig;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -68,11 +69,11 @@ class LawyerApplicationRepositoryIT {
   @Test
   void findByStatusOrderBySubmittedAtDescReturnsOnlyMatchingStatusNewestFirst() {
     LawyerApplication older = persistApplication("older@example.com", ApplicationStatus.PENDING);
-    setSubmittedAt(older, LocalDateTime.now().minusDays(2));
+    setSubmittedAt(older, LocalDateTime.now(ZoneOffset.UTC).minusDays(2));
     lawyerApplicationRepository.saveAndFlush(older);
 
     LawyerApplication newer = persistApplication("newer@example.com", ApplicationStatus.PENDING);
-    setSubmittedAt(newer, LocalDateTime.now().minusDays(1));
+    setSubmittedAt(newer, LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     lawyerApplicationRepository.saveAndFlush(newer);
 
     persistApplication("approved@example.com", ApplicationStatus.APPROVED);
@@ -89,11 +90,11 @@ class LawyerApplicationRepositoryIT {
   @Test
   void findAllByOrderBySubmittedAtDescReturnsAllApplicationsNewestFirst() {
     LawyerApplication first = persistApplication("first@example.com", ApplicationStatus.PENDING);
-    setSubmittedAt(first, LocalDateTime.now().minusDays(2));
+    setSubmittedAt(first, LocalDateTime.now(ZoneOffset.UTC).minusDays(2));
     lawyerApplicationRepository.saveAndFlush(first);
 
     LawyerApplication second = persistApplication("second@example.com", ApplicationStatus.APPROVED);
-    setSubmittedAt(second, LocalDateTime.now().minusDays(1));
+    setSubmittedAt(second, LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     lawyerApplicationRepository.saveAndFlush(second);
 
     List<LawyerApplication> result =
@@ -172,23 +173,26 @@ class LawyerApplicationRepositoryIT {
     LawyerApplication expiredUnverified =
         persistApplication("expired@example.com", ApplicationStatus.PENDING);
     expiredUnverified.setEmailVerificationToken("expired-token");
-    expiredUnverified.setEmailVerificationExpiresAt(LocalDateTime.now().minusHours(1));
+    expiredUnverified.setEmailVerificationExpiresAt(
+        LocalDateTime.now(ZoneOffset.UTC).minusHours(1));
     lawyerApplicationRepository.saveAndFlush(expiredUnverified);
 
     LawyerApplication activeUnverified =
         persistApplication("active@example.com", ApplicationStatus.PENDING);
     activeUnverified.setEmailVerificationToken("active-token");
-    activeUnverified.setEmailVerificationExpiresAt(LocalDateTime.now().plusHours(1));
+    activeUnverified.setEmailVerificationExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1));
     lawyerApplicationRepository.saveAndFlush(activeUnverified);
 
     LawyerApplication expiredVerified =
         persistApplication("expired-verified@example.com", ApplicationStatus.PENDING);
     expiredVerified.setEmailVerificationToken("expired-verified-token");
-    expiredVerified.setEmailVerificationExpiresAt(LocalDateTime.now().minusHours(1));
+    expiredVerified.setEmailVerificationExpiresAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1));
     expiredVerified.setEmailVerified(true);
     lawyerApplicationRepository.saveAndFlush(expiredVerified);
 
-    int updated = lawyerApplicationRepository.clearExpiredVerificationTokens(LocalDateTime.now());
+    int updated =
+        lawyerApplicationRepository.clearExpiredVerificationTokens(
+            LocalDateTime.now(ZoneOffset.UTC));
 
     assertThat(updated).isEqualTo(1);
     assertThat(

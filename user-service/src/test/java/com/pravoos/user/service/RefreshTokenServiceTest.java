@@ -16,6 +16,7 @@ import com.pravoos.user.identity.internal.service.RefreshTokenService;
 import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.shared.security.TokenHasher;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,7 +70,7 @@ class RefreshTokenServiceTest {
     assertThat(saved.getUserId()).isEqualTo(userId);
     assertThat(saved.getTokenHash()).isEqualTo(tokenHasher.sha256Hex(rawToken));
     assertThat(saved.getTokenHash()).isNotEqualTo(rawToken);
-    assertThat(saved.getExpiresAt()).isAfter(LocalDateTime.now());
+    assertThat(saved.getExpiresAt()).isAfter(LocalDateTime.now(ZoneOffset.UTC));
     assertThat(saved.getIpAddress()).isEqualTo("203.0.113.7");
     assertThat(saved.getUserAgent()).isEqualTo("JUnit-UA");
     assertThat(saved.getLastUsedAt()).isNotNull();
@@ -79,7 +80,7 @@ class RefreshTokenServiceTest {
   void rotateReturnsUserIdAndRevokesOldTokenForActiveToken() {
     String raw = "valid-token";
     UUID userId = UUID.randomUUID();
-    RefreshToken active = token(userId, null, LocalDateTime.now().plusDays(1));
+    RefreshToken active = token(userId, null, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     when(refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(raw)))
         .thenReturn(Optional.of(active));
 
@@ -105,7 +106,10 @@ class RefreshTokenServiceTest {
     String raw = "reused-token";
     UUID userId = UUID.randomUUID();
     RefreshToken revoked =
-        token(userId, LocalDateTime.now().minusMinutes(1), LocalDateTime.now().plusDays(1));
+        token(
+            userId,
+            LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1),
+            LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     when(refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(raw)))
         .thenReturn(Optional.of(revoked));
 
@@ -118,7 +122,7 @@ class RefreshTokenServiceTest {
   void rotateRevokesAndThrowsForExpiredToken() {
     String raw = "expired-token";
     UUID userId = UUID.randomUUID();
-    RefreshToken expired = token(userId, null, LocalDateTime.now().minusMinutes(1));
+    RefreshToken expired = token(userId, null, LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1));
     when(refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(raw)))
         .thenReturn(Optional.of(expired));
 
@@ -132,7 +136,7 @@ class RefreshTokenServiceTest {
   void rotateThrowsOnConcurrentRotation() {
     String raw = "racing-token";
     UUID userId = UUID.randomUUID();
-    RefreshToken active = token(userId, null, LocalDateTime.now().plusDays(1));
+    RefreshToken active = token(userId, null, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     when(refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(raw)))
         .thenReturn(Optional.of(active));
     when(refreshTokenRepository.saveAndFlush(active))
@@ -144,7 +148,8 @@ class RefreshTokenServiceTest {
   @Test
   void revokeMarksActiveTokenRevoked() {
     String raw = "logout-token";
-    RefreshToken active = token(UUID.randomUUID(), null, LocalDateTime.now().plusDays(1));
+    RefreshToken active =
+        token(UUID.randomUUID(), null, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     when(refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(raw)))
         .thenReturn(Optional.of(active));
 
@@ -156,9 +161,9 @@ class RefreshTokenServiceTest {
   @Test
   void revokeIsNoOpForAlreadyRevokedToken() {
     String raw = "already-out";
-    LocalDateTime originalRevokedAt = LocalDateTime.now().minusHours(1);
+    LocalDateTime originalRevokedAt = LocalDateTime.now(ZoneOffset.UTC).minusHours(1);
     RefreshToken revoked =
-        token(UUID.randomUUID(), originalRevokedAt, LocalDateTime.now().plusDays(1));
+        token(UUID.randomUUID(), originalRevokedAt, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     when(refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(raw)))
         .thenReturn(Optional.of(revoked));
 
@@ -170,7 +175,7 @@ class RefreshTokenServiceTest {
   @Test
   void listActiveSessionsReturnsMappedSessionsForUser() {
     UUID userId = UUID.randomUUID();
-    RefreshToken session = token(userId, null, LocalDateTime.now().plusDays(1));
+    RefreshToken session = token(userId, null, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     session.setId(UUID.randomUUID());
     session.setIpAddress("203.0.113.7");
     session.setUserAgent("JUnit-UA");
@@ -201,7 +206,7 @@ class RefreshTokenServiceTest {
   void revokeSessionRevokesMatchingActiveSessionForUser() {
     UUID userId = UUID.randomUUID();
     UUID sessionId = UUID.randomUUID();
-    RefreshToken session = token(userId, null, LocalDateTime.now().plusDays(1));
+    RefreshToken session = token(userId, null, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     session.setId(sessionId);
     when(refreshTokenRepository.findByIdAndUserId(sessionId, userId))
         .thenReturn(Optional.of(session));
@@ -215,8 +220,9 @@ class RefreshTokenServiceTest {
   void revokeSessionIsNoOpForAlreadyRevokedSession() {
     UUID userId = UUID.randomUUID();
     UUID sessionId = UUID.randomUUID();
-    LocalDateTime originalRevokedAt = LocalDateTime.now().minusHours(1);
-    RefreshToken session = token(userId, originalRevokedAt, LocalDateTime.now().plusDays(1));
+    LocalDateTime originalRevokedAt = LocalDateTime.now(ZoneOffset.UTC).minusHours(1);
+    RefreshToken session =
+        token(userId, originalRevokedAt, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
     session.setId(sessionId);
     when(refreshTokenRepository.findByIdAndUserId(sessionId, userId))
         .thenReturn(Optional.of(session));

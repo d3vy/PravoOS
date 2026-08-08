@@ -30,25 +30,25 @@ class NewLoginConsumerTest {
   }
 
   @Test
-  void onNewLogin_notifiesAndMarksProcessed() {
+  void onNewLogin_notifiesOnce() {
     NewLoginKafkaPayload payload = payload();
-    when(processedEventGuard.isProcessed(eq(EVENT_TYPE), anyString())).thenReturn(false);
+    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(true);
 
     consumer.onNewLogin(payload);
 
     verify(notificationDispatcher).dispatchNewLogin(payload);
-    verify(processedEventGuard).markProcessed(eq(EVENT_TYPE), anyString());
+    verify(processedEventGuard, never()).release(anyString(), anyString());
   }
 
   @Test
   void onNewLogin_skipsDuplicate() {
     NewLoginKafkaPayload payload = payload();
-    when(processedEventGuard.isProcessed(eq(EVENT_TYPE), anyString())).thenReturn(true);
+    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(false);
 
     consumer.onNewLogin(payload);
 
     verify(notificationDispatcher, never()).dispatchNewLogin(payload);
-    verify(processedEventGuard, never()).markProcessed(anyString(), anyString());
+    verify(processedEventGuard, never()).release(anyString(), anyString());
   }
 
   private NewLoginKafkaPayload payload() {

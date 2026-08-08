@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,15 +25,18 @@ import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -92,7 +96,7 @@ class SearchServiceTest {
     assertThat(result.documents()).isEmpty();
     assertThat(result.clients()).isEmpty();
     assertThat(result.invoices()).isEmpty();
-    verify(caseRepository, never()).search(any(), any(), anyString(), anyCollection());
+    verify(caseRepository, never()).search(any(), any(), anyString(), anyCollection(), any());
     verify(clientRepository, never()).findByLawyerIdOrderByCreatedAtDesc(any(UUID.class));
   }
 
@@ -113,15 +117,17 @@ class SearchServiceTest {
     UUID caseId = UUID.randomUUID();
     Client client = clientWithId(clientId, "Иван Иванов", "ivan@example.com", "+7900");
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of(client));
-    when(caseRepository.search(eq(lawyerId), eq(null), anyString(), anyCollection()))
-        .thenReturn(List.of(caseWithId(caseId, "Дело Иванова", CaseStatus.IN_PROGRESS, clientId)));
+    when(caseRepository.search(eq(lawyerId), eq(null), anyString(), anyCollection(), any()))
+        .thenReturn(
+            new PageImpl<>(
+                List.of(caseWithId(caseId, "Дело Иванова", CaseStatus.IN_PROGRESS, clientId))));
     when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
         .thenReturn(List.of());
     when(documentSearchQuery.searchDocuments(
             any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
         .thenReturn(List.of());
-    when(invoiceRepository.findByLawyerIdOrderByCreatedAtDesc(any(), any()))
-        .thenReturn(Page.empty());
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
 
     GlobalSearchResponse result = searchService.search(lawyerId, "  Иванов  ", false);
 
@@ -133,22 +139,24 @@ class SearchServiceTest {
     assertThat(hit.statusName()).isEqualTo(CaseStatus.IN_PROGRESS.getDisplayName());
     assertThat(hit.clientName()).isEqualTo("Иван Иванов");
 
-    verify(caseRepository).search(eq(lawyerId), eq(null), anyString(), anyCollection());
+    verify(caseRepository).search(eq(lawyerId), eq(null), anyString(), anyCollection(), any());
   }
 
   @Test
   void searchCaseHitHasNullClientNameWhenClientIdIsNull() {
     UUID caseId = UUID.randomUUID();
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of());
-    when(caseRepository.search(eq(lawyerId), eq(null), anyString(), anyCollection()))
-        .thenReturn(List.of(caseWithId(caseId, "Дело без клиента", CaseStatus.INTAKE, null)));
+    when(caseRepository.search(eq(lawyerId), eq(null), anyString(), anyCollection(), any()))
+        .thenReturn(
+            new PageImpl<>(
+                List.of(caseWithId(caseId, "Дело без клиента", CaseStatus.INTAKE, null))));
     when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
         .thenReturn(List.of());
     when(documentSearchQuery.searchDocuments(
             any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
         .thenReturn(List.of());
-    when(invoiceRepository.findByLawyerIdOrderByCreatedAtDesc(any(), any()))
-        .thenReturn(Page.empty());
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
 
     GlobalSearchResponse result = searchService.search(lawyerId, "дело", false);
 
@@ -159,7 +167,8 @@ class SearchServiceTest {
   @Test
   void searchMapsConversationsAndDocuments() {
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of());
-    when(caseRepository.search(any(), any(), anyString(), anyCollection())).thenReturn(List.of());
+    when(caseRepository.search(any(), any(), anyString(), anyCollection(), any()))
+        .thenReturn(Page.empty());
     when(conversationSearchQuery.searchConversations(eq(lawyerId), eq("вопрос"), eq(10)))
         .thenReturn(List.of(new ConversationSearchHit("conv-1", "Обсуждение договора")));
     UUID docId = UUID.randomUUID();
@@ -168,8 +177,8 @@ class SearchServiceTest {
         .thenReturn(
             List.of(
                 new DocumentSearchHit(docId, "Договор.pdf", "dogovor.pdf", docCaseId, "снипет")));
-    when(invoiceRepository.findByLawyerIdOrderByCreatedAtDesc(any(), any()))
-        .thenReturn(Page.empty());
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
 
     GlobalSearchResponse result = searchService.search(lawyerId, "вопрос", true);
 
@@ -201,14 +210,15 @@ class SearchServiceTest {
             clientWithId(matchByPhone, "Кузнецов", "b@x.com", "8-900-PETROV-00"),
             clientWithId(noMatch, "Николаев", "c@x.com", "+70003"));
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(clients);
-    when(caseRepository.search(any(), any(), anyString(), anyCollection())).thenReturn(List.of());
+    when(caseRepository.search(any(), any(), anyString(), anyCollection(), any()))
+        .thenReturn(Page.empty());
     when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
         .thenReturn(List.of());
     when(documentSearchQuery.searchDocuments(
             any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
         .thenReturn(List.of());
-    when(invoiceRepository.findByLawyerIdOrderByCreatedAtDesc(any(), any()))
-        .thenReturn(Page.empty());
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
 
     GlobalSearchResponse result = searchService.search(lawyerId, "petrov", false);
 
@@ -222,7 +232,8 @@ class SearchServiceTest {
     UUID clientId = UUID.randomUUID();
     Client client = clientWithId(clientId, "ООО Ромашка", "info@romashka.ru", null);
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of(client));
-    when(caseRepository.search(any(), any(), anyString(), anyCollection())).thenReturn(List.of());
+    when(caseRepository.search(any(), any(), anyString(), anyCollection(), any()))
+        .thenReturn(Page.empty());
     when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
         .thenReturn(List.of());
     when(documentSearchQuery.searchDocuments(
@@ -230,7 +241,6 @@ class SearchServiceTest {
         .thenReturn(List.of());
 
     UUID matchingInvoiceId = UUID.randomUUID();
-    UUID nonMatchingInvoiceId = UUID.randomUUID();
     Invoice matchingByNumber =
         invoiceWithId(
             matchingInvoiceId,
@@ -239,16 +249,8 @@ class SearchServiceTest {
             BigDecimal.TEN,
             "RUB",
             InvoiceStatus.ISSUED);
-    Invoice nonMatching =
-        invoiceWithId(
-            nonMatchingInvoiceId,
-            "INV-0002",
-            UUID.randomUUID(),
-            BigDecimal.ONE,
-            "RUB",
-            InvoiceStatus.DRAFT);
-    when(invoiceRepository.findByLawyerIdOrderByCreatedAtDesc(eq(lawyerId), any()))
-        .thenReturn(new PageImpl<>(List.of(matchingByNumber, nonMatching)));
+    when(invoiceRepository.search(eq(lawyerId), anyString(), anyCollection(), any()))
+        .thenReturn(List.of(matchingByNumber));
 
     GlobalSearchResponse result = searchService.search(lawyerId, "romashka", false);
 
@@ -264,20 +266,68 @@ class SearchServiceTest {
   }
 
   @Test
+  void searchPushesNumberPatternAndClientMatchesIntoTheInvoiceQuery() {
+    UUID clientId = UUID.randomUUID();
+    when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId))
+        .thenReturn(List.of(clientWithId(clientId, "ООО Ромашка", null, null)));
+    when(caseRepository.search(any(), any(), anyString(), anyCollection(), any()))
+        .thenReturn(Page.empty());
+    when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
+        .thenReturn(List.of());
+    when(documentSearchQuery.searchDocuments(
+            any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
+        .thenReturn(List.of());
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
+
+    searchService.search(lawyerId, "Ромашка", false);
+
+    ArgumentCaptor<String> pattern = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<Collection<UUID>> clientIds = ArgumentCaptor.forClass(Collection.class);
+    ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+    verify(invoiceRepository)
+        .search(eq(lawyerId), pattern.capture(), clientIds.capture(), pageable.capture());
+
+    assertThat(pattern.getValue()).isEqualTo("%ромашка%");
+    assertThat(clientIds.getValue()).containsExactly(clientId);
+    assertThat(pageable.getValue().getPageSize()).isEqualTo(10);
+  }
+
+  @Test
+  void searchLoadsTheClientsOfTheLawyerOnlyOnce() {
+    when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId))
+        .thenReturn(List.of(clientWithId(UUID.randomUUID(), "ООО Ромашка", null, null)));
+    when(caseRepository.search(any(), any(), anyString(), anyCollection(), any()))
+        .thenReturn(Page.empty());
+    when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
+        .thenReturn(List.of());
+    when(documentSearchQuery.searchDocuments(
+            any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
+        .thenReturn(List.of());
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
+
+    searchService.search(lawyerId, "ромашка", false);
+
+    verify(clientRepository, times(1)).findByLawyerIdOrderByCreatedAtDesc(lawyerId);
+  }
+
+  @Test
   void searchLimitsEachSourceToMaxHitsPerSource() {
     List<Client> manyClients =
         java.util.stream.IntStream.range(0, 15)
             .mapToObj(i -> clientWithId(UUID.randomUUID(), "Клиент совпадение " + i, null, null))
             .toList();
     when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(manyClients);
-    when(caseRepository.search(any(), any(), anyString(), anyCollection())).thenReturn(List.of());
+    when(caseRepository.search(any(), any(), anyString(), anyCollection(), any()))
+        .thenReturn(Page.empty());
     when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
         .thenReturn(List.of());
     when(documentSearchQuery.searchDocuments(
             any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
         .thenReturn(List.of());
-    when(invoiceRepository.findByLawyerIdOrderByCreatedAtDesc(any(), any()))
-        .thenReturn(Page.empty());
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
 
     GlobalSearchResponse result = searchService.search(lawyerId, "совпадение", false);
 

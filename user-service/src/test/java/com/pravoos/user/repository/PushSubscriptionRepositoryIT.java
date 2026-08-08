@@ -9,6 +9,7 @@ import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.push.internal.model.entity.PushSubscription;
 import com.pravoos.user.push.internal.repository.PushSubscriptionRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -67,11 +68,11 @@ class PushSubscriptionRepositoryIT {
   void findByUserIdOrderByCreatedAtDescOrdersNewestFirst() {
     UUID userId = persistUser();
     PushSubscription older = persistSubscription(userId, "https://push.example.com/older");
-    older.setCreatedAt(LocalDateTime.now().minusDays(1));
+    older.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     pushSubscriptionRepository.saveAndFlush(older);
 
     PushSubscription newer = persistSubscription(userId, "https://push.example.com/newer");
-    newer.setCreatedAt(LocalDateTime.now());
+    newer.setCreatedAt(LocalDateTime.now(ZoneOffset.UTC));
     pushSubscriptionRepository.saveAndFlush(newer);
 
     persistSubscription(persistUser(), "https://push.example.com/other-user");
