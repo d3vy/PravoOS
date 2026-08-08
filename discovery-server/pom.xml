@@ -14,6 +14,11 @@
     <name>PravoOS Discovery Server</name>
     <description>Eureka Server — реестр сервисов</description>
 
+    <properties>
+        <!-- Инфраструктурный модуль без бизнес-логики, тестами не покрывается (testing.md, раздел 1) -->
+        <jacoco.check.skip>true</jacoco.check.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.pravoos</groupId>

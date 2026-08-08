@@ -32,7 +32,7 @@ public class CaseHearingConsumer {
     MDC.put("requestId", String.valueOf(payload.caseId()));
     try {
       String dedupKey = payload.caseId() + ":" + payload.newHearingDate();
-      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
         log.info("Skipping duplicate case.hearing.updated: {}", dedupKey);
         return;
       }
@@ -41,8 +41,12 @@ public class CaseHearingConsumer {
           payload.caseId(),
           payload.previousHearingDate(),
           payload.newHearingDate());
-      notificationDispatcher.dispatchHearingUpdate(payload);
-      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+      try {
+        notificationDispatcher.dispatchHearingUpdate(payload);
+      } catch (RuntimeException e) {
+        processedEventGuard.release(EVENT_TYPE, dedupKey);
+        throw e;
+      }
     } finally {
       MDC.remove("requestId");
     }

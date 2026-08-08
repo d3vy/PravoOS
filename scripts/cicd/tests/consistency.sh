@@ -25,3 +25,22 @@ test_consistency() {
   assert_eq "$from_registry" "$from_bake"    "registry.sh matches docker-bake.hcl"
   assert_eq "$from_registry" "$from_compose" "registry.sh matches docker-compose.images.yml"
 }
+
+# docker/Dockerfile builds the whole Maven reactor inside the image, so every
+# <module> of the root pom must be COPY'd in. A module added to pom.xml but not
+# to the Dockerfile fails the build with "Child module does not exist" — every
+# image stops rebuilding and the server keeps running the previous jars.
+test_dockerfile_covers_reactor() {
+  echo "docker/Dockerfile covers every reactor module"
+  local root="${CICD_ROOT}"
+
+  local from_pom
+  from_pom="$(grep -oE '<module>[^<]+</module>' "${root}/pom.xml" \
+    | sed -E 's/<\/?module>//g' | sort | tr '\n' ' ')"
+
+  local from_dockerfile
+  from_dockerfile="$(grep -oE '^COPY [a-z-]+/pom\.xml' "${root}/docker/Dockerfile" \
+    | sed -E 's|^COPY ||; s|/pom\.xml$||' | sort -u | tr '\n' ' ')"
+
+  assert_eq "$from_pom" "$from_dockerfile" "pom.xml modules match Dockerfile COPY lines"
+}

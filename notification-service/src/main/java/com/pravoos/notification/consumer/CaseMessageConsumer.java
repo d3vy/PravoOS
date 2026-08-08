@@ -32,7 +32,7 @@ public class CaseMessageConsumer {
     MDC.put("requestId", String.valueOf(payload.messageId()));
     try {
       String dedupKey = String.valueOf(payload.messageId());
-      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
         log.info("Skipping duplicate case.message.created: {}", dedupKey);
         return;
       }
@@ -41,8 +41,12 @@ public class CaseMessageConsumer {
           payload.caseId(),
           payload.messageId(),
           payload.authorRole());
-      notificationDispatcher.dispatchCaseMessage(payload);
-      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+      try {
+        notificationDispatcher.dispatchCaseMessage(payload);
+      } catch (RuntimeException e) {
+        processedEventGuard.release(EVENT_TYPE, dedupKey);
+        throw e;
+      }
     } finally {
       MDC.remove("requestId");
     }

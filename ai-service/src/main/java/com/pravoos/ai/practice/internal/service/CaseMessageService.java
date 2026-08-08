@@ -11,6 +11,7 @@ import com.pravoos.ai.shared.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
 import com.pravoos.ai.shared.service.OutboxEventService;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -64,8 +65,9 @@ public class CaseMessageService {
     CaseThreadRead read =
         caseThreadReadRepository
             .findById(id)
-            .orElseGet(() -> new CaseThreadRead(caseId, lawyerId, LocalDateTime.now()));
-    read.setLastReadAt(LocalDateTime.now());
+            .orElseGet(
+                () -> new CaseThreadRead(caseId, lawyerId, LocalDateTime.now(ZoneOffset.UTC)));
+    read.setLastReadAt(LocalDateTime.now(ZoneOffset.UTC));
     caseThreadReadRepository.save(read);
   }
 

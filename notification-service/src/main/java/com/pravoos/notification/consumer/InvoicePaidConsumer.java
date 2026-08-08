@@ -32,13 +32,17 @@ public class InvoicePaidConsumer {
     MDC.put("requestId", String.valueOf(payload.invoiceId()));
     try {
       String dedupKey = String.valueOf(payload.invoiceId());
-      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
         log.info("Skipping duplicate invoice.paid: {}", dedupKey);
         return;
       }
       log.info("Received invoice.paid: invoice={}", payload.invoiceId());
-      notificationDispatcher.dispatchInvoicePaid(payload);
-      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+      try {
+        notificationDispatcher.dispatchInvoicePaid(payload);
+      } catch (RuntimeException e) {
+        processedEventGuard.release(EVENT_TYPE, dedupKey);
+        throw e;
+      }
     } finally {
       MDC.remove("requestId");
     }

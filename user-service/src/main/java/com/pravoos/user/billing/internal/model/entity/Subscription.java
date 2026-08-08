@@ -3,6 +3,7 @@ package com.pravoos.user.billing.internal.model.entity;
 import com.pravoos.user.billing.internal.model.enums.SubscriptionStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -42,14 +43,14 @@ public class Subscription {
 
   @PrePersist
   void prePersist() {
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
     createdAt = now;
     updatedAt = now;
   }
 
   @PreUpdate
   void preUpdate() {
-    updatedAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public UUID getId() {

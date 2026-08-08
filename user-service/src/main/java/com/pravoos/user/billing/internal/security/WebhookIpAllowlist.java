@@ -1,6 +1,7 @@
 package com.pravoos.user.billing.internal.security;
 
 import com.pravoos.user.billing.internal.config.YooKassaProperties;
+import com.pravoos.user.shared.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Component;
 public class WebhookIpAllowlist {
 
   private static final Logger log = LoggerFactory.getLogger(WebhookIpAllowlist.class);
-  private static final String FORWARDED_FOR_HEADER = "X-Forwarded-For";
 
   private final List<CidrRange> allowedRanges;
 
@@ -32,7 +32,7 @@ public class WebhookIpAllowlist {
     if (allowedRanges.isEmpty()) {
       return true;
     }
-    String clientIp = resolveClientIp(request);
+    String clientIp = ClientIpResolver.resolve(request);
     byte[] address = toAddress(clientIp);
     if (address == null) {
       log.warn("Webhook rejected: unparseable client IP {}", clientIp);
@@ -43,14 +43,6 @@ public class WebhookIpAllowlist {
       log.warn("Webhook rejected: client IP {} is not in the YooKassa allowlist", clientIp);
     }
     return allowed;
-  }
-
-  private String resolveClientIp(HttpServletRequest request) {
-    String forwardedFor = request.getHeader(FORWARDED_FOR_HEADER);
-    if (forwardedFor != null && !forwardedFor.isBlank()) {
-      return forwardedFor.split(",")[0].trim();
-    }
-    return request.getRemoteAddr();
   }
 
   private static byte[] toAddress(String ip) {

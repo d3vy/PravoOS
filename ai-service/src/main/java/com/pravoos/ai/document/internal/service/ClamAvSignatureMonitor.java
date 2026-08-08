@@ -5,6 +5,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -58,7 +59,8 @@ public class ClamAvSignatureMonitor {
       return;
     }
 
-    signatureAgeDays = (int) ChronoUnit.DAYS.between(signatureDate.get(), LocalDate.now());
+    signatureAgeDays =
+        (int) ChronoUnit.DAYS.between(signatureDate.get(), LocalDate.now(ZoneOffset.UTC));
     if (signaturesStale()) {
       log.error(
           "ClamAV signatures are {} days old (limit {}), uploads are rejected until freshclam updates them",

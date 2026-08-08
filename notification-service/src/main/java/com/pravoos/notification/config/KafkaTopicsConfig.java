@@ -53,4 +53,9 @@ public class KafkaTopicsConfig {
   public NewTopic lawyerDigestMorningDltTopic() {
     return topic("lawyer.digest.morning.DLT");
   }
+
+  @Bean
+  public NewTopic newLoginDltTopic() {
+    return topic("user.new_login.DLT");
+  }
 }

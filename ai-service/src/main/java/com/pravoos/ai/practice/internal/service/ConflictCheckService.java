@@ -35,20 +35,20 @@ public class ConflictCheckService {
     }
 
     List<ConflictHit> hits = new ArrayList<>();
-    for (CasePartyRepository.PartyLookup party : casePartyRepository.findByLawyerId(lawyerId)) {
-      if (matches(normalizedQuery, normalize(party.getPartyName()))) {
-        hits.add(
-            new ConflictHit(
-                ConflictSource.CASE_PARTY,
-                party.getPartyName(),
-                null,
-                party.getCaseId(),
-                party.getCaseTitle(),
-                party.getPartyRole()));
-        if (hits.size() >= MAX_HITS) {
-          return hits;
-        }
-      }
+    for (CasePartyRepository.PartyLookup party :
+        casePartyRepository.searchConflicts(
+            lawyerId, normalizedQuery, MIN_QUERY_LENGTH, MAX_HITS)) {
+      hits.add(
+          new ConflictHit(
+              ConflictSource.CASE_PARTY,
+              party.getPartyName(),
+              null,
+              party.getCaseId(),
+              party.getCaseTitle(),
+              party.getPartyRole()));
+    }
+    if (hits.size() >= MAX_HITS) {
+      return hits;
     }
 
     for (Client client : clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)) {

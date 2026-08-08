@@ -5,7 +5,9 @@ import com.pravoos.ai.core.internal.dto.DiffSegment;
 import com.pravoos.ai.shared.model.enums.DiffChangeType;
 import com.pravoos.ai.shared.model.enums.DiffSegmentType;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ public class TextDiffService {
   private static final Pattern WHITESPACE = Pattern.compile("\\s+");
   private static final Pattern WORD_WITH_TRAILING_SPACE = Pattern.compile("\\S+\\s*");
   private static final int INLINE_MAX_WORDS = 400;
+  private static final long MAX_ALIGNMENT_CELLS = 4_000_000L;
 
   public List<DiffChange> diff(String baseText, String revisedText) {
     List<String> base = splitParagraphs(baseText);
@@ -64,42 +67,91 @@ public class TextDiffService {
   }
 
   private List<Op> align(List<String> base, List<String> revised) {
-    int n = base.size();
-    int m = revised.size();
-    int[][] lcs = new int[n + 1][m + 1];
-    for (int i = n - 1; i >= 0; i--) {
-      for (int j = m - 1; j >= 0; j--) {
-        if (equalToken(base.get(i), revised.get(j))) {
-          lcs[i][j] = lcs[i + 1][j + 1] + 1;
-        } else {
-          lcs[i][j] = Math.max(lcs[i + 1][j], lcs[i][j + 1]);
-        }
-      }
+    Map<String, Integer> tokenIds = new HashMap<>();
+    int[] baseIds = tokenIds(base, tokenIds);
+    int[] revisedIds = tokenIds(revised, tokenIds);
+    int n = baseIds.length;
+    int m = revisedIds.length;
+
+    int prefix = 0;
+    while (prefix < n && prefix < m && baseIds[prefix] == revisedIds[prefix]) {
+      prefix++;
     }
 
     List<Op> ops = new ArrayList<>();
+    for (int i = 0; i < prefix; i++) {
+      ops.add(new Op(OpType.EQUAL, base.get(i)));
+    }
+    alignWindow(base, revised, baseIds, revisedIds, prefix, n, m, ops);
+    return ops;
+  }
+
+  private void alignWindow(
+      List<String> base,
+      List<String> revised,
+      int[] baseIds,
+      int[] revisedIds,
+      int from,
+      int baseEnd,
+      int revisedEnd,
+      List<Op> ops) {
+    int n = baseEnd - from;
+    int m = revisedEnd - from;
+    if (n == 0 || m == 0 || (long) n * m > MAX_ALIGNMENT_CELLS) {
+      for (int i = from; i < baseEnd; i++) {
+        ops.add(new Op(OpType.DELETE, base.get(i)));
+      }
+      for (int j = from; j < revisedEnd; j++) {
+        ops.add(new Op(OpType.INSERT, revised.get(j)));
+      }
+      return;
+    }
+
+    int[][] lcs = new int[n + 1][m + 1];
+    for (int i = n - 1; i >= 0; i--) {
+      for (int j = m - 1; j >= 0; j--) {
+        lcs[i][j] =
+            baseIds[from + i] == revisedIds[from + j]
+                ? lcs[i + 1][j + 1] + 1
+                : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+      }
+    }
+
     int i = 0;
     int j = 0;
     while (i < n && j < m) {
-      if (equalToken(base.get(i), revised.get(j))) {
-        ops.add(new Op(OpType.EQUAL, base.get(i)));
+      if (baseIds[from + i] == revisedIds[from + j]) {
+        ops.add(new Op(OpType.EQUAL, base.get(from + i)));
         i++;
         j++;
       } else if (lcs[i + 1][j] >= lcs[i][j + 1]) {
-        ops.add(new Op(OpType.DELETE, base.get(i)));
+        ops.add(new Op(OpType.DELETE, base.get(from + i)));
         i++;
       } else {
-        ops.add(new Op(OpType.INSERT, revised.get(j)));
+        ops.add(new Op(OpType.INSERT, revised.get(from + j)));
         j++;
       }
     }
     while (i < n) {
-      ops.add(new Op(OpType.DELETE, base.get(i++)));
+      ops.add(new Op(OpType.DELETE, base.get(from + i++)));
     }
     while (j < m) {
-      ops.add(new Op(OpType.INSERT, revised.get(j++)));
+      ops.add(new Op(OpType.INSERT, revised.get(from + j++)));
     }
-    return ops;
+  }
+
+  private int[] tokenIds(List<String> tokens, Map<String, Integer> assignedIds) {
+    int[] ids = new int[tokens.size()];
+    for (int i = 0; i < ids.length; i++) {
+      String normalized = normalize(tokens.get(i));
+      Integer assigned = assignedIds.get(normalized);
+      if (assigned == null) {
+        assigned = assignedIds.size();
+        assignedIds.put(normalized, assigned);
+      }
+      ids[i] = assigned;
+    }
+    return ids;
   }
 
   private List<DiffSegment> mergeSegments(List<Op> ops) {
@@ -175,10 +227,6 @@ public class TextDiffService {
     deleted.clear();
     inserted.clear();
     return order + 1;
-  }
-
-  private boolean equalToken(String left, String right) {
-    return normalize(left).equals(normalize(right));
   }
 
   private String normalize(String value) {

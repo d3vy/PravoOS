@@ -9,6 +9,7 @@ import com.pravoos.user.shared.exception.InvalidRefreshTokenException;
 import com.pravoos.user.shared.security.TokenHasher;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
@@ -47,7 +48,7 @@ public class RefreshTokenService {
   @Transactional
   public IssuedRefreshToken issue(UUID userId, String ipAddress, String userAgent) {
     String rawToken = generateRawToken();
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
     RefreshToken refreshToken = new RefreshToken();
     refreshToken.setUserId(userId);
     refreshToken.setTokenHash(tokenHasher.sha256Hex(rawToken));
@@ -63,14 +64,14 @@ public class RefreshTokenService {
   public boolean isKnownDevice(UUID userId, String ipAddress) {
     return ipAddress != null
         && refreshTokenRepository.existsByUserIdAndIpAddressAndRevokedAtIsNullAndExpiresAtAfter(
-            userId, ipAddress, LocalDateTime.now());
+            userId, ipAddress, LocalDateTime.now(ZoneOffset.UTC));
   }
 
   @Transactional(readOnly = true)
   public List<SessionResponse> listActiveSessions(UUID userId, UUID currentSessionId) {
     return refreshTokenRepository
         .findByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(
-            userId, LocalDateTime.now())
+            userId, LocalDateTime.now(ZoneOffset.UTC))
         .stream()
         .map(
             token ->
@@ -89,7 +90,7 @@ public class RefreshTokenService {
     refreshTokenRepository
         .findByIdAndUserId(sessionId, userId)
         .filter(token -> token.getRevokedAt() == null)
-        .ifPresent(token -> token.setRevokedAt(LocalDateTime.now()));
+        .ifPresent(token -> token.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC)));
   }
 
   @Transactional
@@ -108,13 +109,13 @@ public class RefreshTokenService {
       throw new InvalidRefreshTokenException();
     }
 
-    if (stored.getExpiresAt().isBefore(LocalDateTime.now())) {
-      stored.setRevokedAt(LocalDateTime.now());
+    if (stored.getExpiresAt().isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
+      stored.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC));
       refreshTokenRepository.save(stored);
       throw new InvalidRefreshTokenException();
     }
 
-    stored.setRevokedAt(LocalDateTime.now());
+    stored.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC));
     try {
       refreshTokenRepository.saveAndFlush(stored);
     } catch (OptimisticLockingFailureException ex) {
@@ -129,14 +130,14 @@ public class RefreshTokenService {
     refreshTokenRepository
         .findByTokenHash(tokenHasher.sha256Hex(rawToken))
         .filter(token -> token.getRevokedAt() == null)
-        .ifPresent(token -> token.setRevokedAt(LocalDateTime.now()));
+        .ifPresent(token -> token.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC)));
   }
 
   @Scheduled(cron = "0 0 3 * * *")
   @SchedulerLock(name = "RefreshTokenService_purgeExpiredTokens", lockAtMostFor = "PT10M")
   @Transactional
   public void purgeExpiredTokens() {
-    int deleted = refreshTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+    int deleted = refreshTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now(ZoneOffset.UTC));
     if (deleted > 0) {
       log.info("Purged {} expired refresh tokens", deleted);
     }

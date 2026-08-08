@@ -20,22 +20,22 @@ public class ProcessedEventGuard {
     this.redisTemplate = redisTemplate;
   }
 
-  public boolean isProcessed(String eventType, String dedupKey) {
+  public boolean claim(String eventType, String dedupKey) {
     String key = key(eventType, dedupKey);
     try {
-      return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+      return Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(key, "1", TTL));
     } catch (DataAccessException ex) {
-      log.warn("Redis unavailable for dedup check ({}), processing event to avoid loss", key, ex);
-      return false;
+      log.warn("Redis unavailable for dedup claim ({}), processing event to avoid loss", key, ex);
+      return true;
     }
   }
 
-  public void markProcessed(String eventType, String dedupKey) {
+  public void release(String eventType, String dedupKey) {
     String key = key(eventType, dedupKey);
     try {
-      redisTemplate.opsForValue().set(key, "1", TTL);
+      redisTemplate.delete(key);
     } catch (DataAccessException ex) {
-      log.warn("Redis unavailable to mark event processed ({}), may be redelivered", key, ex);
+      log.warn("Redis unavailable to release dedup claim ({}), retry will be skipped", key, ex);
     }
   }
 

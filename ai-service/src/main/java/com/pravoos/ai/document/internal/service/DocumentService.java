@@ -5,7 +5,6 @@ import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.document.internal.dto.LegislationResponse;
-import com.pravoos.ai.document.internal.event.DocumentCreatedSpringEvent;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
 import com.pravoos.ai.document.internal.pipeline.ChunkData;
@@ -31,7 +30,6 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -45,7 +43,7 @@ public class DocumentService {
 
   private final DocumentRepository documentRepository;
   private final DocumentChunkRepository documentChunkRepository;
-  private final ApplicationEventPublisher eventPublisher;
+  private final DocumentUploadWriter documentUploadWriter;
   private final DocumentProperties documentProperties;
   private final FileCryptoService fileCryptoService;
   private final MalwareScanClient malwareScanClient;
@@ -56,7 +54,7 @@ public class DocumentService {
   public DocumentService(
       DocumentRepository documentRepository,
       DocumentChunkRepository documentChunkRepository,
-      ApplicationEventPublisher eventPublisher,
+      DocumentUploadWriter documentUploadWriter,
       DocumentProperties documentProperties,
       FileCryptoService fileCryptoService,
       MalwareScanClient malwareScanClient,
@@ -65,7 +63,7 @@ public class DocumentService {
       MeterRegistry meterRegistry) {
     this.documentRepository = documentRepository;
     this.documentChunkRepository = documentChunkRepository;
-    this.eventPublisher = eventPublisher;
+    this.documentUploadWriter = documentUploadWriter;
     this.documentProperties = documentProperties;
     this.fileCryptoService = fileCryptoService;
     this.malwareScanClient = malwareScanClient;
@@ -78,18 +76,15 @@ public class DocumentService {
             .register(meterRegistry);
   }
 
-  @Transactional
   public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy) {
     return upload(file, title, uploadedBy, null);
   }
 
-  @Transactional
   public DocumentUploadResponse upload(
       MultipartFile file, String title, UUID uploadedBy, UUID caseId) {
     return upload(file, title, uploadedBy, caseId, false);
   }
 
-  @Transactional
   public DocumentUploadResponse upload(
       MultipartFile file, String title, UUID uploadedBy, UUID caseId, boolean visibleToClient) {
     if (file == null || file.isEmpty()) {
@@ -122,7 +117,6 @@ public class DocumentService {
     return persistAndEmbed(content, originalName, fileType, document);
   }
 
-  @Transactional
   public DocumentUploadResponse uploadChatAttachment(
       MultipartFile file, String title, UUID lawyerId) {
     if (file == null || file.isEmpty()) {
@@ -145,7 +139,6 @@ public class DocumentService {
     return persistAndEmbed(content, originalName, fileType, document);
   }
 
-  @Transactional
   public DocumentUploadResponse uploadLegislation(
       MultipartFile file,
       String actCanonical,
@@ -169,16 +162,6 @@ public class DocumentService {
     String fileType = extractFileType(originalName);
     byte[] content = validateAndScan(file, uploadedBy, originalName, fileType);
 
-    documentRepository
-        .findByDocumentKindAndActCanonicalAndArticleNumberAndSupersededFalse(
-            DocumentKind.LEGISLATION, act, article)
-        .ifPresent(
-            current -> {
-              current.setSuperseded(true);
-              documentRepository.saveAndFlush(current);
-              log.info("Legislation superseded: {} {} (doc {})", act, article, current.getId());
-            });
-
     Document document = new Document();
     document.setTitle(resolveTitle(title, "ст. " + article + " " + act));
     document.setUploadedBy(uploadedBy);
@@ -187,7 +170,8 @@ public class DocumentService {
     document.setArticleNumber(article);
     document.setEditionDate(editionDate);
 
-    DocumentUploadResponse response = persistAndEmbed(content, originalName, fileType, document);
+    DocumentUploadResponse response =
+        persistAndEmbed(content, originalName, fileType, document, act, article);
     log.info("Legislation uploaded: {} {} ред. от {} by {}", act, article, editionDate, uploadedBy);
     return response;
   }
@@ -205,14 +189,26 @@ public class DocumentService {
 
   private DocumentUploadResponse persistAndEmbed(
       byte[] content, String originalName, String fileType, Document document) {
+    return persistAndEmbed(content, originalName, fileType, document, null, null);
+  }
+
+  private DocumentUploadResponse persistAndEmbed(
+      byte[] content,
+      String originalName,
+      String fileType,
+      Document document,
+      String act,
+      String article) {
     Path filePath = storeFile(content, UUID.randomUUID().toString(), fileType);
     document.setFileName(originalName);
     document.setFileType(fileType);
     document.setFilePath(filePath.toString());
     document.setSizeBytes(content.length);
 
-    Document saved = documentRepository.save(document);
-    eventPublisher.publishEvent(new DocumentCreatedSpringEvent(saved.getId()));
+    Document saved =
+        act == null
+            ? documentUploadWriter.persist(document)
+            : documentUploadWriter.persistLegislation(document, act, article);
 
     log.info(
         "Document uploaded: '{}' ({}) by {}",

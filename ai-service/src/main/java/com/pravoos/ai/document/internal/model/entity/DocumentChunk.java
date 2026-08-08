@@ -2,6 +2,7 @@ package com.pravoos.ai.document.internal.model.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.hibernate.annotations.Type;
 
@@ -34,7 +35,7 @@ public class DocumentChunk {
 
   @PrePersist
   void prePersist() {
-    createdAt = LocalDateTime.now();
+    createdAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public UUID getId() {

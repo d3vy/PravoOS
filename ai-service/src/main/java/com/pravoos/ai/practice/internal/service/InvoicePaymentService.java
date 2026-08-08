@@ -9,7 +9,6 @@ import com.pravoos.ai.practice.internal.repository.jpa.InvoicePaymentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.exception.InvoiceStateException;
-import com.pravoos.ai.shared.model.enums.InvoicePaymentStatus;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,17 +28,17 @@ public class InvoicePaymentService {
   private final InvoiceRepository invoiceRepository;
   private final InvoicePaymentRepository invoicePaymentRepository;
   private final YooKassaInvoiceClient yooKassaInvoiceClient;
-  private final InvoicePaidPublisher invoicePaidPublisher;
+  private final InvoicePaymentWriter invoicePaymentWriter;
 
   public InvoicePaymentService(
       InvoiceRepository invoiceRepository,
       InvoicePaymentRepository invoicePaymentRepository,
       YooKassaInvoiceClient yooKassaInvoiceClient,
-      InvoicePaidPublisher invoicePaidPublisher) {
+      InvoicePaymentWriter invoicePaymentWriter) {
     this.invoiceRepository = invoiceRepository;
     this.invoicePaymentRepository = invoicePaymentRepository;
     this.yooKassaInvoiceClient = yooKassaInvoiceClient;
-    this.invoicePaidPublisher = invoicePaidPublisher;
+    this.invoicePaymentWriter = invoicePaymentWriter;
   }
 
   @Transactional
@@ -63,45 +62,12 @@ public class InvoicePaymentService {
     return new InvoicePaymentResponse(invoiceId, payment.confirmationUrl());
   }
 
-  @Transactional
   public void handleWebhook(String providerPaymentId) {
-    InvoicePayment invoicePayment =
-        invoicePaymentRepository.findByProviderPaymentId(providerPaymentId).orElse(null);
-    if (invoicePayment == null) {
-      log.warn("Received YooKassa webhook for unknown payment {}", providerPaymentId);
+    if (!invoicePaymentWriter.isPending(providerPaymentId)) {
       return;
     }
-    if (invoicePayment.getStatus() != InvoicePaymentStatus.PENDING) {
-      log.info(
-          "Ignoring webhook for payment {} already in status {}",
-          providerPaymentId,
-          invoicePayment.getStatus());
-      return;
-    }
-
     YooKassaInvoicePayment snapshot = yooKassaInvoiceClient.getPayment(providerPaymentId);
-    if (snapshot.succeeded()) {
-      invoicePayment.markSucceeded();
-      Invoice invoice =
-          invoiceRepository
-              .findById(invoicePayment.getInvoiceId())
-              .orElseThrow(() -> new InvoiceNotFoundException(invoicePayment.getInvoiceId()));
-      if (invoice.getStatus().canTransitionTo(InvoiceStatus.PAID)) {
-        invoice.setStatus(InvoiceStatus.PAID);
-        invoicePaidPublisher.publish(invoice);
-      }
-      log.info("Payment {} succeeded for invoice {}", providerPaymentId, invoice.getId());
-    } else if (snapshot.canceled()) {
-      invoicePayment.markCanceled();
-      log.info(
-          "Payment {} canceled for invoice {}", providerPaymentId, invoicePayment.getInvoiceId());
-    } else {
-      log.info(
-          "Payment {} still in status {} for invoice {}",
-          providerPaymentId,
-          snapshot.status(),
-          invoicePayment.getInvoiceId());
-    }
+    invoicePaymentWriter.applySnapshot(providerPaymentId, snapshot);
   }
 
   private Invoice requireClientInvoice(UUID invoiceId, List<UUID> clientIds) {

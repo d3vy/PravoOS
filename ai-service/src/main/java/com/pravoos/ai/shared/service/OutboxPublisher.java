@@ -46,12 +46,14 @@ public class OutboxPublisher {
           event,
           stringKafkaTemplate.send(event.getTopic(), event.getKafkaKey(), event.getPayload()));
     }
-    inFlight.forEach(this::awaitResult);
+    long batchDeadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(SEND_TIMEOUT_SECONDS);
+    inFlight.forEach((event, sendResult) -> awaitResult(event, sendResult, batchDeadlineNanos));
   }
 
-  private void awaitResult(OutboxEvent event, CompletableFuture<?> sendResult) {
+  private void awaitResult(
+      OutboxEvent event, CompletableFuture<?> sendResult, long batchDeadlineNanos) {
     try {
-      sendResult.get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      sendResult.get(Math.max(0L, batchDeadlineNanos - System.nanoTime()), TimeUnit.NANOSECONDS);
       event.markPublished();
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();

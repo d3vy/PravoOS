@@ -4,6 +4,7 @@ import com.pravoos.user.privacy.internal.model.enums.SubjectRequestStatus;
 import com.pravoos.user.privacy.internal.model.enums.SubjectRequestType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -45,19 +46,19 @@ public class SubjectRequest {
   @PrePersist
   void prePersist() {
     if (requestedAt == null) {
-      requestedAt = LocalDateTime.now();
+      requestedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
   }
 
   public void complete(String resultNote) {
     status = SubjectRequestStatus.COMPLETED;
-    completedAt = LocalDateTime.now();
+    completedAt = LocalDateTime.now(ZoneOffset.UTC);
     note = resultNote;
   }
 
   public void reject(String reason) {
     status = SubjectRequestStatus.REJECTED;
-    completedAt = LocalDateTime.now();
+    completedAt = LocalDateTime.now(ZoneOffset.UTC);
     note = reason;
   }
 

@@ -2,6 +2,7 @@ package com.pravoos.ai.core.internal.model.mongo;
 
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -32,7 +33,7 @@ public class Message {
     this.role = role;
     this.content = content;
     this.sources = sources;
-    this.createdAt = LocalDateTime.now();
+    this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public String getId() {

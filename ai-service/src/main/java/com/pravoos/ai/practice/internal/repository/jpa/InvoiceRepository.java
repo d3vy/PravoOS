@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.repository.jpa;
 import com.pravoos.ai.practice.internal.model.entity.Invoice;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,19 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
   List<Invoice> findByLawyerIdAndStatusOrderByDueDateAsc(UUID lawyerId, InvoiceStatus status);
 
   List<Invoice> findByStatusAndDueDate(InvoiceStatus status, LocalDate dueDate);
+
+  @Query(
+      """
+            SELECT i FROM Invoice i
+            WHERE i.lawyerId = :lawyerId
+              AND (LOWER(i.number) LIKE :pattern ESCAPE '!' OR i.clientId IN :clientIds)
+            ORDER BY i.createdAt DESC
+            """)
+  List<Invoice> search(
+      @Param("lawyerId") UUID lawyerId,
+      @Param("pattern") String pattern,
+      @Param("clientIds") Collection<UUID> clientIds,
+      Pageable pageable);
 
   @Query("SELECT DISTINCT i.lawyerId FROM Invoice i WHERE i.status = :status")
   List<UUID> findDistinctLawyerIdsByStatus(@Param("status") InvoiceStatus status);

@@ -4,6 +4,7 @@ import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -60,7 +61,7 @@ public class User {
 
   @PrePersist
   void prePersist() {
-    createdAt = LocalDateTime.now();
+    createdAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public UUID getId() {

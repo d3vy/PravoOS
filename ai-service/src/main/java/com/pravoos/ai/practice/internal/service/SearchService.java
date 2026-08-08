@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class SearchService {
 
   private static final Logger log = LoggerFactory.getLogger(SearchService.class);
   private static final int MAX_HITS_PER_SOURCE = 10;
+  private static final Pageable TOP_HITS = PageRequest.of(0, MAX_HITS_PER_SOURCE);
 
   private final CaseRepository caseRepository;
   private final ClientRepository clientRepository;
@@ -58,11 +60,17 @@ public class SearchService {
       return new GlobalSearchResponse(List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
-    List<CaseHit> cases = searchCases(lawyerId, trimmed);
+    List<Client> lawyerClients = clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId);
+    Map<UUID, String> clientNames =
+        lawyerClients.stream().collect(Collectors.toMap(Client::getId, Client::getName));
+    Collection<UUID> matchingClientIds = ClientNameMatch.matchingIds(clientNames, trimmed);
+    String pattern = LikePattern.contains(trimmed);
+
+    List<CaseHit> cases = searchCases(lawyerId, pattern, matchingClientIds, clientNames);
     List<ConversationHit> conversations = searchConversations(lawyerId, trimmed);
     List<DocumentHit> documents = searchDocuments(lawyerId, trimmed, searchContent);
-    List<ClientHit> clients = searchClients(lawyerId, trimmed);
-    List<InvoiceHit> invoices = searchInvoices(lawyerId, trimmed);
+    List<ClientHit> clients = searchClients(lawyerClients, trimmed);
+    List<InvoiceHit> invoices = searchInvoices(lawyerId, pattern, matchingClientIds, clientNames);
 
     log.info(
         "Global search by lawyer {} for '{}' (content={}): {} cases, {} conversations, "
@@ -78,13 +86,12 @@ public class SearchService {
     return new GlobalSearchResponse(cases, conversations, documents, clients, invoices);
   }
 
-  private List<CaseHit> searchCases(UUID lawyerId, String trimmed) {
-    Map<UUID, String> clientNames = clientNamesFor(lawyerId);
-    Collection<UUID> matchingClientIds = ClientNameMatch.matchingIds(clientNames, trimmed);
-    return caseRepository
-        .search(lawyerId, null, LikePattern.contains(trimmed), matchingClientIds)
-        .stream()
-        .limit(MAX_HITS_PER_SOURCE)
+  private List<CaseHit> searchCases(
+      UUID lawyerId,
+      String pattern,
+      Collection<UUID> matchingClientIds,
+      Map<UUID, String> clientNames) {
+    return caseRepository.search(lawyerId, null, pattern, matchingClientIds, TOP_HITS).stream()
         .map(
             c ->
                 new CaseHit(
@@ -112,23 +119,21 @@ public class SearchService {
         .toList();
   }
 
-  private List<ClientHit> searchClients(UUID lawyerId, String trimmed) {
+  private List<ClientHit> searchClients(List<Client> lawyerClients, String trimmed) {
     String normalized = trimmed.toLowerCase(Locale.ROOT);
-    return clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId).stream()
+    return lawyerClients.stream()
         .filter(c -> matchesText(normalized, c.getName(), c.getEmail(), c.getPhone()))
         .limit(MAX_HITS_PER_SOURCE)
         .map(c -> new ClientHit(c.getId(), c.getName(), c.getEmail(), c.getPhone()))
         .toList();
   }
 
-  private List<InvoiceHit> searchInvoices(UUID lawyerId, String trimmed) {
-    String normalized = trimmed.toLowerCase(Locale.ROOT);
-    Map<UUID, String> clientNames = clientNamesFor(lawyerId);
-    return invoiceRepository
-        .findByLawyerIdOrderByCreatedAtDesc(lawyerId, Pageable.unpaged())
-        .stream()
-        .filter(i -> matchesText(normalized, i.getNumber(), clientNames.get(i.getClientId())))
-        .limit(MAX_HITS_PER_SOURCE)
+  private List<InvoiceHit> searchInvoices(
+      UUID lawyerId,
+      String pattern,
+      Collection<UUID> matchingClientIds,
+      Map<UUID, String> clientNames) {
+    return invoiceRepository.search(lawyerId, pattern, matchingClientIds, TOP_HITS).stream()
         .map(
             i ->
                 new InvoiceHit(
@@ -149,10 +154,5 @@ public class SearchService {
       }
     }
     return false;
-  }
-
-  private Map<UUID, String> clientNamesFor(UUID lawyerId) {
-    return clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId).stream()
-        .collect(Collectors.toMap(Client::getId, Client::getName));
   }
 }

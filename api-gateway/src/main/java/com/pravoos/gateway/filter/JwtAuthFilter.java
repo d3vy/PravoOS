@@ -23,6 +23,8 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String DENYLIST_KEY_PREFIX = "auth:revoked_after:";
 
+  public static final String AUTHENTICATED_USER_ATTRIBUTE = "pravoos.gateway.authenticatedUserId";
+
   private final JwtVerifier jwtVerifier;
   private final ReactiveStringRedisTemplate redisTemplate;
   private final boolean denylistFailOpen;
@@ -67,6 +69,9 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
               revoked -> {
                 if (revoked) {
                   return unauthorized(exchange);
+                }
+                if (subject != null && !subject.isBlank()) {
+                  exchange.getAttributes().put(AUTHENTICATED_USER_ATTRIBUTE, subject);
                 }
                 ServerWebExchange mutatedExchange =
                     exchange

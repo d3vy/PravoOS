@@ -32,7 +32,7 @@ public class InvoiceOverdueConsumer {
     MDC.put("requestId", String.valueOf(payload.invoiceId()));
     try {
       String dedupKey = payload.invoiceId() + ":" + payload.daysOverdue();
-      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
         log.info("Skipping duplicate invoice.overdue: {}", dedupKey);
         return;
       }
@@ -40,8 +40,12 @@ public class InvoiceOverdueConsumer {
           "Received invoice.overdue: invoice={} daysOverdue={}",
           payload.invoiceId(),
           payload.daysOverdue());
-      notificationDispatcher.dispatchInvoiceOverdue(payload);
-      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+      try {
+        notificationDispatcher.dispatchInvoiceOverdue(payload);
+      } catch (RuntimeException e) {
+        processedEventGuard.release(EVENT_TYPE, dedupKey);
+        throw e;
+      }
     } finally {
       MDC.remove("requestId");
     }

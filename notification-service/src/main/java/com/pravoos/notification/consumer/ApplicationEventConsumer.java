@@ -36,7 +36,7 @@ public class ApplicationEventConsumer {
     MDC.put("requestId", String.valueOf(event.applicationId()));
     try {
       String dedupKey = String.valueOf(event.applicationId());
-      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
         log.info(
             "Skipping duplicate application.submitted event: applicationId={}",
             event.applicationId());
@@ -44,21 +44,24 @@ public class ApplicationEventConsumer {
       }
       log.info("Received application.submitted event: applicationId={}", event.applicationId());
 
-      ApplicationDetailsResponse details =
-          userServiceClient.getApplication(event.applicationId()).orElse(null);
-      if (details == null) {
-        log.warn("Application {} no longer exists, skipping notification", event.applicationId());
-        processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
-        return;
-      }
+      try {
+        ApplicationDetailsResponse details =
+            userServiceClient.getApplication(event.applicationId()).orElse(null);
+        if (details == null) {
+          log.warn("Application {} no longer exists, skipping notification", event.applicationId());
+          return;
+        }
 
-      telegramNotificationService.notifyNewApplication(
-          new ApplicationSubmittedKafkaPayload(
-              event.applicationId(),
-              details.fullName(),
-              details.email(),
-              details.specialization()));
-      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+        telegramNotificationService.notifyNewApplication(
+            new ApplicationSubmittedKafkaPayload(
+                event.applicationId(),
+                details.fullName(),
+                details.email(),
+                details.specialization()));
+      } catch (RuntimeException e) {
+        processedEventGuard.release(EVENT_TYPE, dedupKey);
+        throw e;
+      }
     } finally {
       MDC.remove("requestId");
     }

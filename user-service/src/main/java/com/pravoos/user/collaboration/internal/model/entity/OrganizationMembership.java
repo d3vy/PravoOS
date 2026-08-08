@@ -3,6 +3,7 @@ package com.pravoos.user.collaboration.internal.model.entity;
 import com.pravoos.user.collaboration.internal.model.enums.OrgRole;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -28,7 +29,7 @@ public class OrganizationMembership {
 
   @PrePersist
   void prePersist() {
-    createdAt = LocalDateTime.now();
+    createdAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public UUID getId() {

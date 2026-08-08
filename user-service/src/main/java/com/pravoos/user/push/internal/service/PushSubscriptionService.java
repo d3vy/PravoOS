@@ -5,6 +5,7 @@ import com.pravoos.user.push.internal.dto.RegisterPushSubscriptionRequest;
 import com.pravoos.user.push.internal.model.entity.PushSubscription;
 import com.pravoos.user.push.internal.repository.PushSubscriptionRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class PushSubscriptionService {
     subscription.setP256dhKey(request.p256dh());
     subscription.setAuthKey(request.auth());
     subscription.setUserAgent(truncateUserAgent(request.userAgent()));
-    subscription.setLastUsedAt(LocalDateTime.now());
+    subscription.setLastUsedAt(LocalDateTime.now(ZoneOffset.UTC));
     pushSubscriptionRepository.save(subscription);
     evictOldestBeyondLimit(userId);
     log.info("Push subscription registered for user {}", userId);

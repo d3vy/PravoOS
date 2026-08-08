@@ -9,6 +9,7 @@ import com.pravoos.user.privacy.internal.model.entity.UserConsent;
 import com.pravoos.user.privacy.internal.model.enums.ConsentPurpose;
 import com.pravoos.user.privacy.internal.repository.UserConsentRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -42,7 +43,7 @@ public class ConsentService implements ConsentRecorder {
             ? privacyProperties.resolvedPolicyVersion()
             : consent.policyVersion();
     LocalDateTime grantedAt =
-        consent.grantedAt() == null ? LocalDateTime.now() : consent.grantedAt();
+        consent.grantedAt() == null ? LocalDateTime.now(ZoneOffset.UTC) : consent.grantedAt();
 
     grant(userId, ConsentPurpose.PERSONAL_DATA, version, grantedAt, consent, "SIGNUP");
     if (consent.crossBorderAccepted()) {
@@ -79,7 +80,7 @@ public class ConsentService implements ConsentRecorder {
             userId,
             purpose,
             privacyProperties.resolvedPolicyVersion(),
-            LocalDateTime.now(),
+            LocalDateTime.now(ZoneOffset.UTC),
             ipAddress,
             userAgent,
             "SETTINGS");

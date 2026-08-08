@@ -4,6 +4,7 @@ import com.pravoos.user.registration.internal.model.enums.ApplicationStatus;
 import com.pravoos.user.shared.security.PiiStringConverter;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -75,7 +76,7 @@ public class LawyerApplication {
 
   @PrePersist
   void prePersist() {
-    submittedAt = LocalDateTime.now();
+    submittedAt = LocalDateTime.now(ZoneOffset.UTC);
     if (status == null) {
       status = ApplicationStatus.PENDING;
     }

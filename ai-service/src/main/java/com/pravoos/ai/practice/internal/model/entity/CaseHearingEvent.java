@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.model.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -53,7 +54,7 @@ public class CaseHearingEvent {
 
   @PrePersist
   void prePersist() {
-    createdAt = LocalDateTime.now();
+    createdAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public UUID getId() {

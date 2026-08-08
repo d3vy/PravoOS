@@ -68,7 +68,6 @@ public class DocumentComparisonService {
     this.objectMapper = objectMapper;
   }
 
-  @Transactional
   public DocumentComparisonDto compare(
       UUID baseDocumentId, UUID revisedDocumentId, UUID lawyerId, List<UUID> orgIds) {
     if (baseDocumentId.equals(revisedDocumentId)) {

@@ -32,13 +32,17 @@ public class NewLoginConsumer {
     MDC.put("requestId", String.valueOf(payload.userId()));
     try {
       String dedupKey = payload.userId() + ":" + payload.occurredAt() + ":" + payload.ipAddress();
-      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
         log.info("Skipping duplicate user.new_login: {}", dedupKey);
         return;
       }
       log.info("Received user.new_login: user={}", payload.userId());
-      notificationDispatcher.dispatchNewLogin(payload);
-      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+      try {
+        notificationDispatcher.dispatchNewLogin(payload);
+      } catch (RuntimeException e) {
+        processedEventGuard.release(EVENT_TYPE, dedupKey);
+        throw e;
+      }
     } finally {
       MDC.remove("requestId");
     }

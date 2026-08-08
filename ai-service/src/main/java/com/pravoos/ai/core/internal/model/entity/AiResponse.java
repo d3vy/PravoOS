@@ -3,6 +3,7 @@ package com.pravoos.ai.core.internal.model.entity;
 import com.pravoos.ai.core.api.SourceReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -45,7 +46,7 @@ public class AiResponse {
 
   @PrePersist
   void prePersist() {
-    createdAt = LocalDateTime.now();
+    createdAt = LocalDateTime.now(ZoneOffset.UTC);
     if (sources == null) {
       sources = List.of();
     }

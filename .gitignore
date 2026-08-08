@@ -45,6 +45,7 @@ logs/
 memory/
 frontend/node_modules/
 frontend/dist/
+frontend/coverage/
 frontend/.env
 docker/nginx/generated/default.conf
 docker/jars/*

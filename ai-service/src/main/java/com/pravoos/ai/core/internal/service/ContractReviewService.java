@@ -62,7 +62,6 @@ public class ContractReviewService {
     this.objectMapper = objectMapper;
   }
 
-  @Transactional
   public ContractReviewDto review(UUID documentId, UUID lawyerId, List<UUID> orgIds) {
     llmQuotaService.assertWithinQuota(lawyerId);
 

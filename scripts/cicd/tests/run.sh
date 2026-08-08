@@ -19,5 +19,6 @@ source "${TESTS_DIR}/consistency.sh"
 test_health
 test_deploy_state
 test_consistency
+test_dockerfile_covers_reactor
 
 assert_summary

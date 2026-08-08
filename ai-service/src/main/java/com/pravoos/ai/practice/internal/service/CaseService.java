@@ -258,7 +258,6 @@ public class CaseService {
     log.info("Case deleted: {} by lawyer {}", caseId, lawyerId);
   }
 
-  @Transactional
   public DocumentUploadResponse uploadDocument(
       UUID caseId, MultipartFile file, String title, UUID lawyerId, List<UUID> orgIds) {
     requireVisibleCase(caseId, lawyerId, orgIds);

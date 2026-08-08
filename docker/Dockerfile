@@ -3,6 +3,7 @@ WORKDIR /build
 COPY pom.xml .
 COPY pravoos-common/pom.xml pravoos-common/pom.xml
 COPY pravoos-common-web/pom.xml pravoos-common-web/pom.xml
+COPY pravoos-common-test/pom.xml pravoos-common-test/pom.xml
 COPY pravoos-observability/pom.xml pravoos-observability/pom.xml
 COPY pravoos-cloud/pom.xml pravoos-cloud/pom.xml
 COPY discovery-server/pom.xml discovery-server/pom.xml
@@ -12,9 +13,11 @@ COPY user-service/pom.xml user-service/pom.xml
 COPY llm-service/pom.xml llm-service/pom.xml
 COPY ai-service/pom.xml ai-service/pom.xml
 COPY notification-service/pom.xml notification-service/pom.xml
+COPY coverage-report/pom.xml coverage-report/pom.xml
 RUN mvn -B -ntp -q dependency:go-offline || true
 COPY pravoos-common/src pravoos-common/src
 COPY pravoos-common-web/src pravoos-common-web/src
+COPY pravoos-common-test/src pravoos-common-test/src
 COPY pravoos-observability/src pravoos-observability/src
 COPY pravoos-cloud/src pravoos-cloud/src
 COPY discovery-server/src discovery-server/src

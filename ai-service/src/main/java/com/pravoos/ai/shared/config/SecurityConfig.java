@@ -5,7 +5,6 @@ import com.pravoos.ai.shared.security.JwtAuthenticationFilter;
 import com.pravoos.common.security.JwtVerifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -61,7 +60,7 @@ public class SecurityConfig {
                     .hasRole("CLIENT")
                     .requestMatchers("/api/ai/cases/**")
                     .hasRole("LAWYER")
-                    .requestMatchers("/api/ai/dashboard")
+                    .requestMatchers("/api/ai/dashboard/**")
                     .hasRole("LAWYER")
                     .requestMatchers("/api/ai/calendar/**")
                     .hasRole("LAWYER")
@@ -91,7 +90,7 @@ public class SecurityConfig {
                     .hasRole("LAWYER")
                     .requestMatchers("/api/ai/messages/**")
                     .hasRole("LAWYER")
-                    .requestMatchers(HttpMethod.GET, "/api/ai/conversations/**")
+                    .requestMatchers("/api/ai/conversations/**")
                     .hasRole("LAWYER")
                     .requestMatchers("/api/ai/chat/**")
                     .hasRole("LAWYER")
@@ -108,7 +107,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/ai/emails/**")
                     .hasRole("LAWYER")
                     .anyRequest()
-                    .authenticated())
+                    .hasAnyRole("LAWYER", "ADMIN"))
         .addFilterBefore(
             new JwtAuthenticationFilter(jwtVerifier, accessTokenDenylist),
             UsernamePasswordAuthenticationFilter.class)

@@ -134,7 +134,6 @@ public class MailboxService {
     return MailboxResponse.from(mailboxRepository.save(mailbox));
   }
 
-  @Transactional
   public MailboxTestResult testConnection(UUID mailboxId, UUID userId) {
     Mailbox mailbox = requireOwnedMailbox(mailboxId, userId);
     try {

@@ -30,6 +30,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -107,14 +108,14 @@ public class ApplicationService {
     application.setSpecialization(request.specialization());
     application.setPhone(PhoneNormalizer.normalize(request.phone()));
     application.setConsentPolicyVersion(request.consentPolicyVersion());
-    application.setConsentGrantedAt(LocalDateTime.now());
+    application.setConsentGrantedAt(LocalDateTime.now(ZoneOffset.UTC));
     application.setConsentIp(clientIp);
     application.setConsentUserAgent(userAgent);
     application.setConsentCrossBorder(request.crossBorderConsent());
     application.setConsentMarketing(request.marketingConsent());
     String rawVerificationToken = emailVerificationService.generateToken();
     application.setStatusToken(emailVerificationService.generateToken());
-    application.setStatusTokenExpiresAt(LocalDateTime.now().plus(STATUS_TOKEN_TTL));
+    application.setStatusTokenExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plus(STATUS_TOKEN_TTL));
     application.setEmailVerificationToken(tokenHasher.sha256Hex(rawVerificationToken));
     application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
 
@@ -151,7 +152,7 @@ public class ApplicationService {
             .orElseThrow(ApplicationTokenNotFoundException::new);
 
     LocalDateTime expiresAt = application.getStatusTokenExpiresAt();
-    if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now())) {
+    if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
       throw new ApplicationTokenNotFoundException();
     }
 
@@ -263,7 +264,7 @@ public class ApplicationService {
 
   private void markReviewed(LawyerApplication application, ApplicationStatus status, UUID adminId) {
     application.setStatus(status);
-    application.setReviewedAt(LocalDateTime.now());
+    application.setReviewedAt(LocalDateTime.now(ZoneOffset.UTC));
     application.setReviewedBy(adminId);
     applicationRepository.save(application);
   }

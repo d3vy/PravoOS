@@ -4,16 +4,15 @@ import com.pravoos.ai.core.internal.repository.jpa.AiTrustCounterRepository;
 import com.pravoos.ai.shared.model.enums.TrustMetric;
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -22,13 +21,13 @@ public class TrustMetricsRecorder {
   private static final Logger log = LoggerFactory.getLogger(TrustMetricsRecorder.class);
 
   private final AiTrustCounterRepository trustCounterRepository;
-  private final TrustMetricsRecorder self;
+  private final TrustCounterWriter trustCounterWriter;
   private final Map<TrustMetric, LongAdder> pending = new ConcurrentHashMap<>();
 
   public TrustMetricsRecorder(
-      AiTrustCounterRepository trustCounterRepository, @Lazy TrustMetricsRecorder self) {
+      AiTrustCounterRepository trustCounterRepository, TrustCounterWriter trustCounterWriter) {
     this.trustCounterRepository = trustCounterRepository;
-    this.self = self;
+    this.trustCounterWriter = trustCounterWriter;
   }
 
   public void record(TrustMetric metric) {
@@ -36,16 +35,15 @@ public class TrustMetricsRecorder {
   }
 
   @Scheduled(fixedDelayString = "${trust-metrics.flush-interval-ms:60000}")
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void flush() {
-    LocalDate today = LocalDate.now();
+    LocalDate today = LocalDate.now(ZoneOffset.UTC);
     for (Map.Entry<TrustMetric, LongAdder> entry : pending.entrySet()) {
       long delta = entry.getValue().sumThenReset();
       if (delta == 0) {
         continue;
       }
       try {
-        trustCounterRepository.addDelta(today, entry.getKey().name(), delta);
+        trustCounterWriter.addDelta(today, entry.getKey(), delta);
       } catch (RuntimeException ex) {
         entry.getValue().add(delta);
         log.warn("Не удалось записать метрику доверия {}: {}", entry.getKey(), ex.getMessage());
@@ -55,7 +53,7 @@ public class TrustMetricsRecorder {
 
   @PreDestroy
   void flushOnShutdown() {
-    self.flush();
+    flush();
   }
 
   @Transactional(readOnly = true)

@@ -3,6 +3,7 @@ package com.pravoos.ai.core.internal.model.entity;
 import com.pravoos.ai.core.internal.dto.DiffChange;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -55,7 +56,7 @@ public class DocumentComparison {
 
   @PrePersist
   void prePersist() {
-    createdAt = LocalDateTime.now();
+    createdAt = LocalDateTime.now(ZoneOffset.UTC);
     if (changes == null) {
       changes = List.of();
     }

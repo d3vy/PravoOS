@@ -5,6 +5,7 @@ import com.pravoos.ai.shared.security.PlanLimitsProvider;
 import com.pravoos.common.web.PlanLimits;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,10 +137,10 @@ public class LlmQuotaService {
   }
 
   private String requestKey(UUID lawyerId) {
-    return REQUEST_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
+    return REQUEST_KEY_PREFIX + lawyerId + ":" + LocalDate.now(ZoneOffset.UTC);
   }
 
   private String tokenKey(UUID lawyerId) {
-    return TOKEN_KEY_PREFIX + lawyerId + ":" + LocalDate.now();
+    return TOKEN_KEY_PREFIX + lawyerId + ":" + LocalDate.now(ZoneOffset.UTC);
   }
 }

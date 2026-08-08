@@ -3,6 +3,7 @@ package com.pravoos.user.privacy.internal.model.entity;
 import com.pravoos.user.privacy.internal.model.enums.ConsentPurpose;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -41,7 +42,7 @@ public class UserConsent {
   @PrePersist
   void prePersist() {
     if (grantedAt == null) {
-      grantedAt = LocalDateTime.now();
+      grantedAt = LocalDateTime.now(ZoneOffset.UTC);
     }
     if (source == null) {
       source = "SIGNUP";
@@ -53,7 +54,7 @@ public class UserConsent {
   }
 
   public void revoke() {
-    revokedAt = LocalDateTime.now();
+    revokedAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public UUID getId() {

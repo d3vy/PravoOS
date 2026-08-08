@@ -16,6 +16,7 @@ import com.pravoos.user.shared.service.OutboxEventService;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.PaginationSupport;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -94,7 +95,7 @@ public class AdminService {
 
   @Transactional(readOnly = true)
   public ClientStatsResponse getClientStats() {
-    LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+    LocalDateTime weekAgo = LocalDateTime.now(ZoneOffset.UTC).minusDays(7);
     long totalActive = userRepository.countByRoleAndStatus(UserRole.LAWYER, UserStatus.ACTIVE);
     long newThisWeek =
         userRepository.countByRoleAndStatusAndCreatedAtAfter(

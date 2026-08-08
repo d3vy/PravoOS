@@ -2,6 +2,7 @@ package com.pravoos.ai.shared.model.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -25,7 +26,7 @@ public class OutboxEvent {
   private int attempts;
 
   @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt = LocalDateTime.now();
+  private LocalDateTime createdAt = LocalDateTime.now(ZoneOffset.UTC);
 
   @Column(name = "published_at")
   private LocalDateTime publishedAt;
@@ -67,6 +68,6 @@ public class OutboxEvent {
   }
 
   public void markPublished() {
-    this.publishedAt = LocalDateTime.now();
+    this.publishedAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 }

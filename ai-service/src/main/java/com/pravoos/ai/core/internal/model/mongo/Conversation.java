@@ -1,6 +1,7 @@
 package com.pravoos.ai.core.internal.model.mongo;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -31,7 +32,7 @@ public class Conversation {
     this.title = title;
     this.caseId = caseId;
     this.documentId = documentId;
-    this.createdAt = LocalDateTime.now();
+    this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public String getId() {

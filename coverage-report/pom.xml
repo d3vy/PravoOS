@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.pravoos</groupId>
+        <artifactId>pravoos-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>coverage-report</artifactId>
+    <name>PravoOS Aggregated Coverage Report</name>
+    <packaging>pom</packaging>
+
+    <properties>
+        <!-- Модуль без исходников — ничего не покрывает и не проверяет, только агрегирует чужие jacoco.exec -->
+        <jacoco.check.skip>true</jacoco.check.skip>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>pravoos-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>pravoos-common-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>pravoos-observability</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>pravoos-cloud</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>api-gateway</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>user-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>llm-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>ai-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pravoos</groupId>
+            <artifactId>notification-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <!-- отключаем унаследованные из родителя per-module executions — этот модуль без исходников/тестов -->
+                    <execution>
+                        <id>jacoco-prepare-agent</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>jacoco-check</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>jacoco-report-aggregate</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

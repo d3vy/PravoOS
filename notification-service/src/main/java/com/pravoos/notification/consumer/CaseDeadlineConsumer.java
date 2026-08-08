@@ -33,7 +33,7 @@ public class CaseDeadlineConsumer {
     try {
       String dedupKey =
           payload.caseId() + ":" + payload.deadlineTypeName() + ":" + payload.daysLeft();
-      if (processedEventGuard.isProcessed(EVENT_TYPE, dedupKey)) {
+      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
         log.info("Skipping duplicate case.deadline.approaching: {}", dedupKey);
         return;
       }
@@ -42,8 +42,12 @@ public class CaseDeadlineConsumer {
           payload.caseId(),
           payload.deadlineTypeName(),
           payload.daysLeft());
-      notificationDispatcher.dispatchDeadline(payload);
-      processedEventGuard.markProcessed(EVENT_TYPE, dedupKey);
+      try {
+        notificationDispatcher.dispatchDeadline(payload);
+      } catch (RuntimeException e) {
+        processedEventGuard.release(EVENT_TYPE, dedupKey);
+        throw e;
+      }
     } finally {
       MDC.remove("requestId");
     }

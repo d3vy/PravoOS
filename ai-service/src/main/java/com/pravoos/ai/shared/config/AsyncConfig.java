@@ -75,7 +75,7 @@ public class AsyncConfig implements AsyncConfigurer {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
     executor.setCorePoolSize(8);
     executor.setMaxPoolSize(25);
-    executor.setQueueCapacity(50);
+    executor.setQueueCapacity(0);
     executor.setThreadNamePrefix("chat-stream-");
     executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
     executor.setWaitForTasksToCompleteOnShutdown(true);

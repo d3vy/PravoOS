@@ -75,11 +75,16 @@ public class OrganizationService {
     if (memberships.isEmpty()) {
       return List.of();
     }
+    List<UUID> orgIds = memberships.stream().map(OrganizationMembership::getOrgId).toList();
     Map<UUID, Organization> orgsById =
-        organizationRepository
-            .findAllById(memberships.stream().map(OrganizationMembership::getOrgId).toList())
-            .stream()
+        organizationRepository.findAllById(orgIds).stream()
             .collect(Collectors.toMap(Organization::getId, Function.identity()));
+    Map<UUID, Long> memberCountsByOrgId =
+        membershipRepository.countMembersByOrgIds(orgIds).stream()
+            .collect(
+                Collectors.toMap(
+                    OrganizationMembershipRepository.OrgMemberCount::getOrgId,
+                    OrganizationMembershipRepository.OrgMemberCount::getMemberCount));
 
     return memberships.stream()
         .map(
@@ -88,7 +93,7 @@ public class OrganizationService {
               if (org == null) {
                 return null;
               }
-              long memberCount = membershipRepository.countByOrgId(org.getId());
+              long memberCount = memberCountsByOrgId.getOrDefault(org.getId(), 0L);
               return new OrganizationResponse(
                   org.getId(),
                   org.getName(),

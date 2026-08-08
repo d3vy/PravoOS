@@ -35,6 +35,21 @@ public class KafkaTopicsConfig {
   }
 
   @Bean
+  public NewTopic invoicePaidTopic() {
+    return topic("invoice.paid");
+  }
+
+  @Bean
+  public NewTopic invoiceOverdueTopic() {
+    return topic("invoice.overdue");
+  }
+
+  @Bean
+  public NewTopic lawyerDigestMorningTopic() {
+    return topic("lawyer.digest.morning");
+  }
+
+  @Bean
   public NewTopic lawyerDeletedDltTopic() {
     return topic("lawyer.deleted.DLT");
   }

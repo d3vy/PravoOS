@@ -13,6 +13,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
 import com.pravoos.ai.shared.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.ai.shared.service.OutboxEventService;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.Set;
@@ -172,7 +173,7 @@ public class CourtSyncService {
   }
 
   private void createPreparationTask(Case caseEntity, LocalDate hearingDate) {
-    if (hearingDate.isBefore(LocalDate.now())) {
+    if (hearingDate.isBefore(LocalDate.now(ZoneOffset.UTC))) {
       return;
     }
     String text = "Подготовиться к заседанию " + DATE_FORMATTER.format(hearingDate);

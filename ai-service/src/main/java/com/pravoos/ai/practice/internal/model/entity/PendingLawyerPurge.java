@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -16,7 +17,7 @@ public class PendingLawyerPurge {
   private UUID lawyerId;
 
   @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt = LocalDateTime.now();
+  private LocalDateTime createdAt = LocalDateTime.now(ZoneOffset.UTC);
 
   @Column(name = "last_attempt_at")
   private LocalDateTime lastAttemptAt;
@@ -39,7 +40,7 @@ public class PendingLawyerPurge {
 
   public void recordFailedAttempt(String error) {
     this.attempts++;
-    this.lastAttemptAt = LocalDateTime.now();
+    this.lastAttemptAt = LocalDateTime.now(ZoneOffset.UTC);
     this.lastError = error;
   }
 }

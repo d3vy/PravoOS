@@ -16,6 +16,7 @@ import com.pravoos.user.shared.exception.InvalidCredentialsException;
 import com.pravoos.user.shared.exception.SubjectNotFoundException;
 import com.pravoos.user.shared.util.EmailMasker;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -94,7 +95,7 @@ public class PersonalDataService {
             .map(SubjectRequestResponse::from)
             .toList(),
         privacyProperties.resolvedOperatorName(),
-        LocalDateTime.now());
+        LocalDateTime.now(ZoneOffset.UTC));
   }
 
   @Transactional
@@ -155,7 +156,7 @@ public class PersonalDataService {
     request.setSubjectRef(EmailMasker.mask(user.getEmail()));
     request.setType(type);
     request.setIpAddress(ipAddress);
-    request.setDueAt(LocalDateTime.now().plusDays(dueDays));
+    request.setDueAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(dueDays));
     return subjectRequestRepository.save(request);
   }
 }

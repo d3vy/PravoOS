@@ -23,13 +23,27 @@ public interface CasePartyRepository extends JpaRepository<CaseParty, UUID> {
   List<CaseParty> findByCaseId(UUID caseId);
 
   @Query(
-      """
-            SELECT c.id AS caseId, c.title AS caseTitle, p.name AS partyName, p.role AS partyRole
-            FROM CaseParty p, Case c
-            WHERE c.id = p.caseId
-              AND c.lawyerId = :lawyerId
-            """)
-  List<PartyLookup> findByLawyerId(@Param("lawyerId") UUID lawyerId);
+      value =
+          """
+            SELECT c.id            AS "caseId",
+                   c.title         AS "caseTitle",
+                   p.name          AS "partyName",
+                   p.role          AS "partyRole"
+            FROM case_parties p
+                     JOIN cases c ON c.id = p.case_id
+            WHERE c.lawyer_id = :lawyerId
+              AND length(btrim(regexp_replace(lower(p.name), '\\s+', ' ', 'g'))) >= :minLength
+              AND (strpos(btrim(regexp_replace(lower(p.name), '\\s+', ' ', 'g')), :query) > 0
+                OR strpos(:query, btrim(regexp_replace(lower(p.name), '\\s+', ' ', 'g'))) > 0)
+            ORDER BY c.title, p.name
+            LIMIT :maxHits
+            """,
+      nativeQuery = true)
+  List<PartyLookup> searchConflicts(
+      @Param("lawyerId") UUID lawyerId,
+      @Param("query") String normalizedQuery,
+      @Param("minLength") int minLength,
+      @Param("maxHits") int maxHits);
 
   @Modifying
   void deleteByCaseId(UUID caseId);

@@ -6,6 +6,7 @@ import com.pravoos.ai.shared.model.enums.DocumentSummaryStatus;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -81,7 +82,7 @@ public class Document {
 
   @PrePersist
   void prePersist() {
-    uploadedAt = LocalDateTime.now();
+    uploadedAt = LocalDateTime.now(ZoneOffset.UTC);
     if (status == null) {
       status = DocumentStatus.PROCESSING;
     }
