@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.route.Route;
 import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -16,6 +17,7 @@ public class RateLimiterConfig {
   private static final String UNROUTED = "unrouted";
 
   @Bean
+  @Primary
   public KeyResolver ipKeyResolver(TrustedProxyClientIpResolver clientIpResolver) {
     return exchange ->
         Mono.just(scoped(exchange, "ip:" + clientIpResolver.resolve(exchange.getRequest())));

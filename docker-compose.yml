@@ -443,7 +443,7 @@ services:
       - alertmanager
 
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:v0.28.0
     container_name: pravoos-alertmanager
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
