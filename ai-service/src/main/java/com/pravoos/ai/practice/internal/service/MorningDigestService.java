@@ -17,7 +17,6 @@ import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,8 +36,6 @@ public class MorningDigestService {
   private static final String TOPIC = "lawyer.digest.morning";
   private static final int DEADLINE_HORIZON_DAYS = 7;
   private static final DecimalFormat TOTAL_FORMATTER = new DecimalFormat("#,##0.00");
-  private static final Set<CaseStatus> CLOSED_STATUSES =
-      EnumSet.of(CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST);
 
   private final CaseRepository caseRepository;
   private final CaseTaskRepository caseTaskRepository;
@@ -99,9 +96,11 @@ public class MorningDigestService {
     LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
     Set<UUID> lawyerIds = new LinkedHashSet<>();
     lawyerIds.addAll(
-        caseTaskRepository.findDistinctLawyerIdsWithTasksDueTodayOrOverdue(CLOSED_STATUSES, today));
+        caseTaskRepository.findDistinctLawyerIdsWithTasksDueTodayOrOverdue(
+            CaseStatus.CLOSED, today));
     lawyerIds.addAll(
-        caseRepository.findDistinctLawyerIdsWithUpcomingDeadlines(CLOSED_STATUSES, today, horizon));
+        caseRepository.findDistinctLawyerIdsWithUpcomingDeadlines(
+            CaseStatus.CLOSED, today, horizon));
     lawyerIds.addAll(invoiceRepository.findDistinctLawyerIdsByStatus(InvoiceStatus.ISSUED));
     return List.copyOf(lawyerIds);
   }
@@ -114,7 +113,7 @@ public class MorningDigestService {
 
     LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
     long tasksTodayCount =
-        caseTaskRepository.countDueTodayOrOverdueByLawyerId(lawyerId, CLOSED_STATUSES, today);
+        caseTaskRepository.countDueTodayOrOverdueByLawyerId(lawyerId, CaseStatus.CLOSED, today);
     long upcomingDeadlinesCount = countUpcomingDeadlines(lawyerId, today, horizon);
     List<Invoice> unpaidInvoices =
         invoiceRepository.findByLawyerIdAndStatusOrderByDueDateAsc(lawyerId, InvoiceStatus.ISSUED);
@@ -149,13 +148,16 @@ public class MorningDigestService {
   private long countUpcomingDeadlines(UUID lawyerId, LocalDate today, LocalDate horizon) {
     long count = 0;
     for (Case caseEntity :
-        caseRepository.findCasesWithUpcomingDeadlines(lawyerId, CLOSED_STATUSES, today, horizon)) {
+        caseRepository.findCasesWithUpcomingDeadlines(
+            lawyerId, CaseStatus.CLOSED, today, horizon)) {
       count += isWithinHorizon(caseEntity.getFilingDeadline(), today, horizon) ? 1 : 0;
       count += isWithinHorizon(caseEntity.getNextHearingDate(), today, horizon) ? 1 : 0;
       count += isWithinHorizon(caseEntity.getExpiresAt(), today, horizon) ? 1 : 0;
     }
     count +=
-        caseTaskRepository.findUpcomingByLawyerId(lawyerId, CLOSED_STATUSES, today, horizon).size();
+        caseTaskRepository
+            .findUpcomingByLawyerId(lawyerId, CaseStatus.CLOSED, today, horizon)
+            .size();
     return count;
   }
 

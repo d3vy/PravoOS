@@ -120,6 +120,7 @@ const en = {
     widgetsPickerTitle: 'Dashboard widgets',
     widgetsReset: 'Reset layout',
     widgetsAllHidden: 'All widgets are hidden — enable some in settings.',
+    widgetDragHandle: 'Move widget (drag or use arrow keys)',
     moneyOnTableTitle: 'Money on the table',
     moneyOnTableMinutes: 'unbilled — {{duration}}',
     moneyOnTableEmpty: 'Everything is billed to clients.',
@@ -1493,6 +1494,7 @@ const en = {
       'We use strictly necessary cookies for sign-in and interface settings, and — with your consent — analytics cookies for error diagnostics. Details are in the <0>cookie policy</0>.',
     accept: 'Accept all',
     decline: 'Necessary only',
+    close: 'Close',
   },
   privacy: {
     consentsTitle: 'Consents',

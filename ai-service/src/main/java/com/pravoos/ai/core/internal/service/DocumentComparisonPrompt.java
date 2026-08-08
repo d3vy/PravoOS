@@ -2,17 +2,12 @@ package com.pravoos.ai.core.internal.service;
 
 import com.pravoos.ai.core.internal.dto.DiffChange;
 import java.util.List;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DocumentComparisonPrompt {
 
-  private static final String FENCE_OPEN = "<<<ИЗМЕНЕНИЯ_НАЧАЛО>>>";
-  private static final String FENCE_CLOSE = "<<<ИЗМЕНЕНИЯ_КОНЕЦ>>>";
-  private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
-  private static final Pattern FENCE_MARKERS =
-      Pattern.compile(Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
+  private static final PromptFence FENCE = new PromptFence("ИЗМЕНЕНИЯ");
 
   private static final String SYSTEM_PROMPT =
       """
@@ -51,26 +46,13 @@ public class DocumentComparisonPrompt {
           .append(change.type())
           .append("]\n");
       if (!change.baseText().isBlank()) {
-        body.append("БЫЛО: ").append(sanitize(change.baseText())).append('\n');
+        body.append("БЫЛО: ").append(FENCE.sanitize(change.baseText())).append('\n');
       }
       if (!change.revisedText().isBlank()) {
-        body.append("СТАЛО: ").append(sanitize(change.revisedText())).append('\n');
+        body.append("СТАЛО: ").append(FENCE.sanitize(change.revisedText())).append('\n');
       }
       body.append('\n');
     }
-    return SYSTEM_PROMPT.formatted(fence(body.toString().strip()));
-  }
-
-  private String sanitize(String text) {
-    if (text == null) {
-      return "";
-    }
-    String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
-    cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
-    return cleaned.strip();
-  }
-
-  private String fence(String text) {
-    return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
+    return SYSTEM_PROMPT.formatted(FENCE.wrap(body.toString().strip()));
   }
 }

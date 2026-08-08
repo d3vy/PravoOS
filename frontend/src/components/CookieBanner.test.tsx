@@ -19,6 +19,13 @@ function renderBanner(): void {
   )
 }
 
+function storeDecision(analytics: boolean): void {
+  localStorage.setItem(
+    COOKIE_CONSENT_STORAGE_KEY,
+    JSON.stringify({ version: 1, analytics, decidedAt: new Date().toISOString() })
+  )
+}
+
 describe('CookieBanner', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -54,5 +61,52 @@ describe('CookieBanner', () => {
     act(() => useCookieBannerStore.getState().reopen())
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('marks the stored decision on the buttons when reopened', () => {
+    storeDecision(true)
+    renderBanner()
+    act(() => useCookieBannerStore.getState().reopen())
+
+    expect(screen.getByRole('button', { name: i18n.t('cookieBanner.accept') })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: i18n.t('cookieBanner.decline') })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+  })
+
+  it('lets a reopened banner be dismissed without touching the stored decision', async () => {
+    storeDecision(true)
+    renderBanner()
+    act(() => useCookieBannerStore.getState().reopen())
+
+    await userEvent.click(screen.getByRole('button', { name: i18n.t('cookieBanner.close') }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(readCookieConsent()?.analytics).toBe(true)
+  })
+
+  it('closes a reopened banner on Escape', async () => {
+    storeDecision(false)
+    renderBanner()
+    act(() => useCookieBannerStore.getState().reopen())
+
+    await userEvent.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(readCookieConsent()?.analytics).toBe(false)
+  })
+
+  it('cannot be dismissed before a decision is made', async () => {
+    renderBanner()
+
+    expect(screen.queryByRole('button', { name: i18n.t('cookieBanner.close') })).toBeNull()
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(readCookieConsent()).toBeNull()
   })
 })

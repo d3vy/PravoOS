@@ -17,6 +17,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.InvoicePaymentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.exception.InvoiceStateException;
+import com.pravoos.ai.shared.model.enums.InvoicePaymentStatus;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -112,6 +113,22 @@ class InvoicePaymentServiceTest {
 
     assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.PAID);
     assertThat(invoicePayment.getPaidAt()).isNotNull();
+  }
+
+  @Test
+  void handleWebhook_leavesInvoiceUnpaidWhenTheSettledAmountDiffersFromTheExpectedOne() {
+    Invoice invoice = invoice(InvoiceStatus.ISSUED);
+    InvoicePayment invoicePayment = new InvoicePayment(invoice.getId(), "pay_1", 150000L, "url");
+    when(invoicePaymentRepository.findByProviderPaymentId("pay_1"))
+        .thenReturn(Optional.of(invoicePayment));
+    when(yooKassaInvoiceClient.getPayment("pay_1"))
+        .thenReturn(new YooKassaInvoicePayment("pay_1", "succeeded", true, 100000L, null));
+
+    service.handleWebhook("pay_1");
+
+    assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.ISSUED);
+    assertThat(invoicePayment.getStatus()).isEqualTo(InvoicePaymentStatus.PENDING);
+    verify(invoiceRepository, never()).findById(any());
   }
 
   @Test

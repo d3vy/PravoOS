@@ -6,6 +6,7 @@ import { Logo } from '../ui/Logo'
 import { ThemeToggle } from '../ui/ThemeToggle'
 import { LanguageSwitcher } from '../ui/LanguageSwitcher'
 import { SkipLink } from '../ui/SkipLink'
+import { LegalLinks } from '../legal/LegalLinks'
 import { signOut } from '../../utils/signOut'
 import { useTranslation } from 'react-i18next'
 
@@ -60,6 +61,12 @@ export function PortalLayout({ children }: PortalLayoutProps): JSX.Element {
       </header>
 
       <main id="main-content" tabIndex={-1} className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 focus:outline-none">{children}</main>
+
+      <footer className="border-t border-line bg-surface">
+        <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-6">
+          <LegalLinks />
+        </div>
+      </footer>
     </div>
   )
 }

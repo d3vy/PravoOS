@@ -6,6 +6,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseDeadlineReminderRepos
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
 import com.pravoos.ai.shared.event.CaseDeadlineKafkaPayload;
+import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.shared.model.enums.DeadlineType;
 import com.pravoos.ai.shared.service.OutboxEventService;
 import java.time.LocalDate;
@@ -93,16 +94,19 @@ public class DeadlineReminderService {
 
   private List<Case> casesForType(DeadlineType type, LocalDate target) {
     return switch (type) {
-      case FILING_DEADLINE -> caseRepository.findByFilingDeadline(target);
-      case NEXT_HEARING -> caseRepository.findByNextHearingDate(target);
-      case EXPIRY -> caseRepository.findByExpiresAt(target);
+      case FILING_DEADLINE ->
+          caseRepository.findByFilingDeadlineAndStatusNotIn(target, CaseStatus.CLOSED);
+      case NEXT_HEARING ->
+          caseRepository.findByNextHearingDateAndStatusNotIn(target, CaseStatus.CLOSED);
+      case EXPIRY -> caseRepository.findByExpiresAtAndStatusNotIn(target, CaseStatus.CLOSED);
       case TASK -> List.of();
     };
   }
 
   private int processTaskReminders(LocalDate target, int threshold) {
     int published = 0;
-    for (CaseTaskRepository.TaskReminderView task : caseTaskRepository.findDueOnDate(target)) {
+    for (CaseTaskRepository.TaskReminderView task :
+        caseTaskRepository.findDueOnDate(target, CaseStatus.CLOSED)) {
       try {
         if (self.enqueueTaskReminder(task, threshold)) {
           published++;

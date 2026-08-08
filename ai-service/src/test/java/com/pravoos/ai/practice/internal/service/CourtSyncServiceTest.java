@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.pravoos.ai.court.api.CourtCaseData;
 import com.pravoos.ai.court.api.CourtCaseLookup;
 import com.pravoos.ai.practice.internal.model.entity.Case;
+import com.pravoos.ai.practice.internal.model.entity.CaseHearingEvent;
 import com.pravoos.ai.practice.internal.model.entity.CaseTask;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseHearingEventRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
@@ -86,7 +87,36 @@ class CourtSyncServiceTest {
 
     service.syncCase(caseId);
 
-    verify(hearingEventRepository, never()).save(any());
+    verify(hearingEventRepository, never()).saveAll(any());
+  }
+
+  @Test
+  void persistsEachSourceEventOnce_evenWhenTheCourtRepeatsItInTheSameResponse() {
+    Case caseEntity = caseEntity(null);
+    when(caseRepository.findById(caseId)).thenReturn(java.util.Optional.of(caseEntity));
+    when(hearingEventRepository.findSourceEventIdsByCaseId(caseId)).thenReturn(List.of("e-1"));
+    CourtCaseData data =
+        new CourtCaseData(
+            "А40-1/2026",
+            null,
+            null,
+            null,
+            List.of(),
+            List.of(event("e-1"), event("e-2"), event("e-2"), event(null)));
+
+    service.persistSyncedCase(caseId, data);
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<CaseHearingEvent>> captor = ArgumentCaptor.forClass(List.class);
+    verify(hearingEventRepository).saveAll(captor.capture());
+    assertThat(captor.getValue())
+        .extracting(CaseHearingEvent::getSourceEventId)
+        .containsExactly("e-2");
+  }
+
+  private CourtCaseData.CourtEvent event(String sourceEventId) {
+    return new CourtCaseData.CourtEvent(
+        sourceEventId, LocalDate.now(), "HEARING", "Заседание", "АС Москвы");
   }
 
   @Test

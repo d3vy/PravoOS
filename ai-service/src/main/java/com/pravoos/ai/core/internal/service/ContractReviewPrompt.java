@@ -1,17 +1,11 @@
 package com.pravoos.ai.core.internal.service;
 
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ContractReviewPrompt {
 
-  private static final String CONTRACT_FENCE_OPEN = "<<<ДОГОВОР_НАЧАЛО>>>";
-  private static final String CONTRACT_FENCE_CLOSE = "<<<ДОГОВОР_КОНЕЦ>>>";
-  private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
-  private static final Pattern FENCE_MARKERS =
-      Pattern.compile(
-          Pattern.quote(CONTRACT_FENCE_OPEN) + "|" + Pattern.quote(CONTRACT_FENCE_CLOSE));
+  private static final PromptFence FENCE = new PromptFence("ДОГОВОР");
 
   private static final String SYSTEM_PROMPT =
       """
@@ -49,19 +43,6 @@ public class ContractReviewPrompt {
             """;
 
   public String buildSystemPrompt(String contractText) {
-    return SYSTEM_PROMPT.formatted(fence(sanitize(contractText)));
-  }
-
-  private String sanitize(String text) {
-    if (text == null) {
-      return "";
-    }
-    String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
-    cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
-    return cleaned.strip();
-  }
-
-  private String fence(String text) {
-    return CONTRACT_FENCE_OPEN + "\n" + text + "\n" + CONTRACT_FENCE_CLOSE;
+    return SYSTEM_PROMPT.formatted(FENCE.wrap(contractText));
   }
 }

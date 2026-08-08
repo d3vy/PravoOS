@@ -57,6 +57,16 @@ public class InvoicePaymentWriter {
       return;
     }
     if (snapshot.succeeded()) {
+      if (snapshot.amountKopecks() != invoicePayment.getAmountKopecks()) {
+        log.error(
+            "Payment {} amount mismatch: provider {} kopecks, expected {} for invoice {} —"
+                + " not marking paid",
+            providerPaymentId,
+            snapshot.amountKopecks(),
+            invoicePayment.getAmountKopecks(),
+            invoicePayment.getInvoiceId());
+        return;
+      }
       invoicePayment.markSucceeded();
       Invoice invoice =
           invoiceRepository

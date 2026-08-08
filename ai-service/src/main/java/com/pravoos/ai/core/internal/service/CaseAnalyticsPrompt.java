@@ -1,17 +1,12 @@
 package com.pravoos.ai.core.internal.service;
 
 import java.util.List;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CaseAnalyticsPrompt {
 
-  private static final String FENCE_OPEN = "<<<ДАННЫЕ_НАЧАЛО>>>";
-  private static final String FENCE_CLOSE = "<<<ДАННЫЕ_КОНЕЦ>>>";
-  private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}&&[^\\r\\n\\t]]");
-  private static final Pattern FENCE_MARKERS =
-      Pattern.compile(Pattern.quote(FENCE_OPEN) + "|" + Pattern.quote(FENCE_CLOSE));
+  private static final PromptFence FENCE = new PromptFence("ДАННЫЕ", "—");
 
   private static final String SYSTEM_PROMPT =
       """
@@ -49,7 +44,7 @@ public class CaseAnalyticsPrompt {
 
   public String build(String caseContext, String statistics, String hearingTimeline) {
     return SYSTEM_PROMPT.formatted(
-        fence(sanitize(caseContext)), sanitize(statistics), fence(sanitize(hearingTimeline)));
+        FENCE.wrap(caseContext), FENCE.sanitize(statistics), FENCE.wrap(hearingTimeline));
   }
 
   public String buildContextFromChunks(List<String> chunks) {
@@ -58,21 +53,8 @@ public class CaseAnalyticsPrompt {
     }
     StringBuilder body = new StringBuilder();
     for (String chunk : chunks) {
-      body.append("- ").append(sanitize(chunk)).append('\n');
+      body.append("- ").append(FENCE.sanitize(chunk)).append('\n');
     }
     return body.toString().strip();
-  }
-
-  private String sanitize(String text) {
-    if (text == null || text.isBlank()) {
-      return "—";
-    }
-    String cleaned = CONTROL_CHARS.matcher(text).replaceAll(" ");
-    cleaned = FENCE_MARKERS.matcher(cleaned).replaceAll(" ");
-    return cleaned.strip();
-  }
-
-  private String fence(String text) {
-    return FENCE_OPEN + "\n" + text + "\n" + FENCE_CLOSE;
   }
 }

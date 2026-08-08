@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,12 +26,15 @@ public class OutboxPublisher {
 
   private final OutboxEventRepository outboxEventRepository;
   private final KafkaTemplate<String, String> stringKafkaTemplate;
+  private final int maxAttempts;
 
   public OutboxPublisher(
       OutboxEventRepository outboxEventRepository,
-      KafkaTemplate<String, String> stringKafkaTemplate) {
+      KafkaTemplate<String, String> stringKafkaTemplate,
+      @Value("${app.outbox.max-attempts:10}") int maxAttempts) {
     this.outboxEventRepository = outboxEventRepository;
     this.stringKafkaTemplate = stringKafkaTemplate;
+    this.maxAttempts = maxAttempts;
   }
 
   @Scheduled(fixedDelayString = "${app.outbox.poll-interval-ms:5000}")
@@ -41,7 +45,7 @@ public class OutboxPublisher {
   @Transactional
   public void publishPending() {
     List<OutboxEvent> pending =
-        outboxEventRepository.lockUnpublishedBatch(PageRequest.of(0, BATCH_SIZE));
+        outboxEventRepository.lockUnpublishedBatch(maxAttempts, PageRequest.of(0, BATCH_SIZE));
     if (pending.isEmpty()) {
       return;
     }
@@ -76,6 +80,14 @@ public class OutboxPublisher {
           event.getTopic(),
           event.getAttempts(),
           ex);
+      if (event.getAttempts() >= maxAttempts) {
+        log.error(
+            "Outbox event {} to topic {} parked after {} attempts and will no longer be"
+                + " retried automatically",
+            event.getId(),
+            event.getTopic(),
+            event.getAttempts());
+      }
     }
   }
 }

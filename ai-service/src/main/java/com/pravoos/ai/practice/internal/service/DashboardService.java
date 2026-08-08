@@ -36,8 +36,6 @@ public class DashboardService {
 
   private static final int DEADLINE_HORIZON_DAYS = 7;
   private static final int UNPAID_INVOICES_LIMIT = 5;
-  private static final Set<CaseStatus> CLOSED_STATUSES =
-      EnumSet.of(CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST);
 
   private final CaseRepository caseRepository;
   private final CaseTaskRepository caseTaskRepository;
@@ -62,7 +60,7 @@ public class DashboardService {
   public DashboardResponse getDashboard(UUID lawyerId) {
     return new DashboardResponse(
         buildPipeline(lawyerId),
-        caseRepository.countByLawyerIdAndStatusNotIn(lawyerId, CLOSED_STATUSES),
+        caseRepository.countByLawyerIdAndStatusNotIn(lawyerId, CaseStatus.CLOSED),
         caseTaskRepository.countOpenByLawyerId(lawyerId),
         buildUpcomingDeadlines(lawyerId),
         buildRecentCases(lawyerId),
@@ -86,7 +84,7 @@ public class DashboardService {
   private List<TodayTask> buildTasksToday(UUID lawyerId) {
     LocalDate today = LocalDate.now(ZoneOffset.UTC);
     return caseTaskRepository
-        .findDueTodayOrOverdueByLawyerId(lawyerId, CLOSED_STATUSES, today)
+        .findDueTodayOrOverdueByLawyerId(lawyerId, CaseStatus.CLOSED, today)
         .stream()
         .map(
             task ->
@@ -150,7 +148,8 @@ public class DashboardService {
     LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
     List<UpcomingDeadline> deadlines = new ArrayList<>();
     for (Case caseEntity :
-        caseRepository.findCasesWithUpcomingDeadlines(lawyerId, CLOSED_STATUSES, today, horizon)) {
+        caseRepository.findCasesWithUpcomingDeadlines(
+            lawyerId, CaseStatus.CLOSED, today, horizon)) {
       collectDeadline(
           deadlines,
           caseEntity,
@@ -169,7 +168,7 @@ public class DashboardService {
           deadlines, caseEntity, DeadlineType.EXPIRY, Case::getExpiresAt, today, horizon);
     }
     for (CaseTaskRepository.UpcomingTaskView task :
-        caseTaskRepository.findUpcomingByLawyerId(lawyerId, CLOSED_STATUSES, today, horizon)) {
+        caseTaskRepository.findUpcomingByLawyerId(lawyerId, CaseStatus.CLOSED, today, horizon)) {
       deadlines.add(
           new UpcomingDeadline(
               task.getCaseId(),

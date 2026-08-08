@@ -1,4 +1,4 @@
-package com.pravoos.user.shared.service;
+package com.pravoos.ai.shared.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -7,8 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.pravoos.user.shared.model.entity.OutboxEvent;
-import com.pravoos.user.shared.repository.OutboxEventRepository;
+import com.pravoos.ai.shared.model.entity.OutboxEvent;
+import com.pravoos.ai.shared.repository.jpa.OutboxEventRepository;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;

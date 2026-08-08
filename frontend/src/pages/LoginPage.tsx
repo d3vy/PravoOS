@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
+import { LegalFooter } from '../components/legal/LegalFooter'
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation()
@@ -298,6 +299,8 @@ export default function LoginPage(): JSX.Element {
           </div>
         </motion.div>
       </main>
+
+      <LegalFooter />
     </div>
   )
 }

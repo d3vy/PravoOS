@@ -52,7 +52,6 @@ public class ClientService {
     this.consentProperties = consentProperties;
   }
 
-  @Transactional(readOnly = true)
   public void invitePortal(UUID clientId, UUID lawyerId) {
     Client client = requireOwnedClient(clientId, lawyerId);
     if (client.getEmail() == null || client.getEmail().isBlank()) {
@@ -62,13 +61,11 @@ public class ClientService {
     log.info("Portal invite requested for client {} by lawyer {}", clientId, lawyerId);
   }
 
-  @Transactional(readOnly = true)
   public PortalInviteStatusResponse portalInviteStatus(UUID clientId, UUID lawyerId) {
     requireOwnedClient(clientId, lawyerId);
     return userServiceClient.getPortalInviteStatus(clientId);
   }
 
-  @Transactional(readOnly = true)
   public void revokePortalInvite(UUID clientId, UUID lawyerId) {
     requireOwnedClient(clientId, lawyerId);
     userServiceClient.revokePortalInvite(clientId);

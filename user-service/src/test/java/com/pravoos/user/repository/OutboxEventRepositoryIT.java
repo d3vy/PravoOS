@@ -21,6 +21,8 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers(disabledWithoutDocker = true)
 class OutboxEventRepositoryIT {
 
+  private static final int MAX_ATTEMPTS = 10;
+
   @Container @ServiceConnection
   static PostgreSQLContainer<?> postgres =
       new PostgreSQLContainer<>(
@@ -33,7 +35,8 @@ class OutboxEventRepositoryIT {
     outboxEventRepository.save(new OutboxEvent("lawyer.deleted", "key-1", "{\"userId\":\"x\"}"));
     outboxEventRepository.save(new OutboxEvent("application.submitted", "key-2", "{\"id\":\"y\"}"));
 
-    List<OutboxEvent> batch = outboxEventRepository.lockUnpublishedBatch(PageRequest.of(0, 10));
+    List<OutboxEvent> batch =
+        outboxEventRepository.lockUnpublishedBatch(MAX_ATTEMPTS, PageRequest.of(0, 10));
 
     assertThat(batch).hasSize(2);
     assertThat(batch)
@@ -49,8 +52,26 @@ class OutboxEventRepositoryIT {
     event.markPublished();
     outboxEventRepository.saveAndFlush(event);
 
-    List<OutboxEvent> batch = outboxEventRepository.lockUnpublishedBatch(PageRequest.of(0, 10));
+    List<OutboxEvent> batch =
+        outboxEventRepository.lockUnpublishedBatch(MAX_ATTEMPTS, PageRequest.of(0, 10));
 
     assertThat(batch).noneSatisfy(e -> assertThat(e.getId()).isEqualTo(event.getId()));
+  }
+
+  @Test
+  void eventsThatExhaustedTheirAttemptsStopBlockingTheQueue() {
+    OutboxEvent poison =
+        outboxEventRepository.save(new OutboxEvent("lawyer.deleted", "key-4", "{}"));
+    for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      poison.incrementAttempts();
+    }
+    outboxEventRepository.saveAndFlush(poison);
+    OutboxEvent fresh =
+        outboxEventRepository.save(new OutboxEvent("lawyer.deleted", "key-5", "{}"));
+
+    List<OutboxEvent> batch =
+        outboxEventRepository.lockUnpublishedBatch(MAX_ATTEMPTS, PageRequest.of(0, 10));
+
+    assertThat(batch).extracting(OutboxEvent::getId).containsExactly(fresh.getId());
   }
 }

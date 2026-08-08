@@ -1,24 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Button } from './ui/Button'
-import { readCookieConsent } from '../utils/cookieConsent'
+import { readCookieConsent, type CookieConsent } from '../utils/cookieConsent'
 import { applyCookieDecision } from '../utils/applyCookieDecision'
 import { useCookieBannerStore } from '../store/cookieBannerStore'
 
 export function CookieBanner(): JSX.Element | null {
   const { t } = useTranslation()
+  const [consent, setConsent] = useState<CookieConsent | null>(null)
   const [undecided, setUndecided] = useState(false)
   const reopened = useCookieBannerStore((state) => state.reopened)
   const close = useCookieBannerStore((state) => state.close)
 
   useEffect(() => {
-    setUndecided(readCookieConsent() === null)
+    const stored = readCookieConsent()
+    setConsent(stored)
+    setUndecided(stored === null)
   }, [])
+
+  const dismiss = useCallback((): void => {
+    if (undecided) return
+    close()
+  }, [close, undecided])
+
+  useEffect(() => {
+    if (!reopened) return
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') dismiss()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [dismiss, reopened])
 
   const decide = (analytics: boolean): void => {
     applyCookieDecision(analytics)
+    setConsent(readCookieConsent())
     setUndecided(false)
     close()
   }
@@ -47,13 +65,28 @@ export function CookieBanner(): JSX.Element | null {
                 />
               </p>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <Button variant="secondary" size="md" onClick={() => decide(false)}>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="md"
+                aria-pressed={consent ? !consent.analytics : undefined}
+                onClick={() => decide(false)}
+              >
                 {t('cookieBanner.decline')}
               </Button>
-              <Button variant="secondary" size="md" onClick={() => decide(true)}>
+              <Button
+                variant="secondary"
+                size="md"
+                aria-pressed={consent ? consent.analytics : undefined}
+                onClick={() => decide(true)}
+              >
                 {t('cookieBanner.accept')}
               </Button>
+              {!undecided && (
+                <Button variant="ghost" size="md" onClick={dismiss}>
+                  {t('cookieBanner.close')}
+                </Button>
+              )}
             </div>
           </div>
         </motion.div>

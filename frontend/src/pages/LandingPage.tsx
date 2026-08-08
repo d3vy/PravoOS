@@ -6,9 +6,7 @@ import { LandingHeader } from '../components/landing/LandingHeader'
 import { ChatDemo } from '../components/landing/ChatDemo'
 import { CaseMockup } from '../components/landing/CaseMockup'
 import { CalendarMockup } from '../components/landing/CalendarMockup'
-import { useCookieBannerStore } from '../store/cookieBannerStore'
-
-const reopenCookieBanner = (): void => useCookieBannerStore.getState().reopen()
+import { LegalLinks } from '../components/legal/LegalLinks'
 
 export default function LandingPage(): JSX.Element {
   const { t } = useTranslation()
@@ -328,27 +326,7 @@ export default function LandingPage(): JSX.Element {
             <p className="text-sm text-white/50">
               {t('landing.footerCopyright', { year: new Date().getFullYear() })}
             </p>
-            <nav className="flex flex-wrap gap-x-4 gap-y-2" aria-label={t('legal.navLabel')}>
-              <Link to="/legal/privacy" className="text-sm text-white/50 hover:text-white transition-colors">
-                {t('legal.navPrivacy')}
-              </Link>
-              <Link to="/legal/consent" className="text-sm text-white/50 hover:text-white transition-colors">
-                {t('legal.navConsent')}
-              </Link>
-              <Link to="/legal/cross-border" className="text-sm text-white/50 hover:text-white transition-colors">
-                {t('legal.navCrossBorder')}
-              </Link>
-              <Link to="/legal/cookies" className="text-sm text-white/50 hover:text-white transition-colors">
-                {t('legal.navCookies')}
-              </Link>
-              <button
-                type="button"
-                onClick={reopenCookieBanner}
-                className="text-sm text-white/50 hover:text-white transition-colors"
-              >
-                {t('legal.navCookieSettings')}
-              </button>
-            </nav>
+            <LegalLinks tone="inverted" />
           </div>
         </div>
       </section>

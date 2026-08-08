@@ -11,6 +11,7 @@ import { Logo } from '../components/ui/Logo'
 import { Spinner } from '../components/ui/Spinner'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
+import { LegalFooter } from '../components/legal/LegalFooter'
 import { validatePassword } from '../utils/password'
 
 interface FieldErrors {
@@ -230,6 +231,8 @@ export default function PortalAcceptPage(): JSX.Element {
           </motion.div>
         )}
       </main>
+
+      <LegalFooter />
     </div>
   )
 }

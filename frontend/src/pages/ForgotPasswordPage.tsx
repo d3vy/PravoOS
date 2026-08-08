@@ -8,6 +8,7 @@ import { Input } from '../components/ui/Input'
 import { Logo } from '../components/ui/Logo'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
+import { LegalFooter } from '../components/legal/LegalFooter'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -128,6 +129,8 @@ export default function ForgotPasswordPage(): JSX.Element {
           </motion.div>
         )}
       </main>
+
+      <LegalFooter />
     </div>
   )
 }

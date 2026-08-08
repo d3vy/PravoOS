@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,6 +29,8 @@ public class EmailLinkResolver {
 
   public record LawyerLinkIndex(
       Map<String, CaseRef> casesByNumber, Map<String, UUID> clientsByEmail) {}
+
+  private static final Pageable THREAD_SIBLING_PAGE = PageRequest.of(0, 2);
 
   private final CaseRepository caseRepository;
   private final ClientRepository clientRepository;
@@ -86,7 +90,8 @@ public class EmailLinkResolver {
       return Optional.empty();
     }
     List<EmailMessage> linkedInThread =
-        emailMessageRepository.findLinkedInThread(message.getMailboxId(), message.getThreadKey());
+        emailMessageRepository.findLinkedInThread(
+            message.getMailboxId(), message.getThreadKey(), THREAD_SIBLING_PAGE);
     return linkedInThread.stream()
         .filter(sibling -> message.getId() == null || !message.getId().equals(sibling.getId()))
         .findFirst()

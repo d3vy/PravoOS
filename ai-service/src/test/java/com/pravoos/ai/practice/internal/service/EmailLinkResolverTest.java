@@ -1,6 +1,8 @@
 package com.pravoos.ai.practice.internal.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.pravoos.ai.practice.internal.model.entity.Case;
@@ -68,7 +70,7 @@ class EmailLinkResolverTest {
     EmailMessage sibling = incoming("opponent@law.ru", "Первое письмо треда");
     sibling.applyLink(caseId, clientId, EmailLinkSource.MANUAL);
     ReflectionTestUtils.setField(sibling, "id", UUID.randomUUID());
-    when(emailMessageRepository.findLinkedInThread(mailboxId, "<thread-1@law.ru>"))
+    when(emailMessageRepository.findLinkedInThread(eq(mailboxId), eq("<thread-1@law.ru>"), any()))
         .thenReturn(List.of(sibling));
 
     EmailMessage message = incoming("opponent@law.ru", "Re: без номера дела");

@@ -43,7 +43,7 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, UUID
           + "AND (m.caseId IS NOT NULL OR m.clientId IS NOT NULL) "
           + "ORDER BY m.linkedAt DESC")
   List<EmailMessage> findLinkedInThread(
-      @Param("mailboxId") UUID mailboxId, @Param("threadKey") String threadKey);
+      @Param("mailboxId") UUID mailboxId, @Param("threadKey") String threadKey, Pageable pageable);
 
   List<EmailMessage> findByMailboxIdAndCaseIdIsNullAndClientIdIsNullOrderBySentAtAsc(
       UUID mailboxId);

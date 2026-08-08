@@ -102,8 +102,11 @@ public interface CaseTaskRepository extends JpaRepository<CaseTask, UUID> {
             WHERE t.caseId = c.id
               AND t.done = false
               AND t.dueDate = :target
+              AND c.status NOT IN :excludedStatuses
             """)
-  List<TaskReminderView> findDueOnDate(@Param("target") LocalDate target);
+  List<TaskReminderView> findDueOnDate(
+      @Param("target") LocalDate target,
+      @Param("excludedStatuses") Collection<CaseStatus> excludedStatuses);
 
   @Query(
       """

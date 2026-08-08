@@ -137,11 +137,14 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
   List<Case> findByClientIdInOrderByCreatedAtDesc(Collection<UUID> clientIds);
 
-  List<Case> findByFilingDeadline(LocalDate filingDeadline);
+  List<Case> findByFilingDeadlineAndStatusNotIn(
+      LocalDate filingDeadline, Collection<CaseStatus> excludedStatuses);
 
-  List<Case> findByNextHearingDate(LocalDate nextHearingDate);
+  List<Case> findByNextHearingDateAndStatusNotIn(
+      LocalDate nextHearingDate, Collection<CaseStatus> excludedStatuses);
 
-  List<Case> findByExpiresAt(LocalDate expiresAt);
+  List<Case> findByExpiresAtAndStatusNotIn(
+      LocalDate expiresAt, Collection<CaseStatus> excludedStatuses);
 
   List<Case> findByCourtCaseNumberIsNotNull();
 

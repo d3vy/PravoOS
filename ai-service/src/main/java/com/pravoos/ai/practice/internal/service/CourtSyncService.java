@@ -15,6 +15,9 @@ import com.pravoos.ai.shared.service.OutboxEventService;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -130,9 +133,10 @@ public class CourtSyncService {
       return;
     }
     casePartyRepository.deleteByCaseId(caseId);
-    for (CourtCaseData.CourtParty party : data.parties()) {
-      casePartyRepository.save(new CaseParty(caseId, party.name(), party.role()));
-    }
+    casePartyRepository.saveAll(
+        data.parties().stream()
+            .map(party -> new CaseParty(caseId, party.name(), party.role()))
+            .toList());
   }
 
   private String partyKey(String name, String role) {
@@ -140,13 +144,17 @@ public class CourtSyncService {
   }
 
   private int persistNewEvents(UUID caseId, CourtCaseData data) {
-    int saved = 0;
+    if (data.events() == null || data.events().isEmpty()) {
+      return 0;
+    }
+    Set<String> knownEventIds =
+        new HashSet<>(hearingEventRepository.findSourceEventIdsByCaseId(caseId));
+    List<CaseHearingEvent> fresh = new ArrayList<>();
     for (CourtCaseData.CourtEvent event : data.events()) {
-      if (event.sourceEventId() == null
-          || hearingEventRepository.existsByCaseIdAndSourceEventId(caseId, event.sourceEventId())) {
+      if (event.sourceEventId() == null || !knownEventIds.add(event.sourceEventId())) {
         continue;
       }
-      hearingEventRepository.save(
+      fresh.add(
           new CaseHearingEvent(
               caseId,
               event.sourceEventId(),
@@ -154,9 +162,9 @@ public class CourtSyncService {
               event.type(),
               event.description(),
               event.courtName()));
-      saved++;
     }
-    return saved;
+    hearingEventRepository.saveAll(fresh);
+    return fresh.size();
   }
 
   private void applyHearingDate(Case caseEntity, LocalDate newHearingDate) {
