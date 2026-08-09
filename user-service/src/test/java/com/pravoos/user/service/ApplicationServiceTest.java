@@ -18,6 +18,7 @@ import com.pravoos.user.registration.internal.repository.LawyerApplicationReposi
 import com.pravoos.user.registration.internal.service.ApplicationService;
 import com.pravoos.user.registration.internal.service.EmailVerificationService;
 import com.pravoos.user.shared.exception.ApplicationAlreadyExistsException;
+import com.pravoos.user.shared.exception.ApplicationTokenNotFoundException;
 import com.pravoos.user.shared.exception.ConsentRequiredException;
 import com.pravoos.user.shared.exception.EmailAlreadyExistsException;
 import com.pravoos.user.shared.security.TokenHasher;
@@ -25,6 +26,7 @@ import com.pravoos.user.shared.service.OutboxEventService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -125,6 +127,7 @@ class ApplicationServiceTest {
     when(emailVerificationService.tokenExpiry())
         .thenReturn(LocalDateTime.now(ZoneOffset.UTC).plusHours(24));
     when(tokenHasher.sha256Hex("raw-verification-token")).thenReturn("hashed-verification-token");
+    when(tokenHasher.sha256Hex("raw-status-token")).thenReturn("hashed-status-token");
     when(applicationRepository.save(any(LawyerApplication.class)))
         .thenAnswer(
             call -> {
@@ -144,7 +147,7 @@ class ApplicationServiceTest {
     assertThat(saved.getConsentUserAgent()).isEqualTo("UA");
     assertThat(saved.isConsentCrossBorder()).isTrue();
     assertThat(saved.getEmailVerificationToken()).isEqualTo("hashed-verification-token");
-    assertThat(saved.getStatusToken()).isEqualTo("raw-status-token");
+    assertThat(saved.getStatusToken()).isEqualTo("hashed-status-token");
 
     assertThat(response.statusToken()).isEqualTo("raw-status-token");
     assertThat(response.application().email()).isEqualTo(request.email().toLowerCase());
@@ -159,7 +162,7 @@ class ApplicationServiceTest {
   }
 
   @Test
-  void submitApplication_storesEmailVerificationTokenHashed_butStatusTokenRaw() {
+  void submitApplication_storesBothTokensHashed_andReturnsOnlyTheRawStatusToken() {
     ApplyRequest request = applyRequest(true, true);
     when(userRepository.existsByEmail(any())).thenReturn(false);
     when(emailVerificationService.generateToken())
@@ -167,6 +170,7 @@ class ApplicationServiceTest {
     when(emailVerificationService.tokenExpiry())
         .thenReturn(LocalDateTime.now(ZoneOffset.UTC).plusHours(24));
     when(tokenHasher.sha256Hex("token-for-verification")).thenReturn("hashed-token");
+    when(tokenHasher.sha256Hex("token-for-status")).thenReturn("hashed-status-token");
     when(applicationRepository.save(any(LawyerApplication.class)))
         .thenAnswer(
             call -> {
@@ -175,12 +179,36 @@ class ApplicationServiceTest {
               return application;
             });
 
-    service.submitApplication(request, "1.2.3.4", "UA");
+    ApplicationSubmissionResponse response = service.submitApplication(request, "1.2.3.4", "UA");
 
     ArgumentCaptor<LawyerApplication> captor = ArgumentCaptor.forClass(LawyerApplication.class);
     verify(applicationRepository).save(captor.capture());
     assertThat(captor.getValue().getEmailVerificationToken()).isEqualTo("hashed-token");
-    assertThat(captor.getValue().getStatusToken()).isEqualTo("token-for-status");
+    assertThat(captor.getValue().getStatusToken()).isEqualTo("hashed-status-token");
+    assertThat(response.statusToken()).isEqualTo("token-for-status");
+  }
+
+  @Test
+  void getApplicationByStatusToken_looksUpByTheHashOfThePresentedToken() {
+    LawyerApplication application = new LawyerApplication();
+    application.setEmail("applicant@example.com");
+    application.setStatusTokenExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
+    when(tokenHasher.sha256Hex("raw-status-token")).thenReturn("hashed-status-token");
+    when(applicationRepository.findByStatusToken("hashed-status-token"))
+        .thenReturn(Optional.of(application));
+
+    assertThat(service.getApplicationByStatusToken("raw-status-token").email())
+        .isEqualTo("applicant@example.com");
+    verify(applicationRepository, never()).findByStatusToken("raw-status-token");
+  }
+
+  @Test
+  void getApplicationByStatusToken_throwsWhenNoApplicationMatchesTheHash() {
+    when(tokenHasher.sha256Hex("guessed-token")).thenReturn("hashed-guess");
+    when(applicationRepository.findByStatusToken("hashed-guess")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.getApplicationByStatusToken("guessed-token"))
+        .isInstanceOf(ApplicationTokenNotFoundException.class);
   }
 
   private ApplyRequest applyRequest(boolean personalDataConsent, boolean crossBorderConsent) {

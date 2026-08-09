@@ -23,6 +23,10 @@ public class AuthApplicationController {
 
   private static final int APPLY_MAX_PER_IP = 5;
   private static final Duration APPLY_WINDOW = Duration.ofHours(1);
+  private static final int STATUS_TOKEN_MAX_PER_IP = 60;
+  private static final Duration STATUS_TOKEN_WINDOW = Duration.ofHours(1);
+  private static final int VERIFY_MAX_PER_IP = 20;
+  private static final Duration VERIFY_WINDOW = Duration.ofHours(1);
 
   private final ApplicationService applicationService;
   private final EmailVerificationService emailVerificationService;
@@ -46,10 +50,8 @@ public class AuthApplicationController {
   @PostMapping("/apply")
   public ResponseEntity<ApplicationSubmissionResponse> apply(
       @Valid @RequestBody ApplyRequest request, HttpServletRequest httpRequest) {
+    guard("apply", httpRequest, APPLY_MAX_PER_IP, APPLY_WINDOW);
     String clientIp = ClientIpResolver.resolve(httpRequest);
-    if (!ipRateLimiter.allow("apply", clientIp, APPLY_MAX_PER_IP, APPLY_WINDOW)) {
-      throw new TooManyRequestsException();
-    }
     passwordPolicyService.validate(request.password());
     emailDeliverabilityValidator.validate(EmailNormalizer.normalize(request.email()));
     return ResponseEntity.status(HttpStatus.CREATED)
@@ -60,14 +62,17 @@ public class AuthApplicationController {
 
   @GetMapping("/application")
   public ResponseEntity<ApplicationResponse> getApplicationByStatusToken(
-      @RequestHeader("X-Application-Token") String token) {
+      @RequestHeader("X-Application-Token") String token, HttpServletRequest httpRequest) {
+    guardStatusTokenRate(httpRequest);
     return ResponseEntity.ok(applicationService.getApplicationByStatusToken(token));
   }
 
   @PutMapping("/application")
   public ResponseEntity<ApplicationResponse> updateApplication(
       @RequestHeader("X-Application-Token") String token,
-      @Valid @RequestBody UpdateApplicationRequest request) {
+      @Valid @RequestBody UpdateApplicationRequest request,
+      HttpServletRequest httpRequest) {
+    guardStatusTokenRate(httpRequest);
     if (request.password() != null && !request.password().isBlank()) {
       passwordPolicyService.validate(request.password());
     }
@@ -77,15 +82,28 @@ public class AuthApplicationController {
 
   @PostMapping("/verify-email")
   public ResponseEntity<Map<String, Boolean>> verifyEmail(
-      @Valid @RequestBody VerifyEmailRequest request) {
+      @Valid @RequestBody VerifyEmailRequest request, HttpServletRequest httpRequest) {
+    guard("verify-email", httpRequest, VERIFY_MAX_PER_IP, VERIFY_WINDOW);
     emailVerificationService.verifyToken(request.token());
     return ResponseEntity.ok(Map.of("verified", true));
   }
 
   @PostMapping("/resend-verification")
   public ResponseEntity<Void> resendVerification(
-      @Valid @RequestBody ResendVerificationRequest request) {
+      @Valid @RequestBody ResendVerificationRequest request, HttpServletRequest httpRequest) {
+    guard("resend-verification", httpRequest, VERIFY_MAX_PER_IP, VERIFY_WINDOW);
     emailVerificationService.resendVerification(request.email());
     return ResponseEntity.accepted().build();
+  }
+
+  private void guardStatusTokenRate(HttpServletRequest httpRequest) {
+    guard("application-token", httpRequest, STATUS_TOKEN_MAX_PER_IP, STATUS_TOKEN_WINDOW);
+  }
+
+  private void guard(
+      String purpose, HttpServletRequest httpRequest, int maxRequests, Duration window) {
+    if (!ipRateLimiter.allow(purpose, ClientIpResolver.resolve(httpRequest), maxRequests, window)) {
+      throw new TooManyRequestsException();
+    }
   }
 }

@@ -33,6 +33,8 @@ public class AuthController {
 
   private static final int LOGIN_MAX_PER_IP = 30;
   private static final Duration LOGIN_WINDOW = Duration.ofMinutes(5);
+  private static final int PASSWORD_RESET_MAX_PER_IP = 10;
+  private static final Duration PASSWORD_RESET_WINDOW = Duration.ofHours(1);
 
   private final AuthService authService;
   private final RefreshCookieFactory refreshCookieFactory;
@@ -104,16 +106,30 @@ public class AuthController {
   }
 
   @PostMapping("/forgot-password")
-  public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+  public ResponseEntity<Void> forgotPassword(
+      @Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
+    guardPasswordResetRate(httpRequest);
     passwordResetService.requestReset(request.email());
     return ResponseEntity.accepted().build();
   }
 
   @PostMapping("/reset-password")
-  public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+  public ResponseEntity<Void> resetPassword(
+      @Valid @RequestBody ResetPasswordRequest request, HttpServletRequest httpRequest) {
+    guardPasswordResetRate(httpRequest);
     passwordPolicyService.validate(request.password());
     passwordResetService.resetPassword(request.token(), request.password());
     return ResponseEntity.noContent().build();
+  }
+
+  private void guardPasswordResetRate(HttpServletRequest httpRequest) {
+    if (!ipRateLimiter.allow(
+        "password-reset",
+        ClientIpResolver.resolve(httpRequest),
+        PASSWORD_RESET_MAX_PER_IP,
+        PASSWORD_RESET_WINDOW)) {
+      throw new TooManyRequestsException();
+    }
   }
 
   private ResponseEntity<LoginResponse> loginSuccess(TokenResponse tokens) {

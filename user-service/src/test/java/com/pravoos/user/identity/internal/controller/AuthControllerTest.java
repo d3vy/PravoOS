@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.user.identity.api.PasswordPolicyService;
+import com.pravoos.user.identity.internal.dto.ForgotPasswordRequest;
 import com.pravoos.user.identity.internal.dto.LoginRequest;
 import com.pravoos.user.identity.internal.dto.LoginResult;
 import com.pravoos.user.identity.internal.dto.TokenResponse;
@@ -163,6 +164,23 @@ class AuthControllerTest {
         .andExpect(status().isTooManyRequests());
 
     verify(authService, never()).login(any(), anyString(), any());
+  }
+
+  @Test
+  void forgotPasswordReturns429WhenIpRateLimitExceeded() throws Exception {
+    when(ipRateLimiter.allow(
+            eq("password-reset"), anyString(), org.mockito.ArgumentMatchers.anyInt(), any()))
+        .thenReturn(false);
+
+    mockMvc
+        .perform(
+            post("/api/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(new ForgotPasswordRequest("user@example.com"))))
+        .andExpect(status().isTooManyRequests());
+
+    verify(passwordResetService, never()).requestReset(anyString());
   }
 
   @Test

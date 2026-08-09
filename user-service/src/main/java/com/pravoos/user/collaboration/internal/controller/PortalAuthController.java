@@ -22,6 +22,8 @@ public class PortalAuthController {
 
   private static final int PORTAL_MAX_PER_IP = 5;
   private static final Duration PORTAL_WINDOW = Duration.ofHours(1);
+  private static final int PREVIEW_MAX_PER_IP = 60;
+  private static final Duration PREVIEW_WINDOW = Duration.ofHours(1);
 
   private final ClientPortalInviteService clientPortalInviteService;
   private final AuthTokens authTokens;
@@ -38,19 +40,25 @@ public class PortalAuthController {
 
   @GetMapping("/portal/invite")
   public ResponseEntity<PortalInvitePreviewResponse> portalInvitePreview(
-      @RequestParam("token") String token) {
+      @RequestParam("token") String token, HttpServletRequest httpRequest) {
+    guard("portal-invite-preview", httpRequest, PREVIEW_MAX_PER_IP, PREVIEW_WINDOW);
     return ResponseEntity.ok(clientPortalInviteService.preview(token));
   }
 
   @PostMapping("/portal/accept")
   public ResponseEntity<LoginResponse> acceptPortalInvite(
       @Valid @RequestBody PortalAcceptRequest request, HttpServletRequest httpRequest) {
-    String clientIp = ClientIpResolver.resolve(httpRequest);
-    if (!ipRateLimiter.allow("portal-accept", clientIp, PORTAL_MAX_PER_IP, PORTAL_WINDOW)) {
+    guard("portal-accept", httpRequest, PORTAL_MAX_PER_IP, PORTAL_WINDOW);
+    UUID userId = clientPortalInviteService.accept(request.token(), request.password());
+    return authTokens.authenticate(
+        userId, ClientIpResolver.resolve(httpRequest), userAgent(httpRequest));
+  }
+
+  private void guard(
+      String purpose, HttpServletRequest httpRequest, int maxRequests, Duration window) {
+    if (!ipRateLimiter.allow(purpose, ClientIpResolver.resolve(httpRequest), maxRequests, window)) {
       throw new TooManyRequestsException();
     }
-    UUID userId = clientPortalInviteService.accept(request.token(), request.password());
-    return authTokens.authenticate(userId, clientIp, userAgent(httpRequest));
   }
 
   private static String userAgent(HttpServletRequest request) {

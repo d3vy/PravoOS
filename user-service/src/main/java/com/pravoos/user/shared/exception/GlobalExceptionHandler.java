@@ -14,6 +14,9 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.ResourceAccessException;
@@ -60,6 +63,16 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
     log.warn("Malformed request body: {}", ex.getMessage());
     return ResponseEntity.badRequest().body(new ErrorResponse("Malformed request body"));
+  }
+
+  @ExceptionHandler({
+    MissingRequestHeaderException.class,
+    MissingServletRequestParameterException.class
+  })
+  public ResponseEntity<ErrorResponse> handleMissingRequestValue(
+      ServletRequestBindingException ex) {
+    log.warn("Missing required request value: {}", ex.getMessage());
+    return ResponseEntity.badRequest().body(new ErrorResponse("Missing required request value"));
   }
 
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)

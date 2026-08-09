@@ -32,7 +32,8 @@ public class PaymentApplier {
 
   @Transactional
   public void apply(YooKassaPayment snapshot) {
-    Payment payment = paymentRepository.findByProviderPaymentId(snapshot.id()).orElse(null);
+    Payment payment =
+        paymentRepository.findByProviderPaymentIdForUpdate(snapshot.id()).orElse(null);
     if (payment == null) {
       log.warn("Webhook for unknown payment {} ignored", snapshot.id());
       return;

@@ -1,8 +1,10 @@
 package com.pravoos.user.registration.internal.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -75,6 +77,9 @@ class AuthApplicationControllerTest {
         MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
+    lenient()
+        .when(ipRateLimiter.allow(anyString(), anyString(), anyInt(), any(Duration.class)))
+        .thenReturn(true);
   }
 
   @Test
@@ -174,10 +179,33 @@ class AuthApplicationControllerTest {
   }
 
   @Test
-  void getApplicationByStatusTokenReturns500WhenHeaderMissing() throws Exception {
-    // GlobalExceptionHandler не мапит MissingRequestHeaderException — падает в generic
-    // 500-обработчик
-    mockMvc.perform(get("/api/auth/application")).andExpect(status().isInternalServerError());
+  void getApplicationByStatusTokenReturns400WhenHeaderMissing() throws Exception {
+    mockMvc.perform(get("/api/auth/application")).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void getApplicationByStatusTokenIsRateLimitedPerIp() throws Exception {
+    when(ipRateLimiter.allow(eq("application-token"), anyString(), anyInt(), any(Duration.class)))
+        .thenReturn(false);
+
+    mockMvc
+        .perform(get("/api/auth/application").header("X-Application-Token", "token-123"))
+        .andExpect(status().isTooManyRequests());
+    verify(applicationService, never()).getApplicationByStatusToken(anyString());
+  }
+
+  @Test
+  void verifyEmailIsRateLimitedPerIp() throws Exception {
+    when(ipRateLimiter.allow(eq("verify-email"), anyString(), anyInt(), any(Duration.class)))
+        .thenReturn(false);
+
+    mockMvc
+        .perform(
+            post("/api/auth/verify-email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new VerifyEmailRequest("token-123"))))
+        .andExpect(status().isTooManyRequests());
+    verify(emailVerificationService, never()).verifyToken(anyString());
   }
 
   @Test

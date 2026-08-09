@@ -39,7 +39,7 @@ class PaymentApplierTest {
 
   @Test
   void apply_ignoresWebhookForUnknownPayment() {
-    when(paymentRepository.findByProviderPaymentId("yk-1")).thenReturn(Optional.empty());
+    when(paymentRepository.findByProviderPaymentIdForUpdate("yk-1")).thenReturn(Optional.empty());
 
     applier.apply(new YooKassaPayment("yk-1", "succeeded", true, 1000, null));
 
@@ -50,7 +50,8 @@ class PaymentApplierTest {
   @Test
   void apply_ignoresWebhookForAlreadyProcessedPayment() {
     Payment payment = payment(PaymentStatus.SUCCEEDED, 1000);
-    when(paymentRepository.findByProviderPaymentId("yk-1")).thenReturn(Optional.of(payment));
+    when(paymentRepository.findByProviderPaymentIdForUpdate("yk-1"))
+        .thenReturn(Optional.of(payment));
 
     applier.apply(new YooKassaPayment("yk-1", "succeeded", true, 1000, null));
 
@@ -61,7 +62,8 @@ class PaymentApplierTest {
   @Test
   void apply_marksPaymentCanceled() {
     Payment payment = payment(PaymentStatus.PENDING, 1000);
-    when(paymentRepository.findByProviderPaymentId("yk-1")).thenReturn(Optional.of(payment));
+    when(paymentRepository.findByProviderPaymentIdForUpdate("yk-1"))
+        .thenReturn(Optional.of(payment));
 
     applier.apply(new YooKassaPayment("yk-1", "canceled", false, 1000, null));
 
@@ -74,7 +76,8 @@ class PaymentApplierTest {
   @Test
   void apply_doesNothingWhenStillPendingAtProvider() {
     Payment payment = payment(PaymentStatus.PENDING, 1000);
-    when(paymentRepository.findByProviderPaymentId("yk-1")).thenReturn(Optional.of(payment));
+    when(paymentRepository.findByProviderPaymentIdForUpdate("yk-1"))
+        .thenReturn(Optional.of(payment));
 
     applier.apply(new YooKassaPayment("yk-1", "pending", false, 1000, null));
 
@@ -85,7 +88,8 @@ class PaymentApplierTest {
   @Test
   void apply_doesNotActivateOnAmountMismatch() {
     Payment payment = payment(PaymentStatus.PENDING, 1000);
-    when(paymentRepository.findByProviderPaymentId("yk-1")).thenReturn(Optional.of(payment));
+    when(paymentRepository.findByProviderPaymentIdForUpdate("yk-1"))
+        .thenReturn(Optional.of(payment));
 
     applier.apply(new YooKassaPayment("yk-1", "succeeded", true, 999, null));
 
@@ -96,7 +100,8 @@ class PaymentApplierTest {
   @Test
   void apply_marksSucceededAndActivatesSubscription() {
     Payment payment = payment(PaymentStatus.PENDING, 1000);
-    when(paymentRepository.findByProviderPaymentId("yk-1")).thenReturn(Optional.of(payment));
+    when(paymentRepository.findByProviderPaymentIdForUpdate("yk-1"))
+        .thenReturn(Optional.of(payment));
 
     applier.apply(new YooKassaPayment("yk-1", "succeeded", true, 1000, null));
 

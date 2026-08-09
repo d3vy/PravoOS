@@ -20,6 +20,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
@@ -29,6 +30,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestClient;
@@ -276,6 +278,8 @@ public class OpenAiEngine {
             status,
             attempt,
             MAX_ATTEMPTS);
+        sleep(retryAfterMs(e).orElse(backoffMs(attempt)));
+        continue;
       } catch (RestClientException e) {
         lastException = e;
         if (attempt == MAX_ATTEMPTS) {
@@ -301,10 +305,35 @@ public class OpenAiEngine {
   }
 
   private void backoff(int attempt) {
+    sleep(backoffMs(attempt));
+  }
+
+  private long backoffMs(int attempt) {
     long delay = Math.min(BASE_BACKOFF_MS * (1L << (attempt - 1)), MAX_BACKOFF_MS);
-    long jitter = ThreadLocalRandom.current().nextLong(delay / 2 + 1);
+    return delay + ThreadLocalRandom.current().nextLong(delay / 2 + 1);
+  }
+
+  private Optional<Long> retryAfterMs(RestClientResponseException exception) {
+    String header =
+        exception.getResponseHeaders() == null
+            ? null
+            : exception.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER);
+    if (header == null || header.isBlank()) {
+      return Optional.empty();
+    }
     try {
-      Thread.sleep(delay + jitter);
+      long seconds = Long.parseLong(header.trim());
+      return seconds < 0
+          ? Optional.empty()
+          : Optional.of(Math.min(seconds * 1000L, MAX_BACKOFF_MS));
+    } catch (NumberFormatException e) {
+      return Optional.empty();
+    }
+  }
+
+  private void sleep(long delayMs) {
+    try {
+      Thread.sleep(delayMs);
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
       throw new LlmException("OpenAI call interrupted during backoff");

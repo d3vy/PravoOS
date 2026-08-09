@@ -38,6 +38,36 @@ class PromptPiiRedactorTest {
   }
 
   @Test
+  void masksPassportInEveryFormatItIsWrittenInRussianDocuments() {
+    assertThat(redactOnce("Паспорт 45 09 123456"))
+        .contains("[PASSPORT_1]")
+        .doesNotContain("123456");
+    assertThat(redactOnce("Паспорт 4509 123456")).contains("[PASSPORT_1]").doesNotContain("123456");
+    assertThat(redactOnce("Паспорт 4509 № 123456"))
+        .contains("[PASSPORT_1]")
+        .doesNotContain("123456");
+    assertThat(redactOnce("Паспорт 45 09 №123456"))
+        .contains("[PASSPORT_1]")
+        .doesNotContain("123456");
+  }
+
+  @Test
+  void masksSnilsWrittenWithoutSeparators() {
+    assertThat(redactOnce("СНИЛС 112-233-445 95")).contains("[SNILS_1]").doesNotContain("112-233");
+    assertThat(redactOnce("СНИЛС 112 233 445 95")).contains("[SNILS_1]").doesNotContain("112 233");
+    assertThat(redactOnce("СНИЛС 11223344595")).contains("[SNILS_1]").doesNotContain("11223344595");
+  }
+
+  @Test
+  void keepsTenDigitInnRecognizableAsInnAndNotAsPassport() {
+    assertThat(redactOnce("ИНН 7707083893")).contains("[INN_1]").doesNotContain("7707083893");
+  }
+
+  private String redactOnce(String text) {
+    return redactor.redact(text, redactor.newSession());
+  }
+
+  @Test
   void reusesSamePlaceholderForRepeatedValueAcrossMessages() {
     RedactionSession session = redactor.newSession();
 

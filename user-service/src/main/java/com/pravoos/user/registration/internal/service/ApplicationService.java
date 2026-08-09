@@ -114,7 +114,8 @@ public class ApplicationService {
     application.setConsentCrossBorder(request.crossBorderConsent());
     application.setConsentMarketing(request.marketingConsent());
     String rawVerificationToken = emailVerificationService.generateToken();
-    application.setStatusToken(emailVerificationService.generateToken());
+    String rawStatusToken = emailVerificationService.generateToken();
+    application.setStatusToken(tokenHasher.sha256Hex(rawStatusToken));
     application.setStatusTokenExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plus(STATUS_TOKEN_TTL));
     application.setEmailVerificationToken(tokenHasher.sha256Hex(rawVerificationToken));
     application.setEmailVerificationExpiresAt(emailVerificationService.tokenExpiry());
@@ -129,7 +130,7 @@ public class ApplicationService {
     applicationSubmittedCounter.increment();
 
     log.info("Lawyer application submitted: {}", EmailMasker.mask(email));
-    return new ApplicationSubmissionResponse(toApplicationResponse(saved), saved.getStatusToken());
+    return new ApplicationSubmissionResponse(toApplicationResponse(saved), rawStatusToken);
   }
 
   @Transactional(readOnly = true)
@@ -148,7 +149,7 @@ public class ApplicationService {
   private LawyerApplication findByValidStatusToken(String statusToken) {
     LawyerApplication application =
         applicationRepository
-            .findByStatusToken(statusToken)
+            .findByStatusToken(tokenHasher.sha256Hex(statusToken))
             .orElseThrow(ApplicationTokenNotFoundException::new);
 
     LocalDateTime expiresAt = application.getStatusTokenExpiresAt();

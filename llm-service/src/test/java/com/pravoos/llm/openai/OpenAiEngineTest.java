@@ -14,9 +14,11 @@ import com.pravoos.llm.domain.LlmOptions;
 import com.pravoos.llm.domain.LlmResult;
 import com.pravoos.llm.exception.LlmException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.ExpectedCount;
@@ -121,6 +123,28 @@ class OpenAiEngineTest {
     LlmResult result = engine.complete("system", List.of(), "вопрос", LlmOptions.DEFAULT);
 
     assertThat(result.content()).isEqualTo("ok");
+    server.verify();
+  }
+
+  @Test
+  void completeWaitsForTheRetryAfterHeaderInsteadOfItsOwnBackoff() {
+    server
+        .expect(ExpectedCount.once(), requestTo(CHAT_URL))
+        .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "2"));
+    server
+        .expect(ExpectedCount.once(), requestTo(CHAT_URL))
+        .andRespond(
+            withSuccess(
+                "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"ok\"}}],"
+                    + "\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1,\"total_tokens\":2}}",
+                MediaType.APPLICATION_JSON));
+
+    long startedAt = System.nanoTime();
+    LlmResult result = engine.complete("system", List.of(), "вопрос", LlmOptions.DEFAULT);
+    long elapsedMs = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
+
+    assertThat(result.content()).isEqualTo("ok");
+    assertThat(elapsedMs).isGreaterThanOrEqualTo(1800L);
     server.verify();
   }
 

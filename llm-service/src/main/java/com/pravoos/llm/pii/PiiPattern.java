@@ -9,8 +9,11 @@ public enum PiiPattern {
       Pattern.compile(
           "(?<![\\d-])(?:\\+7|8)[\\s(-]{0,2}\\d{3}[\\s)-]{0,2}\\d{3}[\\s-]?\\d{2}[\\s-]?\\d{2}(?![\\d-])")),
   CARD("CARD", Pattern.compile("(?<!\\d)\\d{4}[ -]?\\d{4}[ -]?\\d{4}[ -]?\\d{4}(?!\\d)")),
-  SNILS("SNILS", Pattern.compile("(?<!\\d)\\d{3}-\\d{3}-\\d{3}[ -]\\d{2}(?!\\d)")),
-  PASSPORT("PASSPORT", Pattern.compile("(?<!\\d)\\d{2}\\s\\d{2}\\s?№?\\s?\\d{6}(?!\\d)")),
+  SNILS(
+      "SNILS", Pattern.compile("(?<!\\d)(?:\\d{3}[ -]\\d{3}[ -]\\d{3}[ -]\\d{2}|\\d{11})(?!\\d)")),
+  PASSPORT(
+      "PASSPORT",
+      Pattern.compile("(?<!\\d)(?:\\d{2}\\s\\d{2}|\\d{4})(?:\\s+|\\s*№\\s*)\\d{6}(?!\\d)")),
   INN("INN", Pattern.compile("(?<!\\d)(?:\\d{12}|\\d{10})(?!\\d)")),
   FULL_NAME(
       "NAME",

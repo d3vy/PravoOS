@@ -3,13 +3,18 @@ package com.pravoos.user.migration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HexFormat;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,12 +64,50 @@ class PersonalDataPrivacyMigrationIT {
   }
 
   @Test
-  void migratesUpToV25WithoutErrors() {
+  void migratesTheWholeChainWithoutErrors() {
     var result = flyway(null).migrate();
 
     assertThat(result.success).isTrue();
     assertThat(result.migrations).extracting(migration -> migration.version).contains("25");
-    assertThat(flyway(null).info().current().getVersion().toString()).isEqualTo("25");
+    assertThat(flyway(null).info().current().getVersion())
+        .isGreaterThanOrEqualTo(MigrationVersion.fromVersion("25"));
+  }
+
+  @Test
+  void hashesStatusTokensThatWereStoredInPlaintextBeforeV26() throws SQLException {
+    flyway("25").migrate();
+
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      statement.execute(
+          "INSERT INTO lawyer_applications "
+              + "(email, full_name, password_hash, specialization, status, status_token) "
+              + "VALUES ('legacy-token@example.com', 'A', 'hash', 'Civil', 'PENDING', 'plain-token')");
+    }
+
+    flyway(null).migrate();
+
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet rs =
+            statement.executeQuery(
+                "SELECT status_token FROM lawyer_applications "
+                    + "WHERE email = 'legacy-token@example.com'")) {
+      assertThat(rs.next()).isTrue();
+      assertThat(rs.getString("status_token"))
+          .isNotEqualTo("plain-token")
+          .isEqualTo(sha256Hex("plain-token"));
+    }
+  }
+
+  private static String sha256Hex(String value) {
+    try {
+      return HexFormat.of()
+          .formatHex(
+              MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   @Test

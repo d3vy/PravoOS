@@ -51,6 +51,29 @@ class PortalAuthControllerTest {
         MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
+    org.mockito.Mockito.lenient()
+        .when(
+            ipRateLimiter.allow(
+                eq("portal-invite-preview"),
+                anyString(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                any(Duration.class)))
+        .thenReturn(true);
+  }
+
+  @Test
+  void portalInvitePreviewIsRateLimitedPerIp() throws Exception {
+    when(ipRateLimiter.allow(
+            eq("portal-invite-preview"),
+            anyString(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            any(Duration.class)))
+        .thenReturn(false);
+
+    mockMvc
+        .perform(get("/api/auth/portal/invite").param("token", "tok-123"))
+        .andExpect(status().isTooManyRequests());
+    verify(clientPortalInviteService, never()).preview(anyString());
   }
 
   @Test
@@ -67,10 +90,8 @@ class PortalAuthControllerTest {
   }
 
   @Test
-  void portalInvitePreviewReturns500WhenTokenParamMissing() throws Exception {
-    // GlobalExceptionHandler не мапит MissingServletRequestParameterException — падает в generic
-    // 500-обработчик
-    mockMvc.perform(get("/api/auth/portal/invite")).andExpect(status().isInternalServerError());
+  void portalInvitePreviewReturns400WhenTokenParamMissing() throws Exception {
+    mockMvc.perform(get("/api/auth/portal/invite")).andExpect(status().isBadRequest());
   }
 
   @Test
