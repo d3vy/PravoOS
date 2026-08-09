@@ -18,17 +18,9 @@ export function createSentrySink({ dsn, environment, release }: SentrySinkOption
     tracesSampleRate: 0,
     sendDefaultPii: false,
     autoSessionTracking: false,
-    integrations: (defaults) => [
-      ...defaults.filter((integration) => !SELF_MANAGED_INTEGRATIONS.has(integration.name)),
-      Sentry.breadcrumbsIntegration({ dom: false, console: false }),
-    ],
-    beforeBreadcrumb(breadcrumb) {
-      breadcrumb.message = scrubPii(breadcrumb.message)
-      if (typeof breadcrumb.data?.url === 'string') {
-        breadcrumb.data.url = scrubPii(breadcrumb.data.url)
-      }
-      return breadcrumb
-    },
+    integrations: (defaults) =>
+      defaults.filter((integration) => !SELF_MANAGED_INTEGRATIONS.has(integration.name)),
+    beforeBreadcrumb: () => null,
     beforeSend(event) {
       event.message = scrubPii(event.message)
       event.exception?.values?.forEach((value) => {

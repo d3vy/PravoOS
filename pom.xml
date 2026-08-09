@@ -50,7 +50,7 @@
         <web-push.version>5.1.1</web-push.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <spotless.version>2.43.0</spotless.version>
-        <jacoco.version>0.8.12</jacoco.version>
+        <jacoco.version>0.8.13</jacoco.version>
         <!-- Порог поднимать постепенно по мере роста покрытия (см. testing.md, раздел 8) -->
         <jacoco.line.coverage.minimum>0.01</jacoco.line.coverage.minimum>
         <jacoco.check.skip>false</jacoco.check.skip>

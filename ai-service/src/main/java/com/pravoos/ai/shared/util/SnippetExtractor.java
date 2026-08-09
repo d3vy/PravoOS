@@ -35,6 +35,6 @@ public final class SnippetExtractor {
   }
 
   private static String clampHead(String text, int maxLength) {
-    return text.length() <= maxLength ? text : text.substring(0, maxLength) + ELLIPSIS;
+    return TextPreview.clamp(text, maxLength);
   }
 }

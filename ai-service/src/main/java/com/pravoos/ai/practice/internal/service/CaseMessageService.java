@@ -10,6 +10,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseThreadReadRepository;
 import com.pravoos.ai.shared.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
 import com.pravoos.ai.shared.service.OutboxEventService;
+import com.pravoos.ai.shared.util.TextPreview;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -138,10 +139,6 @@ public class CaseMessageService {
   }
 
   private String buildPreview(String body) {
-    String normalized = body.strip();
-    if (normalized.length() <= PREVIEW_MAX_LENGTH) {
-      return normalized;
-    }
-    return normalized.substring(0, PREVIEW_MAX_LENGTH) + "…";
+    return TextPreview.clamp(body.strip(), PREVIEW_MAX_LENGTH);
   }
 }

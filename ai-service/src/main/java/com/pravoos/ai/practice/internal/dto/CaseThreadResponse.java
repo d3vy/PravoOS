@@ -2,6 +2,7 @@ package com.pravoos.ai.practice.internal.dto;
 
 import com.pravoos.ai.practice.internal.repository.jpa.CaseMessageRepository.ThreadView;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
+import com.pravoos.ai.shared.util.TextPreview;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -27,9 +28,6 @@ public record CaseThreadResponse(
   }
 
   private static String preview(String body) {
-    String normalized = body.strip();
-    return normalized.length() <= PREVIEW_MAX_LENGTH
-        ? normalized
-        : normalized.substring(0, PREVIEW_MAX_LENGTH) + "…";
+    return TextPreview.clamp(body.strip(), PREVIEW_MAX_LENGTH);
   }
 }

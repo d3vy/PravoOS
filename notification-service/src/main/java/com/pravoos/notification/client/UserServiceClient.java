@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
@@ -21,31 +22,39 @@ import org.springframework.web.client.RestClient;
 public class UserServiceClient {
 
   private static final Logger log = LoggerFactory.getLogger(UserServiceClient.class);
+  private static final String INTERNAL_SECRET_HEADER = "X-Internal-Secret";
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
 
   private final RestClient restClient;
-  private final String internalSecret;
 
+  @Autowired
   public UserServiceClient(
       UserServiceProperties properties,
       @LoadBalanced RestClient.Builder loadBalancedRestClientBuilder) {
+    this(restClientFor(properties, loadBalancedRestClientBuilder));
+  }
+
+  UserServiceClient(RestClient restClient) {
+    this.restClient = restClient;
+  }
+
+  private static RestClient restClientFor(
+      UserServiceProperties properties, RestClient.Builder loadBalancedRestClientBuilder) {
     SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
     requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
     requestFactory.setReadTimeout(READ_TIMEOUT);
-    this.restClient =
-        DiscoveryAwareRestClients.builderFor(properties.baseUrl(), loadBalancedRestClientBuilder)
-            .baseUrl(properties.baseUrl())
-            .requestFactory(requestFactory)
-            .build();
-    this.internalSecret = properties.internalSecret();
+    return DiscoveryAwareRestClients.builderFor(properties.baseUrl(), loadBalancedRestClientBuilder)
+        .baseUrl(properties.baseUrl())
+        .defaultHeader(INTERNAL_SECRET_HEADER, properties.internalSecret())
+        .requestFactory(requestFactory)
+        .build();
   }
 
   public void approveApplication(UUID applicationId) {
     restClient
         .post()
         .uri("/internal/applications/{id}/approve", applicationId)
-        .header("X-Internal-Secret", internalSecret)
         .retrieve()
         .toBodilessEntity();
     log.info("Application approved via internal API: {}", applicationId);
@@ -55,7 +64,6 @@ public class UserServiceClient {
     restClient
         .post()
         .uri("/internal/applications/{id}/approve-force", applicationId)
-        .header("X-Internal-Secret", internalSecret)
         .retrieve()
         .toBodilessEntity();
     log.info("Application force-approved via internal API: {}", applicationId);
@@ -65,7 +73,6 @@ public class UserServiceClient {
     restClient
         .post()
         .uri("/internal/applications/{id}/reject", applicationId)
-        .header("X-Internal-Secret", internalSecret)
         .retrieve()
         .toBodilessEntity();
     log.info("Application rejected via internal API: {}", applicationId);
@@ -77,7 +84,6 @@ public class UserServiceClient {
           restClient
               .get()
               .uri("/internal/applications/{id}", applicationId)
-              .header("X-Internal-Secret", internalSecret)
               .retrieve()
               .body(ApplicationDetailsResponse.class);
       return Optional.ofNullable(details);
@@ -92,7 +98,6 @@ public class UserServiceClient {
         restClient
             .post()
             .uri("/internal/telegram/bind")
-            .header("X-Internal-Secret", internalSecret)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new BindTelegramRequest(code, chatId))
             .retrieve()
@@ -111,7 +116,6 @@ public class UserServiceClient {
     restClient
         .post()
         .uri("/internal/notifications/deadline-email")
-        .header("X-Internal-Secret", internalSecret)
         .contentType(MediaType.APPLICATION_JSON)
         .body(request)
         .retrieve()
@@ -125,7 +129,6 @@ public class UserServiceClient {
         restClient
             .post()
             .uri("/internal/notifications/case-message")
-            .header("X-Internal-Secret", internalSecret)
             .contentType(MediaType.APPLICATION_JSON)
             .body(request)
             .retrieve()
@@ -139,7 +142,6 @@ public class UserServiceClient {
         restClient
             .get()
             .uri("/internal/push/subscriptions/{userId}", userId)
-            .header("X-Internal-Secret", internalSecret)
             .retrieve()
             .body(new ParameterizedTypeReference<>() {});
     return subscriptions == null ? List.of() : subscriptions;
@@ -149,7 +151,6 @@ public class UserServiceClient {
     restClient
         .post()
         .uri("/internal/push/subscriptions/prune")
-        .header("X-Internal-Secret", internalSecret)
         .contentType(MediaType.APPLICATION_JSON)
         .body(new PrunePushSubscriptionRequest(endpoint))
         .retrieve()
@@ -163,7 +164,6 @@ public class UserServiceClient {
           restClient
               .get()
               .uri("/internal/telegram/chat-id/{lawyerId}", lawyerId)
-              .header("X-Internal-Secret", internalSecret)
               .retrieve()
               .body(TelegramChatIdResponse.class);
       return response == null ? Optional.empty() : Optional.ofNullable(response.chatId());
