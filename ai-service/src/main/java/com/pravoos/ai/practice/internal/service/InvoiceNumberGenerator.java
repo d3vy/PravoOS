@@ -17,15 +17,10 @@ public class InvoiceNumberGenerator {
 
   public String next(UUID lawyerId, int year) {
     String yearPrefix = PREFIX + "-" + year + "-";
-    long used = invoiceRepository.countByLawyerIdAndNumberStartingWith(lawyerId, yearPrefix);
-    return format(yearPrefix, used + 1);
-  }
-
-  public String bump(String number) {
-    int lastDash = number.lastIndexOf('-');
-    String yearPrefix = number.substring(0, lastDash + 1);
-    long sequence = Long.parseLong(number.substring(lastDash + 1)) + 1;
-    return format(yearPrefix, sequence);
+    long lastUsed =
+        invoiceRepository.findMaxNumberSequence(
+            lawyerId, "^" + yearPrefix + "[0-9]+$", yearPrefix.length() + 1);
+    return format(yearPrefix, lastUsed + 1);
   }
 
   private String format(String yearPrefix, long sequence) {

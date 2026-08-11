@@ -1,6 +1,7 @@
 package com.pravoos.user.billing.internal.repository;
 
 import com.pravoos.user.billing.internal.model.entity.Payment;
+import com.pravoos.user.billing.internal.model.enums.PaymentStatus;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
@@ -18,4 +19,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
       @Param("providerPaymentId") String providerPaymentId);
 
   List<Payment> findByUserIdOrderByCreatedAtDesc(UUID userId);
+
+  List<Payment> findByUserIdAndPlanIdAndStatusOrderByCreatedAtDesc(
+      UUID userId, UUID planId, PaymentStatus status);
 }

@@ -79,6 +79,46 @@ class InvoicePaymentServiceTest {
   }
 
   @Test
+  void createPayment_reusesPendingPaymentInsteadOfChargingTheClientTwice() {
+    Invoice invoice = invoice(InvoiceStatus.ISSUED);
+    when(invoiceRepository.findByIdAndClientIdIn(invoice.getId(), List.of(clientId)))
+        .thenReturn(Optional.of(invoice));
+    InvoicePayment pending =
+        new InvoicePayment(invoice.getId(), "pay_1", 150000L, "https://yookassa/confirm");
+    when(invoicePaymentRepository.findByInvoiceIdAndStatusOrderByCreatedAtDesc(
+            invoice.getId(), InvoicePaymentStatus.PENDING))
+        .thenReturn(List.of(pending));
+
+    InvoicePaymentResponse response = service.createPayment(invoice.getId(), List.of(clientId));
+
+    assertThat(response.confirmationUrl()).isEqualTo("https://yookassa/confirm");
+    verifyNoInteractions(yooKassaInvoiceClient);
+    verify(invoicePaymentRepository, never()).save(any());
+  }
+
+  @Test
+  void createPayment_doesNotReusePendingPaymentForADifferentAmount() {
+    Invoice invoice = invoice(InvoiceStatus.ISSUED);
+    when(invoiceRepository.findByIdAndClientIdIn(invoice.getId(), List.of(clientId)))
+        .thenReturn(Optional.of(invoice));
+    InvoicePayment staleAmount =
+        new InvoicePayment(invoice.getId(), "pay_old", 100000L, "https://yookassa/stale");
+    when(invoicePaymentRepository.findByInvoiceIdAndStatusOrderByCreatedAtDesc(
+            invoice.getId(), InvoicePaymentStatus.PENDING))
+        .thenReturn(List.of(staleAmount));
+    when(yooKassaInvoiceClient.createPayment(
+            eq(invoice.getId()), anyLong(), anyString(), anyString()))
+        .thenReturn(
+            new YooKassaInvoicePayment(
+                "pay_2", "pending", false, 150000L, "https://yookassa/fresh"));
+
+    InvoicePaymentResponse response = service.createPayment(invoice.getId(), List.of(clientId));
+
+    assertThat(response.confirmationUrl()).isEqualTo("https://yookassa/fresh");
+    verify(invoicePaymentRepository).save(any());
+  }
+
+  @Test
   void createPayment_rejectsInvoiceNotIssued() {
     Invoice invoice = invoice(InvoiceStatus.DRAFT);
     when(invoiceRepository.findByIdAndClientIdIn(invoice.getId(), List.of(clientId)))
@@ -105,6 +145,8 @@ class InvoicePaymentServiceTest {
     InvoicePayment invoicePayment = new InvoicePayment(invoice.getId(), "pay_1", 150000L, "url");
     when(invoicePaymentRepository.findByProviderPaymentId("pay_1"))
         .thenReturn(Optional.of(invoicePayment));
+    when(invoicePaymentRepository.findByProviderPaymentIdForUpdate("pay_1"))
+        .thenReturn(Optional.of(invoicePayment));
     when(yooKassaInvoiceClient.getPayment("pay_1"))
         .thenReturn(new YooKassaInvoicePayment("pay_1", "succeeded", true, 150000L, null));
     when(invoiceRepository.findById(invoice.getId())).thenReturn(Optional.of(invoice));
@@ -121,6 +163,8 @@ class InvoicePaymentServiceTest {
     InvoicePayment invoicePayment = new InvoicePayment(invoice.getId(), "pay_1", 150000L, "url");
     when(invoicePaymentRepository.findByProviderPaymentId("pay_1"))
         .thenReturn(Optional.of(invoicePayment));
+    when(invoicePaymentRepository.findByProviderPaymentIdForUpdate("pay_1"))
+        .thenReturn(Optional.of(invoicePayment));
     when(yooKassaInvoiceClient.getPayment("pay_1"))
         .thenReturn(new YooKassaInvoicePayment("pay_1", "succeeded", true, 100000L, null));
 
@@ -136,6 +180,8 @@ class InvoicePaymentServiceTest {
     Invoice invoice = invoice(InvoiceStatus.ISSUED);
     InvoicePayment invoicePayment = new InvoicePayment(invoice.getId(), "pay_1", 150000L, "url");
     when(invoicePaymentRepository.findByProviderPaymentId("pay_1"))
+        .thenReturn(Optional.of(invoicePayment));
+    when(invoicePaymentRepository.findByProviderPaymentIdForUpdate("pay_1"))
         .thenReturn(Optional.of(invoicePayment));
     when(yooKassaInvoiceClient.getPayment("pay_1"))
         .thenReturn(new YooKassaInvoicePayment("pay_1", "canceled", false, 150000L, null));

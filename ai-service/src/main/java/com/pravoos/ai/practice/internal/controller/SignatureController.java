@@ -15,10 +15,12 @@ import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -66,7 +68,10 @@ public class SignatureController {
         .contentType(MediaType.APPLICATION_PDF)
         .header(
             HttpHeaders.CONTENT_DISPOSITION,
-            "attachment; filename=\"signature-protocol-" + signatureId + ".pdf\"")
+            ContentDisposition.attachment()
+                .filename("signature-protocol-" + signatureId + ".pdf", StandardCharsets.UTF_8)
+                .build()
+                .toString())
         .contentLength(protocol.length)
         .body(new ByteArrayResource(protocol));
   }
@@ -80,7 +85,11 @@ public class SignatureController {
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
         .header(
-            HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + download.fileName() + "\"")
+            HttpHeaders.CONTENT_DISPOSITION,
+            ContentDisposition.attachment()
+                .filename(download.fileName(), StandardCharsets.UTF_8)
+                .build()
+                .toString())
         .contentLength(download.content().length)
         .body(new ByteArrayResource(download.content()));
   }

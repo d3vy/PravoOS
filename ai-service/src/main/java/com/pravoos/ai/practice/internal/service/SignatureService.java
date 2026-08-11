@@ -243,7 +243,8 @@ public class SignatureService {
             signatureRequest.getSignerRole(), signatureRequest.getDocumentId(), caseEntity.getId());
     requireUnmodifiedDocument(signatureRequest, Sha256.hex(content));
 
-    CmsSignatureDetails details = detachedCmsVerifier.verify(signatureFile, content);
+    CmsSignatureDetails details =
+        detachedCmsVerifier.verify(signatureFile, content, signatureRequest.getCreatedAt());
 
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
     signatureRequest.setStatus(SignatureStatus.SIGNED);

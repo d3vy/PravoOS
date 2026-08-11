@@ -7,12 +7,15 @@ import com.pravoos.ai.practice.internal.model.entity.ClientConsent;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientConsentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.config.PersonalDataConsentProperties;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.exception.ClientEmailRequiredException;
+import com.pravoos.ai.shared.exception.ClientHasIssuedInvoicesException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
 import com.pravoos.ai.shared.model.enums.ClientType;
+import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import com.pravoos.ai.shared.util.PageRequests;
 import com.pravoos.common.util.PhoneNormalizer;
 import java.util.List;
@@ -33,6 +36,7 @@ public class ClientService {
   private final ClientRepository clientRepository;
   private final ClientConsentRepository clientConsentRepository;
   private final CaseRepository caseRepository;
+  private final InvoiceRepository invoiceRepository;
   private final CaseService caseService;
   private final UserServiceClient userServiceClient;
   private final PersonalDataConsentProperties consentProperties;
@@ -41,12 +45,14 @@ public class ClientService {
       ClientRepository clientRepository,
       ClientConsentRepository clientConsentRepository,
       CaseRepository caseRepository,
+      InvoiceRepository invoiceRepository,
       CaseService caseService,
       UserServiceClient userServiceClient,
       PersonalDataConsentProperties consentProperties) {
     this.clientRepository = clientRepository;
     this.clientConsentRepository = clientConsentRepository;
     this.caseRepository = caseRepository;
+    this.invoiceRepository = invoiceRepository;
     this.caseService = caseService;
     this.userServiceClient = userServiceClient;
     this.consentProperties = consentProperties;
@@ -192,6 +198,7 @@ public class ClientService {
   @Transactional
   public void delete(UUID clientId, UUID lawyerId, boolean cascade) {
     Client client = requireOwnedClient(clientId, lawyerId);
+    requireNoIssuedInvoices(clientId);
 
     if (cascade) {
       List<Case> cases =
@@ -206,6 +213,18 @@ public class ClientService {
     clientConsentRepository.deleteByClientId(clientId);
     clientRepository.delete(client);
     log.info("Client deleted: {} (cascade={}) by lawyer {}", clientId, cascade, lawyerId);
+  }
+
+  private void requireNoIssuedInvoices(UUID clientId) {
+    long issuedInvoices =
+        invoiceRepository.countByClientIdAndStatusNot(clientId, InvoiceStatus.DRAFT);
+    if (issuedInvoices > 0) {
+      log.warn(
+          "Client {} deletion refused: {} non-draft invoice(s) would be destroyed",
+          clientId,
+          issuedInvoices);
+      throw new ClientHasIssuedInvoicesException(clientId, issuedInvoices);
+    }
   }
 
   public Client requireOwnedClient(UUID clientId, UUID lawyerId) {

@@ -4,6 +4,7 @@ import com.pravoos.ai.shared.exception.InvalidSignatureFileException;
 import java.nio.charset.StandardCharsets;
 import java.security.Security;
 import java.security.cert.CertificateException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
@@ -39,6 +40,7 @@ public class DetachedCmsVerifier {
   private static final Logger log = LoggerFactory.getLogger(DetachedCmsVerifier.class);
 
   private static final String PEM_HEADER = "-----BEGIN";
+  private static final Duration CLOCK_SKEW = Duration.ofMinutes(10);
   private static final DefaultAlgorithmNameFinder ALGORITHM_NAMES =
       new DefaultAlgorithmNameFinder();
 
@@ -55,6 +57,11 @@ public class DetachedCmsVerifier {
   }
 
   public CmsSignatureDetails verify(byte[] signatureFile, byte[] documentContent) {
+    return verify(signatureFile, documentContent, null);
+  }
+
+  public CmsSignatureDetails verify(
+      byte[] signatureFile, byte[] documentContent, LocalDateTime signatureRequestedAt) {
     if (signatureFile == null || signatureFile.length == 0) {
       throw new InvalidSignatureFileException("файл пуст");
     }
@@ -63,10 +70,12 @@ public class DetachedCmsVerifier {
     X509CertificateHolder certificate = findCertificate(signedData, signer);
 
     LocalDateTime signingTime = extractSigningTime(signer);
-    assertCertificateValid(certificate, signingTime);
+    LocalDateTime verificationMoment = resolveVerificationMoment(signingTime, signatureRequestedAt);
+    assertCertificateValid(certificate, verificationMoment);
     assertSignatureMatches(signer, certificate);
     boolean chainVerified =
-        certificateChainValidator.validate(certificate, allCertificates(signedData), signingTime);
+        certificateChainValidator.validate(
+            certificate, allCertificates(signedData), verificationMoment);
 
     return new CmsSignatureDetails(
         commonName(certificate.getSubject()),
@@ -149,7 +158,32 @@ public class DetachedCmsVerifier {
     if (signers.isEmpty()) {
       throw new InvalidSignatureFileException("в контейнере нет подписей");
     }
+    if (signers.size() > 1) {
+      throw new InvalidSignatureFileException(
+          "контейнер содержит несколько подписей — загрузите подпись одного подписанта");
+    }
     return signers.iterator().next();
+  }
+
+  private LocalDateTime resolveVerificationMoment(
+      LocalDateTime declaredSigningTime, LocalDateTime signatureRequestedAt) {
+    LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+    if (declaredSigningTime == null) {
+      return now;
+    }
+    if (declaredSigningTime.isAfter(now.plus(CLOCK_SKEW))) {
+      throw new InvalidSignatureFileException("время подписания указано в будущем");
+    }
+    if (signatureRequestedAt != null
+        && declaredSigningTime.isBefore(signatureRequestedAt.minus(CLOCK_SKEW))) {
+      log.warn(
+          "Detached CMS rejected: declared signing time {} predates signature request {}",
+          declaredSigningTime,
+          signatureRequestedAt);
+      throw new InvalidSignatureFileException(
+          "время подписания раньше момента создания запроса на подпись");
+    }
+    return declaredSigningTime;
   }
 
   private X509CertificateHolder findCertificate(
@@ -181,9 +215,8 @@ public class DetachedCmsVerifier {
   }
 
   private void assertCertificateValid(
-      X509CertificateHolder certificate, LocalDateTime signingTime) {
-    Date moment =
-        signingTime != null ? Date.from(signingTime.toInstant(ZoneOffset.UTC)) : new Date();
+      X509CertificateHolder certificate, LocalDateTime verificationMoment) {
+    Date moment = Date.from(verificationMoment.toInstant(ZoneOffset.UTC));
     if (!certificate.isValidOn(moment)) {
       throw new InvalidSignatureFileException("сертификат недействителен на момент подписания");
     }

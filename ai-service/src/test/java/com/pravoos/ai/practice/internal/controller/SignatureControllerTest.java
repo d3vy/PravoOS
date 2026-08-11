@@ -181,6 +181,31 @@ class SignatureControllerTest {
   }
 
   @Test
+  void downloadSignatureFileEncodesFileNameInsteadOfInterpolatingIt() throws Exception {
+    when(authentication.getPrincipal()).thenReturn(lawyerId.toString());
+    UUID signatureId = UUID.randomUUID();
+    when(caseService.requireVisibleCase(caseId, lawyerId, List.of())).thenReturn(caseEntity);
+    when(signatureService.downloadSignatureFile(caseEntity, signatureId))
+        .thenReturn(new SignatureFileDownload("bytes".getBytes(), "договор \";x=y.p7s"));
+
+    mockMvc
+        .perform(
+            get(
+                    "/api/ai/cases/{caseId}/signatures/{signatureId}/signature-file",
+                    caseId,
+                    signatureId)
+                .principal(authentication))
+        .andExpect(status().isOk())
+        .andExpect(
+            header()
+                .string(
+                    "Content-Disposition",
+                    "attachment; "
+                        + "filename=\"=?UTF-8?Q?=D0=B4=D0=BE=D0=B3=D0=BE=D0=B2=D0=BE=D1=80_=22;x=3Dy.p7s?=\"; "
+                        + "filename*=UTF-8''%D0%B4%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%D1%80%20%22%3Bx%3Dy.p7s"));
+  }
+
+  @Test
   void signReturnsUpdatedRequest() throws Exception {
     when(authentication.getPrincipal()).thenReturn(lawyerId.toString());
     UUID signatureId = UUID.randomUUID();

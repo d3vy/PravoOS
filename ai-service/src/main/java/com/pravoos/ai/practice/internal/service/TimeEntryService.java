@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TimeEntryService {
 
   private static final Logger log = LoggerFactory.getLogger(TimeEntryService.class);
+  private static final int MAX_ENTRY_MINUTES = 1440;
 
   private final TimeEntryRepository timeEntryRepository;
   private final CaseService caseService;
@@ -75,14 +76,14 @@ public class TimeEntryService {
   @Transactional
   public TimeEntryResponse update(
       UUID caseId, UUID entryId, UpdateTimeEntryRequest request, UUID lawyerId, List<UUID> orgIds) {
-    caseService.requireVisibleCase(caseId, lawyerId, orgIds);
+    Case caseEntity = caseService.requireVisibleCase(caseId, lawyerId, orgIds);
     TimeEntry entry = requireEntryInCase(caseId, entryId);
     requireEditable(entry);
 
     entry.setDescription(request.description().trim());
     entry.setActivityDate(request.activityDate());
     entry.setMinutes(request.minutes());
-    entry.setHourlyRate(BillingAmounts.normalize(request.hourlyRate()));
+    entry.setHourlyRate(resolveHourlyRate(request.hourlyRate(), caseEntity));
     entry.setBillable(request.billable());
 
     log.info("Time entry {} updated on case {} by lawyer {}", entryId, caseId, lawyerId);
@@ -166,7 +167,8 @@ public class TimeEntryService {
       return 1;
     }
     long seconds = Duration.between(startedAt, Instant.now()).getSeconds();
-    return (int) Math.max(1, Math.round(seconds / 60.0));
+    long minutes = Math.round(seconds / 60.0);
+    return Math.clamp(minutes, 1, MAX_ENTRY_MINUTES);
   }
 
   private void requireEditable(TimeEntry entry) {

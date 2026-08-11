@@ -7,9 +7,15 @@ import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.cms.Attribute;
+import org.bouncycastle.asn1.cms.AttributeTable;
+import org.bouncycastle.asn1.cms.CMSAttributes;
+import org.bouncycastle.asn1.cms.Time;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
@@ -21,6 +27,7 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.DefaultSignedAttributeTableGenerator;
 import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
@@ -129,6 +136,11 @@ public final class CmsTestSignatures {
 
   public static byte[] detachedSignature(
       byte[] content, String commonName, Date notBefore, Date notAfter) {
+    return detachedSignature(content, commonName, notBefore, notAfter, null);
+  }
+
+  public static byte[] detachedSignature(
+      byte[] content, String commonName, Date notBefore, Date notAfter, Date declaredSigningTime) {
     try {
       KeyPairGenerator keyPairGenerator =
           KeyPairGenerator.getInstance("RSA", BouncyCastleProvider.PROVIDER_NAME);
@@ -154,19 +166,65 @@ public final class CmsTestSignatures {
               .setProvider(BouncyCastleProvider.PROVIDER_NAME)
               .getCertificate(certificateHolder);
 
-      CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
-      generator.addSignerInfoGenerator(
+      JcaSignerInfoGeneratorBuilder signerInfoBuilder =
           new JcaSignerInfoGeneratorBuilder(
-                  new JcaDigestCalculatorProviderBuilder()
-                      .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-                      .build())
-              .build(certSigner, certificate));
+              new JcaDigestCalculatorProviderBuilder()
+                  .setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                  .build());
+      if (declaredSigningTime != null) {
+        signerInfoBuilder.setSignedAttributeGenerator(
+            new DefaultSignedAttributeTableGenerator(
+                new AttributeTable(
+                    new DERSet(
+                        new Attribute(
+                            CMSAttributes.signingTime,
+                            new DERSet(new Time(declaredSigningTime)))))));
+      }
+
+      CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
+      generator.addSignerInfoGenerator(signerInfoBuilder.build(certSigner, certificate));
       generator.addCertificates(new JcaCertStore(List.of(certificate)));
 
       CMSSignedData signedData = generator.generate(new CMSProcessableByteArray(content), false);
       return signedData.getEncoded();
     } catch (Exception ex) {
       throw new IllegalStateException("Failed to build test CMS signature", ex);
+    }
+  }
+
+  public static byte[] twoSignerSignature(byte[] content, String firstName, String secondName) {
+    try {
+      Date notBefore = Date.from(Instant.now().minus(1, ChronoUnit.HOURS));
+      Date notAfter = Date.from(Instant.now().plus(365, ChronoUnit.DAYS));
+      CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
+      List<X509Certificate> certificates = new ArrayList<>();
+      for (String commonName : List.of(firstName, secondName)) {
+        KeyPair keyPair = generateKeyPair();
+        X500Name subject = new X500Name("CN=" + commonName + ", O=Тестовый УЦ, C=RU");
+        ContentSigner certSigner = contentSigner(keyPair);
+        X509Certificate certificate =
+            toCertificate(
+                new JcaX509v3CertificateBuilder(
+                        subject,
+                        BigInteger.valueOf(System.nanoTime()),
+                        notBefore,
+                        notAfter,
+                        subject,
+                        keyPair.getPublic())
+                    .build(certSigner));
+        generator.addSignerInfoGenerator(
+            new JcaSignerInfoGeneratorBuilder(
+                    new JcaDigestCalculatorProviderBuilder()
+                        .setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                        .build())
+                .build(certSigner, certificate));
+        certificates.add(certificate);
+      }
+      generator.addCertificates(new JcaCertStore(certificates));
+
+      return generator.generate(new CMSProcessableByteArray(content), false).getEncoded();
+    } catch (Exception ex) {
+      throw new IllegalStateException("Failed to build two-signer test CMS signature", ex);
     }
   }
 }

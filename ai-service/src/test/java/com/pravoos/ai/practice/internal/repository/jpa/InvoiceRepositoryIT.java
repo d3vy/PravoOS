@@ -89,6 +89,32 @@ class InvoiceRepositoryIT {
   }
 
   @Test
+  void findMaxNumberSequenceIgnoresGapsLeftByDeletedInvoices() {
+    UUID clientId = client();
+    invoice("СЧ-2026-0001", clientId);
+    Invoice second = invoice("СЧ-2026-0002", clientId);
+    invoice("СЧ-2026-0003", clientId);
+    invoiceRepository.delete(second);
+    invoiceRepository.flush();
+
+    assertThat(invoiceRepository.findMaxNumberSequence(lawyerId, "^СЧ-2026-[0-9]+$", 9))
+        .isEqualTo(3L);
+  }
+
+  @Test
+  void findMaxNumberSequenceIsScopedToTheLawyerYearAndNumberFormat() {
+    UUID clientId = client();
+    invoice("СЧ-2026-0005", clientId);
+    invoice("СЧ-2025-0009", clientId);
+    invoice("СЧ-2026-ручной", clientId);
+
+    assertThat(invoiceRepository.findMaxNumberSequence(lawyerId, "^СЧ-2026-[0-9]+$", 9))
+        .isEqualTo(5L);
+    assertThat(invoiceRepository.findMaxNumberSequence(UUID.randomUUID(), "^СЧ-2026-[0-9]+$", 9))
+        .isZero();
+  }
+
+  @Test
   void searchEscapesWildcardsInTheQuery() {
     invoice("INV-0001", client());
 

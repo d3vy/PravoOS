@@ -8,6 +8,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.model.enums.InvoicePaymentStatus;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -50,9 +51,15 @@ public class InvoicePaymentWriter {
   }
 
   @Transactional
+  public void savePending(UUID invoiceId, YooKassaInvoicePayment payment, long amountKopecks) {
+    invoicePaymentRepository.save(
+        new InvoicePayment(invoiceId, payment.id(), amountKopecks, payment.confirmationUrl()));
+  }
+
+  @Transactional
   public void applySnapshot(String providerPaymentId, YooKassaInvoicePayment snapshot) {
     InvoicePayment invoicePayment =
-        invoicePaymentRepository.findByProviderPaymentId(providerPaymentId).orElse(null);
+        invoicePaymentRepository.findByProviderPaymentIdForUpdate(providerPaymentId).orElse(null);
     if (invoicePayment == null || invoicePayment.getStatus() != InvoicePaymentStatus.PENDING) {
       return;
     }

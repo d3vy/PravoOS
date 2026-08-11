@@ -107,12 +107,24 @@ public class YooKassaClient {
     if (id == null) {
       throw providerUnavailable();
     }
+    requireExpectedCurrency(id, node.path("amount").path("currency").asText(""));
     return new YooKassaPayment(
         id,
         node.path("status").asText(""),
         node.path("paid").asBoolean(false),
         toKopecks(node.path("amount").path("value").asText("0")),
         node.path("confirmation").path("confirmation_url").asText(null));
+  }
+
+  private void requireExpectedCurrency(String paymentId, String currency) {
+    if (!CURRENCY.equals(currency)) {
+      log.error(
+          "YooKassa payment {} is denominated in '{}' instead of {} — refusing to compare amounts",
+          paymentId,
+          currency,
+          CURRENCY);
+      throw providerUnavailable();
+    }
   }
 
   private long toKopecks(String amountValue) {

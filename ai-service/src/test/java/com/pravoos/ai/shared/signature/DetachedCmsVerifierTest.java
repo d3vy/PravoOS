@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
@@ -78,6 +80,55 @@ class DetachedCmsVerifierTest {
     assertThatThrownBy(() -> verifier.verify(signature, document))
         .isInstanceOf(InvalidSignatureFileException.class)
         .hasMessageContaining("недействителен");
+  }
+
+  @Test
+  void verify_rejectsExpiredCertificateBackdatedByDeclaredSigningTime() {
+    byte[] signature =
+        CmsTestSignatures.detachedSignature(
+            document,
+            "Сидоров Сидор",
+            Date.from(Instant.now().minus(400, ChronoUnit.DAYS)),
+            Date.from(Instant.now().minus(30, ChronoUnit.DAYS)),
+            Date.from(Instant.now().minus(60, ChronoUnit.DAYS)));
+    LocalDateTime requestedAt = LocalDateTime.now(ZoneOffset.UTC).minusHours(1);
+
+    assertThatThrownBy(() -> verifier.verify(signature, document, requestedAt))
+        .isInstanceOf(InvalidSignatureFileException.class)
+        .hasMessageContaining("раньше момента создания запроса");
+  }
+
+  @Test
+  void verify_rejectsSigningTimeInTheFuture() {
+    byte[] signature =
+        CmsTestSignatures.detachedSignature(
+            document,
+            "Сидоров Сидор",
+            Date.from(Instant.now().minus(1, ChronoUnit.HOURS)),
+            Date.from(Instant.now().plus(365, ChronoUnit.DAYS)),
+            Date.from(Instant.now().plus(2, ChronoUnit.DAYS)));
+
+    assertThatThrownBy(() -> verifier.verify(signature, document, null))
+        .isInstanceOf(InvalidSignatureFileException.class)
+        .hasMessageContaining("в будущем");
+  }
+
+  @Test
+  void verify_acceptsSigningTimeRightAfterTheRequestWasCreated() {
+    byte[] signature = CmsTestSignatures.detachedSignature(document, "Иванов Иван");
+    LocalDateTime requestedAt = LocalDateTime.now(ZoneOffset.UTC).minusHours(2);
+
+    assertThat(verifier.verify(signature, document, requestedAt).signerCommonName())
+        .isEqualTo("Иванов Иван");
+  }
+
+  @Test
+  void verify_rejectsContainerWithSeveralSigners() {
+    byte[] signature = CmsTestSignatures.twoSignerSignature(document, "Первый", "Второй");
+
+    assertThatThrownBy(() -> verifier.verify(signature, document))
+        .isInstanceOf(InvalidSignatureFileException.class)
+        .hasMessageContaining("несколько подписей");
   }
 
   @Test

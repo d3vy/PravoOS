@@ -25,6 +25,17 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
   long countByLawyerIdAndNumberStartingWith(UUID lawyerId, String prefix);
 
+  @Query(
+      value =
+          "SELECT COALESCE(MAX(CAST(SUBSTRING(number FROM :sequenceStart) AS BIGINT)), 0) "
+              + "FROM invoices "
+              + "WHERE lawyer_id = :lawyerId AND number ~ :numberPattern",
+      nativeQuery = true)
+  long findMaxNumberSequence(
+      @Param("lawyerId") UUID lawyerId,
+      @Param("numberPattern") String numberPattern,
+      @Param("sequenceStart") int sequenceStart);
+
   List<Invoice> findByLawyerIdAndStatusOrderByDueDateAsc(UUID lawyerId, InvoiceStatus status);
 
   List<Invoice> findByStatusAndDueDate(InvoiceStatus status, LocalDate dueDate);
@@ -44,6 +55,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
   @Query("SELECT DISTINCT i.lawyerId FROM Invoice i WHERE i.status = :status")
   List<UUID> findDistinctLawyerIdsByStatus(@Param("status") InvoiceStatus status);
+
+  long countByClientIdAndStatusNot(UUID clientId, InvoiceStatus status);
 
   Optional<Invoice> findByIdAndClientIdIn(UUID id, List<UUID> clientIds);
 

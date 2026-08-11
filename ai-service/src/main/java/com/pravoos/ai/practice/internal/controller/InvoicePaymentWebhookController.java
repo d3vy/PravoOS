@@ -34,7 +34,7 @@ public class InvoicePaymentWebhookController {
       return ResponseEntity.status(403).build();
     }
     String providerPaymentId = payload.path("object").path("id").asText(null);
-    if (providerPaymentId == null) {
+    if (providerPaymentId == null || providerPaymentId.isBlank()) {
       log.warn("Ignoring YooKassa webhook without payment id");
       return ResponseEntity.ok().build();
     }

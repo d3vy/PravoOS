@@ -20,6 +20,7 @@ import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -75,7 +76,8 @@ class InvoiceServiceTest {
     when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
     TimeEntry first = entry(60, new BigDecimal("3000"));
     TimeEntry second = entry(30, new BigDecimal("4000"));
-    when(timeEntryRepository.lockBillableForClient(clientId)).thenReturn(List.of(first, second));
+    when(timeEntryRepository.lockBillableForClient(clientId, lawyerId))
+        .thenReturn(List.of(first, second));
 
     CreateInvoiceRequest request =
         new CreateInvoiceRequest(
@@ -92,7 +94,7 @@ class InvoiceServiceTest {
   @Test
   void create_addsVatOnTopOfSubtotal() {
     when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
-    when(timeEntryRepository.lockBillableForClient(clientId))
+    when(timeEntryRepository.lockBillableForClient(clientId, lawyerId))
         .thenReturn(List.of(entry(60, new BigDecimal("1000"))));
 
     CreateInvoiceRequest request =
@@ -108,7 +110,7 @@ class InvoiceServiceTest {
   @Test
   void create_throwsWhenNoBillableTime() {
     when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
-    when(timeEntryRepository.lockBillableForClient(clientId)).thenReturn(List.of());
+    when(timeEntryRepository.lockBillableForClient(clientId, lawyerId)).thenReturn(List.of());
 
     CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, null, null, null, null);
     assertThatThrownBy(() -> service.create(request, lawyerId))
@@ -117,21 +119,35 @@ class InvoiceServiceTest {
   }
 
   @Test
-  void create_withExplicitIdsBillsOnlyLockedEntries() {
+  void create_withExplicitIdsBillsEveryRequestedEntry() {
     when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
-    TimeEntry valid = entry(60, new BigDecimal("2000"));
-    TimeEntry foreignClient = entry(60, new BigDecimal("2000"));
-    foreignClient.setClientId(UUID.randomUUID());
-    TimeEntry alreadyInvoiced = entry(60, new BigDecimal("2000"));
-    alreadyInvoiced.setInvoiceId(UUID.randomUUID());
-    List<UUID> ids = List.of(valid.getId(), foreignClient.getId(), alreadyInvoiced.getId());
-    when(timeEntryRepository.lockBillableByIds(ids, lawyerId, clientId)).thenReturn(List.of(valid));
+    TimeEntry first = entry(60, new BigDecimal("2000"));
+    TimeEntry second = entry(30, new BigDecimal("2000"));
+    List<UUID> ids = List.of(first.getId(), second.getId());
+    when(timeEntryRepository.lockBillableByIds(new LinkedHashSet<>(ids), clientId, lawyerId))
+        .thenReturn(List.of(first, second));
 
     CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, ids, null, null, null);
     InvoiceResponse response = service.create(request, lawyerId);
 
-    assertThat(response.lines()).hasSize(1);
-    assertThat(response.total()).isEqualByComparingTo("2000.00");
+    assertThat(response.lines()).hasSize(2);
+    assertThat(response.total()).isEqualByComparingTo("3000.00");
+  }
+
+  @Test
+  void create_throwsWhenSelectedEntryIsNotBillable() {
+    when(clientService.requireOwnedClient(clientId, lawyerId)).thenReturn(client());
+    TimeEntry valid = entry(60, new BigDecimal("2000"));
+    TimeEntry alreadyInvoiced = entry(60, new BigDecimal("2000"));
+    alreadyInvoiced.setInvoiceId(UUID.randomUUID());
+    List<UUID> ids = List.of(valid.getId(), alreadyInvoiced.getId());
+    when(timeEntryRepository.lockBillableByIds(new LinkedHashSet<>(ids), clientId, lawyerId))
+        .thenReturn(List.of(valid));
+
+    CreateInvoiceRequest request = new CreateInvoiceRequest(clientId, null, ids, null, null, null);
+    assertThatThrownBy(() -> service.create(request, lawyerId))
+        .isInstanceOf(InvoiceStateException.class);
+    verify(invoiceRepository, never()).saveAndFlush(any());
   }
 
   @Test

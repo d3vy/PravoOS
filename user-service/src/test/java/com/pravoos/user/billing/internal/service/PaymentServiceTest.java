@@ -119,6 +119,55 @@ class PaymentServiceTest {
   }
 
   @Test
+  void startCheckout_reusesPendingCheckoutInsteadOfChargingTwice() {
+    UUID userId = UUID.randomUUID();
+    Plan plan = plan("pro", 99000);
+    when(planRepository.findByCode("pro")).thenReturn(Optional.of(plan));
+    Payment pending = new Payment();
+    pending.setUserId(userId);
+    pending.setPlanId(plan.getId());
+    pending.setProviderPaymentId("yk-existing");
+    pending.setAmountKopecks(99000);
+    pending.setStatus(PaymentStatus.PENDING);
+    pending.setConfirmationUrl("https://yookassa.ru/confirm/yk-existing");
+    when(paymentRepository.findByUserIdAndPlanIdAndStatusOrderByCreatedAtDesc(
+            userId, plan.getId(), PaymentStatus.PENDING))
+        .thenReturn(List.of(pending));
+
+    CheckoutResponse response = service.startCheckout(userId, "pro");
+
+    assertThat(response.confirmationUrl()).isEqualTo("https://yookassa.ru/confirm/yk-existing");
+    verify(yooKassaClient, never()).createPayment(any(), any(), anyLong(), any(), any());
+    verify(paymentRepository, never()).save(any());
+  }
+
+  @Test
+  void startCheckout_doesNotReusePendingCheckoutAfterAPriceChange() {
+    UUID userId = UUID.randomUUID();
+    Plan plan = plan("pro", 99000);
+    when(planRepository.findByCode("pro")).thenReturn(Optional.of(plan));
+    Payment stalePrice = new Payment();
+    stalePrice.setUserId(userId);
+    stalePrice.setPlanId(plan.getId());
+    stalePrice.setProviderPaymentId("yk-old");
+    stalePrice.setAmountKopecks(50000);
+    stalePrice.setStatus(PaymentStatus.PENDING);
+    stalePrice.setConfirmationUrl("https://yookassa.ru/confirm/yk-old");
+    when(paymentRepository.findByUserIdAndPlanIdAndStatusOrderByCreatedAtDesc(
+            userId, plan.getId(), PaymentStatus.PENDING))
+        .thenReturn(List.of(stalePrice));
+    when(yooKassaClient.createPayment(eq(userId), eq("pro"), eq(99000L), any(), any()))
+        .thenReturn(
+            new YooKassaPayment(
+                "yk-new", "pending", false, 99000, "https://yookassa.ru/confirm/yk-new"));
+
+    CheckoutResponse response = service.startCheckout(userId, "pro");
+
+    assertThat(response.confirmationUrl()).isEqualTo("https://yookassa.ru/confirm/yk-new");
+    verify(paymentRepository).save(any());
+  }
+
+  @Test
   void handleNotification_fetchesPaymentAndDelegatesToApplier() {
     YooKassaPayment snapshot = new YooKassaPayment("yk-1", "succeeded", true, 1000, null);
     when(yooKassaClient.getPayment("yk-1")).thenReturn(snapshot);

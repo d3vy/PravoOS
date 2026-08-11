@@ -8,6 +8,7 @@ import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientConsentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.config.PersonalDataConsentProperties;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
@@ -24,6 +25,7 @@ class ClientServiceOwnershipTest {
   @Mock private ClientRepository clientRepository;
   @Mock private ClientConsentRepository clientConsentRepository;
   @Mock private CaseRepository caseRepository;
+  @Mock private InvoiceRepository invoiceRepository;
   @Mock private CaseService caseService;
   @Mock private UserServiceClient userServiceClient;
   @Mock private PersonalDataConsentProperties consentProperties;
@@ -33,6 +35,7 @@ class ClientServiceOwnershipTest {
         clientRepository,
         clientConsentRepository,
         caseRepository,
+        invoiceRepository,
         caseService,
         userServiceClient,
         consentProperties);

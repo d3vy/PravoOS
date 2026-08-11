@@ -22,8 +22,10 @@ import com.pravoos.ai.shared.util.PageRequests;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -37,7 +39,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class InvoiceService {
 
   private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
-  private static final int NUMBER_RETRY_ATTEMPTS = 5;
 
   private final InvoiceRepository invoiceRepository;
   private final TimeEntryRepository timeEntryRepository;
@@ -185,26 +186,48 @@ public class InvoiceService {
   private List<TimeEntry> resolveBillableEntries(CreateInvoiceRequest request, UUID lawyerId) {
     UUID clientId = request.clientId();
     if (request.timeEntryIds() != null && !request.timeEntryIds().isEmpty()) {
-      return timeEntryRepository.lockBillableByIds(request.timeEntryIds(), lawyerId, clientId);
+      Set<UUID> requestedIds = new LinkedHashSet<>(request.timeEntryIds());
+      List<TimeEntry> resolved =
+          timeEntryRepository.lockBillableByIds(requestedIds, clientId, lawyerId);
+      requireAllEntriesResolved(requestedIds, resolved, lawyerId);
+      return resolved;
     }
     return request.caseId() == null
-        ? timeEntryRepository.lockBillableForClient(clientId)
-        : timeEntryRepository.lockBillableForClientAndCase(clientId, request.caseId());
+        ? timeEntryRepository.lockBillableForClient(clientId, lawyerId)
+        : timeEntryRepository.lockBillableForClientAndCase(clientId, request.caseId(), lawyerId);
+  }
+
+  private void requireAllEntriesResolved(
+      Set<UUID> requestedIds, List<TimeEntry> resolved, UUID lawyerId) {
+    if (resolved.size() == requestedIds.size()) {
+      return;
+    }
+    Set<UUID> resolvedIds = resolved.stream().map(TimeEntry::getId).collect(Collectors.toSet());
+    List<UUID> missing = requestedIds.stream().filter(id -> !resolvedIds.contains(id)).toList();
+    log.warn(
+        "Invoice creation refused for lawyer {}: {} selected time entry(-ies) are not billable "
+            + "for this client (already invoiced, non-billable, running or foreign): {}",
+        lawyerId,
+        missing.size(),
+        missing);
+    throw new InvoiceStateException(
+        "Часть выбранных записей времени нельзя включить в счёт: они уже выставлены, "
+            + "не подлежат оплате, ещё идут или принадлежат другому клиенту");
   }
 
   private Invoice persistWithUniqueNumber(Invoice invoice, UUID lawyerId) {
-    int year = invoice.getIssueDate().getYear();
-    String number = invoiceNumberGenerator.next(lawyerId, year);
-    for (int attempt = 0; attempt < NUMBER_RETRY_ATTEMPTS; attempt++) {
-      invoice.setNumber(number);
-      try {
-        return invoiceRepository.saveAndFlush(invoice);
-      } catch (DataIntegrityViolationException ex) {
-        log.warn("Invoice number {} collided for lawyer {}, retrying", number, lawyerId);
-        number = invoiceNumberGenerator.bump(number);
-      }
+    String number = invoiceNumberGenerator.next(lawyerId, invoice.getIssueDate().getYear());
+    invoice.setNumber(number);
+    try {
+      return invoiceRepository.saveAndFlush(invoice);
+    } catch (DataIntegrityViolationException ex) {
+      log.warn(
+          "Invoice number {} collided for lawyer {} — concurrent invoice creation",
+          number,
+          lawyerId);
+      throw new InvoiceStateException(
+          "Номер счёта был занят параллельно созданным счётом — повторите попытку");
     }
-    throw new InvoiceStateException("Could not allocate a unique invoice number");
   }
 
   private Invoice requireOwnedInvoice(UUID invoiceId, UUID lawyerId) {

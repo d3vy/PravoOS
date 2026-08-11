@@ -9,6 +9,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.InvoicePaymentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.exception.InvoiceStateException;
+import com.pravoos.ai.shared.model.enums.InvoicePaymentStatus;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,7 +18,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class InvoicePaymentService {
@@ -41,7 +41,6 @@ public class InvoicePaymentService {
     this.invoicePaymentWriter = invoicePaymentWriter;
   }
 
-  @Transactional
   public InvoicePaymentResponse createPayment(UUID invoiceId, List<UUID> clientIds) {
     Invoice invoice = requireClientInvoice(invoiceId, clientIds);
     if (invoice.getStatus() != InvoiceStatus.ISSUED) {
@@ -50,13 +49,22 @@ public class InvoicePaymentService {
 
     long amountKopecks =
         invoice.getTotal().multiply(KOPECKS_IN_RUBLE).setScale(0, RoundingMode.HALF_UP).longValue();
+
+    InvoicePayment reusable = findReusablePending(invoiceId, amountKopecks);
+    if (reusable != null) {
+      log.info(
+          "Reusing pending payment {} for invoice {} instead of creating a second one",
+          reusable.getProviderPaymentId(),
+          invoiceId);
+      return new InvoicePaymentResponse(invoiceId, reusable.getConfirmationUrl());
+    }
+
     String description = "Оплата счёта № " + invoice.getNumber();
     YooKassaInvoicePayment payment =
         yooKassaInvoiceClient.createPayment(
             invoiceId, amountKopecks, description, UUID.randomUUID().toString());
 
-    invoicePaymentRepository.save(
-        new InvoicePayment(invoiceId, payment.id(), amountKopecks, payment.confirmationUrl()));
+    invoicePaymentWriter.savePending(invoiceId, payment, amountKopecks);
     log.info(
         "Payment {} created for invoice {} ({} kopecks)", payment.id(), invoiceId, amountKopecks);
     return new InvoicePaymentResponse(invoiceId, payment.confirmationUrl());
@@ -68,6 +76,16 @@ public class InvoicePaymentService {
     }
     YooKassaInvoicePayment snapshot = yooKassaInvoiceClient.getPayment(providerPaymentId);
     invoicePaymentWriter.applySnapshot(providerPaymentId, snapshot);
+  }
+
+  private InvoicePayment findReusablePending(UUID invoiceId, long amountKopecks) {
+    return invoicePaymentRepository
+        .findByInvoiceIdAndStatusOrderByCreatedAtDesc(invoiceId, InvoicePaymentStatus.PENDING)
+        .stream()
+        .filter(payment -> payment.getAmountKopecks() == amountKopecks)
+        .filter(payment -> payment.getConfirmationUrl() != null)
+        .findFirst()
+        .orElse(null);
   }
 
   private Invoice requireClientInvoice(UUID invoiceId, List<UUID> clientIds) {

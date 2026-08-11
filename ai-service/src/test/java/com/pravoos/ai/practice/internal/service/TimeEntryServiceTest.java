@@ -191,6 +191,35 @@ class TimeEntryServiceTest {
     assertThat(response.amount()).isEqualByComparingTo("1250.00");
   }
 
+  @Test
+  void stopTimer_capsForgottenTimerAtOneDay() {
+    when(caseService.requireVisibleCase(caseId, lawyerId, List.of())).thenReturn(caseEntity());
+    TimeEntry running = entry(0, new BigDecimal("3000"), true, null, true);
+    running.setStartedAt(Instant.now().minus(9, ChronoUnit.DAYS));
+    when(timeEntryRepository.findByLawyerIdAndRunningTrue(lawyerId))
+        .thenReturn(Optional.of(running));
+
+    TimeEntryResponse response = service.stopTimer(caseId, lawyerId, List.of());
+
+    assertThat(response.minutes()).isEqualTo(1440);
+  }
+
+  @Test
+  void update_fallsBackToCaseRateWhenNoRateSubmitted() {
+    when(caseService.requireVisibleCase(caseId, lawyerId, List.of()))
+        .thenReturn(caseEntity(new BigDecimal("4000")));
+    TimeEntry existing = entry(60, new BigDecimal("3000"), true, null, false);
+    when(timeEntryRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+
+    UpdateTimeEntryRequest request =
+        new UpdateTimeEntryRequest(
+            "Правка описания", LocalDate.of(2026, 7, 1), 60, BigDecimal.ZERO, true);
+    TimeEntryResponse response =
+        service.update(caseId, existing.getId(), request, lawyerId, List.of());
+
+    assertThat(response.hourlyRate()).isEqualByComparingTo("4000.00");
+  }
+
   private Case caseEntity() {
     return caseEntity(null);
   }

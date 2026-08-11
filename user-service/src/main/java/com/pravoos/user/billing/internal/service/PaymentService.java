@@ -54,6 +54,16 @@ public class PaymentService {
           "Бесплатный тариф не требует оплаты", HttpStatus.BAD_REQUEST, "PLAN_NOT_PAYABLE");
     }
 
+    Payment reusable = findReusablePending(userId, plan);
+    if (reusable != null) {
+      log.info(
+          "Reusing pending payment {} for user {} on plan {} instead of creating a second one",
+          reusable.getProviderPaymentId(),
+          userId,
+          planCode);
+      return new CheckoutResponse(reusable.getId(), reusable.getConfirmationUrl());
+    }
+
     YooKassaPayment created =
         yooKassaClient.createPayment(
             userId,
@@ -74,6 +84,17 @@ public class PaymentService {
     log.info(
         "Checkout started for user {} on plan {} (payment {})", userId, planCode, created.id());
     return new CheckoutResponse(payment.getId(), created.confirmationUrl());
+  }
+
+  private Payment findReusablePending(UUID userId, Plan plan) {
+    return paymentRepository
+        .findByUserIdAndPlanIdAndStatusOrderByCreatedAtDesc(
+            userId, plan.getId(), PaymentStatus.PENDING)
+        .stream()
+        .filter(payment -> payment.getAmountKopecks() == plan.getPriceKopecks())
+        .filter(payment -> payment.getConfirmationUrl() != null)
+        .findFirst()
+        .orElse(null);
   }
 
   public void handleNotification(String providerPaymentId) {

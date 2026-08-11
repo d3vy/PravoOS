@@ -22,28 +22,33 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, UUID> {
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
-      "SELECT t FROM TimeEntry t WHERE t.clientId = :clientId "
+      "SELECT t FROM TimeEntry t WHERE t.clientId = :clientId AND t.lawyerId = :lawyerId "
           + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "
           + "ORDER BY t.activityDate ASC")
-  List<TimeEntry> lockBillableForClient(@Param("clientId") UUID clientId);
+  List<TimeEntry> lockBillableForClient(
+      @Param("clientId") UUID clientId, @Param("lawyerId") UUID lawyerId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
       "SELECT t FROM TimeEntry t WHERE t.clientId = :clientId AND t.caseId = :caseId "
+          + "AND t.lawyerId = :lawyerId "
           + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "
           + "ORDER BY t.activityDate ASC")
   List<TimeEntry> lockBillableForClientAndCase(
-      @Param("clientId") UUID clientId, @Param("caseId") UUID caseId);
+      @Param("clientId") UUID clientId,
+      @Param("caseId") UUID caseId,
+      @Param("lawyerId") UUID lawyerId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
-      "SELECT t FROM TimeEntry t WHERE t.id IN :ids AND t.lawyerId = :lawyerId AND t.clientId = :clientId "
+      "SELECT t FROM TimeEntry t WHERE t.id IN :ids AND t.clientId = :clientId "
+          + "AND t.lawyerId = :lawyerId "
           + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "
           + "ORDER BY t.activityDate ASC")
   List<TimeEntry> lockBillableByIds(
       @Param("ids") Collection<UUID> ids,
-      @Param("lawyerId") UUID lawyerId,
-      @Param("clientId") UUID clientId);
+      @Param("clientId") UUID clientId,
+      @Param("lawyerId") UUID lawyerId);
 
   @Modifying
   @Query("UPDATE TimeEntry t SET t.invoiceId = null WHERE t.invoiceId = :invoiceId")
