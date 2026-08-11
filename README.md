@@ -238,7 +238,7 @@ cp .env.example .env && nano .env
 git pull && ./scripts/deploy.sh
 ```
 
-Бэкапы: `scripts/backup.sh` (pg_dumpall + mongodump → GPG AES-256 → Telegram, crontab 02:00).
+Бэкапы: `scripts/backup.sh` (pg_dumpall + mongodump → GPG AES-256 → `backups/` на сервере, crontab 02:00, хранение 30 дней). Внешнего отправителя нет — забирать вручную.
 
 ### CI/CD
 

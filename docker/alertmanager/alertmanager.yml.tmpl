@@ -8,13 +8,13 @@ route:
 receivers:
   - name: telegram
     telegram_configs:
-      - bot_token: "${TELEGRAM_BOT_TOKEN}"
-        chat_id: ${TELEGRAM_ALERTS_CHAT_ID_1}
+      - bot_token: "__TELEGRAM_BOT_TOKEN__"
+        chat_id: __TELEGRAM_ALERTS_CHAT_ID_1__
         parse_mode: "HTML"
         send_resolved: true
         message: "{{ range .Alerts }}<b>{{ .Labels.severity }}</b>: {{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}"
-      - bot_token: "${TELEGRAM_BOT_TOKEN}"
-        chat_id: ${TELEGRAM_ALERTS_CHAT_ID_2}
+      - bot_token: "__TELEGRAM_BOT_TOKEN__"
+        chat_id: __TELEGRAM_ALERTS_CHAT_ID_2__
         parse_mode: "HTML"
         send_resolved: true
         message: "{{ range .Alerts }}<b>{{ .Labels.severity }}</b>: {{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}"

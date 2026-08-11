@@ -453,15 +453,23 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.28.0
     container_name: pravoos-alertmanager
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
-      - "--config.expand-env=true"
+      - |
+        set -e
+        sed -e "s|__TELEGRAM_BOT_TOKEN__|$${TELEGRAM_BOT_TOKEN}|g" \
+            -e "s|__TELEGRAM_ALERTS_CHAT_ID_1__|$${TELEGRAM_ALERTS_CHAT_ID_1}|g" \
+            -e "s|__TELEGRAM_ALERTS_CHAT_ID_2__|$${TELEGRAM_ALERTS_CHAT_ID_2}|g" \
+            /etc/alertmanager/alertmanager.yml.tmpl > /tmp/alertmanager.yml
+        exec /bin/alertmanager \
+          --config.file=/tmp/alertmanager.yml \
+          --storage.path=/alertmanager
     environment:
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_ALERTS_CHAT_ID_1: ${TELEGRAM_ALERTS_CHAT_ID_1}
-      TELEGRAM_ALERTS_CHAT_ID_2: ${TELEGRAM_ALERTS_CHAT_ID_2}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
+      TELEGRAM_ALERTS_CHAT_ID_1: ${TELEGRAM_ALERTS_CHAT_ID_1:?TELEGRAM_ALERTS_CHAT_ID_1 is required}
+      TELEGRAM_ALERTS_CHAT_ID_2: ${TELEGRAM_ALERTS_CHAT_ID_2:?TELEGRAM_ALERTS_CHAT_ID_2 is required}
     volumes:
-      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./docker/alertmanager/alertmanager.yml.tmpl:/etc/alertmanager/alertmanager.yml.tmpl:ro
       - alertmanager_data:/alertmanager
     ports:
       - "9093:9093"
