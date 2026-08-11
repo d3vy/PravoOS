@@ -174,6 +174,30 @@ class RemoteLlmClientTest {
   }
 
   @Test
+  void streamCompleteFailsLoudlyWhenUpstreamReportsAnErrorMidStream() {
+    String sse =
+        "event: token\ndata: {\"token\":\"Начало отв\"}\n\n"
+            + "event: error\ndata: {\"message\":\"OpenAI chat stream failed with status 500\"}\n\n";
+    server.createContext(
+        "/internal/llm/stream",
+        exchange -> {
+          byte[] bytes = sse.getBytes(StandardCharsets.UTF_8);
+          exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
+          exchange.sendResponseHeaders(200, bytes.length);
+          try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+          }
+        });
+
+    List<String> tokens = new ArrayList<>();
+
+    assertThatThrownBy(() -> client.streamComplete("system", List.of(), "hi", tokens::add))
+        .isInstanceOf(LlmException.class)
+        .hasMessageContaining("status 500");
+    assertThat(tokens).containsExactly("Начало отв");
+  }
+
+  @Test
   void streamCompleteThrowsWhenServerReturnsErrorStatus() {
     respond("/internal/llm/stream", 500, "");
 

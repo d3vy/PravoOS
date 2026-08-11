@@ -71,7 +71,7 @@ jwt:
 llm:
   service:
     base-url: ${LLM_SERVICE_BASE_URL:http://localhost:8084}
-    internal-secret: ${INTERNAL_SERVICE_SECRET}
+    internal-secret: ${INTERNAL_SECRET_AI_TO_LLM}
     embedding-dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:1536}
   quota:
     daily-requests: ${LLM_DAILY_QUOTA:200}
@@ -186,6 +186,7 @@ mailbox:
     cron: ${MAILBOX_SYNC_CRON:0 */10 * * * *}
     max-messages-per-run: ${MAILBOX_SYNC_MAX_MESSAGES:100}
     max-body-length: ${MAILBOX_SYNC_MAX_BODY_LENGTH:100000}
+    max-auto-link-backlog: ${MAILBOX_SYNC_MAX_AUTO_LINK_BACKLOG:500}
   attachments:
     max-per-message: ${MAILBOX_ATTACHMENT_MAX_PER_MESSAGE:10}
     max-bytes: ${MAILBOX_ATTACHMENT_MAX_BYTES:26214400}
@@ -255,7 +256,7 @@ management:
 
 user-service:
   base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
-  internal-secret: ${INTERNAL_SERVICE_SECRET:}
+  internal-secret: ${INTERNAL_SECRET_AI_SERVICE}
 
 logging:
   config: classpath:logback-spring.xml

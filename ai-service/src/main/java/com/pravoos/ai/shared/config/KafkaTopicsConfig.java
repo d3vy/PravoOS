@@ -50,6 +50,11 @@ public class KafkaTopicsConfig {
   }
 
   @Bean
+  public NewTopic mailboxSyncPausedTopic() {
+    return topic("mailbox.sync.paused");
+  }
+
+  @Bean
   public NewTopic lawyerDeletedDltTopic() {
     return topic("lawyer.deleted.DLT");
   }

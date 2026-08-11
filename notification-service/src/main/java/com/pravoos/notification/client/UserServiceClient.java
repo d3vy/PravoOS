@@ -1,6 +1,7 @@
 package com.pravoos.notification.client;
 
 import com.pravoos.cloud.DiscoveryAwareRestClients;
+import com.pravoos.common.security.internal.InternalCallerHeaders;
 import com.pravoos.notification.config.UserServiceProperties;
 import java.time.Duration;
 import java.util.List;
@@ -22,7 +23,7 @@ import org.springframework.web.client.RestClient;
 public class UserServiceClient {
 
   private static final Logger log = LoggerFactory.getLogger(UserServiceClient.class);
-  private static final String INTERNAL_SECRET_HEADER = "X-Internal-Secret";
+  private static final String CALLER_NAME = "notification-service";
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
 
@@ -46,7 +47,8 @@ public class UserServiceClient {
     requestFactory.setReadTimeout(READ_TIMEOUT);
     return DiscoveryAwareRestClients.builderFor(properties.baseUrl(), loadBalancedRestClientBuilder)
         .baseUrl(properties.baseUrl())
-        .defaultHeader(INTERNAL_SECRET_HEADER, properties.internalSecret())
+        .defaultHeader(InternalCallerHeaders.CALLER, CALLER_NAME)
+        .defaultHeader(InternalCallerHeaders.SECRET, properties.internalSecret())
         .requestFactory(requestFactory)
         .build();
   }

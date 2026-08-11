@@ -1,7 +1,7 @@
 package com.pravoos.llm;
 
+import com.pravoos.common.security.internal.InternalCallerProperties;
 import com.pravoos.common.web.RequestIdFilter;
-import com.pravoos.llm.config.InternalSecretProperties;
 import com.pravoos.llm.config.OpenAiProperties;
 import com.pravoos.llm.config.PiiRedactionProperties;
 import org.springframework.boot.SpringApplication;
@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableConfigurationProperties({
   OpenAiProperties.class,
-  InternalSecretProperties.class,
+  InternalCallerProperties.class,
   PiiRedactionProperties.class
 })
 public class LlmServiceApplication {

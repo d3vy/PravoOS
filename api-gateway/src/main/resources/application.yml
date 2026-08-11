@@ -34,6 +34,16 @@ spring:
                 redis-rate-limiter.replenishRate: ${WEBHOOK_RATE_REPLENISH:5}
                 redis-rate-limiter.burstCapacity: ${WEBHOOK_RATE_BURST:20}
                 key-resolver: "#{@ipKeyResolver}"
+        - id: ai-service-invoice-webhook
+          uri: ${AI_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/ai/billing/invoice-webhook
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${WEBHOOK_RATE_REPLENISH:5}
+                redis-rate-limiter.burstCapacity: ${WEBHOOK_RATE_BURST:20}
+                key-resolver: "#{@ipKeyResolver}"
         - id: user-service-admin
           uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:

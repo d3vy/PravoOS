@@ -110,7 +110,20 @@ test-lawyer:
   phone: ${TEST_LAWYER_PHONE:+70000000000}
 
 internal:
-  secret: ${INTERNAL_SERVICE_SECRET}
+  callers:
+    ai-service:
+      secret: ${INTERNAL_SECRET_AI_SERVICE:}
+      paths:
+        - /internal/org/
+        - /internal/portal-invites
+        - /internal/users/digest-preferences
+    notification-service:
+      secret: ${INTERNAL_SECRET_NOTIFICATION_SERVICE:}
+      paths:
+        - /internal/applications/
+        - /internal/telegram/
+        - /internal/notifications/
+        - /internal/push/
 
 telegram:
   bot-username: ${TELEGRAM_BOT_USERNAME:}

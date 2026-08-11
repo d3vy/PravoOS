@@ -6,6 +6,7 @@ import com.pravoos.ai.shared.exception.DigestPreferenceCheckException;
 import com.pravoos.ai.shared.exception.OrgMembershipCheckException;
 import com.pravoos.ai.shared.exception.PortalInviteException;
 import com.pravoos.cloud.DiscoveryAwareRestClients;
+import com.pravoos.common.security.internal.InternalCallerHeaders;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -22,11 +23,11 @@ import org.springframework.web.client.RestClientException;
 public class UserServiceClient {
 
   private static final Logger log = LoggerFactory.getLogger(UserServiceClient.class);
+  private static final String CALLER_NAME = "ai-service";
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
 
   private final RestClient restClient;
-  private final String internalSecret;
 
   public UserServiceClient(
       UserServiceProperties properties,
@@ -37,9 +38,10 @@ public class UserServiceClient {
     this.restClient =
         DiscoveryAwareRestClients.builderFor(properties.baseUrl(), loadBalancedRestClientBuilder)
             .baseUrl(properties.baseUrl())
+            .defaultHeader(InternalCallerHeaders.CALLER, CALLER_NAME)
+            .defaultHeader(InternalCallerHeaders.SECRET, properties.internalSecret())
             .requestFactory(requestFactory)
             .build();
-    this.internalSecret = properties.internalSecret();
   }
 
   public boolean isOrgMember(UUID orgId, UUID userId) {
@@ -48,7 +50,6 @@ public class UserServiceClient {
           restClient
               .get()
               .uri("/internal/org/{orgId}/members/{userId}", orgId, userId)
-              .header("X-Internal-Secret", internalSecret)
               .retrieve()
               .body(OrgMembershipCheckResponse.class);
       return response != null && response.member();
@@ -63,7 +64,6 @@ public class UserServiceClient {
       restClient
           .post()
           .uri("/internal/portal-invites")
-          .header("X-Internal-Secret", internalSecret)
           .contentType(MediaType.APPLICATION_JSON)
           .body(new CreatePortalInviteRequest(clientId, lawyerId, email, clientName))
           .retrieve()
@@ -84,7 +84,6 @@ public class UserServiceClient {
                       .path("/internal/portal-invites/status")
                       .queryParam("clientId", clientId)
                       .build())
-          .header("X-Internal-Secret", internalSecret)
           .retrieve()
           .body(PortalInviteStatusResponse.class);
     } catch (RestClientException e) {
@@ -103,7 +102,6 @@ public class UserServiceClient {
                       .path("/internal/portal-invites")
                       .queryParam("clientId", clientId)
                       .build())
-          .header("X-Internal-Secret", internalSecret)
           .retrieve()
           .toBodilessEntity();
     } catch (RestClientException e) {
@@ -118,7 +116,6 @@ public class UserServiceClient {
           restClient
               .post()
               .uri("/internal/users/digest-preferences")
-              .header("X-Internal-Secret", internalSecret)
               .contentType(MediaType.APPLICATION_JSON)
               .body(new DigestPreferenceRequest(lawyerIds))
               .retrieve()

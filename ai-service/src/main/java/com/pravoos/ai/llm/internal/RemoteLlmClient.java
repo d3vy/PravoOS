@@ -11,6 +11,7 @@ import com.pravoos.ai.shared.config.LlmServiceProperties;
 import com.pravoos.ai.shared.exception.LlmException;
 import com.pravoos.ai.shared.security.AiProcessingGuard;
 import com.pravoos.cloud.DiscoveryAwareRestClients;
+import com.pravoos.common.security.internal.InternalCallerHeaders;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,11 +36,10 @@ public class RemoteLlmClient implements LlmClient {
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(180);
   private static final Duration GUARD_READ_TIMEOUT = Duration.ofSeconds(12);
-  private static final String SECRET_HEADER = "X-Internal-Secret";
+  private static final String CALLER_NAME = "ai-service";
 
   private final RestClient restClient;
   private final RestClient guardRestClient;
-  private final String internalSecret;
   private final ObjectMapper objectMapper;
   private final AiProcessingGuard aiProcessingGuard;
 
@@ -49,21 +49,33 @@ public class RemoteLlmClient implements LlmClient {
       ObjectMapper objectMapper,
       AiProcessingGuard aiProcessingGuard) {
     this.restClient =
-        buildClient(properties.baseUrl(), READ_TIMEOUT, loadBalancedRestClientBuilder);
+        buildClient(
+            properties.baseUrl(),
+            READ_TIMEOUT,
+            properties.internalSecret(),
+            loadBalancedRestClientBuilder);
     this.guardRestClient =
-        buildClient(properties.baseUrl(), GUARD_READ_TIMEOUT, loadBalancedRestClientBuilder);
-    this.internalSecret = properties.internalSecret();
+        buildClient(
+            properties.baseUrl(),
+            GUARD_READ_TIMEOUT,
+            properties.internalSecret(),
+            loadBalancedRestClientBuilder);
     this.objectMapper = objectMapper;
     this.aiProcessingGuard = aiProcessingGuard;
   }
 
   private static RestClient buildClient(
-      String baseUrl, Duration readTimeout, RestClient.Builder loadBalancedBuilder) {
+      String baseUrl,
+      Duration readTimeout,
+      String internalSecret,
+      RestClient.Builder loadBalancedBuilder) {
     SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
     requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
     requestFactory.setReadTimeout(readTimeout);
     return DiscoveryAwareRestClients.builderFor(baseUrl, loadBalancedBuilder)
         .baseUrl(baseUrl)
+        .defaultHeader(InternalCallerHeaders.CALLER, CALLER_NAME)
+        .defaultHeader(InternalCallerHeaders.SECRET, internalSecret)
         .requestFactory(requestFactory)
         .build();
   }
@@ -82,7 +94,6 @@ public class RemoteLlmClient implements LlmClient {
           clientFor(options)
               .post()
               .uri("/internal/llm/complete")
-              .header(SECRET_HEADER, internalSecret)
               .contentType(MediaType.APPLICATION_JSON)
               .body(new CompleteRequest(systemPrompt, history, userMessage, options))
               .retrieve()
@@ -108,7 +119,6 @@ public class RemoteLlmClient implements LlmClient {
       return restClient
           .post()
           .uri("/internal/llm/stream")
-          .header(SECRET_HEADER, internalSecret)
           .contentType(MediaType.APPLICATION_JSON)
           .accept(MediaType.TEXT_EVENT_STREAM)
           .body(new CompleteRequest(systemPrompt, history, userMessage, LlmOptions.DEFAULT))
@@ -153,6 +163,10 @@ public class RemoteLlmClient implements LlmClient {
           data.append(line.substring("data:".length()).trim());
         }
       }
+      LlmUsage trailing = dispatchEvent(currentEvent, data.toString(), tokenConsumer);
+      if (trailing != null) {
+        usage = trailing;
+      }
     }
     return usage;
   }
@@ -172,6 +186,13 @@ public class RemoteLlmClient implements LlmClient {
     if ("usage".equals(event)) {
       return objectMapper.readValue(data, LlmUsage.class);
     }
+    if ("error".equals(event)) {
+      StreamError error = objectMapper.readValue(data, StreamError.class);
+      log.error("llm-service reported a stream failure: {}", error.message());
+      throw new LlmException(
+          "llm-service stream failed: "
+              + (error.message() == null ? "unknown error" : error.message()));
+    }
     return null;
   }
 
@@ -183,7 +204,6 @@ public class RemoteLlmClient implements LlmClient {
           restClient
               .post()
               .uri("/internal/llm/embed")
-              .header(SECRET_HEADER, internalSecret)
               .contentType(MediaType.APPLICATION_JSON)
               .body(new EmbedRequest(text))
               .retrieve()
@@ -206,7 +226,6 @@ public class RemoteLlmClient implements LlmClient {
           restClient
               .post()
               .uri("/internal/llm/embed-batch")
-              .header(SECRET_HEADER, internalSecret)
               .contentType(MediaType.APPLICATION_JSON)
               .body(new EmbedBatchRequest(texts))
               .retrieve()
@@ -237,4 +256,6 @@ public class RemoteLlmClient implements LlmClient {
   private record EmbedResponse(float[] embedding) {}
 
   private record StreamToken(String token) {}
+
+  private record StreamError(String message) {}
 }

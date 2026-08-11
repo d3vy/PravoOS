@@ -28,7 +28,11 @@ llm:
     acquire-timeout-ms: ${OPENAI_ACQUIRE_TIMEOUT_MS:2000}
 
 internal:
-  secret: ${INTERNAL_SERVICE_SECRET}
+  callers:
+    ai-service:
+      secret: ${INTERNAL_SECRET_AI_TO_LLM:}
+      paths:
+        - /internal/llm/
 
 springdoc:
   api-docs:
