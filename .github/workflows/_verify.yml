@@ -2,6 +2,10 @@ name: _verify
 
 # Reusable correctness gate shared by ci.yml (PRs) and release.yml (main).
 # Keeps the "what makes a build green" definition in exactly one place.
+#
+# Third-party actions are pinned to a commit SHA, never a tag: tags are mutable,
+# so a compromised action repository would otherwise execute in this runner.
+# Dependabot (github-actions ecosystem) bumps the SHAs and the trailing comment.
 on:
   workflow_call:
 
@@ -13,7 +17,7 @@ jobs:
     name: Backend — mvn verify (unit + IT + Modulith gate)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.github/actions/setup-backend
       - name: Spotless format check (fail-fast)
         run: mvn -B -ntp spotless:check
@@ -27,22 +31,60 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci --legacy-peer-deps
+      # --ignore-scripts blocks the npm lifecycle-script vector used by the
+      # Shai-Hulud worm family to harvest CI credentials on install. Verified:
+      # esbuild and rollup ship their binaries as platform optionalDependencies,
+      # so the build needs no postinstall step.
+      - run: npm ci --ignore-scripts --legacy-peer-deps
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      # Ships-to-users dependencies only: devDependencies never reach the browser.
+      # Fails on high/critical so a vulnerable prod dep cannot merge unnoticed.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      # Build-chain dependencies never reach the browser but do execute in CI and
+      # can tamper with the bundle, so critical findings there block the build too.
+      - name: Audit build-chain dependencies
+        run: npm audit --audit-level=critical
+
+  supply-chain:
+    name: Supply chain — Trivy dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # Backend has no other SCA gate: Dependabot opens PRs but cannot fail a
+      # build, so a known-vulnerable transitive Maven dependency would ship.
+      - name: Report HIGH findings (non-blocking)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH
+          ignore-unfixed: true
+          exit-code: "0"
+      - name: Fail on CRITICAL findings
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
 
   scripts:
     name: CICD scripts — shellcheck + unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Lint shell scripts

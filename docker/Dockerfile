@@ -1,4 +1,6 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
+# Base images are pinned by digest, not tag: a tag can be repointed at a
+# different image after review. Dependabot (docker ecosystem) bumps the digests.
+FROM maven:3.9-eclipse-temurin-21@sha256:c07f7ccfb8ca6c9fa29ee523f00afa7d2ca6132c92f8652c4aebb5ee3491f502 AS build
 WORKDIR /build
 COPY pom.xml .
 COPY pravoos-common/pom.xml pravoos-common/pom.xml
@@ -29,7 +31,9 @@ COPY ai-service/src ai-service/src
 COPY notification-service/src notification-service/src
 RUN mvn -B -ntp -q clean package -DskipTests
 
-FROM eclipse-temurin:21-jre-alpine AS user-service
+FROM eclipse-temurin:21-jre-alpine@sha256:3f08b13888f595cc49edabea7250ba69499ba25602b267da591720769400e08c AS jre-base
+
+FROM jre-base AS user-service
 RUN apk add --no-cache wget
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
@@ -39,7 +43,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD wget -qO- http://localhost:8081/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-FROM eclipse-temurin:21-jre-alpine AS llm-service
+FROM jre-base AS llm-service
 RUN apk add --no-cache wget
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring \
@@ -51,7 +55,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD wget -qO- http://localhost:8084/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-FROM eclipse-temurin:21-jre-alpine AS ai-service
+FROM jre-base AS ai-service
 RUN apk add --no-cache wget
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring \
@@ -63,7 +67,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD wget -qO- http://localhost:8082/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-FROM eclipse-temurin:21-jre-alpine AS api-gateway
+FROM jre-base AS api-gateway
 RUN apk add --no-cache wget
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
@@ -73,7 +77,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD wget -qO- http://localhost:8090/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-FROM eclipse-temurin:21-jre-alpine AS notification-service
+FROM jre-base AS notification-service
 RUN apk add --no-cache wget
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
@@ -83,7 +87,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD wget -qO- http://localhost:8083/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-FROM eclipse-temurin:21-jre-alpine AS discovery-server
+FROM jre-base AS discovery-server
 RUN apk add --no-cache wget
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
@@ -93,7 +97,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
     CMD wget -qO- http://localhost:8761/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-FROM eclipse-temurin:21-jre-alpine AS config-server
+FROM jre-base AS config-server
 RUN apk add --no-cache wget
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring

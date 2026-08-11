@@ -181,7 +181,9 @@ cd frontend && npm run dev
 | `OPENAI_API_KEY` | ключ OpenAI |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | первый администратор |
 | `TELEGRAM_BOT_TOKEN` | токен Telegram-бота |
-| `INTERNAL_SERVICE_SECRET` | секрет для `/internal/**` между сервисами |
+| `INTERNAL_SECRET_AI_SERVICE` | секрет для вызовов ai-service → user-service (`/internal/**`) |
+| `INTERNAL_SECRET_AI_TO_LLM` | секрет для вызовов ai-service → llm-service (`/internal/llm/**`) |
+| `INTERNAL_SECRET_NOTIFICATION_SERVICE` | секрет для вызовов notification-service → user-service (`/internal/**`) |
 | `REDIS_PASSWORD` | пароль Redis (обязателен в profile `docker`) |
 | `FILE_ENCRYPTION_KEY` | base64, ровно 32 байта — шифрование документов |
 | `RESEND_API_KEY` | отправка email |
