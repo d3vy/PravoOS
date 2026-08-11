@@ -2,7 +2,10 @@ package com.pravoos.ai;
 
 import com.pravoos.ai.shared.config.*;
 import com.pravoos.common.security.PiiCryptoProperties;
+import com.pravoos.common.web.ClientIpSanitizingFilter;
 import com.pravoos.common.web.RequestIdFilter;
+import com.pravoos.common.web.UtcTimestampModule;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
@@ -54,5 +57,17 @@ public class AiServiceApplication {
   @Bean
   public RequestIdFilter requestIdFilter() {
     return new RequestIdFilter();
+  }
+
+  @Bean
+  public UtcTimestampModule utcTimestampModule() {
+    return new UtcTimestampModule();
+  }
+
+  @Bean
+  public ClientIpSanitizingFilter clientIpSanitizingFilter(
+      @Value("${app.trusted-peers:" + ClientIpSanitizingFilter.DEFAULT_TRUSTED_PEERS + "}")
+          String trustedPeers) {
+    return new ClientIpSanitizingFilter(trustedPeers);
   }
 }

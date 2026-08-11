@@ -1,12 +1,15 @@
 package com.pravoos.user.identity.internal.config;
 
 import com.pravoos.common.security.JwtVerifier;
+import com.pravoos.common.security.internal.InternalCallerVerifier;
+import com.pravoos.common.web.internal.InternalCallerSecurityConfiguration;
+import com.pravoos.common.web.internal.InternalSecretFilter;
 import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.internal.security.JwtAuthenticationFilter;
-import com.pravoos.user.shared.security.InternalSecretFilter;
-import com.pravoos.user.shared.security.InternalSecretVerifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,22 +18,24 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Import(InternalCallerSecurityConfiguration.class)
 public class SecurityConfig {
 
   private static final int BCRYPT_STRENGTH = 12;
 
   private final TokenDenylistService tokenDenylistService;
-  private final InternalSecretVerifier internalSecretVerifier;
+  private final InternalCallerVerifier internalCallerVerifier;
 
   public SecurityConfig(
-      TokenDenylistService tokenDenylistService, InternalSecretVerifier internalSecretVerifier) {
+      TokenDenylistService tokenDenylistService, InternalCallerVerifier internalCallerVerifier) {
     this.tokenDenylistService = tokenDenylistService;
-    this.internalSecretVerifier = internalSecretVerifier;
+    this.internalCallerVerifier = internalCallerVerifier;
   }
 
   @Bean
@@ -44,6 +49,10 @@ public class SecurityConfig {
     return http.csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .exceptionHandling(
+            exceptions ->
+                exceptions.authenticationEntryPoint(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(
@@ -67,7 +76,7 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(
-            new InternalSecretFilter(internalSecretVerifier),
+            new InternalSecretFilter(internalCallerVerifier),
             UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(
             new JwtAuthenticationFilter(jwtVerifier, tokenDenylistService),

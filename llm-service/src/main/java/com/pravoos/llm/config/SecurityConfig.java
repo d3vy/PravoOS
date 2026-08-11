@@ -1,9 +1,11 @@
 package com.pravoos.llm.config;
 
-import com.pravoos.llm.security.InternalSecretFilter;
-import com.pravoos.llm.security.InternalSecretVerifier;
+import com.pravoos.common.security.internal.InternalCallerVerifier;
+import com.pravoos.common.web.internal.InternalCallerSecurityConfiguration;
+import com.pravoos.common.web.internal.InternalSecretFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -13,12 +15,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@Import(InternalCallerSecurityConfiguration.class)
 public class SecurityConfig {
 
-  private final InternalSecretVerifier internalSecretVerifier;
+  private final InternalCallerVerifier internalCallerVerifier;
 
-  public SecurityConfig(InternalSecretVerifier internalSecretVerifier) {
-    this.internalSecretVerifier = internalSecretVerifier;
+  public SecurityConfig(InternalCallerVerifier internalCallerVerifier) {
+    this.internalCallerVerifier = internalCallerVerifier;
   }
 
   @Bean
@@ -38,7 +41,7 @@ public class SecurityConfig {
                     .anyRequest()
                     .denyAll())
         .addFilterBefore(
-            new InternalSecretFilter(internalSecretVerifier),
+            new InternalSecretFilter(internalCallerVerifier),
             UsernamePasswordAuthenticationFilter.class)
         .build();
   }
