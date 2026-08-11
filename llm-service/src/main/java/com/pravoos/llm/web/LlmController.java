@@ -11,6 +11,7 @@ import com.pravoos.llm.web.dto.CompleteRequest;
 import com.pravoos.llm.web.dto.EmbedBatchRequest;
 import com.pravoos.llm.web.dto.EmbedRequest;
 import com.pravoos.llm.web.dto.EmbedResponse;
+import com.pravoos.llm.web.dto.StreamError;
 import com.pravoos.llm.web.dto.StreamToken;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -96,12 +97,27 @@ public class LlmController {
             piiRedactor.recordSession(session);
             emitter.send(SseEmitter.event().name("usage").data(usage, MediaType.APPLICATION_JSON));
             emitter.complete();
+          } catch (StreamClosedException e) {
+            log.info("Streaming completion aborted: client closed the connection");
+            emitter.complete();
           } catch (Exception e) {
             log.error("Streaming completion failed", e);
-            emitter.completeWithError(e);
+            signalStreamFailure(emitter, e);
           }
         });
     return emitter;
+  }
+
+  private void signalStreamFailure(SseEmitter emitter, Exception failure) {
+    try {
+      emitter.send(
+          SseEmitter.event()
+              .name("error")
+              .data(new StreamError(failure.getMessage()), MediaType.APPLICATION_JSON));
+      emitter.complete();
+    } catch (IOException | RuntimeException sendFailure) {
+      emitter.completeWithError(failure);
+    }
   }
 
   private void sendToken(SseEmitter emitter, String token) {

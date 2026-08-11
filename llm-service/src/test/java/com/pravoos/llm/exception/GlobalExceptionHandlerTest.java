@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.server.ResponseStatusException;
 
 class GlobalExceptionHandlerTest {
 
@@ -39,5 +40,26 @@ class GlobalExceptionHandlerTest {
 
     assertThat(problem.getStatus()).isEqualTo(503);
     assertThat(problem.getDetail()).isEqualTo("timeout");
+  }
+
+  @Test
+  void hidesUnexpectedFailureDetailsBehindErrorId() {
+    ProblemDetail problem =
+        handler.handleGeneral(new IllegalStateException("jdbc://user:secret@db/pravoos"));
+
+    assertThat(problem.getStatus()).isEqualTo(500);
+    assertThat(problem.getDetail()).isEqualTo("Внутренняя ошибка сервиса");
+    assertThat(problem.getProperties()).containsEntry("code", "INTERNAL_ERROR");
+    assertThat(problem.getProperties()).containsKey("errorId");
+  }
+
+  @Test
+  void keepsSpringRequestErrorStatusInsteadOfMaskingItAsInternal() {
+    ProblemDetail problem =
+        handler.handleGeneral(
+            new ResponseStatusException(HttpStatus.BAD_REQUEST, "userMessage is required"));
+
+    assertThat(problem.getStatus()).isEqualTo(400);
+    assertThat(problem.getDetail()).isEqualTo("userMessage is required");
   }
 }
