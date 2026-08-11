@@ -36,15 +36,16 @@ public class LlmReranker implements Reranker {
   }
 
   @Override
-  public List<ChunkCandidate> rerank(String query, List<ChunkCandidate> candidates, int topK) {
+  public RerankOutcome rerank(String query, List<ChunkCandidate> candidates, int topK) {
     if (candidates == null || candidates.isEmpty() || topK <= 0) {
-      return List.of();
+      return RerankOutcome.free(List.of());
     }
     if (candidates.size() <= 1) {
       return fallbackReranker.rerank(query, candidates, topK);
     }
 
     Map<Integer, Double> scoreByIndex;
+    long spentTokens;
     try {
       LlmResult result =
           llmClient.complete(
@@ -52,16 +53,19 @@ public class LlmReranker implements Reranker {
               List.of(),
               RerankPrompt.buildUserMessage(query, candidates, properties.maxCharsPerCandidate()),
               LlmOptions.rerank(properties.maxTokens(), RERANK_TEMPERATURE));
+      spentTokens = result.usage() == null ? 0L : result.usage().totalTokens();
       scoreByIndex = scoreParser.parse(result.content(), candidates.size());
     } catch (RuntimeException e) {
-      return onFailure(query, candidates, topK, "reranker call failed: " + e.getMessage());
+      return onFailure(query, candidates, topK, "reranker call failed: " + e.getMessage(), 0L);
     }
 
     if (scoreByIndex.isEmpty()) {
-      return onFailure(query, candidates, topK, "reranker returned no usable scores");
+      return onFailure(query, candidates, topK, "reranker returned no usable scores", spentTokens);
     }
 
-    return reorder(candidates, scoreByIndex).subList(0, Math.min(topK, candidates.size()));
+    return new RerankOutcome(
+        reorder(candidates, scoreByIndex).subList(0, Math.min(topK, candidates.size())),
+        spentTokens);
   }
 
   private List<ChunkCandidate> reorder(
@@ -79,12 +83,13 @@ public class LlmReranker implements Reranker {
         .toList();
   }
 
-  private List<ChunkCandidate> onFailure(
-      String query, List<ChunkCandidate> candidates, int topK, String reason) {
+  private RerankOutcome onFailure(
+      String query, List<ChunkCandidate> candidates, int topK, String reason, long spentTokens) {
     if (!properties.failOpen()) {
       throw new LlmException("Reranking failed: " + reason);
     }
     log.warn("Falling back to fusion order — {}", reason);
-    return fallbackReranker.rerank(query, candidates, topK);
+    return new RerankOutcome(
+        fallbackReranker.rerank(query, candidates, topK).candidates(), spentTokens);
   }
 }

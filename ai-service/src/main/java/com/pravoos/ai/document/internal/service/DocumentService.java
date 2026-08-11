@@ -34,6 +34,8 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -205,10 +207,17 @@ public class DocumentService {
     document.setFilePath(filePath.toString());
     document.setSizeBytes(content.length);
 
-    Document saved =
-        act == null
-            ? documentUploadWriter.persist(document)
-            : documentUploadWriter.persistLegislation(document, act, article);
+    Document saved;
+    try {
+      saved =
+          act == null
+              ? documentUploadWriter.persist(document)
+              : documentUploadWriter.persistLegislation(document, act, article);
+    } catch (RuntimeException ex) {
+      log.warn("Document persist failed — removing orphaned encrypted file {}", filePath);
+      deleteFile(filePath);
+      throw ex;
+    }
 
     log.info(
         "Document uploaded: '{}' ({}) by {}",
@@ -276,10 +285,7 @@ public class DocumentService {
     String filePath = document.getFilePath();
     documentChunkRepository.deleteByDocumentId(documentId);
     documentRepository.delete(document);
-
-    if (filePath != null) {
-      deleteFile(Paths.get(filePath));
-    }
+    deleteFileAfterCommit(filePath);
 
     log.info("Document deleted: {}", documentId);
   }
@@ -291,9 +297,7 @@ public class DocumentService {
       String filePath = document.getFilePath();
       documentChunkRepository.deleteByDocumentId(document.getId());
       documentRepository.delete(document);
-      if (filePath != null) {
-        deleteFile(Paths.get(filePath));
-      }
+      deleteFileAfterCommit(filePath);
     }
     log.info("Deleted {} document(s) of case {}", documents.size(), caseId);
   }
@@ -509,6 +513,24 @@ public class DocumentService {
     } catch (IOException e) {
       throw new DocumentProcessingException("Failed to store file: " + e.getMessage());
     }
+  }
+
+  private void deleteFileAfterCommit(String filePath) {
+    if (filePath == null) {
+      return;
+    }
+    Path path = Paths.get(filePath);
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      deleteFile(path);
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            deleteFile(path);
+          }
+        });
   }
 
   private void deleteFile(Path filePath) {

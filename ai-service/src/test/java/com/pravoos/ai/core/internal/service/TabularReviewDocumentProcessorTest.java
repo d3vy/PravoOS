@@ -200,7 +200,7 @@ class TabularReviewDocumentProcessorTest {
 
   private void stubRetrieval(DocumentChunkMatch... matches) {
     when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(DOCUMENT_ID)))
-        .thenReturn(new DocumentChunkMatches(List.of(matches), 128L));
+        .thenReturn(new DocumentChunkMatches(List.of(matches), 128L, 0L));
   }
 
   private void stubCompletion(String content) {

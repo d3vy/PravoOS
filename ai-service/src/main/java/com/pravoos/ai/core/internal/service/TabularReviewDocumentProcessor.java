@@ -82,7 +82,7 @@ public class TabularReviewDocumentProcessor {
   private List<Fragment> retrieveFragments(UUID documentId, List<String> questions, UUID lawyerId) {
     DocumentChunkMatches retrieved =
         documentRetrieval.retrieveInDocument(questions, properties.topKPerQuestion(), documentId);
-    llmQuotaService.recordTokenUsage(lawyerId, retrieved.embeddingTokens());
+    llmQuotaService.recordTokenUsage(lawyerId, retrieved.totalTokens());
 
     List<Fragment> fragments = new ArrayList<>();
     for (DocumentChunkMatch match : retrieved.matches()) {

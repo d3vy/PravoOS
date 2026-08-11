@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface Reranker {
 
-  List<ChunkCandidate> rerank(String query, List<ChunkCandidate> candidates, int topK);
+  RerankOutcome rerank(String query, List<ChunkCandidate> candidates, int topK);
 }

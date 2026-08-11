@@ -41,7 +41,8 @@ class LlmRerankerTest {
 
     List<ChunkCandidate> reranked =
         reranker(failOpen(true))
-            .rerank(QUERY, List.of(candidate(first), candidate(second), candidate(third)), 2);
+            .rerank(QUERY, List.of(candidate(first), candidate(second), candidate(third)), 2)
+            .candidates();
 
     assertThat(reranked).extracting(ChunkCandidate::chunkId).containsExactly(second, third);
     assertThat(reranked.get(0).score()).isEqualTo(9.0);
@@ -53,7 +54,8 @@ class LlmRerankerTest {
 
     List<ChunkCandidate> reranked =
         reranker(failOpen(true))
-            .rerank(QUERY, List.of(candidate(first), candidate(second), candidate(third)), 3);
+            .rerank(QUERY, List.of(candidate(first), candidate(second), candidate(third)), 3)
+            .candidates();
 
     assertThat(reranked).extracting(ChunkCandidate::chunkId).containsExactly(third, first, second);
   }
@@ -77,7 +79,8 @@ class LlmRerankerTest {
 
     List<ChunkCandidate> reranked =
         reranker(failOpen(true))
-            .rerank(QUERY, List.of(candidate(first), candidate(second), candidate(third)), 2);
+            .rerank(QUERY, List.of(candidate(first), candidate(second), candidate(third)), 2)
+            .candidates();
 
     assertThat(reranked).extracting(ChunkCandidate::chunkId).containsExactly(first, second);
   }
@@ -87,7 +90,9 @@ class LlmRerankerTest {
     stubResponse("не могу оценить фрагменты");
 
     List<ChunkCandidate> reranked =
-        reranker(failOpen(true)).rerank(QUERY, List.of(candidate(first), candidate(second)), 2);
+        reranker(failOpen(true))
+            .rerank(QUERY, List.of(candidate(first), candidate(second)), 2)
+            .candidates();
 
     assertThat(reranked).extracting(ChunkCandidate::chunkId).containsExactly(first, second);
   }
@@ -107,11 +112,29 @@ class LlmRerankerTest {
   void skipsModelCallForEmptyOrSingleCandidateList() {
     Reranker reranker = reranker(failOpen(true));
 
-    assertThat(reranker.rerank(QUERY, List.of(), 5)).isEmpty();
-    assertThat(reranker.rerank(QUERY, List.of(candidate(first)), 5))
+    assertThat(reranker.rerank(QUERY, List.of(), 5).candidates()).isEmpty();
+    assertThat(reranker.rerank(QUERY, List.of(candidate(first)), 5).candidates())
         .extracting(ChunkCandidate::chunkId)
         .containsExactly(first);
     verify(llmClient, never()).complete(anyString(), anyList(), anyString(), any(LlmOptions.class));
+  }
+
+  @Test
+  void reportsTokensSpentByTheRerankCall() {
+    when(llmClient.complete(anyString(), anyList(), anyString(), any(LlmOptions.class)))
+        .thenReturn(new LlmResult("[{\"id\":1,\"score\":9}]", new LlmUsage(120, 30, 150)));
+
+    RerankOutcome outcome =
+        reranker(failOpen(true)).rerank(QUERY, List.of(candidate(first), candidate(second)), 2);
+
+    assertThat(outcome.llmTokens()).isEqualTo(150L);
+  }
+
+  @Test
+  void reportsNoTokensWhenTheModelCallNeverHappened() {
+    RerankOutcome outcome = reranker(failOpen(true)).rerank(QUERY, List.of(candidate(first)), 5);
+
+    assertThat(outcome.llmTokens()).isZero();
   }
 
   private void stubResponse(String content) {

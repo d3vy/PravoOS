@@ -50,7 +50,9 @@ class HybridSearchServiceTest {
         .thenReturn(List.of(candidate(shared), candidate(lexicalOnly)));
 
     List<ChunkCandidate> results =
-        service(properties(true, true)).search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase());
+        service(properties(true, true))
+            .search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase())
+            .candidates();
 
     assertThat(results).extracting(ChunkCandidate::chunkId).containsExactly(shared, vectorOnly);
   }
@@ -62,7 +64,9 @@ class HybridSearchServiceTest {
         .thenReturn(List.of(candidate(lexicalOnly)));
 
     List<ChunkCandidate> results =
-        service(properties(true, true)).search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase());
+        service(properties(true, true))
+            .search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase())
+            .candidates();
 
     assertThat(results).extracting(ChunkCandidate::chunkId).containsExactly(lexicalOnly);
   }
@@ -73,7 +77,9 @@ class HybridSearchServiceTest {
         .thenReturn(List.of(candidate(vectorOnly)));
 
     List<ChunkCandidate> results =
-        service(properties(false, true)).search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase());
+        service(properties(false, true))
+            .search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase())
+            .candidates();
 
     assertThat(results).extracting(ChunkCandidate::chunkId).containsExactly(vectorOnly);
     verify(lexicalSearchRepository, never()).search(anyString(), anyInt(), any());
@@ -88,7 +94,9 @@ class HybridSearchServiceTest {
             new InvalidDataAccessResourceUsageException("column content_tsv does not exist"));
 
     List<ChunkCandidate> results =
-        service(properties(true, true)).search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase());
+        service(properties(true, true))
+            .search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase())
+            .candidates();
 
     assertThat(results).extracting(ChunkCandidate::chunkId).containsExactly(vectorOnly);
   }
@@ -121,7 +129,9 @@ class HybridSearchServiceTest {
   @Test
   void returnsEmptyForBlankQueryWithoutTouchingSources() {
     List<ChunkCandidate> results =
-        service(properties(true, true)).search("   ", TOP_K, ChunkSearchScope.knowledgeBase());
+        service(properties(true, true))
+            .search("   ", TOP_K, ChunkSearchScope.knowledgeBase())
+            .candidates();
 
     assertThat(results).isEmpty();
     verify(embeddingService, never()).embed(anyString());

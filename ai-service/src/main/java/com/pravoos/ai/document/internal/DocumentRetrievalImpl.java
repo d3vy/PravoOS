@@ -4,8 +4,10 @@ import com.pravoos.ai.document.api.DocumentChunkMatch;
 import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.RetrievedChunk;
+import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.document.internal.search.ChunkCandidate;
 import com.pravoos.ai.document.internal.search.ChunkSearchScope;
+import com.pravoos.ai.document.internal.search.HybridSearchResult;
 import com.pravoos.ai.document.internal.search.HybridSearchService;
 import com.pravoos.ai.document.internal.service.EmbeddingService;
 import com.pravoos.ai.llm.api.EmbeddingResult;
@@ -28,13 +30,13 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
   }
 
   @Override
-  public List<RetrievedChunk> retrieveKnowledgeBase(String query, int topK) {
+  public RetrievedChunks retrieveKnowledgeBase(String query, int topK) {
     return toRetrievedChunks(
         hybridSearchService.search(query, topK, ChunkSearchScope.knowledgeBase()));
   }
 
   @Override
-  public List<RetrievedChunk> retrieveForCase(String query, int topK, UUID caseId) {
+  public RetrievedChunks retrieveForCase(String query, int topK, UUID caseId) {
     return toRetrievedChunks(
         hybridSearchService.search(query, topK, ChunkSearchScope.forCase(caseId)));
   }
@@ -53,18 +55,21 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
     EmbeddingResult embedded = embeddingService.embedBatch(effectiveQueries);
     ChunkSearchScope scope = ChunkSearchScope.forDocument(documentId);
     Map<UUID, DocumentChunkMatch> bestByChunk = new LinkedHashMap<>();
+    long rerankTokens = 0L;
     for (int index = 0; index < effectiveQueries.size(); index++) {
-      List<ChunkCandidate> candidates =
+      HybridSearchResult result =
           hybridSearchService.search(
               effectiveQueries.get(index), embedded.embeddings().get(index), topK, scope);
-      for (ChunkCandidate candidate : candidates) {
+      rerankTokens += result.llmTokens();
+      for (ChunkCandidate candidate : result.candidates()) {
         bestByChunk.merge(
             candidate.chunkId(),
             toMatch(candidate),
             (existing, incoming) -> existing.score() >= incoming.score() ? existing : incoming);
       }
     }
-    return new DocumentChunkMatches(List.copyOf(bestByChunk.values()), embedded.totalTokens());
+    return new DocumentChunkMatches(
+        List.copyOf(bestByChunk.values()), embedded.totalTokens(), rerankTokens);
   }
 
   private DocumentChunkMatch toMatch(ChunkCandidate candidate) {
@@ -72,18 +77,20 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
         candidate.chunkId(), candidate.chunkIndex(), candidate.content(), candidate.score());
   }
 
-  private List<RetrievedChunk> toRetrievedChunks(List<ChunkCandidate> candidates) {
-    return candidates.stream()
-        .map(
-            candidate ->
-                new RetrievedChunk(
-                    candidate.content(),
-                    candidate.documentTitle(),
-                    candidate.score(),
-                    candidate.legislation(),
-                    candidate.actCanonical(),
-                    candidate.articleNumber(),
-                    candidate.editionDate()))
-        .toList();
+  private RetrievedChunks toRetrievedChunks(HybridSearchResult result) {
+    List<RetrievedChunk> chunks =
+        result.candidates().stream()
+            .map(
+                candidate ->
+                    new RetrievedChunk(
+                        candidate.content(),
+                        candidate.documentTitle(),
+                        candidate.score(),
+                        candidate.legislation(),
+                        candidate.actCanonical(),
+                        candidate.articleNumber(),
+                        candidate.editionDate()))
+            .toList();
+    return new RetrievedChunks(chunks, result.llmTokens());
   }
 }

@@ -232,7 +232,7 @@ public class RagService {
   public String buildWorkflowPrompt(String instruction, List<String> relevantChunks) {
     return fill(
         WORKFLOW_PROMPT_TEMPLATE,
-        Map.of("instruction", instruction, "context", joinContext(relevantChunks)));
+        Map.of("instruction", sanitizeChunk(instruction), "context", joinContext(relevantChunks)));
   }
 
   private String fill(String template, Map<String, String> values) {

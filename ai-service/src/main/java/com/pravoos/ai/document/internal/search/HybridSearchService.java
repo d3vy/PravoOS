@@ -36,17 +36,17 @@ public class HybridSearchService {
     this.properties = properties;
   }
 
-  public List<ChunkCandidate> search(String query, int topK, ChunkSearchScope scope) {
+  public HybridSearchResult search(String query, int topK, ChunkSearchScope scope) {
     if (query == null || query.isBlank() || topK <= 0) {
-      return List.of();
+      return HybridSearchResult.empty();
     }
     return search(query, embeddingService.embed(query), topK, scope);
   }
 
-  public List<ChunkCandidate> search(
+  public HybridSearchResult search(
       String query, float[] queryEmbedding, int topK, ChunkSearchScope scope) {
     if (query == null || query.isBlank() || queryEmbedding == null || topK <= 0) {
-      return List.of();
+      return HybridSearchResult.empty();
     }
 
     int candidateLimit = properties.candidateLimit(topK);
@@ -63,7 +63,7 @@ public class HybridSearchService {
             properties.legislationBoost());
 
     if (fused.isEmpty()) {
-      return List.of();
+      return HybridSearchResult.empty();
     }
 
     int rerankInputSize = Math.min(fused.size(), properties.rerankInputLimit(topK));
@@ -77,7 +77,8 @@ public class HybridSearchService {
         rerankInputSize,
         topK);
 
-    return reranker.rerank(query, rerankInput, topK);
+    RerankOutcome reranked = reranker.rerank(query, rerankInput, topK);
+    return new HybridSearchResult(reranked.candidates(), reranked.llmTokens());
   }
 
   private List<ChunkCandidate> lexicalCandidates(

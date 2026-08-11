@@ -18,27 +18,27 @@ class PassThroughRerankerTest {
 
   @Test
   void rerank_returnsEmptyList_whenCandidatesNull() {
-    assertThat(reranker.rerank("query", null, 5)).isEmpty();
+    assertThat(reranker.rerank("query", null, 5).candidates()).isEmpty();
   }
 
   @Test
   void rerank_returnsEmptyList_whenCandidatesEmpty() {
-    assertThat(reranker.rerank("query", List.of(), 5)).isEmpty();
+    assertThat(reranker.rerank("query", List.of(), 5).candidates()).isEmpty();
   }
 
   @Test
   void rerank_returnsEmptyList_whenTopKZeroOrNegative() {
     List<ChunkCandidate> candidates = List.of(candidate(1.0));
 
-    assertThat(reranker.rerank("query", candidates, 0)).isEmpty();
-    assertThat(reranker.rerank("query", candidates, -1)).isEmpty();
+    assertThat(reranker.rerank("query", candidates, 0).candidates()).isEmpty();
+    assertThat(reranker.rerank("query", candidates, -1).candidates()).isEmpty();
   }
 
   @Test
   void rerank_truncatesToTopK_preservingOriginalOrder() {
     List<ChunkCandidate> candidates = List.of(candidate(1.0), candidate(2.0), candidate(3.0));
 
-    List<ChunkCandidate> result = reranker.rerank("query", candidates, 2);
+    List<ChunkCandidate> result = reranker.rerank("query", candidates, 2).candidates();
 
     assertThat(result).containsExactly(candidates.get(0), candidates.get(1));
   }
@@ -47,7 +47,7 @@ class PassThroughRerankerTest {
   void rerank_returnsAllCandidates_whenTopKExceedsSize() {
     List<ChunkCandidate> candidates = List.of(candidate(1.0));
 
-    List<ChunkCandidate> result = reranker.rerank("query", candidates, 10);
+    List<ChunkCandidate> result = reranker.rerank("query", candidates, 10).candidates();
 
     assertThat(result).containsExactlyElementsOf(candidates);
   }
