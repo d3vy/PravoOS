@@ -107,7 +107,8 @@ public class LlmQuotaService {
   }
 
   public void recordTokenUsage(UUID lawyerId, long totalTokens) {
-    if (totalTokens <= 0 || planLimitsProvider.currentLimits().dailyTokens() <= 0) {
+    PlanLimits limits = planLimitsProvider.currentLimits();
+    if (totalTokens <= 0 || limits.quotaDisabled() || limits.dailyTokens() <= 0) {
       return;
     }
     try {
