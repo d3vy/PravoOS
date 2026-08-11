@@ -24,6 +24,7 @@ import com.pravoos.ai.document.api.DocumentChunkMatch;
 import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.DocumentSummaryView;
+import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
@@ -96,7 +97,8 @@ class DocumentChatContextTest {
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt())).thenReturn(List.of());
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
     when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
         .thenReturn(DocumentChunkMatches.empty());
     when(documentAccessGuard.requireVisible(eq(documentId), eq(lawyerId), anyList()))
@@ -128,7 +130,8 @@ class DocumentChatContextTest {
         .thenReturn(
             new DocumentChunkMatches(
                 List.of(new DocumentChunkMatch(UUID.randomUUID(), 3, "пункт 4.1 договора", 0.8)),
-                12L));
+                12L,
+                0L));
 
     var response =
         service.chat(

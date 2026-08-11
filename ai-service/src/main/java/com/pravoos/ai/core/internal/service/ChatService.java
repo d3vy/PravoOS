@@ -15,6 +15,7 @@ import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.document.api.RetrievedChunk;
+import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmMessage;
 import com.pravoos.ai.llm.api.LlmResult;
@@ -281,9 +282,11 @@ public class ChatService {
                 messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(
                     conversation.getId()));
 
-    List<RetrievedChunk> knowledgeBaseMatches =
+    RetrievedChunks knowledgeBaseRetrieval =
         documentRetrieval.retrieveKnowledgeBase(
             request.message(), documentProperties.topKResults());
+    llmQuotaService.recordTokenUsage(lawyerId, knowledgeBaseRetrieval.llmTokens());
+    List<RetrievedChunk> knowledgeBaseMatches = knowledgeBaseRetrieval.chunks();
     boolean legislationPresent =
         knowledgeBaseMatches.stream().anyMatch(RetrievedChunk::legislation);
 
@@ -299,11 +302,18 @@ public class ChatService {
           orgIds);
     }
 
-    List<RetrievedChunk> caseMatches =
+    CaseContext caseContext =
         request.caseId() == null
-            ? List.of()
+            ? null
+            : caseContextProvider.loadContext(request.caseId(), lawyerId, orgIds);
+
+    RetrievedChunks caseRetrieval =
+        caseContext == null
+            ? RetrievedChunks.empty()
             : documentRetrieval.retrieveForCase(
                 request.message(), documentProperties.topKResults(), request.caseId());
+    llmQuotaService.recordTokenUsage(lawyerId, caseRetrieval.llmTokens());
+    List<RetrievedChunk> caseMatches = caseRetrieval.chunks();
 
     List<String> relevantChunks = new ArrayList<>(attachedChunks);
     relevantChunks.addAll(caseMatches.stream().map(RetrievedChunk::content).toList());
@@ -320,12 +330,11 @@ public class ChatService {
         .forEach(label -> addSource(sources, label));
     attachedDocuments.stream().map(DocumentRef::title).forEach(title -> addSource(sources, title));
 
-    if (request.caseId() == null) {
+    if (caseContext == null) {
       return new PreparedContext(
           ragService.buildSystemPrompt(relevantChunks, legislationPresent), sources, historyForLlm);
     }
 
-    CaseContext caseContext = caseContextProvider.loadContext(request.caseId(), lawyerId, orgIds);
     return new PreparedContext(
         ragService.buildCaseSystemPrompt(
             caseContext.caseCard(),
@@ -351,7 +360,7 @@ public class ChatService {
     DocumentChunkMatches matches =
         documentRetrieval.retrieveInDocument(
             List.of(request.message()), documentProperties.topKResults(), request.documentId());
-    llmQuotaService.recordTokenUsage(lawyerId, matches.embeddingTokens());
+    llmQuotaService.recordTokenUsage(lawyerId, matches.totalTokens());
 
     List<String> relevantChunks = new ArrayList<>(attachedChunks);
     relevantChunks.addAll(matches.matches().stream().map(DocumentChunkMatch::content).toList());
@@ -462,7 +471,8 @@ public class ChatService {
       if (delimiterReached) {
         return;
       }
-      int delimiterIdx = raw.indexOf(FollowUpParser.DELIMITER);
+      int searchFrom = Math.max(0, emittedAnswerLength - FollowUpParser.DELIMITER.length());
+      int delimiterIdx = raw.indexOf(FollowUpParser.DELIMITER, searchFrom);
       String answerSoFar = delimiterIdx >= 0 ? raw.substring(0, delimiterIdx) : raw.toString();
       int safeEnd =
           delimiterIdx >= 0

@@ -12,6 +12,7 @@ import com.pravoos.ai.core.internal.service.FollowUpParser;
 import com.pravoos.ai.core.internal.service.RagService;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.RetrievedChunk;
+import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.shared.config.DocumentProperties;
@@ -66,8 +67,10 @@ public class LegalAiPortImpl implements LegalAiPort {
   @Override
   public LegalAiAnswer answerForCase(
       UUID caseId, String instruction, String userMessage, UUID lawyerId) {
-    List<RetrievedChunk> matches =
+    RetrievedChunks retrieval =
         documentRetrieval.retrieveForCase(instruction, documentProperties.topKResults(), caseId);
+    llmQuotaService.recordTokenUsage(lawyerId, retrieval.llmTokens());
+    List<RetrievedChunk> matches = retrieval.chunks();
     List<String> chunks = matches.stream().map(RetrievedChunk::content).toList();
     String systemPrompt = ragService.buildWorkflowPrompt(instruction, chunks);
     LlmResult completion = llmClient.complete(systemPrompt, List.of(), userMessage);
@@ -78,8 +81,10 @@ public class LegalAiPortImpl implements LegalAiPort {
   @Override
   public LegalAiAnswer refineDraft(
       UUID caseId, String instruction, String currentText, UUID lawyerId) {
-    List<RetrievedChunk> matches =
+    RetrievedChunks retrieval =
         documentRetrieval.retrieveForCase(instruction, documentProperties.topKResults(), caseId);
+    llmQuotaService.recordTokenUsage(lawyerId, retrieval.llmTokens());
+    List<RetrievedChunk> matches = retrieval.chunks();
     List<String> chunks = matches.stream().map(RetrievedChunk::content).toList();
     String systemPrompt = draftRefinePrompt.build(instruction, currentText, chunks);
     LlmResult completion =
@@ -92,8 +97,10 @@ public class LegalAiPortImpl implements LegalAiPort {
   @Override
   public LegalAiAnswer analyzeCase(
       UUID caseId, String caseContext, String hearingTimeline, String statistics, UUID lawyerId) {
-    List<RetrievedChunk> matches =
+    RetrievedChunks retrieval =
         documentRetrieval.retrieveForCase(caseContext, documentProperties.topKResults(), caseId);
+    llmQuotaService.recordTokenUsage(lawyerId, retrieval.llmTokens());
+    List<RetrievedChunk> matches = retrieval.chunks();
     List<String> chunks = matches.stream().map(RetrievedChunk::content).toList();
     String documentContext = caseAnalyticsPrompt.buildContextFromChunks(chunks);
     String enrichedContext =
@@ -113,9 +120,11 @@ public class LegalAiPortImpl implements LegalAiPort {
   @Override
   public AiResponseDto runCaseWorkflow(
       UUID caseId, UUID lawyerId, String workflowId, String query, String instruction) {
-    List<RetrievedChunk> matches =
+    RetrievedChunks retrieval =
         documentRetrieval.retrieveForCase(instruction, documentProperties.topKResults(), caseId);
 
+    llmQuotaService.recordTokenUsage(lawyerId, retrieval.llmTokens());
+    List<RetrievedChunk> matches = retrieval.chunks();
     List<String> chunks = matches.stream().map(RetrievedChunk::content).toList();
     List<SourceReference> sources = toSourceReferences(matches);
 

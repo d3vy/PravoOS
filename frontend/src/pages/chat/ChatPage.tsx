@@ -42,6 +42,9 @@ export default function ChatPage(): JSX.Element {
   const attachPickerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const skipNextHistorySyncRef = useRef(false)
+  const streamAbortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => streamAbortRef.current?.abort(), [])
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -148,6 +151,10 @@ export default function ChatPage(): JSX.Element {
     setAttachedDocIds([])
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
+    streamAbortRef.current?.abort()
+    const abortController = new AbortController()
+    streamAbortRef.current = abortController
+
     void streamMessage(
       { conversationId: activeConversationId ?? undefined, message, attachedDocumentIds },
       {
@@ -185,7 +192,8 @@ export default function ChatPage(): JSX.Element {
           ])
           setIsSending(false)
         },
-      }
+      },
+      abortController.signal
     )
   }, [inputValue, isSending, hasIndexingAttachment, activeConversationId, attachedDocIds, queryClient])
 

@@ -15,6 +15,7 @@ import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentRetrieval;
+import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
@@ -82,7 +83,8 @@ class ChatAttachmentOwnershipTest {
     when(documentAccess.findByIds(any()))
         .thenReturn(List.of(new DocumentRef(documentId, null, lawyerId, "Мой файл")));
     when(documentAccess.chunkContentsForDocuments(anyList())).thenReturn(List.of("текст файла"));
-    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt())).thenReturn(List.of());
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
     when(ragService.buildSystemPrompt(anyList(), any(Boolean.class))).thenReturn("prompt");
     when(llmClient.complete(anyString(), anyList(), anyString()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));

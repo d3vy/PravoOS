@@ -32,6 +32,7 @@ import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.document.api.RetrievedChunk;
+import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
@@ -146,7 +147,9 @@ class ChatServiceTest {
     ChatRequest request = new ChatRequest(null, "Что такое иск?", List.of(), null, null);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(
-            List.of(new RetrievedChunk("контент", "Кодекс", 0.9, true, "ГК РФ", "15", null)));
+            new RetrievedChunks(
+                List.of(new RetrievedChunk("контент", "Кодекс", 0.9, true, "ГК РФ", "15", null)),
+                0L));
     when(ragService.buildSystemPrompt(anyList(), eq(true))).thenReturn("system-prompt");
     when(llmClient.complete(eq("system-prompt"), anyList(), eq("Что такое иск?")))
         .thenReturn(new LlmResult("Ответ на вопрос", new LlmUsage(5, 5, 10)));
@@ -185,7 +188,8 @@ class ChatServiceTest {
     when(messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId()))
         .thenReturn(
             List.of(new Message(conversation.getId(), MessageRole.ASSISTANT, "Привет", List.of())));
-    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt())).thenReturn(List.of());
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
     when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
     when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение")))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
@@ -201,10 +205,13 @@ class ChatServiceTest {
   void chatWithCaseScopeBuildsCaseSystemPrompt() {
     UUID caseId = UUID.randomUUID();
     ChatRequest request = new ChatRequest(null, "Что по делу?", List.of(), caseId, null);
-    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt())).thenReturn(List.of());
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
     when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
         .thenReturn(
-            List.of(new RetrievedChunk("контент", "Иск.pdf", 0.5, false, null, null, null)));
+            new RetrievedChunks(
+                List.of(new RetrievedChunk("контент", "Иск.pdf", 0.5, false, null, null, null)),
+                0L));
     when(caseContextProvider.loadContext(caseId, lawyerId, List.of()))
         .thenReturn(new CaseContext("card", "timeline", "checklist"));
     when(ragService.buildCaseSystemPrompt(
@@ -244,11 +251,12 @@ class ChatServiceTest {
             List.of("пункт 1"),
             null);
     when(documentAccessGuard.requireVisible(documentId, lawyerId, List.of())).thenReturn(document);
-    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt())).thenReturn(List.of());
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
     when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
         .thenReturn(
             new DocumentChunkMatches(
-                List.of(new DocumentChunkMatch(UUID.randomUUID(), 0, "фрагмент", 0.7)), 5L));
+                List.of(new DocumentChunkMatch(UUID.randomUUID(), 0, "фрагмент", 0.7)), 5L, 0L));
     when(ragService.buildDocumentSystemPrompt(
             eq("Договор.pdf"), anyString(), anyList(), anyBoolean()))
         .thenReturn("doc-prompt");

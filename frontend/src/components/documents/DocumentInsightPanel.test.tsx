@@ -129,7 +129,8 @@ describe('DocumentInsightPanel', () => {
           documentId: DOCUMENT_ID,
           caseId: undefined,
         }),
-        expect.anything()
+        expect.anything(),
+        expect.any(AbortSignal)
       )
     })
   })

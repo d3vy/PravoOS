@@ -108,7 +108,8 @@ describe('CaseChatSection', () => {
     await waitFor(() => {
       expect(mockedStreamMessage).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Какой срок поставки?', caseId: CASE_ID }),
-        expect.anything()
+        expect.anything(),
+        expect.any(AbortSignal)
       )
     })
     expect(await screen.findByText('Срок поставки — 10 дней.')).toBeInTheDocument()
@@ -142,7 +143,8 @@ describe('CaseChatSection', () => {
     await waitFor(() => {
       expect(mockedStreamMessage).toHaveBeenCalledWith(
         expect.objectContaining({ message: i18n.t('caseChat.suggestion1'), caseId: CASE_ID }),
-        expect.anything()
+        expect.anything(),
+        expect.any(AbortSignal)
       )
     })
   })

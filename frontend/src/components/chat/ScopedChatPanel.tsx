@@ -36,6 +36,9 @@ export function ScopedChatPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const skipNextHistorySyncRef = useRef(false)
+  const streamAbortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => streamAbortRef.current?.abort(), [])
 
   const { data: conversations = [] } = useQuery<ConversationResponse[]>({
     queryKey: conversationsQueryKey,
@@ -102,6 +105,10 @@ export function ScopedChatPanel({
       ])
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
+      streamAbortRef.current?.abort()
+      const abortController = new AbortController()
+      streamAbortRef.current = abortController
+
       void streamMessage(
         { conversationId: activeConversationId ?? undefined, message, caseId, documentId },
         {
@@ -139,7 +146,8 @@ export function ScopedChatPanel({
             ])
             setIsSending(false)
           },
-        }
+        },
+        abortController.signal
       )
     },
     [inputValue, isSending, activeConversationId, caseId, documentId, conversationsQueryKey, queryClient]

@@ -21,15 +21,25 @@ export interface ChatStreamCallbacks {
   onError: (message: string) => void
 }
 
-export async function streamMessage(data: ChatRequest, callbacks: ChatStreamCallbacks): Promise<void> {
+export async function streamMessage(
+  data: ChatRequest,
+  callbacks: ChatStreamCallbacks,
+  signal?: AbortSignal
+): Promise<void> {
   try {
-    await runStream(data, callbacks, false)
+    await runStream(data, callbacks, false, signal)
   } catch {
+    if (signal?.aborted) return
     callbacks.onError(genericStreamError())
   }
 }
 
-async function runStream(data: ChatRequest, callbacks: ChatStreamCallbacks, isRetry: boolean): Promise<void> {
+async function runStream(
+  data: ChatRequest,
+  callbacks: ChatStreamCallbacks,
+  isRetry: boolean,
+  signal?: AbortSignal
+): Promise<void> {
   const token = useAuthStore.getState().accessToken
   const response = await fetch(`${baseURL}/api/ai/chat/stream`, {
     method: 'POST',
@@ -40,11 +50,12 @@ async function runStream(data: ChatRequest, callbacks: ChatStreamCallbacks, isRe
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(data),
+    signal,
   })
 
   if (response.status === 401 && !isRetry) {
     await refreshSession()
-    await runStream(data, callbacks, true)
+    await runStream(data, callbacks, true, signal)
     return
   }
 
@@ -53,7 +64,7 @@ async function runStream(data: ChatRequest, callbacks: ChatStreamCallbacks, isRe
     return
   }
 
-  await consumeEventStream(response.body, callbacks)
+  await consumeEventStream(response.body, callbacks, signal)
 }
 
 async function extractErrorMessage(response: Response): Promise<string> {
@@ -66,12 +77,20 @@ async function extractErrorMessage(response: Response): Promise<string> {
   return genericStreamError()
 }
 
-async function consumeEventStream(body: ReadableStream<Uint8Array>, callbacks: ChatStreamCallbacks): Promise<void> {
+async function consumeEventStream(
+  body: ReadableStream<Uint8Array>,
+  callbacks: ChatStreamCallbacks,
+  signal?: AbortSignal
+): Promise<void> {
   const reader = body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
 
   for (;;) {
+    if (signal?.aborted) {
+      await reader.cancel().catch(() => undefined)
+      return
+    }
     const { value, done } = await reader.read()
     if (done) break
     buffer += decoder.decode(value, { stream: true })

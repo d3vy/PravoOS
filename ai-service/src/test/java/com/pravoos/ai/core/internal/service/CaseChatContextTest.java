@@ -22,6 +22,7 @@ import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.RetrievedChunk;
+import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
@@ -97,16 +98,25 @@ class CaseChatContextTest {
             anyString(), anyString(), anyString(), anyList(), any(Boolean.class)))
         .thenReturn("case prompt");
     when(ragService.buildSystemPrompt(anyList(), any(Boolean.class))).thenReturn("generic prompt");
-    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt())).thenReturn(List.of());
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
   }
 
   @Test
   void usesCaseRetrievalAndCaseContextWhenCaseIdPresent() {
     when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
         .thenReturn(
-            List.of(
-                new RetrievedChunk(
-                    "текст из документа дела", "Договор поставки", 0.9, false, null, null, null)));
+            new RetrievedChunks(
+                List.of(
+                    new RetrievedChunk(
+                        "текст из документа дела",
+                        "Договор поставки",
+                        0.9,
+                        false,
+                        null,
+                        null,
+                        null)),
+                0L));
 
     var response =
         service.chat(
@@ -130,7 +140,7 @@ class CaseChatContextTest {
   @Test
   void bindsNewConversationToCase() {
     when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
-        .thenReturn(List.of());
+        .thenReturn(RetrievedChunks.empty());
 
     service.chat(new ChatRequest(null, "Вопрос по делу", null, caseId, null), lawyerId, orgIds);
 
