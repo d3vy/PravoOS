@@ -35,6 +35,7 @@ public class AsyncConfig implements AsyncConfigurer {
     executor.setMaxPoolSize(4);
     executor.setQueueCapacity(50);
     executor.setThreadNamePrefix("embedding-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
     executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
     executor.setWaitForTasksToCompleteOnShutdown(true);
     executor.setAwaitTerminationSeconds(60);
@@ -49,6 +50,7 @@ public class AsyncConfig implements AsyncConfigurer {
     executor.setMaxPoolSize(4);
     executor.setQueueCapacity(50);
     executor.setThreadNamePrefix("review-run-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
     executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
     executor.setWaitForTasksToCompleteOnShutdown(true);
     executor.setAwaitTerminationSeconds(60);
@@ -63,6 +65,7 @@ public class AsyncConfig implements AsyncConfigurer {
     executor.setMaxPoolSize(8);
     executor.setQueueCapacity(200);
     executor.setThreadNamePrefix("review-doc-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
     executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
     executor.setWaitForTasksToCompleteOnShutdown(true);
     executor.setAwaitTerminationSeconds(60);
@@ -77,6 +80,7 @@ public class AsyncConfig implements AsyncConfigurer {
     executor.setMaxPoolSize(25);
     executor.setQueueCapacity(0);
     executor.setThreadNamePrefix("chat-stream-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
     executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
     executor.setWaitForTasksToCompleteOnShutdown(true);
     executor.setAwaitTerminationSeconds(30);
