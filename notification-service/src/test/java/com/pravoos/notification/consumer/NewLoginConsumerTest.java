@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import com.pravoos.notification.service.NotificationDispatcher;
-import com.pravoos.notification.service.ProcessedEventGuard;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,35 +19,21 @@ class NewLoginConsumerTest {
   private static final String EVENT_TYPE = "user.new_login";
 
   @Mock private NotificationDispatcher notificationDispatcher;
-  @Mock private ProcessedEventGuard processedEventGuard;
 
   private NewLoginConsumer consumer;
 
   @BeforeEach
   void setUp() {
-    consumer = new NewLoginConsumer(notificationDispatcher, processedEventGuard);
+    consumer = new NewLoginConsumer(notificationDispatcher);
   }
 
   @Test
   void onNewLogin_notifiesOnce() {
     NewLoginKafkaPayload payload = payload();
-    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(true);
 
     consumer.onNewLogin(payload);
 
-    verify(notificationDispatcher).dispatchNewLogin(payload);
-    verify(processedEventGuard, never()).release(anyString(), anyString());
-  }
-
-  @Test
-  void onNewLogin_skipsDuplicate() {
-    NewLoginKafkaPayload payload = payload();
-    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(false);
-
-    consumer.onNewLogin(payload);
-
-    verify(notificationDispatcher, never()).dispatchNewLogin(payload);
-    verify(processedEventGuard, never()).release(anyString(), anyString());
+    verify(notificationDispatcher).dispatchNewLogin(eq(EVENT_TYPE), anyString(), eq(payload));
   }
 
   private NewLoginKafkaPayload payload() {

@@ -85,6 +85,34 @@ public class TelegramNotificationService {
     return true;
   }
 
+  public boolean sendMailboxPaused(MailboxSyncPausedKafkaPayload payload) {
+    Optional<Long> chatId = telegramChatIdResolver.resolve(payload.lawyerId());
+    if (chatId.isEmpty()) {
+      log.info(
+          "Lawyer {} has no linked Telegram, skipping mailbox-paused alert for {}",
+          payload.lawyerId(),
+          payload.mailboxId());
+      return false;
+    }
+    send(
+        buildMessage(chatId.get(), formatMailboxPausedMessage(payload)),
+        payload.mailboxId().toString());
+    return true;
+  }
+
+  private String formatMailboxPausedMessage(MailboxSyncPausedKafkaPayload payload) {
+    return String.format(
+        """
+                <b>Синхронизация почты остановлена</b>
+
+                <b>Ящик:</b> %s
+                <b>Ошибок подряд:</b> %d
+                <b>Последняя ошибка:</b> %s
+
+                Проверьте пароль приложения в настройках почты PravoOS и включите синхронизацию заново.""",
+        escapeHtml(payload.emailAddress()), payload.failures(), escapeHtml(payload.lastError()));
+  }
+
   private SendMessage buildMessage(long chatId, String text) {
     SendMessage message = new SendMessage();
     message.setChatId(Long.toString(chatId));

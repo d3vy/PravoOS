@@ -2,13 +2,10 @@ package com.pravoos.notification.consumer;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.pravoos.notification.event.CaseHearingUpdatedKafkaPayload;
 import com.pravoos.notification.service.NotificationDispatcher;
-import com.pravoos.notification.service.ProcessedEventGuard;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,35 +19,21 @@ class CaseHearingConsumerTest {
   private static final String EVENT_TYPE = "case.hearing.updated";
 
   @Mock private NotificationDispatcher notificationDispatcher;
-  @Mock private ProcessedEventGuard processedEventGuard;
 
   private CaseHearingConsumer consumer;
 
   @BeforeEach
   void setUp() {
-    consumer = new CaseHearingConsumer(notificationDispatcher, processedEventGuard);
+    consumer = new CaseHearingConsumer(notificationDispatcher);
   }
 
   @Test
   void onHearingUpdated_dispatchesOnce() {
     CaseHearingUpdatedKafkaPayload payload = payload();
-    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(true);
 
     consumer.onHearingUpdated(payload);
 
-    verify(notificationDispatcher).dispatchHearingUpdate(payload);
-    verify(processedEventGuard, never()).release(anyString(), anyString());
-  }
-
-  @Test
-  void onHearingUpdated_skipsDuplicate() {
-    CaseHearingUpdatedKafkaPayload payload = payload();
-    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(false);
-
-    consumer.onHearingUpdated(payload);
-
-    verify(notificationDispatcher, never()).dispatchHearingUpdate(payload);
-    verify(processedEventGuard, never()).release(anyString(), anyString());
+    verify(notificationDispatcher).dispatchHearingUpdate(eq(EVENT_TYPE), anyString(), eq(payload));
   }
 
   private CaseHearingUpdatedKafkaPayload payload() {

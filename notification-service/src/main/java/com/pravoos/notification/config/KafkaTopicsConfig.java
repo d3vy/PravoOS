@@ -58,4 +58,9 @@ public class KafkaTopicsConfig {
   public NewTopic newLoginDltTopic() {
     return topic("user.new_login.DLT");
   }
+
+  @Bean
+  public NewTopic mailboxSyncPausedDltTopic() {
+    return topic("mailbox.sync.paused.DLT");
+  }
 }

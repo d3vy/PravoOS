@@ -28,7 +28,7 @@ telegram:
 
 user-service:
   base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
-  internal-secret: ${INTERNAL_SERVICE_SECRET}
+  internal-secret: ${INTERNAL_SECRET_NOTIFICATION_SERVICE}
 
 app:
   push:

@@ -101,6 +101,13 @@ public class KafkaConsumerConfig {
   }
 
   @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, MailboxSyncPausedKafkaPayload>
+      mailboxSyncPausedKafkaListenerContainerFactory(
+          KafkaTemplate<String, Object> deadLetterKafkaTemplate) {
+    return listenerFactory(MailboxSyncPausedKafkaPayload.class, deadLetterKafkaTemplate);
+  }
+
+  @Bean
   public ConsumerFactory<String, String> dltConsumerFactory() {
     Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties(null));
     return new DefaultKafkaConsumerFactory<>(

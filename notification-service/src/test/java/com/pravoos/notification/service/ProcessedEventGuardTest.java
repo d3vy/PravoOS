@@ -34,18 +34,37 @@ class ProcessedEventGuardTest {
   @Test
   void claimSucceedsForFirstCallerAndSetsThreeDayTtl() {
     when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-    when(valueOperations.setIfAbsent(KEY, "1", Duration.ofDays(3))).thenReturn(true);
+    when(valueOperations.setIfAbsent(KEY, "pending", Duration.ofDays(3))).thenReturn(true);
 
     assertThat(guard.claim("invoice.paid", "123")).isTrue();
-    verify(valueOperations).setIfAbsent(eq(KEY), eq("1"), eq(Duration.ofDays(3)));
+    verify(valueOperations).setIfAbsent(eq(KEY), eq("pending"), eq(Duration.ofDays(3)));
   }
 
   @Test
   void claimFailsWhenAnotherConsumerAlreadyHoldsTheKey() {
     when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-    when(valueOperations.setIfAbsent(KEY, "1", Duration.ofDays(3))).thenReturn(false);
+    when(valueOperations.setIfAbsent(KEY, "pending", Duration.ofDays(3))).thenReturn(false);
 
     assertThat(guard.claim("invoice.paid", "123")).isFalse();
+  }
+
+  @Test
+  void previousOutcomeReportsWhetherTheChannelActuallyReachedTheRecipient() {
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(valueOperations.get(KEY)).thenReturn("reached", "not-reached", "pending");
+
+    assertThat(guard.previousOutcome("invoice.paid", "123")).contains(true);
+    assertThat(guard.previousOutcome("invoice.paid", "123")).contains(false);
+    assertThat(guard.previousOutcome("invoice.paid", "123")).isEmpty();
+  }
+
+  @Test
+  void recordOutcomeOverwritesThePendingMarker() {
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+    guard.recordOutcome("invoice.paid", "123", true);
+
+    verify(valueOperations).set(KEY, "reached", Duration.ofDays(3));
   }
 
   @Test

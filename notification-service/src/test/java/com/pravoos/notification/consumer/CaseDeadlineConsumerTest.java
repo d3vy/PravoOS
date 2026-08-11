@@ -1,18 +1,17 @@
 package com.pravoos.notification.consumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.pravoos.notification.event.CaseDeadlineKafkaPayload;
 import com.pravoos.notification.service.NotificationDispatcher;
-import com.pravoos.notification.service.ProcessedEventGuard;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,35 +21,33 @@ class CaseDeadlineConsumerTest {
   private static final String EVENT_TYPE = "case.deadline.approaching";
 
   @Mock private NotificationDispatcher notificationDispatcher;
-  @Mock private ProcessedEventGuard processedEventGuard;
 
   private CaseDeadlineConsumer consumer;
 
   @BeforeEach
   void setUp() {
-    consumer = new CaseDeadlineConsumer(notificationDispatcher, processedEventGuard);
+    consumer = new CaseDeadlineConsumer(notificationDispatcher);
   }
 
   @Test
   void onDeadlineApproaching_dispatchesOnce() {
     CaseDeadlineKafkaPayload payload = payload();
-    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(true);
 
     consumer.onDeadlineApproaching(payload);
 
-    verify(notificationDispatcher).dispatchDeadline(payload);
-    verify(processedEventGuard, never()).release(anyString(), anyString());
+    verify(notificationDispatcher).dispatchDeadline(eq(EVENT_TYPE), anyString(), eq(payload));
   }
 
   @Test
-  void onDeadlineApproaching_skipsDuplicate() {
+  void dedupKeyDistinguishesRescheduledDeadlines() {
     CaseDeadlineKafkaPayload payload = payload();
-    when(processedEventGuard.claim(eq(EVENT_TYPE), anyString())).thenReturn(false);
 
     consumer.onDeadlineApproaching(payload);
 
-    verify(notificationDispatcher, never()).dispatchDeadline(payload);
-    verify(processedEventGuard, never()).release(anyString(), anyString());
+    ArgumentCaptor<String> dedupKey = ArgumentCaptor.forClass(String.class);
+    verify(notificationDispatcher)
+        .dispatchDeadline(eq(EVENT_TYPE), dedupKey.capture(), eq(payload));
+    assertThat(dedupKey.getValue()).contains(payload.deadlineDate());
   }
 
   private CaseDeadlineKafkaPayload payload() {

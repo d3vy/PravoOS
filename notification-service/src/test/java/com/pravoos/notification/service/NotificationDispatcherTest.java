@@ -1,7 +1,10 @@
 package com.pravoos.notification.service;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -13,8 +16,12 @@ import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
 import com.pravoos.notification.event.LawyerDigestKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
+import com.pravoos.notification.exception.NotificationDeliveryException;
 import com.pravoos.notification.push.PushMessage;
 import com.pravoos.notification.push.PushMessageFactory;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,22 +32,28 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class NotificationDispatcherTest {
 
+  private static final String EVENT_TYPE = "test.event";
+  private static final String DEDUP_KEY = "dedup-1";
+
   @Mock private TelegramNotificationService telegramNotificationService;
   @Mock private PushNotificationService pushNotificationService;
   @Mock private DeadlineEmailFallbackService deadlineEmailFallbackService;
   @Mock private UserServiceClient userServiceClient;
+  @Mock private ProcessedEventGuard processedEventGuard;
 
   private NotificationDispatcher dispatcher;
 
   @BeforeEach
   void setUp() {
+    lenient().when(processedEventGuard.claim(anyString(), anyString())).thenReturn(true);
     dispatcher =
         new NotificationDispatcher(
             telegramNotificationService,
             pushNotificationService,
             deadlineEmailFallbackService,
             userServiceClient,
-            new PushMessageFactory());
+            new PushMessageFactory(),
+            new ChannelDelivery(processedEventGuard));
   }
 
   @Test
@@ -50,7 +63,7 @@ class NotificationDispatcherTest {
         .thenReturn(2);
     when(telegramNotificationService.sendDeadline(payload)).thenReturn(true);
 
-    dispatcher.dispatchDeadline(payload);
+    dispatcher.dispatchDeadline(EVENT_TYPE, DEDUP_KEY, payload);
 
     verify(pushNotificationService).notifyUser(eq(payload.lawyerId()), any(PushMessage.class));
     verify(telegramNotificationService).sendDeadline(payload);
@@ -64,7 +77,7 @@ class NotificationDispatcherTest {
         .thenReturn(0);
     when(telegramNotificationService.sendDeadline(payload)).thenReturn(false);
 
-    dispatcher.dispatchDeadline(payload);
+    dispatcher.dispatchDeadline(EVENT_TYPE, DEDUP_KEY, payload);
 
     verify(deadlineEmailFallbackService).send(payload);
   }
@@ -76,7 +89,7 @@ class NotificationDispatcherTest {
         .thenReturn(1);
     when(telegramNotificationService.sendDeadline(payload)).thenReturn(false);
 
-    dispatcher.dispatchDeadline(payload);
+    dispatcher.dispatchDeadline(EVENT_TYPE, DEDUP_KEY, payload);
 
     verify(deadlineEmailFallbackService, never()).send(any());
   }
@@ -88,7 +101,7 @@ class NotificationDispatcherTest {
     when(userServiceClient.dispatchCaseMessage(any(CaseMessageNotificationRequest.class)))
         .thenReturn(new CaseMessageNotificationResult(recipientId, 555L, true));
 
-    dispatcher.dispatchCaseMessage(payload);
+    dispatcher.dispatchCaseMessage(EVENT_TYPE, DEDUP_KEY, payload);
 
     verify(pushNotificationService).notifyUser(eq(recipientId), any(PushMessage.class));
     verify(telegramNotificationService).sendCaseMessage(payload, 555L);
@@ -100,7 +113,7 @@ class NotificationDispatcherTest {
     when(userServiceClient.dispatchCaseMessage(any(CaseMessageNotificationRequest.class)))
         .thenReturn(CaseMessageNotificationResult.none());
 
-    dispatcher.dispatchCaseMessage(payload);
+    dispatcher.dispatchCaseMessage(EVENT_TYPE, DEDUP_KEY, payload);
 
     verify(pushNotificationService, never()).notifyUser(any(), any());
     verify(telegramNotificationService, never()).sendCaseMessage(any(), anyLong());
@@ -112,7 +125,7 @@ class NotificationDispatcherTest {
         new NewLoginKafkaPayload(
             UUID.randomUUID(), "203.0.113.9", "JUnit-UA", "2026-07-03 10:15", false, true);
 
-    dispatcher.dispatchNewLogin(pushOnly);
+    dispatcher.dispatchNewLogin(EVENT_TYPE, DEDUP_KEY, pushOnly);
 
     verify(pushNotificationService).notifyUser(eq(pushOnly.userId()), any(PushMessage.class));
     verify(telegramNotificationService, never()).sendNewLogin(any());
@@ -124,7 +137,7 @@ class NotificationDispatcherTest {
         new NewLoginKafkaPayload(
             UUID.randomUUID(), "203.0.113.9", "JUnit-UA", "2026-07-03 10:15", true, false);
 
-    dispatcher.dispatchNewLogin(telegramOnly);
+    dispatcher.dispatchNewLogin(EVENT_TYPE, DEDUP_KEY, telegramOnly);
 
     verify(pushNotificationService, never()).notifyUser(any(), any());
     verify(telegramNotificationService).sendNewLogin(telegramOnly);
@@ -136,7 +149,7 @@ class NotificationDispatcherTest {
         new InvoiceOverdueKafkaPayload(
             UUID.randomUUID(), UUID.randomUUID(), "СЧ-2026-0007", "ООО Ромашка", "2 500.00 RUB", 3);
 
-    dispatcher.dispatchInvoiceOverdue(payload);
+    dispatcher.dispatchInvoiceOverdue(EVENT_TYPE, DEDUP_KEY, payload);
 
     verify(pushNotificationService).notifyUser(eq(payload.lawyerId()), any(PushMessage.class));
   }
@@ -146,9 +159,60 @@ class NotificationDispatcherTest {
     LawyerDigestKafkaPayload payload =
         new LawyerDigestKafkaPayload(UUID.randomUUID(), "2026-07-30", 2, 1, 1, "1 500,00");
 
-    dispatcher.dispatchMorningDigest(payload);
+    dispatcher.dispatchMorningDigest(EVENT_TYPE, DEDUP_KEY, payload);
 
     verify(pushNotificationService).notifyUser(eq(payload.lawyerId()), any(PushMessage.class));
+  }
+
+  @Test
+  void retryAfterEmailFailure_doesNotResendPushOrTelegram() {
+    CaseDeadlineKafkaPayload payload = deadlinePayload();
+    Map<String, Boolean> outcomes = new HashMap<>();
+    when(processedEventGuard.claim(anyString(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              String channelEvent = invocation.getArgument(0, String.class);
+              if (outcomes.containsKey(channelEvent)) {
+                return false;
+              }
+              outcomes.put(channelEvent, null);
+              return true;
+            });
+    doAnswer(
+            invocation -> {
+              outcomes.put(
+                  invocation.getArgument(0, String.class),
+                  invocation.getArgument(2, Boolean.class));
+              return null;
+            })
+        .when(processedEventGuard)
+        .recordOutcome(anyString(), anyString(), anyBoolean());
+    when(processedEventGuard.previousOutcome(anyString(), anyString()))
+        .thenAnswer(
+            invocation ->
+                Optional.ofNullable(outcomes.get(invocation.getArgument(0, String.class))));
+    doAnswer(
+            invocation -> {
+              outcomes.remove(invocation.getArgument(0, String.class));
+              return null;
+            })
+        .when(processedEventGuard)
+        .release(anyString(), anyString());
+    when(pushNotificationService.notifyUser(eq(payload.lawyerId()), any(PushMessage.class)))
+        .thenReturn(0);
+    when(telegramNotificationService.sendDeadline(payload)).thenReturn(false);
+    doThrow(new NotificationDeliveryException("user-service недоступен", null))
+        .when(deadlineEmailFallbackService)
+        .send(payload);
+
+    assertThatThrownBy(() -> dispatcher.dispatchDeadline(EVENT_TYPE, DEDUP_KEY, payload))
+        .isInstanceOf(NotificationDeliveryException.class);
+    assertThatThrownBy(() -> dispatcher.dispatchDeadline(EVENT_TYPE, DEDUP_KEY, payload))
+        .isInstanceOf(NotificationDeliveryException.class);
+
+    verify(pushNotificationService, times(1)).notifyUser(any(), any(PushMessage.class));
+    verify(telegramNotificationService, times(1)).sendDeadline(payload);
+    verify(deadlineEmailFallbackService, times(2)).send(payload);
   }
 
   private CaseDeadlineKafkaPayload deadlinePayload() {

@@ -2,7 +2,6 @@ package com.pravoos.notification.consumer;
 
 import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
 import com.pravoos.notification.service.NotificationDispatcher;
-import com.pravoos.notification.service.ProcessedEventGuard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -16,12 +15,9 @@ public class InvoiceOverdueConsumer {
   private static final String EVENT_TYPE = "invoice.overdue";
 
   private final NotificationDispatcher notificationDispatcher;
-  private final ProcessedEventGuard processedEventGuard;
 
-  public InvoiceOverdueConsumer(
-      NotificationDispatcher notificationDispatcher, ProcessedEventGuard processedEventGuard) {
+  public InvoiceOverdueConsumer(NotificationDispatcher notificationDispatcher) {
     this.notificationDispatcher = notificationDispatcher;
-    this.processedEventGuard = processedEventGuard;
   }
 
   @KafkaListener(
@@ -32,20 +28,11 @@ public class InvoiceOverdueConsumer {
     MDC.put("requestId", String.valueOf(payload.invoiceId()));
     try {
       String dedupKey = payload.invoiceId() + ":" + payload.daysOverdue();
-      if (!processedEventGuard.claim(EVENT_TYPE, dedupKey)) {
-        log.info("Skipping duplicate invoice.overdue: {}", dedupKey);
-        return;
-      }
       log.info(
           "Received invoice.overdue: invoice={} daysOverdue={}",
           payload.invoiceId(),
           payload.daysOverdue());
-      try {
-        notificationDispatcher.dispatchInvoiceOverdue(payload);
-      } catch (RuntimeException e) {
-        processedEventGuard.release(EVENT_TYPE, dedupKey);
-        throw e;
-      }
+      notificationDispatcher.dispatchInvoiceOverdue(EVENT_TYPE, dedupKey, payload);
     } finally {
       MDC.remove("requestId");
     }

@@ -6,6 +6,7 @@ import com.pravoos.notification.event.CaseMessageCreatedKafkaPayload;
 import com.pravoos.notification.event.InvoiceOverdueKafkaPayload;
 import com.pravoos.notification.event.InvoicePaidKafkaPayload;
 import com.pravoos.notification.event.LawyerDigestKafkaPayload;
+import com.pravoos.notification.event.MailboxSyncPausedKafkaPayload;
 import com.pravoos.notification.event.NewLoginKafkaPayload;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +57,14 @@ public class PushMessageFactory {
             payload.clientName(), payload.totalFormatted(), payload.daysOverdue()),
         "/invoices/" + payload.invoiceId(),
         "invoice-overdue-" + payload.invoiceId() + "-" + payload.daysOverdue());
+  }
+
+  public PushMessage mailboxPaused(MailboxSyncPausedKafkaPayload payload) {
+    return PushMessage.of(
+        "Синхронизация почты остановлена",
+        payload.emailAddress() + " — проверьте пароль приложения в настройках почты",
+        "/mailboxes",
+        "mailbox-paused-" + payload.mailboxId());
   }
 
   public PushMessage invoicePaid(InvoicePaidKafkaPayload payload) {

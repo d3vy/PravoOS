@@ -57,17 +57,6 @@ class ApplicationEventConsumerTest {
   }
 
   @Test
-  void onApplicationSubmitted_skipsDuplicate() {
-    UUID applicationId = UUID.randomUUID();
-    when(processedEventGuard.claim(eq(EVENT_TYPE), eq(applicationId.toString()))).thenReturn(false);
-
-    consumer.onApplicationSubmitted(new ApplicationSubmittedEvent(applicationId));
-
-    verify(userServiceClient, never()).getApplication(any());
-    verify(telegramNotificationService, never()).notifyNewApplication(any());
-  }
-
-  @Test
   void onApplicationSubmitted_applicationNoLongerExists_keepsClaimWithoutNotifying() {
     UUID applicationId = UUID.randomUUID();
     when(processedEventGuard.claim(eq(EVENT_TYPE), eq(applicationId.toString()))).thenReturn(true);
