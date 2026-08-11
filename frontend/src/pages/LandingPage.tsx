@@ -49,15 +49,6 @@ export default function LandingPage(): JSX.Element {
     { number: '03', title: t('landing.step3Title'), description: t('landing.step3Desc') },
   ]
 
-  const securityItems = [
-    { number: '01', title: t('landing.sec1Title'), description: t('landing.sec1Desc') },
-    { number: '02', title: t('landing.sec2Title'), description: t('landing.sec2Desc') },
-    { number: '03', title: t('landing.sec3Title'), description: t('landing.sec3Desc') },
-    { number: '04', title: t('landing.sec4Title'), description: t('landing.sec4Desc') },
-    { number: '05', title: t('landing.sec5Title'), description: t('landing.sec5Desc') },
-    { number: '06', title: t('landing.sec6Title'), description: t('landing.sec6Desc') },
-  ]
-
   return (
     <div className="bg-[#F7F7F4] text-[#1A0F0A]">
       <LandingHeader />
@@ -218,32 +209,6 @@ export default function LandingPage(): JSX.Element {
               </AnimatedSection>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Security */}
-      <section id="security" className="page-container py-16 sm:py-24">
-        <AnimatedSection className="mb-12 max-w-2xl text-center mx-auto">
-          <p className="font-script text-xl text-[#1A0F0A]/50 mb-3 tracking-wide">{t('landing.securityEyebrow')}</p>
-          <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-[0.95] tracking-tight">
-            {t('landing.securityHeading')}
-          </h2>
-        </AnimatedSection>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {securityItems.map((item, index) => (
-            <AnimatedSection key={item.title} delay={index * 0.05}>
-              <div className="rounded-xl bg-[#F2F1ED] p-6 h-full">
-                <span className="font-display text-2xl block mb-8">{item.number}</span>
-                <h3 className="text-lg font-medium tracking-tight mb-1.5">
-                  {item.title}
-                </h3>
-                <p className="text-sm text-[#1A0F0A]/50 leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
-            </AnimatedSection>
-          ))}
         </div>
       </section>
 

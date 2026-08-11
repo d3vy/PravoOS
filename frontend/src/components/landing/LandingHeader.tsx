@@ -7,7 +7,6 @@ import { PravoIcon } from '../ui/Logo'
 const NAV_LINKS = [
   { href: '#product', key: 'landing.navProduct' },
   { href: '#early-access', key: 'landing.navEarlyAccess' },
-  { href: '#security', key: 'landing.navSecurity' },
   { href: '#contacts', key: 'landing.navContacts' },
 ]
 
