@@ -1,5 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
+import com.pravoos.ai.shared.util.PromptFence;
 import org.springframework.stereotype.Component;
 
 @Component
