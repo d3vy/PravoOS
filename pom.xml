@@ -46,7 +46,7 @@
         <shedlock.version>5.16.0</shedlock.version>
         <spring-modulith.version>1.4.12</spring-modulith.version>
         <sentry.version>7.22.6</sentry.version>
-        <logstash-logback.version>8.0</logstash-logback.version>
+        <logstash-logback.version>9.0</logstash-logback.version>
         <web-push.version>5.1.1</web-push.version>
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <spotless.version>2.43.0</spotless.version>
