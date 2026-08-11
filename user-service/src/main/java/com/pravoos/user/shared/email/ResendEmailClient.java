@@ -51,7 +51,7 @@ public class ResendEmailClient {
     String greeting =
         (fullName == null || fullName.isBlank())
             ? "Ваша заявка одобрена."
-            : fullName + ", ваша заявка одобрена.";
+            : escapeHtml(fullName) + ", ваша заявка одобрена.";
     send(
         to,
         "Заявка одобрена — PravoOS",
@@ -60,7 +60,7 @@ public class ResendEmailClient {
                 + " Доступ к системе предоставлен — войдите в личный кабинет, используя email и пароль из заявки.",
             "Перейти в личный кабинет",
             loginLink,
-            "Если кнопка не работает, откройте адрес в браузере: " + loginLink));
+            "Если кнопка не работает, откройте адрес в браузере: " + escapeHtml(loginLink)));
     log.info("Approval email sent to {}", EmailMasker.mask(to));
   }
 
@@ -74,7 +74,10 @@ public class ResendEmailClient {
     String bodyText =
         String.format(
             "Напоминание по делу «%s»: %s — %s. Осталось дней: %d.",
-            caseTitle, deadlineTypeName, deadlineDate, daysLeft);
+            escapeHtml(caseTitle),
+            escapeHtml(deadlineTypeName),
+            escapeHtml(deadlineDate),
+            daysLeft);
     send(
         to,
         "Напоминание о дедлайне — PravoOS",
@@ -197,6 +200,7 @@ public class ResendEmailClient {
   }
 
   private String buildHtml(String bodyText, String buttonText, String link, String footnote) {
+    String safeLink = escapeHtml(link);
     return """
                 <!DOCTYPE html>
                 <html>
@@ -211,6 +215,6 @@ public class ResendEmailClient {
                 </body>
                 </html>
                 """
-        .formatted(bodyText, link, buttonText, footnote);
+        .formatted(bodyText, safeLink, buttonText, footnote);
   }
 }
