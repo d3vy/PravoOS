@@ -11,6 +11,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.EmailMessageRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
 import com.pravoos.ai.practice.internal.service.EmailLinkResolver.EmailLink;
 import com.pravoos.ai.practice.internal.service.EmailLinkResolver.LawyerLinkIndex;
+import com.pravoos.ai.shared.config.MailSyncProperties;
 import com.pravoos.ai.shared.exception.EmailLinkTargetRequiredException;
 import com.pravoos.ai.shared.exception.EmailMessageNotFoundException;
 import com.pravoos.ai.shared.exception.MailboxNotFoundException;
@@ -34,6 +35,7 @@ public class EmailLinkingService {
 
   private static final Logger log = LoggerFactory.getLogger(EmailLinkingService.class);
   private static final int MAX_NOTES_LENGTH = 1000;
+  private static final int MAX_AUTO_LINK_ATTEMPTS = 5;
 
   private final EmailMessageRepository emailMessageRepository;
   private final MailboxRepository mailboxRepository;
@@ -41,6 +43,7 @@ public class EmailLinkingService {
   private final EmailLinkResolver linkResolver;
   private final CaseService caseService;
   private final ClientService clientService;
+  private final MailSyncProperties syncProperties;
 
   public EmailLinkingService(
       EmailMessageRepository emailMessageRepository,
@@ -48,13 +51,15 @@ public class EmailLinkingService {
       ClientContactRepository clientContactRepository,
       EmailLinkResolver linkResolver,
       CaseService caseService,
-      ClientService clientService) {
+      ClientService clientService,
+      MailSyncProperties syncProperties) {
     this.emailMessageRepository = emailMessageRepository;
     this.mailboxRepository = mailboxRepository;
     this.clientContactRepository = clientContactRepository;
     this.linkResolver = linkResolver;
     this.caseService = caseService;
     this.clientService = clientService;
+    this.syncProperties = syncProperties;
   }
 
   @Transactional
@@ -64,8 +69,10 @@ public class EmailLinkingService {
             .findById(mailboxId)
             .orElseThrow(() -> new MailboxNotFoundException(mailboxId));
     List<EmailMessage> pending =
-        emailMessageRepository.findByMailboxIdAndCaseIdIsNullAndClientIdIsNullOrderBySentAtAsc(
-            mailboxId);
+        emailMessageRepository.findAutoLinkCandidates(
+            mailboxId,
+            MAX_AUTO_LINK_ATTEMPTS,
+            PageRequests.of(0, syncProperties.maxAutoLinkBacklog()));
     if (pending.isEmpty()) {
       return 0;
     }
@@ -77,6 +84,8 @@ public class EmailLinkingService {
       if (resolved.isPresent()) {
         applyLink(message, resolved.get());
         linked++;
+      } else {
+        message.recordAutoLinkAttempt();
       }
     }
     log.info(
@@ -214,7 +223,7 @@ public class EmailLinkingService {
 
   private EmailMessage requireOwnedMessage(UUID messageId, UUID lawyerId) {
     return emailMessageRepository
-        .findByIdAndUserId(messageId, lawyerId)
+        .findByIdAndUserIdForUpdate(messageId, lawyerId)
         .orElseThrow(() -> new EmailMessageNotFoundException(messageId));
   }
 }

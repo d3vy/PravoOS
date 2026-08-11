@@ -49,7 +49,7 @@ class FetchedEmailMapperTest {
         --MIX--
         """;
 
-    FetchedEmail email = mapper.map(message(raw), 17L, 99L, "imap.example.com");
+    FetchedEmail email = mapper.map(message(raw), 17L, "imap.example.com");
 
     assertThat(email.messageId()).isEqualTo("<abc123@example.com>");
     assertThat(email.uid()).isEqualTo(17L);
@@ -79,7 +79,7 @@ class FetchedEmailMapperTest {
         <div><p>Первый абзац</p><p>Второй абзац</p></div>
         """;
 
-    FetchedEmail email = mapper.map(message(raw), 5L, 99L, "imap.example.com");
+    FetchedEmail email = mapper.map(message(raw), 5L, "imap.example.com");
 
     assertThat(email.bodyText()).isEqualTo("Первый абзац\n\nВторой абзац");
     assertThat(email.attachmentCount()).isZero();
@@ -97,9 +97,11 @@ class FetchedEmailMapperTest {
         Body
         """;
 
-    FetchedEmail email = mapper.map(message(raw), 8L, 99L, "imap.example.com");
+    FetchedEmail email = mapper.map(message(raw), 8L, "imap.example.com");
+    FetchedEmail sameEmailDifferentUid = mapper.map(message(raw), 4321L, "imap.example.com");
 
-    assertThat(email.messageId()).isEqualTo("<uid-99-8@imap.example.com>");
+    assertThat(email.messageId()).matches("<sha256-[0-9a-f]{64}@imap\\.example\\.com>");
+    assertThat(email.messageId()).isEqualTo(sameEmailDifferentUid.messageId());
   }
 
   @Test
@@ -116,7 +118,7 @@ class FetchedEmailMapperTest {
         """
             .formatted("a".repeat(5000));
 
-    FetchedEmail email = new FetchedEmailMapper(100).map(message(raw), 9L, 99L, "imap.example.com");
+    FetchedEmail email = new FetchedEmailMapper(100).map(message(raw), 9L, "imap.example.com");
 
     assertThat(email.bodyText()).hasSize(100);
   }

@@ -13,6 +13,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -22,6 +24,10 @@ import java.util.UUID;
 public class Mailbox {
 
   private static final int MAX_ERROR_LENGTH = 500;
+  private static final int MAX_UNREADABLE_UID_ATTEMPTS = 3;
+  private static final Duration MIN_BACKOFF = Duration.ofMinutes(10);
+  private static final Duration MAX_BACKOFF = Duration.ofHours(12);
+  private static final int MAX_FAILURES_BEFORE_PAUSE = 8;
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -66,10 +72,24 @@ public class Mailbox {
   private LocalDateTime lastSyncAt;
 
   @Column(nullable = false)
+  private int consecutiveFailures = 0;
+
+  @Column(nullable = false)
   private LocalDateTime createdAt;
 
   @Column(nullable = false)
   private LocalDateTime updatedAt;
+
+  @Version
+  @Column(nullable = false)
+  private long version;
+
+  private LocalDateTime nextAttemptAt;
+
+  private Long unreadableUid;
+
+  @Column(nullable = false)
+  private int unreadableUidAttempts;
 
   @PrePersist
   void prePersist() {
@@ -85,16 +105,73 @@ public class Mailbox {
   public void markConnected() {
     status = MailboxStatus.OK;
     lastError = null;
+    consecutiveFailures = 0;
+    nextAttemptAt = null;
   }
 
-  public void markFailed(String error) {
+  public boolean markFailed(String error) {
     status = MailboxStatus.ERROR;
     lastError = truncate(error);
+    boolean wasAutoPaused = isAutoPaused();
+    consecutiveFailures++;
+    if (consecutiveFailures >= MAX_FAILURES_BEFORE_PAUSE) {
+      syncEnabled = false;
+      nextAttemptAt = null;
+      return !wasAutoPaused;
+    }
+    nextAttemptAt = LocalDateTime.now(ZoneOffset.UTC).plus(retryBackoff());
+    return false;
+  }
+
+  public boolean isAutoPaused() {
+    return !syncEnabled && consecutiveFailures >= MAX_FAILURES_BEFORE_PAUSE;
+  }
+
+  public void markVerificationFailed(String error) {
+    status = MailboxStatus.ERROR;
+    lastError = truncate(error);
+  }
+
+  public boolean isRetryPending(LocalDateTime now) {
+    return nextAttemptAt != null && nextAttemptAt.isAfter(now);
+  }
+
+  public boolean registerUnreadableUid(long uid) {
+    if (unreadableUid != null && unreadableUid == uid) {
+      unreadableUidAttempts++;
+    } else {
+      unreadableUid = uid;
+      unreadableUidAttempts = 1;
+    }
+    return isUnreadableUidExhausted();
+  }
+
+  public boolean isUnreadableUidExhausted() {
+    return unreadableUid != null && unreadableUidAttempts >= MAX_UNREADABLE_UID_ATTEMPTS;
+  }
+
+  public void clearUnreadableUid() {
+    unreadableUid = null;
+    unreadableUidAttempts = 0;
   }
 
   public void resetVerification() {
     status = MailboxStatus.PENDING;
     lastError = null;
+    consecutiveFailures = 0;
+    nextAttemptAt = null;
+    clearUnreadableUid();
+  }
+
+  public void resetSyncCursor() {
+    uidValidity = null;
+    lastSeenUid = null;
+    clearUnreadableUid();
+  }
+
+  private Duration retryBackoff() {
+    Duration backoff = MIN_BACKOFF.multipliedBy(1L << Math.min(consecutiveFailures - 1, 8));
+    return backoff.compareTo(MAX_BACKOFF) > 0 ? MAX_BACKOFF : backoff;
   }
 
   private String truncate(String error) {
@@ -169,6 +246,10 @@ public class Mailbox {
   }
 
   public void setSyncEnabled(boolean syncEnabled) {
+    if (syncEnabled && !this.syncEnabled) {
+      consecutiveFailures = 0;
+      nextAttemptAt = null;
+    }
     this.syncEnabled = syncEnabled;
   }
 
@@ -204,11 +285,31 @@ public class Mailbox {
     this.lastSyncAt = lastSyncAt;
   }
 
+  public int getConsecutiveFailures() {
+    return consecutiveFailures;
+  }
+
   public LocalDateTime getCreatedAt() {
     return createdAt;
   }
 
   public LocalDateTime getUpdatedAt() {
     return updatedAt;
+  }
+
+  public long getVersion() {
+    return version;
+  }
+
+  public LocalDateTime getNextAttemptAt() {
+    return nextAttemptAt;
+  }
+
+  public Long getUnreadableUid() {
+    return unreadableUid;
+  }
+
+  public int getUnreadableUidAttempts() {
+    return unreadableUidAttempts;
   }
 }

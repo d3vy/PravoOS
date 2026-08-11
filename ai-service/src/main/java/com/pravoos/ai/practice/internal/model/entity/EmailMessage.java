@@ -2,7 +2,9 @@ package com.pravoos.ai.practice.internal.model.entity;
 
 import com.pravoos.ai.shared.model.enums.EmailDirection;
 import com.pravoos.ai.shared.model.enums.EmailLinkSource;
+import com.pravoos.ai.shared.security.PiiStringConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -43,18 +45,23 @@ public class EmailMessage {
   @Column(nullable = false, length = 10)
   private EmailDirection direction;
 
-  @Column(name = "from_address", length = MAX_ADDRESS_LENGTH)
+  @Convert(converter = PiiStringConverter.class)
+  @Column(name = "from_address", columnDefinition = "TEXT")
   private String fromAddress;
 
+  @Convert(converter = PiiStringConverter.class)
   @Column(name = "to_addresses", columnDefinition = "TEXT")
   private String toAddresses;
 
+  @Convert(converter = PiiStringConverter.class)
   @Column(name = "cc_addresses", columnDefinition = "TEXT")
   private String ccAddresses;
 
-  @Column(length = MAX_SUBJECT_LENGTH)
+  @Convert(converter = PiiStringConverter.class)
+  @Column(columnDefinition = "TEXT")
   private String subject;
 
+  @Convert(converter = PiiStringConverter.class)
   @Column(name = "body_text", columnDefinition = "TEXT")
   private String bodyText;
 
@@ -85,6 +92,9 @@ public class EmailMessage {
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
+
+  @Column(name = "auto_link_attempts", nullable = false)
+  private int autoLinkAttempts;
 
   protected EmailMessage() {}
 
@@ -129,6 +139,14 @@ public class EmailMessage {
 
   public boolean isLinked() {
     return caseId != null || clientId != null;
+  }
+
+  public void recordAutoLinkAttempt() {
+    autoLinkAttempts++;
+  }
+
+  public int getAutoLinkAttempts() {
+    return autoLinkAttempts;
   }
 
   private static String truncate(String value, int maxLength) {

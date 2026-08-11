@@ -25,16 +25,20 @@ import org.slf4j.LoggerFactory;
 public class ImapMailboxReader implements MailboxReader {
 
   private static final Logger log = LoggerFactory.getLogger(ImapMailboxReader.class);
+  private static final String TLS_PROTOCOLS = "TLSv1.2 TLSv1.3";
 
   private final MailboxProperties properties;
+  private final MailHostGuard hostGuard;
   private final FetchedEmailMapper fetchedEmailMapper;
   private final AttachmentExtractor attachmentExtractor;
 
   public ImapMailboxReader(
       MailboxProperties properties,
+      MailHostGuard hostGuard,
       MailSyncProperties syncProperties,
       MailAttachmentProperties attachmentProperties) {
     this.properties = properties;
+    this.hostGuard = hostGuard;
     this.fetchedEmailMapper = new FetchedEmailMapper(syncProperties.maxBodyLength());
     this.attachmentExtractor =
         new AttachmentExtractor(
@@ -86,15 +90,15 @@ public class ImapMailboxReader implements MailboxReader {
       for (var entry : fresh.entrySet()) {
         long uid = entry.getKey();
         try {
-          emails.add(
-              fetchedEmailMapper.map(entry.getValue(), uid, uidValidity, credentials.host()));
+          emails.add(fetchedEmailMapper.map(entry.getValue(), uid, credentials.host()));
         } catch (MessagingException | IOException e) {
           log.warn(
-              "Письмо uid={} ящика {} пропущено: {}", uid, credentials.username(), e.getMessage());
+              "Письмо uid={} не разобрано, курсор остановлен перед ним: {}", uid, e.getMessage());
+          return new MailboxFetchResult(uidValidity, lastSeenUid, reindexed, emails, uid);
         }
         lastSeenUid = uid;
       }
-      return new MailboxFetchResult(uidValidity, lastSeenUid, reindexed, emails);
+      return new MailboxFetchResult(uidValidity, lastSeenUid, reindexed, emails, null);
     } catch (AuthenticationFailedException e) {
       throw new MailboxConnectionException("Неверный логин или пароль приложения", e);
     } catch (MessagingException e) {
@@ -185,6 +189,8 @@ public class ImapMailboxReader implements MailboxReader {
   }
 
   private Store openStore(MailboxCredentials credentials) throws MessagingException {
+    hostGuard.requireRoutableHost(credentials.host());
+    hostGuard.requireAllowedPort(credentials.port());
     String protocol = credentials.ssl() ? "imaps" : "imap";
     Properties props = new Properties();
     props.put("mail.store.protocol", protocol);
@@ -201,8 +207,12 @@ public class ImapMailboxReader implements MailboxReader {
     if (credentials.ssl()) {
       props.put("mail.imaps.ssl.enable", "true");
       props.put("mail.imaps.ssl.checkserveridentity", "true");
+      props.put("mail.imaps.ssl.protocols", TLS_PROTOCOLS);
     } else {
       props.put("mail.imap.starttls.enable", "true");
+      props.put("mail.imap.starttls.required", "true");
+      props.put("mail.imap.ssl.checkserveridentity", "true");
+      props.put("mail.imap.ssl.protocols", TLS_PROTOCOLS);
     }
 
     Store store = Session.getInstance(props).getStore(protocol);

@@ -3,6 +3,7 @@ package com.pravoos.ai.shared.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.pravoos.ai.shared.mail.ImapMailboxReader;
+import com.pravoos.ai.shared.mail.MailHostGuard;
 import com.pravoos.ai.shared.mail.MailboxReader;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,8 @@ class MailboxConfigTest {
     MailboxReader reader =
         config.imapMailboxReader(
             new MailboxProperties(Duration.ofSeconds(5), Duration.ofSeconds(10), 5),
-            new MailSyncProperties(100, 1000),
+            new MailHostGuard(),
+            new MailSyncProperties(100, 1000, 500),
             new MailAttachmentProperties(10, 1024));
 
     assertThat(reader).isInstanceOf(ImapMailboxReader.class);

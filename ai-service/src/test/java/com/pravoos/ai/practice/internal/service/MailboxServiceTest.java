@@ -20,6 +20,7 @@ import com.pravoos.ai.shared.exception.MailboxConnectionException;
 import com.pravoos.ai.shared.exception.MailboxHostRequiredException;
 import com.pravoos.ai.shared.exception.MailboxLimitExceededException;
 import com.pravoos.ai.shared.exception.MailboxNotFoundException;
+import com.pravoos.ai.shared.mail.MailHostGuard;
 import com.pravoos.ai.shared.mail.MailboxCredentials;
 import com.pravoos.ai.shared.mail.MailboxReader;
 import com.pravoos.ai.shared.model.enums.MailboxStatus;
@@ -38,6 +39,7 @@ class MailboxServiceTest {
 
   @Mock private MailboxRepository mailboxRepository;
   @Mock private MailboxReader mailboxReader;
+  @Mock private MailHostGuard hostGuard;
 
   private MailboxService service;
 
@@ -50,7 +52,18 @@ class MailboxServiceTest {
         new MailboxService(
             mailboxRepository,
             mailboxReader,
-            new MailboxProperties(Duration.ofSeconds(5), Duration.ofSeconds(10), 2));
+            new MailboxProperties(Duration.ofSeconds(5), Duration.ofSeconds(10), 2),
+            hostGuard,
+            selfProxy());
+  }
+
+  private MailboxService selfProxy() {
+    return new MailboxService(
+        mailboxRepository,
+        mailboxReader,
+        new MailboxProperties(Duration.ofSeconds(5), Duration.ofSeconds(10), 2),
+        hostGuard,
+        null);
   }
 
   @Test
@@ -142,6 +155,45 @@ class MailboxServiceTest {
 
     assertThat(mailbox.getPassword()).isEqualTo("new-password");
     assertThat(response.status()).isEqualTo(MailboxStatus.PENDING);
+  }
+
+  @Test
+  void updateResumesAutoPausedMailboxWhenCredentialsAreFixed() {
+    Mailbox mailbox = mailbox();
+    for (int attempt = 0; attempt < 8; attempt++) {
+      mailbox.markFailed("Неверный логин или пароль приложения");
+    }
+    assertThat(mailbox.isSyncEnabled()).isFalse();
+    when(mailboxRepository.findByIdAndUserId(mailboxId, userId)).thenReturn(Optional.of(mailbox));
+    when(mailboxRepository.save(any(Mailbox.class))).thenAnswer(call -> call.getArgument(0));
+
+    MailboxResponse response =
+        service.update(
+            mailboxId,
+            new UpdateMailboxRequest("new-password", null, null, null, null, null),
+            userId);
+
+    assertThat(response.syncEnabled()).isTrue();
+    assertThat(mailbox.getConsecutiveFailures()).isZero();
+    assertThat(response.status()).isEqualTo(MailboxStatus.PENDING);
+  }
+
+  @Test
+  void updateKeepsMailboxDisabledWhenOwnerAsksForIt() {
+    Mailbox mailbox = mailbox();
+    for (int attempt = 0; attempt < 8; attempt++) {
+      mailbox.markFailed("Неверный логин или пароль приложения");
+    }
+    when(mailboxRepository.findByIdAndUserId(mailboxId, userId)).thenReturn(Optional.of(mailbox));
+    when(mailboxRepository.save(any(Mailbox.class))).thenAnswer(call -> call.getArgument(0));
+
+    MailboxResponse response =
+        service.update(
+            mailboxId,
+            new UpdateMailboxRequest("new-password", null, null, null, null, false),
+            userId);
+
+    assertThat(response.syncEnabled()).isFalse();
   }
 
   @Test

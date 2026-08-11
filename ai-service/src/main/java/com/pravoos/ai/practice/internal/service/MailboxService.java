@@ -13,6 +13,7 @@ import com.pravoos.ai.shared.exception.MailboxConnectionException;
 import com.pravoos.ai.shared.exception.MailboxHostRequiredException;
 import com.pravoos.ai.shared.exception.MailboxLimitExceededException;
 import com.pravoos.ai.shared.exception.MailboxNotFoundException;
+import com.pravoos.ai.shared.mail.MailHostGuard;
 import com.pravoos.ai.shared.mail.MailHostPreset;
 import com.pravoos.ai.shared.mail.MailboxCredentials;
 import com.pravoos.ai.shared.mail.MailboxReader;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,14 +37,20 @@ public class MailboxService {
   private final MailboxRepository mailboxRepository;
   private final MailboxReader mailboxReader;
   private final MailboxProperties mailboxProperties;
+  private final MailHostGuard hostGuard;
+  private final MailboxService self;
 
   public MailboxService(
       MailboxRepository mailboxRepository,
       MailboxReader mailboxReader,
-      MailboxProperties mailboxProperties) {
+      MailboxProperties mailboxProperties,
+      MailHostGuard hostGuard,
+      @Lazy MailboxService self) {
     this.mailboxRepository = mailboxRepository;
     this.mailboxReader = mailboxReader;
     this.mailboxProperties = mailboxProperties;
+    this.hostGuard = hostGuard;
+    this.self = self;
   }
 
   public List<MailHostPresetResponse> presets() {
@@ -80,6 +88,8 @@ public class MailboxService {
     if (imapHost == null || imapPort == null) {
       throw new MailboxHostRequiredException(emailAddress);
     }
+    hostGuard.requireRoutableHost(imapHost);
+    hostGuard.requireAllowedPort(imapPort);
 
     Mailbox mailbox = new Mailbox();
     mailbox.setUserId(userId);
@@ -101,6 +111,7 @@ public class MailboxService {
   @Transactional
   public MailboxResponse update(UUID mailboxId, UpdateMailboxRequest request, UUID userId) {
     Mailbox mailbox = requireOwnedMailbox(mailboxId, userId);
+    boolean wasAutoPaused = mailbox.isAutoPaused();
     boolean connectionChanged = false;
 
     if (request.password() != null && !request.password().isBlank()) {
@@ -108,10 +119,13 @@ public class MailboxService {
       connectionChanged = true;
     }
     if (request.imapHost() != null && !request.imapHost().isBlank()) {
-      mailbox.setImapHost(request.imapHost().trim());
+      String imapHost = request.imapHost().trim();
+      hostGuard.requireRoutableHost(imapHost);
+      mailbox.setImapHost(imapHost);
       connectionChanged = true;
     }
     if (request.imapPort() != null) {
+      hostGuard.requireAllowedPort(request.imapPort());
       mailbox.setImapPort(request.imapPort());
       connectionChanged = true;
     }
@@ -120,11 +134,18 @@ public class MailboxService {
       connectionChanged = true;
     }
     if (request.folder() != null && !request.folder().isBlank()) {
-      mailbox.setFolder(normalizeFolder(request.folder()));
+      String folder = normalizeFolder(request.folder());
+      if (!folder.equals(mailbox.getFolder())) {
+        mailbox.resetSyncCursor();
+      }
+      mailbox.setFolder(folder);
       connectionChanged = true;
     }
     if (request.syncEnabled() != null) {
       mailbox.setSyncEnabled(request.syncEnabled());
+    } else if (connectionChanged && wasAutoPaused) {
+      mailbox.setSyncEnabled(true);
+      log.info("Mailbox {} auto-resumed after connection settings were corrected", mailboxId);
     }
     if (connectionChanged) {
       mailbox.resetVerification();
@@ -135,18 +156,26 @@ public class MailboxService {
   }
 
   public MailboxTestResult testConnection(UUID mailboxId, UUID userId) {
-    Mailbox mailbox = requireOwnedMailbox(mailboxId, userId);
+    MailboxCredentials credentials = credentialsOf(requireOwnedMailbox(mailboxId, userId));
     try {
-      mailboxReader.verifyConnection(credentialsOf(mailbox));
-      mailbox.markConnected();
-      mailboxRepository.save(mailbox);
+      mailboxReader.verifyConnection(credentials);
+      self.recordVerificationResult(mailboxId, userId, null);
       log.info("Mailbox {} connection verified", mailboxId);
       return MailboxTestResult.ok();
     } catch (MailboxConnectionException e) {
-      mailbox.markFailed(e.getMessage());
-      mailboxRepository.save(mailbox);
+      self.recordVerificationResult(mailboxId, userId, e.getMessage());
       log.warn("Mailbox {} connection failed: {}", mailboxId, e.getMessage());
       return MailboxTestResult.failed(e.getMessage());
+    }
+  }
+
+  @Transactional
+  public void recordVerificationResult(UUID mailboxId, UUID userId, String error) {
+    Mailbox mailbox = requireOwnedMailbox(mailboxId, userId);
+    if (error == null) {
+      mailbox.markConnected();
+    } else {
+      mailbox.markVerificationFailed(error);
     }
   }
 

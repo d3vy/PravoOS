@@ -25,26 +25,25 @@ public class MailSyncService {
   private final MailSyncProperties syncProperties;
   private final EmailLinkingService emailLinkingService;
   private final MailSyncWriter mailSyncWriter;
+  private final MailboxSyncLock syncLock;
 
   public MailSyncService(
       MailboxRepository mailboxRepository,
       MailboxReader mailboxReader,
       MailSyncProperties syncProperties,
       EmailLinkingService emailLinkingService,
-      MailSyncWriter mailSyncWriter) {
+      MailSyncWriter mailSyncWriter,
+      MailboxSyncLock syncLock) {
     this.mailboxRepository = mailboxRepository;
     this.mailboxReader = mailboxReader;
     this.syncProperties = syncProperties;
     this.emailLinkingService = emailLinkingService;
     this.mailSyncWriter = mailSyncWriter;
+    this.syncLock = syncLock;
   }
 
   public MailSyncResult syncMailbox(UUID mailboxId) {
-    Mailbox mailbox =
-        mailboxRepository
-            .findById(mailboxId)
-            .orElseThrow(() -> new MailboxNotFoundException(mailboxId));
-    return sync(mailbox);
+    return sync(requireMailbox(mailboxId));
   }
 
   public MailSyncResult syncMailboxForUser(UUID mailboxId, UUID userId) {
@@ -55,16 +54,33 @@ public class MailSyncService {
     return sync(mailbox);
   }
 
+  private Mailbox requireMailbox(UUID mailboxId) {
+    return mailboxRepository
+        .findById(mailboxId)
+        .orElseThrow(() -> new MailboxNotFoundException(mailboxId));
+  }
+
   private MailSyncResult sync(Mailbox mailbox) {
+    String lockToken = syncLock.acquire(mailbox.getId());
+    if (lockToken == null) {
+      log.info("Синк ящика {} пропущен: уже выполняется", mailbox.getId());
+      return MailSyncResult.alreadyRunning(mailbox.getId(), mailbox.getStatus());
+    }
+    try {
+      return syncUnderLock(mailbox);
+    } finally {
+      syncLock.release(mailbox.getId(), lockToken);
+    }
+  }
+
+  private MailSyncResult syncUnderLock(Mailbox mailbox) {
     MailboxFetchResult fetchResult;
     try {
       fetchResult =
           mailboxReader.fetchMessages(
               credentialsOf(mailbox), cursorOf(mailbox), syncProperties.maxMessagesPerRun());
     } catch (MailboxConnectionException e) {
-      mailSyncWriter.markFailed(mailbox, e.getMessage());
-      log.warn("Синк ящика {} не удался: {}", mailbox.getId(), e.getMessage());
-      return MailSyncResult.failed(mailbox.getId(), e.getMessage());
+      return failSync(mailbox, e.getMessage());
     }
 
     if (fetchResult.reindexed()) {
@@ -74,7 +90,8 @@ public class MailSyncService {
           fetchResult.uidValidity());
     }
 
-    int saved = mailSyncWriter.applyFetch(mailbox, fetchResult);
+    int saved = mailSyncWriter.persistMessages(mailbox, fetchResult.messages());
+    mailSyncWriter.applyCursor(mailbox.getId(), fetchResult);
     autoLink(mailbox, saved);
 
     log.info(
@@ -85,6 +102,18 @@ public class MailSyncService {
         fetchResult.lastSeenUid());
     return MailSyncResult.ok(
         mailbox.getId(), fetchResult.messages().size(), saved, fetchResult.reindexed());
+  }
+
+  private MailSyncResult failSync(Mailbox mailbox, String error) {
+    if (mailSyncWriter.markFailed(mailbox.getId(), error)) {
+      log.error(
+          "Автосинк ящика {} остановлен после серии ошибок, требуется вмешательство владельца: {}",
+          mailbox.getId(),
+          error);
+    } else {
+      log.warn("Синк ящика {} не удался: {}", mailbox.getId(), error);
+    }
+    return MailSyncResult.failed(mailbox.getId(), error);
   }
 
   private void autoLink(Mailbox mailbox, int saved) {

@@ -19,4 +19,9 @@ public record MailSyncResult(
   public static MailSyncResult failed(UUID mailboxId, String error) {
     return new MailSyncResult(mailboxId, false, MailboxStatus.ERROR, 0, 0, false, error);
   }
+
+  public static MailSyncResult alreadyRunning(UUID mailboxId, MailboxStatus status) {
+    return new MailSyncResult(
+        mailboxId, true, status, 0, 0, false, "Синхронизация этого ящика уже выполняется");
+  }
 }

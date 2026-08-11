@@ -19,6 +19,7 @@ import com.pravoos.ai.practice.internal.model.entity.Mailbox;
 import com.pravoos.ai.practice.internal.repository.jpa.EmailAttachmentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.EmailMessageRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
+import com.pravoos.ai.shared.exception.EmailAttachmentImportInProgressException;
 import com.pravoos.ai.shared.exception.EmailMessageNotFoundException;
 import com.pravoos.ai.shared.exception.EmailNotLinkedToCaseException;
 import com.pravoos.ai.shared.exception.MalwareDetectedException;
@@ -53,6 +54,7 @@ class EmailAttachmentImportServiceTest {
   @Mock private MailboxReader mailboxReader;
   @Mock private CaseService caseService;
   @Mock private DocumentCommand documentCommand;
+  @Mock private EmailAttachmentImportLock importLock;
 
   private EmailAttachmentImportService service;
 
@@ -69,9 +71,10 @@ class EmailAttachmentImportServiceTest {
         new EmailAttachmentImportService(
             emailMessageRepository,
             emailAttachmentRepository,
-            mailboxRepository,
+            new EmailAttachmentImportWriter(
+                emailMessageRepository, emailAttachmentRepository, mailboxRepository, caseService),
+            importLock,
             mailboxReader,
-            caseService,
             documentCommand);
 
     message = new EmailMessage(mailboxId, "<msg-1@example.com>", 42L, EmailDirection.IN);
@@ -93,6 +96,7 @@ class EmailAttachmentImportServiceTest {
     mailbox.setUidValidity(7L);
     mailbox.setLastSeenUid(100L);
 
+    when(importLock.acquire(emailId)).thenReturn("lock-token");
     when(emailMessageRepository.findByIdAndUserId(emailId, lawyerId))
         .thenReturn(Optional.of(message));
     when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
@@ -191,6 +195,20 @@ class EmailAttachmentImportServiceTest {
   }
 
   @Test
+  void doesNotRefetchMailboxWhenRemainingAttachmentIsPermanentlySkipped() {
+    EmailAttachment skipped = new EmailAttachment(emailId, 0, "signature.png", "image/png");
+    skipped.markSkipped(AttachmentSkipReason.TOO_LARGE.message());
+    when(emailAttachmentRepository.findByEmailMessageIdOrderByPartIndexAsc(emailId))
+        .thenReturn(List.of(skipped));
+
+    EmailAttachmentImportResult result = service.importAttachments(emailId, lawyerId);
+
+    assertThat(result.imported()).isZero();
+    assertThat(result.skipped()).isEqualTo(1);
+    verify(mailboxReader, never()).fetchAttachments(any(), any(), anyLong());
+  }
+
+  @Test
   void retriesPreviouslyRejectedAttachment() {
     EmailAttachment rejected = new EmailAttachment(emailId, 0, "contract.pdf", "application/pdf");
     rejected.markRejected("Файл отклонён");
@@ -224,6 +242,26 @@ class EmailAttachmentImportServiceTest {
 
     assertThatThrownBy(() -> service.importAttachments(emailId, lawyerId))
         .isInstanceOf(EmailMessageNotFoundException.class);
+  }
+
+  @Test
+  void rejectsConcurrentImportOfTheSameEmail() {
+    when(importLock.acquire(emailId)).thenReturn(null);
+
+    assertThatThrownBy(() -> service.importAttachments(emailId, lawyerId))
+        .isInstanceOf(EmailAttachmentImportInProgressException.class);
+    verify(mailboxReader, never()).fetchAttachments(any(), any(), anyLong());
+    verify(documentCommand, never()).upload(any(MultipartFile.class), any(), any(), any());
+  }
+
+  @Test
+  void releasesImportLockWhenUploadBlowsUp() {
+    when(mailboxReader.fetchAttachments(any(), any(), anyLong()))
+        .thenThrow(new IllegalStateException("IMAP down"));
+
+    assertThatThrownBy(() -> service.importAttachments(emailId, lawyerId))
+        .isInstanceOf(IllegalStateException.class);
+    verify(importLock).release(emailId, "lock-token");
   }
 
   private FetchedAttachment loaded(int partIndex, String fileName) {

@@ -1,8 +1,9 @@
 package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.practice.internal.dto.MailSyncResult;
-import com.pravoos.ai.practice.internal.model.entity.Mailbox;
 import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -30,8 +31,7 @@ public class MailPollingService {
       lockAtLeastFor = "PT1M",
       lockAtMostFor = "PT1H")
   public void pollMailboxes() {
-    List<UUID> mailboxIds =
-        mailboxRepository.findBySyncEnabledTrue().stream().map(Mailbox::getId).toList();
+    List<UUID> mailboxIds = mailboxRepository.findIdsDueForSync(LocalDateTime.now(ZoneOffset.UTC));
     if (mailboxIds.isEmpty()) {
       return;
     }

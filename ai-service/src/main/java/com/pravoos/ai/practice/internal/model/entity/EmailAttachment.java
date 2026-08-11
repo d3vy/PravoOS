@@ -101,6 +101,10 @@ public class EmailAttachment {
     return status == EmailAttachmentStatus.IMPORTED;
   }
 
+  public boolean isSettled() {
+    return status == EmailAttachmentStatus.IMPORTED || status == EmailAttachmentStatus.SKIPPED;
+  }
+
   private static String truncate(String value, int maxLength) {
     if (value == null) {
       return null;

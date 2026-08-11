@@ -3,6 +3,8 @@ package com.pravoos.ai.practice.internal.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +20,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.EmailMessageRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
 import com.pravoos.ai.practice.internal.service.EmailLinkResolver.EmailLink;
 import com.pravoos.ai.practice.internal.service.EmailLinkResolver.LawyerLinkIndex;
+import com.pravoos.ai.shared.config.MailSyncProperties;
 import com.pravoos.ai.shared.exception.EmailLinkTargetRequiredException;
 import com.pravoos.ai.shared.exception.EmailMessageNotFoundException;
 import com.pravoos.ai.shared.model.enums.ContactType;
@@ -65,7 +68,8 @@ class EmailLinkingServiceTest {
             clientContactRepository,
             linkResolver,
             caseService,
-            clientService);
+            clientService,
+            new MailSyncProperties(100, 1000, 500));
     mailbox.setUserId(lawyerId);
     mailbox.setEmailAddress("lawyer@pravoos.ru");
     ReflectionTestUtils.setField(mailbox, "id", mailboxId);
@@ -111,7 +115,7 @@ class EmailLinkingServiceTest {
     message.applyLink(null, clientId, EmailLinkSource.MANUAL);
     message.attachClientContact(contactId);
     ClientContact existing = contact(clientId);
-    when(emailMessageRepository.findByIdAndUserId(messageId, lawyerId))
+    when(emailMessageRepository.findByIdAndUserIdForUpdate(messageId, lawyerId))
         .thenReturn(Optional.of(message));
     when(clientContactRepository.findById(contactId)).thenReturn(Optional.of(existing));
 
@@ -126,7 +130,7 @@ class EmailLinkingServiceTest {
   void manualLinkTakesClientFromCase() {
     EmailMessage message = message();
     UUID otherClientId = UUID.randomUUID();
-    when(emailMessageRepository.findByIdAndUserId(messageId, lawyerId))
+    when(emailMessageRepository.findByIdAndUserIdForUpdate(messageId, lawyerId))
         .thenReturn(Optional.of(message));
     when(caseService.requireOwnedCase(caseId, lawyerId)).thenReturn(caseWithClient());
     givenContactIsSaved();
@@ -145,12 +149,12 @@ class EmailLinkingServiceTest {
     assertThatThrownBy(() -> service.link(messageId, new LinkEmailRequest(null, null), lawyerId))
         .isInstanceOf(EmailLinkTargetRequiredException.class);
 
-    verify(emailMessageRepository, never()).findByIdAndUserId(any(), any());
+    verify(emailMessageRepository, never()).findByIdAndUserIdForUpdate(any(), any());
   }
 
   @Test
   void foreignMessageIsNotFound() {
-    when(emailMessageRepository.findByIdAndUserId(messageId, lawyerId))
+    when(emailMessageRepository.findByIdAndUserIdForUpdate(messageId, lawyerId))
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.unlink(messageId, lawyerId))
@@ -163,7 +167,7 @@ class EmailLinkingServiceTest {
     message.applyLink(caseId, clientId, EmailLinkSource.CASE_NUMBER);
     message.attachClientContact(contactId);
     ClientContact existing = contact(clientId);
-    when(emailMessageRepository.findByIdAndUserId(messageId, lawyerId))
+    when(emailMessageRepository.findByIdAndUserIdForUpdate(messageId, lawyerId))
         .thenReturn(Optional.of(message));
     when(clientContactRepository.findById(contactId)).thenReturn(Optional.of(existing));
 
@@ -178,8 +182,7 @@ class EmailLinkingServiceTest {
 
   private void givenMailboxWithPending(EmailMessage message) {
     when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
-    when(emailMessageRepository.findByMailboxIdAndCaseIdIsNullAndClientIdIsNullOrderBySentAtAsc(
-            mailboxId))
+    when(emailMessageRepository.findAutoLinkCandidates(eq(mailboxId), anyInt(), any()))
         .thenReturn(List.of(message));
     when(linkResolver.indexFor(lawyerId)).thenReturn(new LawyerLinkIndex(Map.of(), Map.of()));
   }

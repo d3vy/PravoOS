@@ -1,131 +1,82 @@
 package com.pravoos.ai.practice.internal.service;
 
-import com.pravoos.ai.practice.internal.model.entity.EmailMessage;
 import com.pravoos.ai.practice.internal.model.entity.Mailbox;
-import com.pravoos.ai.practice.internal.repository.jpa.EmailMessageRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
+import com.pravoos.ai.shared.exception.MailboxNotFoundException;
 import com.pravoos.ai.shared.mail.FetchedEmail;
 import com.pravoos.ai.shared.mail.MailboxFetchResult;
-import com.pravoos.ai.shared.model.enums.EmailDirection;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
 class MailSyncWriter {
 
-  private static final int MAX_MESSAGE_ID_LENGTH = 500;
-  private static final String ADDRESS_SEPARATOR = ", ";
+  private static final Logger log = LoggerFactory.getLogger(MailSyncWriter.class);
 
   private final MailboxRepository mailboxRepository;
-  private final EmailMessageRepository emailMessageRepository;
+  private final EmailMessageWriter emailMessageWriter;
+  private final MailboxAlertPublisher alertPublisher;
 
   MailSyncWriter(
-      MailboxRepository mailboxRepository, EmailMessageRepository emailMessageRepository) {
+      MailboxRepository mailboxRepository,
+      EmailMessageWriter emailMessageWriter,
+      MailboxAlertPublisher alertPublisher) {
     this.mailboxRepository = mailboxRepository;
-    this.emailMessageRepository = emailMessageRepository;
+    this.emailMessageWriter = emailMessageWriter;
+    this.alertPublisher = alertPublisher;
   }
 
   @Transactional
-  void markFailed(Mailbox mailbox, String error) {
-    mailbox.markFailed(error);
-    mailbox.setLastSyncAt(LocalDateTime.now(ZoneOffset.UTC));
-    mailboxRepository.save(mailbox);
+  boolean markFailed(UUID mailboxId, String error) {
+    Mailbox mailbox = requireMailbox(mailboxId);
+    boolean pausedNow = mailbox.markFailed(error);
+    LocalDateTime failedAt = LocalDateTime.now(ZoneOffset.UTC);
+    mailbox.setLastSyncAt(failedAt);
+    if (pausedNow) {
+      alertPublisher.enqueuePaused(mailbox, failedAt);
+    }
+    return pausedNow;
   }
 
-  @Transactional
-  int applyFetch(Mailbox mailbox, MailboxFetchResult fetchResult) {
-    int saved = persist(mailbox, fetchResult.messages());
-    mailbox.setUidValidity(fetchResult.uidValidity());
-    mailbox.setLastSeenUid(fetchResult.lastSeenUid());
-    mailbox.setLastSyncAt(LocalDateTime.now(ZoneOffset.UTC));
-    mailbox.markConnected();
-    mailboxRepository.save(mailbox);
+  int persistMessages(Mailbox mailbox, List<FetchedEmail> emails) {
+    int saved = 0;
+    for (FetchedEmail email : emails) {
+      if (emailMessageWriter.saveIfAbsent(mailbox, email)) {
+        saved++;
+      }
+    }
     return saved;
   }
 
-  private int persist(Mailbox mailbox, List<FetchedEmail> emails) {
-    if (emails.isEmpty()) {
-      return 0;
+  @Transactional
+  void applyCursor(UUID mailboxId, MailboxFetchResult fetchResult) {
+    Mailbox mailbox = requireMailbox(mailboxId);
+    long lastSeenUid = fetchResult.lastSeenUid();
+    if (!fetchResult.hasUnreadableUid()) {
+      mailbox.clearUnreadableUid();
+    } else if (mailbox.registerUnreadableUid(fetchResult.unreadableUid())) {
+      lastSeenUid = fetchResult.unreadableUid();
+      mailbox.clearUnreadableUid();
+      log.error(
+          "Письмо uid={} ящика {} не читается после нескольких попыток — пропускаю его",
+          fetchResult.unreadableUid(),
+          mailboxId);
     }
-    List<String> messageIds = emails.stream().map(this::messageId).toList();
-    Set<String> known =
-        new HashSet<>(emailMessageRepository.findExistingMessageIds(mailbox.getId(), messageIds));
-
-    List<EmailMessage> newMessages = new ArrayList<>();
-    for (FetchedEmail email : emails) {
-      if (!known.add(messageId(email))) {
-        continue;
-      }
-      newMessages.add(toEntity(mailbox, email));
-    }
-    if (newMessages.isEmpty()) {
-      return 0;
-    }
-    emailMessageRepository.saveAll(newMessages);
-    return newMessages.size();
+    mailbox.setUidValidity(fetchResult.uidValidity());
+    mailbox.setLastSeenUid(lastSeenUid);
+    mailbox.setLastSyncAt(LocalDateTime.now(ZoneOffset.UTC));
+    mailbox.markConnected();
   }
 
-  private EmailMessage toEntity(Mailbox mailbox, FetchedEmail email) {
-    EmailMessage message =
-        new EmailMessage(
-            mailbox.getId(), messageId(email), email.uid(), directionOf(mailbox, email));
-    message.setThreadKey(threadKeyOf(email));
-    message.setFromAddress(email.fromAddress());
-    message.setToAddresses(joinAddresses(email.toAddresses()));
-    message.setCcAddresses(joinAddresses(email.ccAddresses()));
-    message.setSubject(email.subject());
-    message.setBodyText(email.bodyText());
-    message.setSentAt(email.sentAt());
-    message.setHasAttachments(email.hasAttachments());
-    message.setAttachmentCount(email.attachmentCount());
-    return message;
-  }
-
-  private EmailDirection directionOf(Mailbox mailbox, FetchedEmail email) {
-    String from = email.fromAddress();
-    if (from != null && from.equalsIgnoreCase(mailbox.getEmailAddress())) {
-      return EmailDirection.OUT;
-    }
-    return EmailDirection.IN;
-  }
-
-  private String threadKeyOf(FetchedEmail email) {
-    if (!email.references().isEmpty()) {
-      return truncate(email.references().getFirst());
-    }
-    if (email.inReplyTo() != null && !email.inReplyTo().isBlank()) {
-      return truncate(email.inReplyTo());
-    }
-    return messageId(email);
-  }
-
-  private String messageId(FetchedEmail email) {
-    return truncate(email.messageId());
-  }
-
-  private String truncate(String value) {
-    if (value == null) {
-      return null;
-    }
-    String trimmed = value.trim();
-    return trimmed.length() <= MAX_MESSAGE_ID_LENGTH
-        ? trimmed
-        : trimmed.substring(0, MAX_MESSAGE_ID_LENGTH);
-  }
-
-  private String joinAddresses(List<String> addresses) {
-    if (addresses.isEmpty()) {
-      return null;
-    }
-    return String.join(
-        ADDRESS_SEPARATOR,
-        addresses.stream().map(address -> address.toLowerCase(Locale.ROOT)).toList());
+  private Mailbox requireMailbox(UUID mailboxId) {
+    return mailboxRepository
+        .findById(mailboxId)
+        .orElseThrow(() -> new MailboxNotFoundException(mailboxId));
   }
 }

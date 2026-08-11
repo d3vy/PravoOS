@@ -5,23 +5,18 @@ import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.practice.internal.dto.EmailAttachmentImportResult;
 import com.pravoos.ai.practice.internal.dto.EmailAttachmentResponse;
 import com.pravoos.ai.practice.internal.model.entity.EmailAttachment;
-import com.pravoos.ai.practice.internal.model.entity.EmailMessage;
-import com.pravoos.ai.practice.internal.model.entity.Mailbox;
 import com.pravoos.ai.practice.internal.repository.jpa.EmailAttachmentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.EmailMessageRepository;
-import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
+import com.pravoos.ai.practice.internal.service.EmailAttachmentImportWriter.ImportPlan;
 import com.pravoos.ai.shared.exception.DocumentProcessingException;
+import com.pravoos.ai.shared.exception.EmailAttachmentImportInProgressException;
 import com.pravoos.ai.shared.exception.EmailMessageNotFoundException;
-import com.pravoos.ai.shared.exception.EmailNotLinkedToCaseException;
 import com.pravoos.ai.shared.exception.FileTooLargeException;
-import com.pravoos.ai.shared.exception.MailboxNotFoundException;
 import com.pravoos.ai.shared.exception.MalwareDetectedException;
 import com.pravoos.ai.shared.exception.StorageQuotaExceededException;
 import com.pravoos.ai.shared.exception.UnsafeFileContentException;
 import com.pravoos.ai.shared.mail.FetchedAttachment;
-import com.pravoos.ai.shared.mail.MailboxCredentials;
 import com.pravoos.ai.shared.mail.MailboxReader;
-import com.pravoos.ai.shared.mail.MailboxSyncCursor;
 import com.pravoos.ai.shared.util.InMemoryMultipartFile;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,23 +39,23 @@ public class EmailAttachmentImportService {
 
   private final EmailMessageRepository emailMessageRepository;
   private final EmailAttachmentRepository emailAttachmentRepository;
-  private final MailboxRepository mailboxRepository;
+  private final EmailAttachmentImportWriter importWriter;
+  private final EmailAttachmentImportLock importLock;
   private final MailboxReader mailboxReader;
-  private final CaseService caseService;
   private final DocumentCommand documentCommand;
 
   public EmailAttachmentImportService(
       EmailMessageRepository emailMessageRepository,
       EmailAttachmentRepository emailAttachmentRepository,
-      MailboxRepository mailboxRepository,
+      EmailAttachmentImportWriter importWriter,
+      EmailAttachmentImportLock importLock,
       MailboxReader mailboxReader,
-      CaseService caseService,
       DocumentCommand documentCommand) {
     this.emailMessageRepository = emailMessageRepository;
     this.emailAttachmentRepository = emailAttachmentRepository;
-    this.mailboxRepository = mailboxRepository;
+    this.importWriter = importWriter;
+    this.importLock = importLock;
     this.mailboxReader = mailboxReader;
-    this.caseService = caseService;
     this.documentCommand = documentCommand;
   }
 
@@ -73,34 +68,34 @@ public class EmailAttachmentImportService {
   }
 
   public EmailAttachmentImportResult importAttachments(UUID emailId, UUID lawyerId) {
-    EmailMessage message = requireOwnedMessage(emailId, lawyerId);
-    UUID caseId = message.getCaseId();
-    if (caseId == null) {
-      throw new EmailNotLinkedToCaseException(emailId);
+    String lockToken = importLock.acquire(emailId);
+    if (lockToken == null) {
+      log.info("Импорт вложений письма {} уже выполняется", emailId);
+      throw new EmailAttachmentImportInProgressException(emailId);
     }
-    caseService.requireOwnedCase(caseId, lawyerId);
+    try {
+      return importUnderLock(emailId, lawyerId);
+    } finally {
+      importLock.release(emailId, lockToken);
+    }
+  }
 
-    List<EmailAttachment> known =
-        emailAttachmentRepository.findByEmailMessageIdOrderByPartIndexAsc(emailId);
-    if (!message.isHasAttachments() || allImported(known, message.getAttachmentCount())) {
-      return toResult(message, known);
+  private EmailAttachmentImportResult importUnderLock(UUID emailId, UUID lawyerId) {
+    ImportPlan plan = importWriter.loadPlan(emailId, lawyerId);
+    if (!plan.fetchRequired()) {
+      return toResult(plan, plan.known());
     }
 
-    Mailbox mailbox =
-        mailboxRepository
-            .findById(message.getMailboxId())
-            .orElseThrow(() -> new MailboxNotFoundException(message.getMailboxId()));
     List<FetchedAttachment> fetched =
-        mailboxReader.fetchAttachments(
-            credentialsOf(mailbox), cursorOf(mailbox), message.getImapUid());
+        mailboxReader.fetchAttachments(plan.credentials(), plan.cursor(), plan.imapUid());
 
     Map<Integer, EmailAttachment> byPartIndex = new HashMap<>();
-    known.forEach(attachment -> byPartIndex.put(attachment.getPartIndex(), attachment));
+    plan.known().forEach(attachment -> byPartIndex.put(attachment.getPartIndex(), attachment));
 
     List<EmailAttachment> processed = new ArrayList<>(fetched.size());
     boolean quotaExhausted = false;
     for (FetchedAttachment attachment : fetched) {
-      EmailAttachment row = rowFor(message, attachment, byPartIndex);
+      EmailAttachment row = rowFor(plan.emailId(), attachment, byPartIndex);
       if (row.isImported()) {
         processed.add(row);
         continue;
@@ -110,38 +105,40 @@ public class EmailAttachmentImportService {
       } else if (quotaExhausted) {
         row.markSkipped(QUOTA_EXHAUSTED_REASON);
       } else {
-        quotaExhausted = store(row, attachment, message, caseId, lawyerId);
+        quotaExhausted = store(row, attachment, plan, lawyerId);
       }
-      processed.add(emailAttachmentRepository.save(row));
+      processed.add(importWriter.save(row));
     }
 
     log.info(
-        "Импорт вложений письма {} в дело {}: обработано {}", emailId, caseId, processed.size());
-    return toResult(message, processed);
+        "Импорт вложений письма {} в дело {}: обработано {}",
+        emailId,
+        plan.caseId(),
+        processed.size());
+    return toResult(plan, processed);
   }
 
   private boolean store(
-      EmailAttachment row,
-      FetchedAttachment attachment,
-      EmailMessage message,
-      UUID caseId,
-      UUID lawyerId) {
+      EmailAttachment row, FetchedAttachment attachment, ImportPlan plan, UUID lawyerId) {
     try {
       DocumentUploadResponse uploaded =
           documentCommand.upload(
-              multipartOf(attachment), titleOf(message, attachment), lawyerId, caseId);
+              multipartOf(attachment),
+              titleOf(plan.subject(), attachment),
+              lawyerId,
+              plan.caseId());
       row.markImported(uploaded.id());
       return false;
     } catch (StorageQuotaExceededException e) {
       row.markSkipped(QUOTA_EXHAUSTED_REASON);
-      log.warn("Импорт вложений письма {} прерван: {}", message.getId(), e.getMessage());
+      log.warn("Импорт вложений письма {} прерван: {}", plan.emailId(), e.getMessage());
       return true;
     } catch (UnsafeFileContentException | MalwareDetectedException | FileTooLargeException e) {
       row.markRejected(e.getMessage());
       log.warn(
           "Вложение '{}' письма {} отклонено: {}",
           attachment.fileName(),
-          message.getId(),
+          plan.emailId(),
           e.getMessage());
       return false;
     } catch (DocumentProcessingException e) {
@@ -152,30 +149,24 @@ public class EmailAttachmentImportService {
       log.warn(
           "Вложение '{}' письма {} не сохранено: {}",
           attachment.fileName(),
-          message.getId(),
+          plan.emailId(),
           e.toString());
       return false;
     }
   }
 
   private EmailAttachment rowFor(
-      EmailMessage message, FetchedAttachment attachment, Map<Integer, EmailAttachment> known) {
+      UUID emailId, FetchedAttachment attachment, Map<Integer, EmailAttachment> known) {
     EmailAttachment row =
         known.computeIfAbsent(
             attachment.partIndex(),
             partIndex ->
                 new EmailAttachment(
-                    message.getId(), partIndex, attachment.fileName(), attachment.contentType()));
+                    emailId, partIndex, attachment.fileName(), attachment.contentType()));
     row.setFileName(attachment.fileName());
     row.setContentType(attachment.contentType());
     row.setSizeBytes(attachment.sizeBytes());
     return row;
-  }
-
-  private boolean allImported(List<EmailAttachment> known, int attachmentCount) {
-    return !known.isEmpty()
-        && known.size() >= attachmentCount
-        && known.stream().allMatch(EmailAttachment::isImported);
   }
 
   private InMemoryMultipartFile multipartOf(FetchedAttachment attachment) {
@@ -183,8 +174,7 @@ public class EmailAttachmentImportService {
         MULTIPART_NAME, attachment.fileName(), attachment.contentType(), attachment.content());
   }
 
-  private String titleOf(EmailMessage message, FetchedAttachment attachment) {
-    String subject = message.getSubject();
+  private String titleOf(String subject, FetchedAttachment attachment) {
     String title =
         subject == null || subject.isBlank()
             ? attachment.fileName()
@@ -192,30 +182,15 @@ public class EmailAttachmentImportService {
     return title.length() <= MAX_TITLE_LENGTH ? title : title.substring(0, MAX_TITLE_LENGTH);
   }
 
-  private EmailAttachmentImportResult toResult(
-      EmailMessage message, List<EmailAttachment> attachments) {
+  private EmailAttachmentImportResult toResult(ImportPlan plan, List<EmailAttachment> attachments) {
     return EmailAttachmentImportResult.of(
-        message.getId(),
-        message.getCaseId(),
+        plan.emailId(),
+        plan.caseId(),
         attachments.stream().map(EmailAttachmentResponse::from).toList());
   }
 
-  private MailboxCredentials credentialsOf(Mailbox mailbox) {
-    return new MailboxCredentials(
-        mailbox.getImapHost(),
-        mailbox.getImapPort(),
-        mailbox.isImapSsl(),
-        mailbox.getEmailAddress(),
-        mailbox.getPassword(),
-        mailbox.getFolder());
-  }
-
-  private MailboxSyncCursor cursorOf(Mailbox mailbox) {
-    return new MailboxSyncCursor(mailbox.getUidValidity(), mailbox.getLastSeenUid());
-  }
-
-  private EmailMessage requireOwnedMessage(UUID emailId, UUID lawyerId) {
-    return emailMessageRepository
+  private void requireOwnedMessage(UUID emailId, UUID lawyerId) {
+    emailMessageRepository
         .findByIdAndUserId(emailId, lawyerId)
         .orElseThrow(() -> new EmailMessageNotFoundException(emailId));
   }

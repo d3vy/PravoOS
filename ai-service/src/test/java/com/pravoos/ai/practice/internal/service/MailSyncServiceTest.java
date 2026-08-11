@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +28,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,14 +35,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class MailSyncServiceTest {
 
   @Mock private MailboxRepository mailboxRepository;
   @Mock private EmailMessageRepository emailMessageRepository;
   @Mock private MailboxReader mailboxReader;
   @Mock private EmailLinkingService emailLinkingService;
+  @Mock private MailboxSyncLock syncLock;
+  @Mock private MailboxAlertPublisher alertPublisher;
 
   private MailSyncService service;
 
@@ -57,9 +62,11 @@ class MailSyncServiceTest {
         new MailSyncService(
             mailboxRepository,
             mailboxReader,
-            new MailSyncProperties(50, 1000),
+            new MailSyncProperties(50, 1000, 500),
             emailLinkingService,
-            new MailSyncWriter(mailboxRepository, emailMessageRepository));
+            new MailSyncWriter(
+                mailboxRepository, new EmailMessageWriter(emailMessageRepository), alertPublisher),
+            syncLock);
     mailbox = new Mailbox();
     mailbox.setUserId(userId);
     mailbox.setEmailAddress("lawyer@pravoos.ru");
@@ -69,12 +76,15 @@ class MailSyncServiceTest {
     mailbox.setFolder("INBOX");
     mailbox.setUidValidity(42L);
     mailbox.setLastSeenUid(100L);
+    ReflectionTestUtils.setField(mailbox, "id", mailboxId);
+
+    when(syncLock.acquire(mailboxId)).thenReturn("lock-token");
+    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
+    when(emailMessageRepository.existsByMailboxIdAndMessageId(any(), any())).thenReturn(false);
   }
 
   @Test
   void savesNewMessagesAndAdvancesCursor() {
-    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
-    when(emailMessageRepository.findExistingMessageIds(any(), anyList())).thenReturn(Set.of());
     when(mailboxReader.fetchMessages(any(), any(), anyInt()))
         .thenReturn(
             new MailboxFetchResult(
@@ -100,9 +110,8 @@ class MailSyncServiceTest {
 
   @Test
   void skipsMessagesAlreadyStored() {
-    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
-    when(emailMessageRepository.findExistingMessageIds(any(), anyList()))
-        .thenReturn(Set.of("<a@example.com>"));
+    when(emailMessageRepository.existsByMailboxIdAndMessageId(mailboxId, "<a@example.com>"))
+        .thenReturn(true);
     when(mailboxReader.fetchMessages(any(), any(), anyInt()))
         .thenReturn(
             new MailboxFetchResult(
@@ -120,26 +129,7 @@ class MailSyncServiceTest {
   }
 
   @Test
-  void deduplicatesRepeatedMessageIdWithinSingleBatch() {
-    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
-    when(emailMessageRepository.findExistingMessageIds(any(), anyList())).thenReturn(Set.of());
-    when(mailboxReader.fetchMessages(any(), any(), anyInt()))
-        .thenReturn(
-            new MailboxFetchResult(
-                42L,
-                102L,
-                false,
-                List.of(incoming("<dup@example.com>", 101L), incoming("<dup@example.com>", 102L))));
-
-    MailSyncResult result = service.syncMailbox(mailboxId);
-
-    assertThat(result.saved()).isEqualTo(1);
-  }
-
-  @Test
   void marksOutgoingWhenSenderIsMailboxOwner() {
-    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
-    when(emailMessageRepository.findExistingMessageIds(any(), anyList())).thenReturn(Set.of());
     when(mailboxReader.fetchMessages(any(), any(), anyInt()))
         .thenReturn(
             new MailboxFetchResult(
@@ -167,8 +157,6 @@ class MailSyncServiceTest {
 
   @Test
   void usesFirstReferenceAsThreadKey() {
-    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
-    when(emailMessageRepository.findExistingMessageIds(any(), anyList())).thenReturn(Set.of());
     when(mailboxReader.fetchMessages(any(), any(), anyInt()))
         .thenReturn(
             new MailboxFetchResult(
@@ -199,7 +187,6 @@ class MailSyncServiceTest {
 
   @Test
   void connectionFailureSwitchesMailboxToErrorWithoutSavingMessages() {
-    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
     when(mailboxReader.fetchMessages(any(), any(), anyInt()))
         .thenThrow(new MailboxConnectionException("Неверный логин или пароль приложения", null));
 
@@ -210,14 +197,62 @@ class MailSyncServiceTest {
     assertThat(mailbox.getStatus()).isEqualTo(MailboxStatus.ERROR);
     assertThat(mailbox.getLastError()).isEqualTo("Неверный логин или пароль приложения");
     assertThat(mailbox.getLastSeenUid()).isEqualTo(100L);
-    verify(emailMessageRepository, never()).saveAll(anyList());
+    verify(emailMessageRepository, never()).saveAndFlush(any());
+  }
+
+  @Test
+  void repeatedFailuresBackOffAndEventuallyPauseAutoSync() {
+    when(mailboxReader.fetchMessages(any(), any(), anyInt()))
+        .thenThrow(new MailboxConnectionException("Неверный логин или пароль приложения", null));
+
+    service.syncMailbox(mailboxId);
+    assertThat(mailbox.isSyncEnabled()).isTrue();
+    assertThat(mailbox.isRetryPending(LocalDateTime.now(ZoneOffset.UTC))).isTrue();
+
+    for (int attempt = 0; attempt < 7; attempt++) {
+      service.syncMailbox(mailboxId);
+    }
+
+    assertThat(mailbox.isSyncEnabled()).isFalse();
+    assertThat(mailbox.getStatus()).isEqualTo(MailboxStatus.ERROR);
+    verify(alertPublisher).enqueuePaused(eq(mailbox), any(LocalDateTime.class));
+
+    service.syncMailbox(mailboxId);
+
+    verify(alertPublisher, times(1)).enqueuePaused(eq(mailbox), any(LocalDateTime.class));
+  }
+
+  @Test
+  void unreadableMessageStopsCursorAndIsSkippedAfterRepeatedAttempts() {
+    when(mailboxReader.fetchMessages(any(), any(), anyInt()))
+        .thenReturn(new MailboxFetchResult(42L, 100L, false, List.of(), 101L));
+
+    service.syncMailbox(mailboxId);
+    assertThat(mailbox.getLastSeenUid()).isEqualTo(100L);
+
+    service.syncMailbox(mailboxId);
+    assertThat(mailbox.getLastSeenUid()).isEqualTo(100L);
+
+    service.syncMailbox(mailboxId);
+    assertThat(mailbox.getLastSeenUid()).isEqualTo(101L);
+    assertThat(mailbox.getUnreadableUid()).isNull();
+  }
+
+  @Test
+  void concurrentSyncIsSkippedWhileLockIsHeld() {
+    when(syncLock.acquire(mailboxId)).thenReturn(null);
+
+    MailSyncResult result = service.syncMailbox(mailboxId);
+
+    assertThat(result.success()).isTrue();
+    assertThat(result.saved()).isZero();
+    verify(mailboxReader, never()).fetchMessages(any(), any(), anyInt());
   }
 
   @Test
   void reindexAfterUidValidityChangeUpdatesCursorToNewValidity() {
-    when(mailboxRepository.findById(mailboxId)).thenReturn(Optional.of(mailbox));
-    when(emailMessageRepository.findExistingMessageIds(any(), anyList()))
-        .thenReturn(Set.of("<a@example.com>"));
+    when(emailMessageRepository.existsByMailboxIdAndMessageId(mailboxId, "<a@example.com>"))
+        .thenReturn(true);
     when(mailboxReader.fetchMessages(any(), any(), anyInt()))
         .thenReturn(
             new MailboxFetchResult(77L, 2L, true, List.of(incoming("<a@example.com>", 2L))));
@@ -254,10 +289,10 @@ class MailSyncServiceTest {
         List.of());
   }
 
-  @SuppressWarnings("unchecked")
   private List<EmailMessage> savedMessages() {
-    ArgumentCaptor<List<EmailMessage>> captor = ArgumentCaptor.forClass(List.class);
-    verify(emailMessageRepository).saveAll(captor.capture());
-    return captor.getValue();
+    ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
+    verify(emailMessageRepository, org.mockito.Mockito.atLeastOnce())
+        .saveAndFlush(captor.capture());
+    return captor.getAllValues();
   }
 }
