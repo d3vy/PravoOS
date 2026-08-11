@@ -33,6 +33,8 @@ public class AuthController {
 
   private static final int LOGIN_MAX_PER_IP = 30;
   private static final Duration LOGIN_WINDOW = Duration.ofMinutes(5);
+  private static final int REFRESH_MAX_PER_IP = 60;
+  private static final Duration REFRESH_WINDOW = Duration.ofMinutes(5);
   private static final int PASSWORD_RESET_MAX_PER_IP = 10;
   private static final Duration PASSWORD_RESET_WINDOW = Duration.ofHours(1);
 
@@ -86,12 +88,14 @@ public class AuthController {
   public ResponseEntity<AuthResponse> refresh(
       @CookieValue(name = RefreshCookieFactory.COOKIE_NAME, required = false) String refreshToken,
       HttpServletRequest httpRequest) {
+    String clientIp = ClientIpResolver.resolve(httpRequest);
+    if (!ipRateLimiter.allow("refresh", clientIp, REFRESH_MAX_PER_IP, REFRESH_WINDOW)) {
+      throw new TooManyRequestsException();
+    }
     if (refreshToken == null || refreshToken.isBlank()) {
       throw new InvalidRefreshTokenException();
     }
-    return authResponse(
-        authService.refresh(
-            refreshToken, ClientIpResolver.resolve(httpRequest), userAgent(httpRequest)));
+    return authResponse(authService.refresh(refreshToken, clientIp, userAgent(httpRequest)));
   }
 
   @PostMapping("/logout")

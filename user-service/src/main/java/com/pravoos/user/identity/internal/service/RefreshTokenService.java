@@ -1,5 +1,6 @@
 package com.pravoos.user.identity.internal.service;
 
+import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.internal.config.JwtProperties;
 import com.pravoos.user.identity.internal.dto.IssuedRefreshToken;
 import com.pravoos.user.identity.internal.dto.SessionResponse;
@@ -31,6 +32,7 @@ public class RefreshTokenService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final RefreshTokenFamilyRevoker refreshTokenFamilyRevoker;
   private final TokenHasher tokenHasher;
+  private final TokenDenylistService tokenDenylistService;
   private final SecureRandom secureRandom = new SecureRandom();
   private final long refreshExpirationMs;
 
@@ -38,10 +40,12 @@ public class RefreshTokenService {
       RefreshTokenRepository refreshTokenRepository,
       RefreshTokenFamilyRevoker refreshTokenFamilyRevoker,
       TokenHasher tokenHasher,
+      TokenDenylistService tokenDenylistService,
       JwtProperties jwtProperties) {
     this.refreshTokenRepository = refreshTokenRepository;
     this.refreshTokenFamilyRevoker = refreshTokenFamilyRevoker;
     this.tokenHasher = tokenHasher;
+    this.tokenDenylistService = tokenDenylistService;
     this.refreshExpirationMs = jwtProperties.refreshExpirationMs();
   }
 
@@ -90,7 +94,11 @@ public class RefreshTokenService {
     refreshTokenRepository
         .findByIdAndUserId(sessionId, userId)
         .filter(token -> token.getRevokedAt() == null)
-        .ifPresent(token -> token.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC)));
+        .ifPresent(
+            token -> {
+              token.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC));
+              tokenDenylistService.revokeSession(token.getId());
+            });
   }
 
   @Transactional
@@ -102,6 +110,7 @@ public class RefreshTokenService {
 
     if (stored.getRevokedAt() != null) {
       int revoked = refreshTokenFamilyRevoker.revokeAllActive(stored.getUserId());
+      tokenDenylistService.revokeAccessTokensFor(stored.getUserId());
       log.warn(
           "Refresh token reuse detected for user {}; revoked {} active tokens",
           stored.getUserId(),
@@ -130,7 +139,11 @@ public class RefreshTokenService {
     refreshTokenRepository
         .findByTokenHash(tokenHasher.sha256Hex(rawToken))
         .filter(token -> token.getRevokedAt() == null)
-        .ifPresent(token -> token.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC)));
+        .ifPresent(
+            token -> {
+              token.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC));
+              tokenDenylistService.revokeSession(token.getId());
+            });
   }
 
   @Scheduled(cron = "0 0 3 * * *")

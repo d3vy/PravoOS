@@ -150,18 +150,31 @@ public class AuthService {
   public TokenResponse completeMfaLogin(
       String mfaToken, String code, String ipAddress, String userAgent) {
     UUID userId = mfaChallengeService.resolve(mfaToken);
-    if (!mfaService.verifyLoginCode(userId, code)) {
-      mfaChallengeService.registerFailedAttempt(mfaToken);
-      log.warn("Invalid MFA code during login for user {}", userId);
-      throw MfaException.invalidCode();
-    }
-    mfaChallengeService.invalidate(mfaToken);
-
     User user =
         userRepository
             .findById(userId)
             .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
             .orElseThrow(InvalidCredentialsException::new);
+
+    loginAttemptService
+        .remainingLockSeconds(user.getEmail())
+        .ifPresent(
+            seconds -> {
+              loginLockedCounter.increment();
+              log.warn(
+                  "Blocked MFA attempt for locked account: {}", EmailMasker.mask(user.getEmail()));
+              throw new AccountLockedException(seconds);
+            });
+
+    if (!mfaService.verifyLoginCode(userId, code)) {
+      loginAttemptService.recordFailure(user.getEmail());
+      loginFailureCounter.increment();
+      log.warn("Invalid MFA code during login for user {}", userId);
+      mfaChallengeService.registerFailedAttempt(mfaToken);
+      throw MfaException.invalidCode();
+    }
+    mfaChallengeService.invalidate(mfaToken);
+    loginAttemptService.reset(user.getEmail());
 
     loginSuccessCounter.increment();
     log.info("User authenticated via MFA: {}", EmailMasker.mask(user.getEmail()));
@@ -236,7 +249,6 @@ public class AuthService {
     String accessToken =
         jwtTokenProvider.generateToken(
             user.getId(),
-            user.getEmail(),
             user.getRole(),
             orgIds,
             clientIds,

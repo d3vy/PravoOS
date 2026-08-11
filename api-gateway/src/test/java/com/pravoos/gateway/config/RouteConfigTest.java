@@ -41,9 +41,28 @@ class RouteConfigTest {
         .containsExactlyInAnyOrder(
             "user-service-auth",
             "user-service-billing-webhook",
+            "ai-service-invoice-webhook",
             "user-service-admin",
             "user-service-user",
             "ai-service");
+  }
+
+  @Test
+  void invoiceWebhookRoute_isRateLimitedButNotJwtProtected() {
+    RouteDefinition route = routeById("ai-service-invoice-webhook");
+
+    assertThat(predicate(route, "Path").getArgs().values())
+        .contains("/api/ai/billing/invoice-webhook");
+    assertThat(filterNames(route)).containsExactly("RequestRateLimiter");
+  }
+
+  @Test
+  void invoiceWebhookRoute_isMatchedBeforeTheJwtProtectedAiRoute() {
+    List<String> routeIds =
+        gatewayProperties.getRoutes().stream().map(RouteDefinition::getId).toList();
+
+    assertThat(routeIds.indexOf("ai-service-invoice-webhook"))
+        .isLessThan(routeIds.indexOf("ai-service"));
   }
 
   @Test

@@ -58,7 +58,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private boolean isRevoked(Claims claims) {
     Date issuedAt = claims.getIssuedAt();
     long issuedAtSeconds = issuedAt != null ? issuedAt.toInstant().getEpochSecond() : 0L;
-    return tokenDenylistService.isAccessTokenRevoked(claims.getSubject(), issuedAtSeconds);
+    return tokenDenylistService.isAccessTokenRevoked(claims.getSubject(), issuedAtSeconds)
+        || tokenDenylistService.isSessionRevoked(claims.get("sid", String.class));
   }
 
   private String extractBearerToken(HttpServletRequest request) {

@@ -29,6 +29,7 @@ class JwtAuthFilterTest {
   private static final String TOKEN = "Bearer signed.jwt.token";
   private static final String USER_ID = "11111111-1111-1111-1111-111111111111";
   private static final long ISSUED_AT = 1_000_000L;
+  private static final String SESSION_ID = "22222222-2222-2222-2222-222222222222";
 
   private JwtVerifier jwtVerifier;
   private ReactiveStringRedisTemplate redisTemplate;
@@ -45,7 +46,6 @@ class JwtAuthFilterTest {
     Claims claims = mock(Claims.class);
     when(claims.getSubject()).thenReturn(USER_ID);
     when(claims.get("role", String.class)).thenReturn("LAWYER");
-    when(claims.get("email", String.class)).thenReturn("lawyer@example.com");
     when(claims.getIssuedAt()).thenReturn(Date.from(Instant.ofEpochSecond(ISSUED_AT)));
     when(jwtVerifier.extractClaims(anyString())).thenReturn(claims);
   }
@@ -61,7 +61,41 @@ class JwtAuthFilterTest {
     HttpHeaders headers = forwarded.get().getHeaders();
     assertThat(headers.getFirst("X-User-Id")).isEqualTo(USER_ID);
     assertThat(headers.getFirst("X-User-Role")).isEqualTo("LAWYER");
-    assertThat(headers.getFirst("X-User-Email")).isEqualTo("lawyer@example.com");
+    assertThat(headers.getFirst("X-User-Email")).isNull();
+  }
+
+  @Test
+  void tokenOfRevokedSession_isRejected() {
+    Claims claims = mock(Claims.class);
+    when(claims.getSubject()).thenReturn(USER_ID);
+    when(claims.get("role", String.class)).thenReturn("LAWYER");
+    when(claims.getIssuedAt()).thenReturn(Date.from(Instant.ofEpochSecond(ISSUED_AT)));
+    when(claims.get("sid", String.class)).thenReturn(SESSION_ID);
+    when(jwtVerifier.extractClaims(anyString())).thenReturn(claims);
+    when(valueOperations.get(anyString())).thenReturn(Mono.empty());
+    when(redisTemplate.hasKey("auth:revoked_sid:" + SESSION_ID)).thenReturn(Mono.just(true));
+
+    ServerWebExchange exchange = exchangeWithSpoofedHeaders();
+    runFilter(true, exchange, new AtomicReference<>());
+
+    assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+  }
+
+  @Test
+  void tokenOfActiveSession_passes() {
+    Claims claims = mock(Claims.class);
+    when(claims.getSubject()).thenReturn(USER_ID);
+    when(claims.get("role", String.class)).thenReturn("LAWYER");
+    when(claims.getIssuedAt()).thenReturn(Date.from(Instant.ofEpochSecond(ISSUED_AT)));
+    when(claims.get("sid", String.class)).thenReturn(SESSION_ID);
+    when(jwtVerifier.extractClaims(anyString())).thenReturn(claims);
+    when(valueOperations.get(anyString())).thenReturn(Mono.empty());
+    when(redisTemplate.hasKey("auth:revoked_sid:" + SESSION_ID)).thenReturn(Mono.just(false));
+    AtomicReference<ServerHttpRequest> forwarded = new AtomicReference<>();
+
+    runFilter(true, exchangeWithSpoofedHeaders(), forwarded);
+
+    assertThat(forwarded.get().getHeaders().getFirst("X-User-Id")).isEqualTo(USER_ID);
   }
 
   @Test

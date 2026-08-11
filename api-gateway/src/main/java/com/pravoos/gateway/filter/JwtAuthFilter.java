@@ -22,6 +22,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
   private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String DENYLIST_KEY_PREFIX = "auth:revoked_after:";
+  private static final String SESSION_DENYLIST_KEY_PREFIX = "auth:revoked_sid:";
 
   public static final String AUTHENTICATED_USER_ATTRIBUTE = "pravoos.gateway.authenticatedUserId";
 
@@ -63,8 +64,9 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
       String subject = claims.getSubject();
       long issuedAtSeconds = issuedAtSeconds(claims);
+      String sessionId = claims.get("sid", String.class);
 
-      return isAccessTokenRevoked(subject, issuedAtSeconds)
+      return isRevoked(subject, issuedAtSeconds, sessionId)
           .flatMap(
               revoked -> {
                 if (revoked) {
@@ -85,15 +87,34 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                                       headers.remove("X-User-Email");
                                       putIfPresent(headers, "X-User-Id", subject);
                                       putIfPresent(headers, "X-User-Role", role);
-                                      putIfPresent(
-                                          headers,
-                                          "X-User-Email",
-                                          claims.get("email", String.class));
                                     }))
                         .build();
                 return chain.filter(mutatedExchange);
               });
     };
+  }
+
+  private Mono<Boolean> isRevoked(String userId, long issuedAtSeconds, String sessionId) {
+    return isAccessTokenRevoked(userId, issuedAtSeconds)
+        .flatMap(revoked -> revoked ? Mono.just(true) : isSessionRevoked(sessionId));
+  }
+
+  private Mono<Boolean> isSessionRevoked(String sessionId) {
+    if (sessionId == null || sessionId.isBlank()) {
+      return Mono.just(false);
+    }
+    return redisTemplate
+        .hasKey(SESSION_DENYLIST_KEY_PREFIX + sessionId)
+        .defaultIfEmpty(false)
+        .onErrorResume(
+            ex -> {
+              log.warn(
+                  "Redis session-denylist check failed for session {}, fail-open={}",
+                  sessionId,
+                  denylistFailOpen,
+                  ex);
+              return Mono.just(!denylistFailOpen);
+            });
   }
 
   private Mono<Boolean> isAccessTokenRevoked(String userId, long issuedAtSeconds) {

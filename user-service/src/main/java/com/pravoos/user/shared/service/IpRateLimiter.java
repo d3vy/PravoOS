@@ -1,6 +1,7 @@
 package com.pravoos.user.shared.service;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -26,7 +27,8 @@ public class IpRateLimiter {
       if (count == null) {
         return true;
       }
-      if (count == 1L) {
+      Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+      if (count == 1L || ttl == null || ttl < 0) {
         redisTemplate.expire(key, window);
       }
       if (count > maxRequests) {

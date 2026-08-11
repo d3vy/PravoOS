@@ -96,7 +96,6 @@ class AuthServiceTest {
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
     when(jwtTokenProvider.generateToken(
             eq(user.getId()),
-            eq(EMAIL),
             eq(UserRole.LAWYER),
             anyList(),
             anyList(),
@@ -233,7 +232,6 @@ class AuthServiceTest {
     when(refreshTokenService.isKnownDevice(user.getId(), IP)).thenReturn(true);
     when(jwtTokenProvider.generateToken(
             eq(user.getId()),
-            eq(EMAIL),
             eq(UserRole.LAWYER),
             anyList(),
             anyList(),
@@ -253,14 +251,31 @@ class AuthServiceTest {
 
   @Test
   void completeMfaLogin_rejectsInvalidCode_andRecordsAttempt() {
-    UUID userId = UUID.randomUUID();
-    when(mfaChallengeService.resolve("challenge-token")).thenReturn(userId);
-    when(mfaService.verifyLoginCode(userId, "000000")).thenReturn(false);
+    User user = activeUser();
+    when(mfaChallengeService.resolve("challenge-token")).thenReturn(user.getId());
+    when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(mfaService.verifyLoginCode(user.getId(), "000000")).thenReturn(false);
 
     assertThatThrownBy(() -> authService.completeMfaLogin("challenge-token", "000000", IP, UA))
         .isInstanceOf(MfaException.class);
 
     verify(mfaChallengeService).registerFailedAttempt("challenge-token");
+    verify(loginAttemptService).recordFailure(EMAIL);
+    verify(refreshTokenService, never()).issue(any(), any(), any());
+  }
+
+  @Test
+  void completeMfaLogin_isBlocked_whenAccountLockedByFailedCodes() {
+    User user = activeUser();
+    when(mfaChallengeService.resolve("challenge-token")).thenReturn(user.getId());
+    when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.of(300L));
+
+    assertThatThrownBy(() -> authService.completeMfaLogin("challenge-token", "000000", IP, UA))
+        .isInstanceOf(AccountLockedException.class);
+
+    verify(mfaService, never()).verifyLoginCode(any(), any());
     verify(refreshTokenService, never()).issue(any(), any(), any());
   }
 

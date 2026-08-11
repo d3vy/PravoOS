@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.internal.config.JwtProperties;
 import com.pravoos.user.identity.internal.dto.IssuedRefreshToken;
 import com.pravoos.user.identity.internal.dto.SessionResponse;
@@ -35,6 +36,7 @@ class RefreshTokenServiceTest {
 
   @Mock private RefreshTokenRepository refreshTokenRepository;
   @Mock private RefreshTokenFamilyRevoker refreshTokenFamilyRevoker;
+  @Mock private TokenDenylistService tokenDenylistService;
 
   private final TokenHasher tokenHasher = new TokenHasher();
   private RefreshTokenService service;
@@ -44,7 +46,11 @@ class RefreshTokenServiceTest {
     JwtProperties jwtProperties = new JwtProperties(null, null, 900_000L, REFRESH_TTL_MS);
     service =
         new RefreshTokenService(
-            refreshTokenRepository, refreshTokenFamilyRevoker, tokenHasher, jwtProperties);
+            refreshTokenRepository,
+            refreshTokenFamilyRevoker,
+            tokenHasher,
+            tokenDenylistService,
+            jwtProperties);
   }
 
   @Test
@@ -115,6 +121,7 @@ class RefreshTokenServiceTest {
 
     assertThatThrownBy(() -> service.rotate(raw)).isInstanceOf(InvalidRefreshTokenException.class);
     verify(refreshTokenFamilyRevoker).revokeAllActive(userId);
+    verify(tokenDenylistService).revokeAccessTokensFor(userId);
     verify(refreshTokenRepository, never()).saveAndFlush(any());
   }
 
@@ -148,14 +155,17 @@ class RefreshTokenServiceTest {
   @Test
   void revokeMarksActiveTokenRevoked() {
     String raw = "logout-token";
+    UUID sessionId = UUID.randomUUID();
     RefreshToken active =
         token(UUID.randomUUID(), null, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
+    active.setId(sessionId);
     when(refreshTokenRepository.findByTokenHash(tokenHasher.sha256Hex(raw)))
         .thenReturn(Optional.of(active));
 
     service.revoke(raw);
 
     assertThat(active.getRevokedAt()).isNotNull();
+    verify(tokenDenylistService).revokeSession(sessionId);
   }
 
   @Test
@@ -214,6 +224,7 @@ class RefreshTokenServiceTest {
     service.revokeSession(userId, sessionId);
 
     assertThat(session.getRevokedAt()).isNotNull();
+    verify(tokenDenylistService).revokeSession(sessionId);
   }
 
   @Test
@@ -230,6 +241,7 @@ class RefreshTokenServiceTest {
     service.revokeSession(userId, sessionId);
 
     assertThat(session.getRevokedAt()).isEqualTo(originalRevokedAt);
+    verify(tokenDenylistService, never()).revokeSession(any());
   }
 
   @Test

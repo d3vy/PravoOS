@@ -26,15 +26,13 @@ public class JwtTokenProvider {
 
   public String generateToken(
       UUID userId,
-      String email,
       UserRole role,
       List<UUID> orgIds,
       List<UUID> clientIds,
       PlanClaim plan,
       AiProcessingMode aiProcessingMode,
       UUID sessionId) {
-    var builder =
-        Jwts.builder().subject(userId.toString()).claim("email", email).claim("role", role.name());
+    var builder = Jwts.builder().subject(userId.toString()).claim("role", role.name());
     if (sessionId != null) {
       builder.claim("sid", sessionId.toString());
     }

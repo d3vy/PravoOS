@@ -15,6 +15,7 @@ public class TokenDenylistService {
 
   private static final Logger log = LoggerFactory.getLogger(TokenDenylistService.class);
   private static final String KEY_PREFIX = "auth:revoked_after:";
+  private static final String SESSION_KEY_PREFIX = "auth:revoked_sid:";
 
   private final StringRedisTemplate redisTemplate;
   private final Duration accessTokenTtl;
@@ -32,6 +33,31 @@ public class TokenDenylistService {
       log.info("Access tokens revoked for user {} (issued before {})", userId, cutoffEpochSeconds);
     } catch (DataAccessException ex) {
       log.error("Failed to write access-token denylist entry for user {}", userId, ex);
+    }
+  }
+
+  public void revokeSession(UUID sessionId) {
+    if (sessionId == null) {
+      return;
+    }
+    String key = SESSION_KEY_PREFIX + sessionId;
+    try {
+      redisTemplate.opsForValue().set(key, "1", accessTokenTtl);
+      log.info("Access token revoked for session {}", sessionId);
+    } catch (DataAccessException ex) {
+      log.error("Failed to write session denylist entry for session {}", sessionId, ex);
+    }
+  }
+
+  public boolean isSessionRevoked(String sessionId) {
+    if (sessionId == null || sessionId.isBlank()) {
+      return false;
+    }
+    try {
+      return Boolean.TRUE.equals(redisTemplate.hasKey(SESSION_KEY_PREFIX + sessionId));
+    } catch (DataAccessException ex) {
+      log.warn("Failed to read session denylist for session {}", sessionId, ex);
+      return false;
     }
   }
 

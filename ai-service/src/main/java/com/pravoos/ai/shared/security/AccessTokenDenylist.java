@@ -11,11 +11,24 @@ public class AccessTokenDenylist {
 
   private static final Logger log = LoggerFactory.getLogger(AccessTokenDenylist.class);
   private static final String KEY_PREFIX = "auth:revoked_after:";
+  private static final String SESSION_KEY_PREFIX = "auth:revoked_sid:";
 
   private final StringRedisTemplate redisTemplate;
 
   public AccessTokenDenylist(StringRedisTemplate redisTemplate) {
     this.redisTemplate = redisTemplate;
+  }
+
+  public boolean isSessionRevoked(String sessionId) {
+    if (sessionId == null || sessionId.isBlank()) {
+      return false;
+    }
+    try {
+      return Boolean.TRUE.equals(redisTemplate.hasKey(SESSION_KEY_PREFIX + sessionId));
+    } catch (DataAccessException ex) {
+      log.warn("Failed to read session denylist for session {}", sessionId, ex);
+      return false;
+    }
   }
 
   public boolean isRevoked(String userId, long issuedAtEpochSeconds) {

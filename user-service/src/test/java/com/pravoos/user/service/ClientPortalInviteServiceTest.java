@@ -14,12 +14,14 @@ import com.pravoos.user.collaboration.internal.model.enums.InviteStatus;
 import com.pravoos.user.collaboration.internal.model.enums.PortalAccessStatus;
 import com.pravoos.user.collaboration.internal.repository.ClientPortalInviteRepository;
 import com.pravoos.user.collaboration.internal.service.ClientPortalInviteService;
+import com.pravoos.user.identity.api.CredentialAttemptGuard;
 import com.pravoos.user.identity.api.PasswordPolicyService;
 import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
+import com.pravoos.user.shared.exception.AccountLockedException;
 import com.pravoos.user.shared.exception.InvalidCredentialsException;
 import com.pravoos.user.shared.exception.InvalidInviteException;
 import com.pravoos.user.shared.exception.PortalAccountConflictException;
@@ -50,6 +52,7 @@ class ClientPortalInviteServiceTest {
   @Mock private EmailRateLimiter emailRateLimiter;
   @Mock private ApplicationEventPublisher eventPublisher;
   @Mock private TokenDenylistService tokenDenylistService;
+  @Mock private CredentialAttemptGuard credentialAttemptGuard;
 
   private final TokenHasher tokenHasher = new TokenHasher();
   private ClientPortalInviteService service;
@@ -65,7 +68,8 @@ class ClientPortalInviteServiceTest {
             tokenHasher,
             emailRateLimiter,
             eventPublisher,
-            tokenDenylistService);
+            tokenDenylistService,
+            credentialAttemptGuard);
   }
 
   @Test
@@ -215,6 +219,25 @@ class ClientPortalInviteServiceTest {
         .isInstanceOf(InvalidCredentialsException.class);
     assertThat(invite.getStatus()).isEqualTo(InviteStatus.PENDING);
     verify(userRepository, never()).save(any());
+    verify(credentialAttemptGuard).recordFailure("client@example.com");
+  }
+
+  @Test
+  void acceptRefusesToCheckPasswordWhileAccountIsLockedOut() {
+    String rawToken = "raw-token";
+    ClientPortalInvite invite = pendingInvite(UUID.randomUUID(), "client@example.com", rawToken);
+    User existing = clientUser(UUID.randomUUID(), "existing-hash", UserStatus.ACTIVE);
+    when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken)))
+        .thenReturn(Optional.of(invite));
+    when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(existing));
+    doThrow(new AccountLockedException(300L))
+        .when(credentialAttemptGuard)
+        .assertNotLocked("client@example.com");
+
+    assertThatThrownBy(() -> service.accept(rawToken, "guess"))
+        .isInstanceOf(AccountLockedException.class);
+    assertThat(invite.getStatus()).isEqualTo(InviteStatus.PENDING);
+    verify(passwordEncoder, never()).matches(any(), any());
   }
 
   @Test

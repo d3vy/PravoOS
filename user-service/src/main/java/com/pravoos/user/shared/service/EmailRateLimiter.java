@@ -4,6 +4,7 @@ import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.shared.util.EmailMasker;
 import com.pravoos.user.shared.util.EmailNormalizer;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -32,7 +33,8 @@ public class EmailRateLimiter {
       if (count == null) {
         return true;
       }
-      if (count == 1L) {
+      Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+      if (count == 1L || ttl == null || ttl < 0) {
         redisTemplate.expire(key, WINDOW);
       }
       if (count > resendProperties.maxEmailsPerHour()) {

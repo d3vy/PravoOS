@@ -7,6 +7,7 @@ import com.pravoos.user.collaboration.internal.event.ClientPortalInviteCreatedEv
 import com.pravoos.user.collaboration.internal.model.entity.ClientPortalInvite;
 import com.pravoos.user.collaboration.internal.model.enums.InviteStatus;
 import com.pravoos.user.collaboration.internal.repository.ClientPortalInviteRepository;
+import com.pravoos.user.identity.api.CredentialAttemptGuard;
 import com.pravoos.user.identity.api.PasswordPolicyService;
 import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.model.entity.User;
@@ -51,6 +52,7 @@ public class ClientPortalInviteService {
   private final EmailRateLimiter emailRateLimiter;
   private final ApplicationEventPublisher eventPublisher;
   private final TokenDenylistService tokenDenylistService;
+  private final CredentialAttemptGuard credentialAttemptGuard;
   private final SecureRandom secureRandom = new SecureRandom();
 
   public ClientPortalInviteService(
@@ -61,7 +63,8 @@ public class ClientPortalInviteService {
       TokenHasher tokenHasher,
       EmailRateLimiter emailRateLimiter,
       ApplicationEventPublisher eventPublisher,
-      TokenDenylistService tokenDenylistService) {
+      TokenDenylistService tokenDenylistService,
+      CredentialAttemptGuard credentialAttemptGuard) {
     this.inviteRepository = inviteRepository;
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
@@ -70,6 +73,7 @@ public class ClientPortalInviteService {
     this.emailRateLimiter = emailRateLimiter;
     this.eventPublisher = eventPublisher;
     this.tokenDenylistService = tokenDenylistService;
+    this.credentialAttemptGuard = credentialAttemptGuard;
   }
 
   @Transactional
@@ -171,9 +175,15 @@ public class ClientPortalInviteService {
     if (existing.getRole() != UserRole.CLIENT || existing.getStatus() != UserStatus.ACTIVE) {
       throw new PortalAccountConflictException();
     }
+    credentialAttemptGuard.assertNotLocked(existing.getEmail());
     if (!passwordEncoder.matches(rawPassword, existing.getPasswordHash())) {
+      credentialAttemptGuard.recordFailure(existing.getEmail());
+      log.warn(
+          "Failed password check while linking portal invite to {}",
+          EmailMasker.mask(existing.getEmail()));
       throw new InvalidCredentialsException();
     }
+    credentialAttemptGuard.recordSuccess(existing.getEmail());
     return existing.getId();
   }
 
