@@ -1,6 +1,6 @@
 # Base images are pinned by digest, not tag: a tag can be repointed at a
 # different image after review. Dependabot (docker ecosystem) bumps the digests.
-FROM maven:3.9-eclipse-temurin-21@sha256:c07f7ccfb8ca6c9fa29ee523f00afa7d2ca6132c92f8652c4aebb5ee3491f502 AS build
+FROM maven:3-eclipse-temurin-24@sha256:a137a467ec89b5713d0be817b55bdba6b4d6ef16e3d05565a79bc08d8e775a1c AS build
 WORKDIR /build
 COPY pom.xml .
 COPY pravoos-common/pom.xml pravoos-common/pom.xml
