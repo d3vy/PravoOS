@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -27,13 +28,19 @@ import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -48,9 +55,24 @@ class SearchServiceTest {
   @Mock private DocumentSearchQuery documentSearchQuery;
   @Mock private ConversationSearchQuery conversationSearchQuery;
 
-  @InjectMocks private SearchService searchService;
+  private SearchService searchService;
 
   private final UUID lawyerId = UUID.randomUUID();
+
+  @BeforeEach
+  void setUp() {
+    searchService = service(Runnable::run);
+  }
+
+  private SearchService service(Executor globalSearchExecutor) {
+    return new SearchService(
+        caseRepository,
+        clientRepository,
+        invoiceRepository,
+        documentSearchQuery,
+        conversationSearchQuery,
+        globalSearchExecutor);
+  }
 
   private Client clientWithId(UUID id, String name, String email, String phone) {
     Client client = new Client();
@@ -332,5 +354,86 @@ class SearchServiceTest {
     GlobalSearchResponse result = searchService.search(lawyerId, "совпадение", false);
 
     assertThat(result.clients()).hasSize(10);
+  }
+
+  @Test
+  void searchProducesSameHitsWhenBranchesRunOnAnotherThread() {
+    UUID clientId = UUID.randomUUID();
+    UUID caseId = UUID.randomUUID();
+    UUID invoiceId = UUID.randomUUID();
+    when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId))
+        .thenReturn(List.of(clientWithId(clientId, "ООО Ромашка", null, null)));
+    when(caseRepository.search(eq(lawyerId), eq(null), anyString(), anyCollection(), any()))
+        .thenReturn(
+            new PageImpl<>(
+                List.of(caseWithId(caseId, "Дело Ромашки", CaseStatus.IN_PROGRESS, clientId))));
+    when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
+        .thenReturn(List.of(new ConversationSearchHit("conv-1", "Ромашка")));
+    when(documentSearchQuery.searchDocuments(
+            any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
+        .thenReturn(
+            List.of(new DocumentSearchHit(UUID.randomUUID(), "Акт", "akt.pdf", null, null)));
+    when(invoiceRepository.search(eq(lawyerId), anyString(), anyCollection(), any()))
+        .thenReturn(
+            List.of(
+                invoiceWithId(
+                    invoiceId, "INV-1", clientId, BigDecimal.ONE, "RUB", InvoiceStatus.ISSUED)));
+
+    Set<String> branchThreads = ConcurrentHashMap.newKeySet();
+    ExecutorService searchExecutor = Executors.newFixedThreadPool(2);
+    try {
+      GlobalSearchResponse result =
+          service(
+                  task ->
+                      searchExecutor.execute(
+                          () -> {
+                            branchThreads.add(Thread.currentThread().getName());
+                            task.run();
+                          }))
+              .search(lawyerId, "ромашка", false);
+
+      assertThat(result.cases())
+          .extracting(GlobalSearchResponse.CaseHit::id)
+          .containsExactly(caseId);
+      assertThat(result.cases().get(0).clientName()).isEqualTo("ООО Ромашка");
+      assertThat(result.conversations())
+          .extracting(GlobalSearchResponse.ConversationHit::id)
+          .containsExactly("conv-1");
+      assertThat(result.documents()).hasSize(1);
+      assertThat(result.clients())
+          .extracting(GlobalSearchResponse.ClientHit::id)
+          .containsExactly(clientId);
+      assertThat(result.invoices())
+          .extracting(GlobalSearchResponse.InvoiceHit::id)
+          .containsExactly(invoiceId);
+      assertThat(branchThreads).doesNotContain(Thread.currentThread().getName());
+    } finally {
+      searchExecutor.shutdownNow();
+    }
+  }
+
+  @Test
+  void searchRethrowsBranchFailureWithoutWrappingIt() {
+    when(clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId)).thenReturn(List.of());
+    when(caseRepository.search(any(), any(), anyString(), anyCollection(), any()))
+        .thenReturn(Page.empty());
+    when(conversationSearchQuery.searchConversations(any(), anyString(), anyInt()))
+        .thenReturn(List.of());
+    when(documentSearchQuery.searchDocuments(
+            any(), anyString(), org.mockito.ArgumentMatchers.anyBoolean(), anyInt()))
+        .thenThrow(new DataAccessResourceFailureException("documents are down"));
+    when(invoiceRepository.search(any(), anyString(), anyCollection(), any()))
+        .thenReturn(List.of());
+
+    ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
+    try {
+      SearchService parallelSearch = service(searchExecutor);
+
+      assertThatThrownBy(() -> parallelSearch.search(lawyerId, "ромашка", false))
+          .isInstanceOf(DataAccessResourceFailureException.class)
+          .hasMessage("documents are down");
+    } finally {
+      searchExecutor.shutdownNow();
+    }
   }
 }

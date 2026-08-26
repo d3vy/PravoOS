@@ -13,19 +13,23 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.util.ClientNameMatch;
+import com.pravoos.ai.shared.util.Futures;
 import com.pravoos.ai.shared.util.LikePattern;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SearchService {
@@ -39,26 +43,33 @@ public class SearchService {
   private final InvoiceRepository invoiceRepository;
   private final DocumentSearchQuery documentSearchQuery;
   private final ConversationSearchQuery conversationSearchQuery;
+  private final Executor globalSearchExecutor;
 
   public SearchService(
       CaseRepository caseRepository,
       ClientRepository clientRepository,
       InvoiceRepository invoiceRepository,
       DocumentSearchQuery documentSearchQuery,
-      ConversationSearchQuery conversationSearchQuery) {
+      ConversationSearchQuery conversationSearchQuery,
+      @Qualifier("globalSearchExecutor") Executor globalSearchExecutor) {
     this.caseRepository = caseRepository;
     this.clientRepository = clientRepository;
     this.invoiceRepository = invoiceRepository;
     this.documentSearchQuery = documentSearchQuery;
     this.conversationSearchQuery = conversationSearchQuery;
+    this.globalSearchExecutor = globalSearchExecutor;
   }
 
-  @Transactional(readOnly = true)
   public GlobalSearchResponse search(UUID lawyerId, String query, boolean searchContent) {
     String trimmed = query == null ? "" : query.trim();
     if (trimmed.isEmpty()) {
       return new GlobalSearchResponse(List.of(), List.of(), List.of(), List.of(), List.of());
     }
+
+    CompletableFuture<List<ConversationHit>> pendingConversations =
+        searchAsync(() -> searchConversations(lawyerId, trimmed));
+    CompletableFuture<List<DocumentHit>> pendingDocuments =
+        searchAsync(() -> searchDocuments(lawyerId, trimmed, searchContent));
 
     List<Client> lawyerClients = clientRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId);
     Map<UUID, String> clientNames =
@@ -66,11 +77,16 @@ public class SearchService {
     Collection<UUID> matchingClientIds = ClientNameMatch.matchingIds(clientNames, trimmed);
     String pattern = LikePattern.contains(trimmed);
 
-    List<CaseHit> cases = searchCases(lawyerId, pattern, matchingClientIds, clientNames);
-    List<ConversationHit> conversations = searchConversations(lawyerId, trimmed);
-    List<DocumentHit> documents = searchDocuments(lawyerId, trimmed, searchContent);
+    CompletableFuture<List<CaseHit>> pendingCases =
+        searchAsync(() -> searchCases(lawyerId, pattern, matchingClientIds, clientNames));
+    CompletableFuture<List<InvoiceHit>> pendingInvoices =
+        searchAsync(() -> searchInvoices(lawyerId, pattern, matchingClientIds, clientNames));
+
     List<ClientHit> clients = searchClients(lawyerClients, trimmed);
-    List<InvoiceHit> invoices = searchInvoices(lawyerId, pattern, matchingClientIds, clientNames);
+    List<CaseHit> cases = Futures.join(pendingCases);
+    List<ConversationHit> conversations = Futures.join(pendingConversations);
+    List<DocumentHit> documents = Futures.join(pendingDocuments);
+    List<InvoiceHit> invoices = Futures.join(pendingInvoices);
 
     log.info(
         "Global search by lawyer {} for '{}' (content={}): {} cases, {} conversations, "
@@ -84,6 +100,10 @@ public class SearchService {
         clients.size(),
         invoices.size());
     return new GlobalSearchResponse(cases, conversations, documents, clients, invoices);
+  }
+
+  private <T> CompletableFuture<T> searchAsync(Supplier<T> source) {
+    return CompletableFuture.supplyAsync(source, globalSearchExecutor);
   }
 
   private List<CaseHit> searchCases(
