@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
@@ -54,6 +55,7 @@ class CaseChatContextTest {
   @Mock private CaseAccessProvider caseAccessProvider;
   @Mock private CaseContextProvider caseContextProvider;
   @Mock private DocumentAccessGuard documentAccessGuard;
+  @Mock private PageContextResolver pageContextResolver;
   @Mock private RagService ragService;
   @Mock private LlmClient llmClient;
   @Mock private LegalDomainGuard legalDomainGuard;
@@ -80,6 +82,7 @@ class CaseChatContextTest {
             caseAccessProvider,
             caseContextProvider,
             documentAccessGuard,
+            pageContextResolver,
             ragService,
             llmClient,
             properties,
@@ -96,9 +99,10 @@ class CaseChatContextTest {
     when(caseContextProvider.loadContext(eq(caseId), eq(lawyerId), anyList()))
         .thenReturn(new CaseContext("Карточка дела", "Хронология", "Задачи"));
     when(ragService.buildCaseSystemPrompt(
-            anyString(), anyString(), anyString(), anyList(), any(Boolean.class)))
+            anyString(), anyString(), anyString(), anyList(), any(Boolean.class), anyString()))
         .thenReturn("case prompt");
-    when(ragService.buildSystemPrompt(anyList(), any(Boolean.class))).thenReturn("generic prompt");
+    when(ragService.buildSystemPrompt(anyList(), any(Boolean.class), anyString()))
+        .thenReturn("generic prompt");
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
   }
@@ -121,7 +125,7 @@ class CaseChatContextTest {
 
     var response =
         service.chat(
-            new ChatRequest(null, "Какие сроки по договору?", null, caseId, null),
+            new ChatRequest(null, "Какие сроки по договору?", null, caseId, null, null),
             lawyerId,
             orgIds);
 
@@ -133,8 +137,9 @@ class CaseChatContextTest {
             eq("Хронология"),
             eq("Задачи"),
             eq(List.of("текст из документа дела")),
-            eq(false));
-    verify(ragService, never()).buildSystemPrompt(anyList(), any(Boolean.class));
+            eq(false),
+            anyString());
+    verify(ragService, never()).buildSystemPrompt(anyList(), any(Boolean.class), anyString());
     assertThat(response.sources()).containsExactly("Материалы дела: Договор поставки");
   }
 
@@ -143,7 +148,8 @@ class CaseChatContextTest {
     when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
         .thenReturn(RetrievedChunks.empty());
 
-    service.chat(new ChatRequest(null, "Вопрос по делу", null, caseId, null), lawyerId, orgIds);
+    service.chat(
+        new ChatRequest(null, "Вопрос по делу", null, caseId, null, null), lawyerId, orgIds);
 
     verify(conversationRepository)
         .save(ArgumentMatchers.argThat(conversation -> caseId.equals(conversation.getCaseId())));
@@ -158,7 +164,7 @@ class CaseChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Вопрос по чужому делу", null, caseId, null),
+                    new ChatRequest(null, "Вопрос по чужому делу", null, caseId, null, null),
                     lawyerId,
                     orgIds))
         .isInstanceOf(CaseNotFoundException.class);
@@ -174,7 +180,9 @@ class CaseChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest("c1", "Вопрос по делу", null, caseId, null), lawyerId, orgIds))
+                    new ChatRequest("c1", "Вопрос по делу", null, caseId, null, null),
+                    lawyerId,
+                    orgIds))
         .isInstanceOf(ConversationCaseMismatchException.class);
   }
 
@@ -186,16 +194,18 @@ class CaseChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest("c1", "Вопрос по делу", null, caseId, null), lawyerId, orgIds))
+                    new ChatRequest("c1", "Вопрос по делу", null, caseId, null, null),
+                    lawyerId,
+                    orgIds))
         .isInstanceOf(ConversationCaseMismatchException.class);
   }
 
   @Test
   void generalChatKeepsKnowledgeBaseOnlyPath() {
-    service.chat(new ChatRequest(null, "Общий вопрос", null, null, null), lawyerId, orgIds);
+    service.chat(new ChatRequest(null, "Общий вопрос", null, null, null, null), lawyerId, orgIds);
 
     verify(caseAccessProvider, never()).assertCaseVisible(any(), any(), anyList());
     verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
-    verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class));
+    verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), anyString());
   }
 }

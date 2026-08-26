@@ -74,3 +74,11 @@ jwt.pem
 
 # Per-host deploy state (current/previous image tag), written by deploy-remote.sh
 .deploy/
+
+# Рабочие заметки и планы в markdown — в репозиторий не идут
+*.md
+!README.md
+!docs/**/*.md
+!frontend/src/legal/*.md
+!claude.md
+plans/

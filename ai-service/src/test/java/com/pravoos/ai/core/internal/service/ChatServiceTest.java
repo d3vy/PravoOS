@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.dto.ChatResponse;
 import com.pravoos.ai.core.internal.dto.ConversationResponse;
@@ -79,6 +80,7 @@ class ChatServiceTest {
   @Mock private CaseAccessProvider caseAccessProvider;
   @Mock private CaseContextProvider caseContextProvider;
   @Mock private DocumentAccessGuard documentAccessGuard;
+  @Mock private PageContextResolver pageContextResolver;
   @Mock private RagService ragService;
   @Mock private LlmClient llmClient;
   @Mock private LegalDomainGuard legalDomainGuard;
@@ -102,6 +104,7 @@ class ChatServiceTest {
             caseAccessProvider,
             caseContextProvider,
             documentAccessGuard,
+            pageContextResolver,
             ragService,
             llmClient,
             properties,
@@ -121,6 +124,7 @@ class ChatServiceTest {
         caseAccessProvider,
         caseContextProvider,
         documentAccessGuard,
+        pageContextResolver,
         ragService,
         llmClient,
         new DocumentProperties("/tmp", 1000, 100, 5, 20000, 50, 200, 1_000_000L, 10),
@@ -134,7 +138,7 @@ class ChatServiceTest {
   @Test
   void buildsSameCaseContextWhenBranchesRunOnAnotherThread() {
     UUID caseId = UUID.randomUUID();
-    ChatRequest request = new ChatRequest(null, "Вопрос по делу", List.of(), caseId, null);
+    ChatRequest request = new ChatRequest(null, "Вопрос по делу", List.of(), caseId, null, null);
     when(caseContextProvider.loadContext(eq(caseId), eq(lawyerId), anyList()))
         .thenReturn(new CaseContext("Карточка", "Хронология", "Задачи"));
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
@@ -145,7 +149,7 @@ class ChatServiceTest {
                 List.of(new RetrievedChunk("фрагмент", "Иск.pdf", 0.8, false, null, null, null)),
                 4L));
     when(ragService.buildCaseSystemPrompt(
-            eq("Карточка"), eq("Хронология"), eq("Задачи"), anyList(), anyBoolean()))
+            eq("Карточка"), eq("Хронология"), eq("Задачи"), anyList(), anyBoolean(), anyString()))
         .thenReturn("case-prompt");
     when(llmClient.complete(eq("case-prompt"), anyList(), eq("Вопрос по делу")))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
@@ -172,7 +176,7 @@ class ChatServiceTest {
 
   @Test
   void unwrapsDomainExceptionRaisedInsideParallelBranch() {
-    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenThrow(new LlmException("реранкер недоступен"));
     ExecutorService contextExecutor = Executors.newFixedThreadPool(3);
@@ -198,7 +202,7 @@ class ChatServiceTest {
   @Test
   void chatRejectsWhenCaseAndDocumentBothScoped() {
     ChatRequest request =
-        new ChatRequest(null, "Вопрос", List.of(), UUID.randomUUID(), UUID.randomUUID());
+        new ChatRequest(null, "Вопрос", List.of(), UUID.randomUUID(), UUID.randomUUID(), null);
 
     assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
         .isInstanceOf(ChatScopeConflictException.class);
@@ -207,7 +211,7 @@ class ChatServiceTest {
 
   @Test
   void chatPropagatesQuotaExceeded() {
-    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
     doThrow(new LlmQuotaExceededException()).when(llmQuotaService).assertWithinQuota(lawyerId);
 
     assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
@@ -217,7 +221,7 @@ class ChatServiceTest {
 
   @Test
   void chatPropagatesNonLegalQueryRejection() {
-    ChatRequest request = new ChatRequest(null, "Погода", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Погода", List.of(), null, null, null);
     doThrow(new NonLegalQueryException()).when(legalDomainGuard).assertLegalQuery("Погода");
 
     assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
@@ -227,13 +231,14 @@ class ChatServiceTest {
 
   @Test
   void chatOnNewConversationBuildsPlainPromptAndPersists() {
-    ChatRequest request = new ChatRequest(null, "Что такое иск?", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Что такое иск?", List.of(), null, null, null);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(
             new RetrievedChunks(
                 List.of(new RetrievedChunk("контент", "Кодекс", 0.9, true, "ГК РФ", "15", null)),
                 0L));
-    when(ragService.buildSystemPrompt(anyList(), eq(true))).thenReturn("system-prompt");
+    when(ragService.buildSystemPrompt(anyList(), eq(true), anyString()))
+        .thenReturn("system-prompt");
     when(llmClient.complete(eq("system-prompt"), anyList(), eq("Что такое иск?")))
         .thenReturn(new LlmResult("Ответ на вопрос", new LlmUsage(5, 5, 10)));
     when(conversationRepository.save(any()))
@@ -265,7 +270,7 @@ class ChatServiceTest {
   void chatOnExistingConversationUsesHistoryAndDoesNotSaveConversationAgain() {
     Conversation conversation = existingConversation(null, null);
     ChatRequest request =
-        new ChatRequest(conversation.getId(), "Продолжение", List.of(), null, null);
+        new ChatRequest(conversation.getId(), "Продолжение", List.of(), null, null, null);
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
     when(messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId()))
@@ -273,7 +278,8 @@ class ChatServiceTest {
             List.of(new Message(conversation.getId(), MessageRole.ASSISTANT, "Привет", List.of())));
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
+    when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
+        .thenReturn("system-prompt");
     when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение")))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -287,7 +293,7 @@ class ChatServiceTest {
   @Test
   void chatWithCaseScopeBuildsCaseSystemPrompt() {
     UUID caseId = UUID.randomUUID();
-    ChatRequest request = new ChatRequest(null, "Что по делу?", List.of(), caseId, null);
+    ChatRequest request = new ChatRequest(null, "Что по делу?", List.of(), caseId, null, null);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
     when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
@@ -298,7 +304,7 @@ class ChatServiceTest {
     when(caseContextProvider.loadContext(caseId, lawyerId, List.of()))
         .thenReturn(new CaseContext("card", "timeline", "checklist"));
     when(ragService.buildCaseSystemPrompt(
-            eq("card"), eq("timeline"), eq("checklist"), anyList(), eq(false)))
+            eq("card"), eq("timeline"), eq("checklist"), anyList(), eq(false), anyString()))
         .thenReturn("case-prompt");
     when(llmClient.complete(eq("case-prompt"), anyList(), eq("Что по делу?")))
         .thenReturn(new LlmResult("Ответ по делу", new LlmUsage(2, 2, 4)));
@@ -320,7 +326,8 @@ class ChatServiceTest {
   @Test
   void chatWithDocumentScopeUsesDocumentSummaryAndSource() {
     UUID documentId = UUID.randomUUID();
-    ChatRequest request = new ChatRequest(null, "Разбери документ", List.of(), null, documentId);
+    ChatRequest request =
+        new ChatRequest(null, "Разбери документ", List.of(), null, documentId, null);
     DocumentSummaryView document =
         new DocumentSummaryView(
             documentId,
@@ -341,7 +348,7 @@ class ChatServiceTest {
             new DocumentChunkMatches(
                 List.of(new DocumentChunkMatch(UUID.randomUUID(), 0, "фрагмент", 0.7)), 5L, 0L));
     when(ragService.buildDocumentSystemPrompt(
-            eq("Договор.pdf"), anyString(), anyList(), anyBoolean()))
+            eq("Договор.pdf"), anyString(), anyList(), anyBoolean(), anyString()))
         .thenReturn("doc-prompt");
     when(llmClient.complete(eq("doc-prompt"), anyList(), eq("Разбери документ")))
         .thenReturn(new LlmResult("Ответ по документу", new LlmUsage(3, 3, 6)));
@@ -364,7 +371,7 @@ class ChatServiceTest {
   void chatOnExistingConversationRejectsCaseMismatch() {
     Conversation conversation = existingConversation(UUID.randomUUID(), null);
     ChatRequest request =
-        new ChatRequest(conversation.getId(), "Вопрос", List.of(), UUID.randomUUID(), null);
+        new ChatRequest(conversation.getId(), "Вопрос", List.of(), UUID.randomUUID(), null, null);
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
@@ -377,7 +384,7 @@ class ChatServiceTest {
     UUID documentId = UUID.randomUUID();
     Conversation conversation = existingConversation(null, documentId);
     ChatRequest request =
-        new ChatRequest(conversation.getId(), "Вопрос", List.of(), null, UUID.randomUUID());
+        new ChatRequest(conversation.getId(), "Вопрос", List.of(), null, UUID.randomUUID(), null);
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
@@ -387,7 +394,7 @@ class ChatServiceTest {
 
   @Test
   void chatOnMissingConversationThrowsNotFound() {
-    ChatRequest request = new ChatRequest("missing-id", "Вопрос", List.of(), null, null);
+    ChatRequest request = new ChatRequest("missing-id", "Вопрос", List.of(), null, null, null);
     when(conversationRepository.findActiveById("missing-id")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
@@ -397,7 +404,8 @@ class ChatServiceTest {
   @Test
   void chatOnConversationOwnedByAnotherLawyerThrowsNotFound() {
     Conversation conversation = existingConversation(null, null);
-    ChatRequest request = new ChatRequest(conversation.getId(), "Вопрос", List.of(), null, null);
+    ChatRequest request =
+        new ChatRequest(conversation.getId(), "Вопрос", List.of(), null, null, null);
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
@@ -407,7 +415,7 @@ class ChatServiceTest {
 
   @Test
   void chatStreamRejectedByExecutorThrowsLlmException() {
-    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
     org.mockito.Mockito.doThrow(new org.springframework.core.task.TaskRejectedException("full"))
         .when(chatStreamExecutor)
         .execute(any());
@@ -418,7 +426,7 @@ class ChatServiceTest {
 
   @Test
   void chatStreamSubmitsWorkToExecutor() {
-    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
 
     var emitter = service.chatStream(request, lawyerId, List.of());
 
@@ -490,12 +498,13 @@ class ChatServiceTest {
   void chatOnExistingConversationTouchesUpdatedAt() {
     Conversation conversation = existingConversation(null, null);
     ChatRequest request =
-        new ChatRequest(conversation.getId(), "Продолжение", List.of(), null, null);
+        new ChatRequest(conversation.getId(), "Продолжение", List.of(), null, null, null);
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
+    when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
+        .thenReturn("system-prompt");
     when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение")))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -508,10 +517,11 @@ class ChatServiceTest {
   @Test
   void newConversationTakesOrgIdFromSingleMembership() {
     UUID orgId = UUID.randomUUID();
-    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
+    when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
+        .thenReturn("system-prompt");
     when(llmClient.complete(anyString(), anyList(), anyString()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -526,10 +536,11 @@ class ChatServiceTest {
 
   @Test
   void newConversationWithoutSingleMembershipHasNoOrgId() {
-    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
+    when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
+        .thenReturn("system-prompt");
     when(llmClient.complete(anyString(), anyList(), anyString()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -546,7 +557,7 @@ class ChatServiceTest {
   void caseScopedConversationTakesOrgIdFromCase() {
     UUID caseId = UUID.randomUUID();
     UUID caseOrgId = UUID.randomUUID();
-    ChatRequest request = new ChatRequest(null, "Что по делу?", List.of(), caseId, null);
+    ChatRequest request = new ChatRequest(null, "Что по делу?", List.of(), caseId, null, null);
     when(caseAccessProvider.caseOrgId(caseId)).thenReturn(caseOrgId);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
@@ -555,7 +566,7 @@ class ChatServiceTest {
     when(caseContextProvider.loadContext(eq(caseId), eq(lawyerId), anyList()))
         .thenReturn(new CaseContext("card", "timeline", "checklist"));
     when(ragService.buildCaseSystemPrompt(
-            anyString(), anyString(), anyString(), anyList(), anyBoolean()))
+            anyString(), anyString(), anyString(), anyList(), anyBoolean(), anyString()))
         .thenReturn("case-prompt");
     when(llmClient.complete(anyString(), anyList(), anyString()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));

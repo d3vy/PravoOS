@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
@@ -61,6 +62,7 @@ class DocumentChatContextTest {
   @Mock private CaseAccessProvider caseAccessProvider;
   @Mock private CaseContextProvider caseContextProvider;
   @Mock private DocumentAccessGuard documentAccessGuard;
+  @Mock private PageContextResolver pageContextResolver;
   @Mock private RagService ragService;
   @Mock private LlmClient llmClient;
   @Mock private LegalDomainGuard legalDomainGuard;
@@ -86,6 +88,7 @@ class DocumentChatContextTest {
             caseAccessProvider,
             caseContextProvider,
             documentAccessGuard,
+            pageContextResolver,
             ragService,
             llmClient,
             properties,
@@ -106,9 +109,10 @@ class DocumentChatContextTest {
     when(documentAccessGuard.requireVisible(eq(documentId), eq(lawyerId), anyList()))
         .thenReturn(summaryView(DocumentSummaryStatus.NONE, null, List.of()));
     when(ragService.buildDocumentSystemPrompt(
-            anyString(), anyString(), anyList(), any(Boolean.class)))
+            anyString(), anyString(), anyList(), any(Boolean.class), anyString()))
         .thenReturn("document prompt");
-    when(ragService.buildSystemPrompt(anyList(), any(Boolean.class))).thenReturn("generic prompt");
+    when(ragService.buildSystemPrompt(anyList(), any(Boolean.class), anyString()))
+        .thenReturn("generic prompt");
   }
 
   private DocumentSummaryView summaryView(
@@ -137,7 +141,9 @@ class DocumentChatContextTest {
 
     var response =
         service.chat(
-            new ChatRequest(null, "Какой срок оплаты?", null, null, documentId), lawyerId, orgIds);
+            new ChatRequest(null, "Какой срок оплаты?", null, null, documentId, null),
+            lawyerId,
+            orgIds);
 
     verify(documentAccessGuard, atLeastOnce())
         .requireVisible(eq(documentId), eq(lawyerId), anyList());
@@ -145,7 +151,11 @@ class DocumentChatContextTest {
     verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
     verify(ragService)
         .buildDocumentSystemPrompt(
-            eq("Договор поставки"), eq(""), eq(List.of("пункт 4.1 договора")), eq(false));
+            eq("Договор поставки"),
+            eq(""),
+            eq(List.of("пункт 4.1 договора")),
+            eq(false),
+            anyString());
     verify(quotaService).recordTokenUsage(lawyerId, 12L);
     assertThat(response.sources()).containsExactly("Документ: Договор поставки");
   }
@@ -157,19 +167,21 @@ class DocumentChatContextTest {
             summaryView(
                 DocumentSummaryStatus.READY, "Договор поставки товара", List.of("Срок 30 дней")));
 
-    service.chat(new ChatRequest(null, "О чём договор?", null, null, documentId), lawyerId, orgIds);
+    service.chat(
+        new ChatRequest(null, "О чём договор?", null, null, documentId, null), lawyerId, orgIds);
 
     verify(ragService)
         .buildDocumentSystemPrompt(
             eq("Договор поставки"),
             eq("Договор поставки товара\n- Срок 30 дней"),
             anyList(),
-            eq(false));
+            eq(false),
+            anyString());
   }
 
   @Test
   void bindsNewConversationToDocument() {
-    service.chat(new ChatRequest(null, "Вопрос", null, null, documentId), lawyerId, orgIds);
+    service.chat(new ChatRequest(null, "Вопрос", null, null, documentId, null), lawyerId, orgIds);
 
     verify(conversationRepository)
         .save(
@@ -186,7 +198,9 @@ class DocumentChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Вопрос", null, null, documentId), lawyerId, orgIds))
+                    new ChatRequest(null, "Вопрос", null, null, documentId, null),
+                    lawyerId,
+                    orgIds))
         .isInstanceOf(DocumentNotFoundException.class);
 
     verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any());
@@ -200,7 +214,9 @@ class DocumentChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest("c1", "Вопрос", null, null, documentId), lawyerId, orgIds))
+                    new ChatRequest("c1", "Вопрос", null, null, documentId, null),
+                    lawyerId,
+                    orgIds))
         .isInstanceOf(ConversationDocumentMismatchException.class);
   }
 
@@ -209,7 +225,7 @@ class DocumentChatContextTest {
     assertThatThrownBy(
             () ->
                 service.chat(
-                    new ChatRequest(null, "Вопрос", null, UUID.randomUUID(), documentId),
+                    new ChatRequest(null, "Вопрос", null, UUID.randomUUID(), documentId, null),
                     lawyerId,
                     orgIds))
         .isInstanceOf(ChatScopeConflictException.class);

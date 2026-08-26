@@ -65,7 +65,12 @@ class SecurityRouteMatrixTest {
   private static final List<String> CLIENT_ONLY_PATHS = List.of("/api/ai/portal/cases");
 
   private static final List<String> LAWYER_AND_ADMIN_PATHS =
-      List.of("/api/ai/document-insights/1", "/api/ai/unmatched-by-any-rule");
+      List.of(
+          "/api/ai/document-insights/1",
+          "/api/ai/messages/1",
+          "/api/ai/conversations/1",
+          "/api/ai/chat/stream",
+          "/api/ai/unmatched-by-any-rule");
 
   private static final List<String> LAWYER_ONLY_PATHS =
       List.of(
@@ -84,9 +89,6 @@ class SecurityRouteMatrixTest {
           "/api/ai/tabular-reviews/1",
           "/api/ai/citation-checks/1",
           "/api/ai/responses/1",
-          "/api/ai/messages/1",
-          "/api/ai/conversations/1",
-          "/api/ai/chat/stream",
           "/api/ai/invoices/1",
           "/api/ai/billing-profile/current",
           "/api/ai/saved-views/1",
