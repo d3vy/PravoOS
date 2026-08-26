@@ -21,15 +21,19 @@ import com.pravoos.ai.practice.internal.util.BillingAmounts;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.shared.model.enums.DeadlineType;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
+import com.pravoos.ai.shared.util.Futures;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DashboardService {
@@ -42,31 +46,57 @@ public class DashboardService {
   private final TimeEntryRepository timeEntryRepository;
   private final InvoiceRepository invoiceRepository;
   private final ClientRepository clientRepository;
+  private final Executor dashboardExecutor;
 
   public DashboardService(
       CaseRepository caseRepository,
       CaseTaskRepository caseTaskRepository,
       TimeEntryRepository timeEntryRepository,
       InvoiceRepository invoiceRepository,
-      ClientRepository clientRepository) {
+      ClientRepository clientRepository,
+      @Qualifier("dashboardExecutor") Executor dashboardExecutor) {
     this.caseRepository = caseRepository;
     this.caseTaskRepository = caseTaskRepository;
     this.timeEntryRepository = timeEntryRepository;
     this.invoiceRepository = invoiceRepository;
     this.clientRepository = clientRepository;
+    this.dashboardExecutor = dashboardExecutor;
   }
 
-  @Transactional(readOnly = true)
   public DashboardResponse getDashboard(UUID lawyerId) {
+    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+
+    CompletableFuture<List<StatusCount>> pendingPipeline =
+        dashboardAsync(() -> buildPipeline(lawyerId));
+    CompletableFuture<Long> pendingActiveCases =
+        dashboardAsync(
+            () -> caseRepository.countByLawyerIdAndStatusNotIn(lawyerId, CaseStatus.CLOSED));
+    CompletableFuture<Long> pendingOpenTasks =
+        dashboardAsync(() -> caseTaskRepository.countOpenByLawyerId(lawyerId));
+    CompletableFuture<List<UpcomingDeadline>> pendingUpcomingDeadlines =
+        dashboardAsync(() -> buildUpcomingDeadlines(lawyerId, today));
+    CompletableFuture<List<RecentCase>> pendingRecentCases =
+        dashboardAsync(() -> buildRecentCases(lawyerId));
+    CompletableFuture<MoneyOnTable> pendingMoneyOnTable =
+        dashboardAsync(() -> buildMoneyOnTable(lawyerId));
+    CompletableFuture<List<TodayTask>> pendingTasksToday =
+        dashboardAsync(() -> buildTasksToday(lawyerId, today));
+    CompletableFuture<UnpaidInvoicesSummary> pendingUnpaidInvoices =
+        dashboardAsync(() -> buildUnpaidInvoices(lawyerId, today));
+
     return new DashboardResponse(
-        buildPipeline(lawyerId),
-        caseRepository.countByLawyerIdAndStatusNotIn(lawyerId, CaseStatus.CLOSED),
-        caseTaskRepository.countOpenByLawyerId(lawyerId),
-        buildUpcomingDeadlines(lawyerId),
-        buildRecentCases(lawyerId),
-        buildMoneyOnTable(lawyerId),
-        buildTasksToday(lawyerId),
-        buildUnpaidInvoices(lawyerId));
+        Futures.join(pendingPipeline),
+        Futures.join(pendingActiveCases),
+        Futures.join(pendingOpenTasks),
+        Futures.join(pendingUpcomingDeadlines),
+        Futures.join(pendingRecentCases),
+        Futures.join(pendingMoneyOnTable),
+        Futures.join(pendingTasksToday),
+        Futures.join(pendingUnpaidInvoices));
+  }
+
+  private <T> CompletableFuture<T> dashboardAsync(Supplier<T> source) {
+    return CompletableFuture.supplyAsync(source, dashboardExecutor);
   }
 
   private MoneyOnTable buildMoneyOnTable(UUID lawyerId) {
@@ -81,8 +111,7 @@ public class DashboardService {
     return new MoneyOnTable(minutes, BillingAmounts.normalize(amount));
   }
 
-  private List<TodayTask> buildTasksToday(UUID lawyerId) {
-    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+  private List<TodayTask> buildTasksToday(UUID lawyerId, LocalDate today) {
     return caseTaskRepository
         .findDueTodayOrOverdueByLawyerId(lawyerId, CaseStatus.CLOSED, today)
         .stream()
@@ -98,8 +127,7 @@ public class DashboardService {
         .toList();
   }
 
-  private UnpaidInvoicesSummary buildUnpaidInvoices(UUID lawyerId) {
-    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+  private UnpaidInvoicesSummary buildUnpaidInvoices(UUID lawyerId, LocalDate today) {
     List<Invoice> unpaid =
         invoiceRepository.findByLawyerIdAndStatusOrderByDueDateAsc(lawyerId, InvoiceStatus.ISSUED);
     Map<UUID, String> names =
@@ -143,8 +171,7 @@ public class DashboardService {
     return pipeline;
   }
 
-  private List<UpcomingDeadline> buildUpcomingDeadlines(UUID lawyerId) {
-    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+  private List<UpcomingDeadline> buildUpcomingDeadlines(UUID lawyerId, LocalDate today) {
     LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
     List<UpcomingDeadline> deadlines = new ArrayList<>();
     for (Case caseEntity :

@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,11 +29,16 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,12 +50,27 @@ class DashboardServiceTest {
   @Mock private InvoiceRepository invoiceRepository;
   @Mock private ClientRepository clientRepository;
 
-  @InjectMocks private DashboardService dashboardService;
+  private DashboardService dashboardService;
 
   private final UUID lawyerId = UUID.randomUUID();
   private final LocalDate today = LocalDate.now(ZoneOffset.UTC);
   private final Set<CaseStatus> closedStatuses =
       EnumSet.of(CaseStatus.CLOSED_WON, CaseStatus.CLOSED_LOST);
+
+  @BeforeEach
+  void setUp() {
+    dashboardService = service(Runnable::run);
+  }
+
+  private DashboardService service(Executor dashboardExecutor) {
+    return new DashboardService(
+        caseRepository,
+        caseTaskRepository,
+        timeEntryRepository,
+        invoiceRepository,
+        clientRepository,
+        dashboardExecutor);
+  }
 
   private void stubEmptyDefaults() {
     when(caseRepository.countGroupedByStatus(lawyerId)).thenReturn(List.of());
@@ -288,5 +309,62 @@ class DashboardServiceTest {
     var itemWithDueDate = response.unpaidInvoices().items().get(1);
     assertThat(itemWithDueDate.daysOverdue())
         .isEqualTo(ChronoUnit.DAYS.between(itemWithDueDate.dueDate(), today));
+  }
+
+  @Test
+  void dashboardIsIdenticalWhenBranchesRunOnAnotherThread() {
+    stubEmptyDefaults();
+    when(caseRepository.countByLawyerIdAndStatusNotIn(lawyerId, closedStatuses)).thenReturn(7L);
+    when(caseTaskRepository.countOpenByLawyerId(lawyerId)).thenReturn(3L);
+    UUID caseId = UUID.randomUUID();
+    Case caseEntity = caseWithId(caseId, "Свежее дело");
+    caseEntity.setStatus(CaseStatus.SUBMITTED);
+    when(caseRepository.findTop5ByLawyerIdOrderByCreatedAtDesc(lawyerId))
+        .thenReturn(List.of(caseEntity));
+
+    Set<String> branchThreads = ConcurrentHashMap.newKeySet();
+    ExecutorService dashboardExecutor = Executors.newFixedThreadPool(4);
+    try {
+      DashboardResponse response =
+          service(
+                  task ->
+                      dashboardExecutor.execute(
+                          () -> {
+                            branchThreads.add(Thread.currentThread().getName());
+                            task.run();
+                          }))
+              .getDashboard(lawyerId);
+
+      assertThat(response.activeCases()).isEqualTo(7L);
+      assertThat(response.openTasks()).isEqualTo(3L);
+      assertThat(response.pipeline())
+          .extracting(DashboardResponse.StatusCount::status)
+          .containsExactly(CaseStatus.values());
+      assertThat(response.recentCases())
+          .extracting(DashboardResponse.RecentCase::id)
+          .containsExactly(caseId);
+      assertThat(branchThreads).isNotEmpty().doesNotContain(Thread.currentThread().getName());
+    } finally {
+      dashboardExecutor.shutdownNow();
+    }
+  }
+
+  @Test
+  void getDashboardRethrowsBranchFailureWithoutWrappingIt() {
+    stubEmptyDefaults();
+    when(timeEntryRepository.findByLawyerIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalse(
+            lawyerId))
+        .thenThrow(new DataAccessResourceFailureException("time entries are down"));
+
+    ExecutorService dashboardExecutor = Executors.newSingleThreadExecutor();
+    try {
+      DashboardService parallelDashboard = service(dashboardExecutor);
+
+      assertThatThrownBy(() -> parallelDashboard.getDashboard(lawyerId))
+          .isInstanceOf(DataAccessResourceFailureException.class)
+          .hasMessage("time entries are down");
+    } finally {
+      dashboardExecutor.shutdownNow();
+    }
   }
 }
