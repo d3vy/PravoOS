@@ -53,7 +53,7 @@ describe('LanguageSwitcher', () => {
     await userEvent.click(screen.getByRole('button'))
     await userEvent.click(screen.getAllByRole('menuitemradio')[1])
     expect(setLanguage).toHaveBeenCalledWith('en')
-    expect(screen.queryByRole('menu')).toBeNull()
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   })
 
   it('closes the menu when clicking outside', async () => {
