@@ -12,6 +12,7 @@ class VectorChunkSearchRepositoryTest {
       new VectorChunkSearchRepository(
           new HybridSearchProperties(
               true,
+              true,
               0.5,
               3,
               50,

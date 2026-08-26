@@ -12,7 +12,12 @@ import static org.mockito.Mockito.when;
 import com.pravoos.ai.document.internal.service.EmbeddingService;
 import com.pravoos.ai.shared.config.HybridSearchProperties;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -138,18 +143,74 @@ class HybridSearchServiceTest {
     verify(vectorSearchRepository, never()).search(any(), anyInt(), any());
   }
 
+  @Test
+  void producesSameResultWhenLexicalBranchRunsOnAnotherThread() {
+    when(vectorSearchRepository.search(any(), anyInt(), any()))
+        .thenReturn(List.of(candidate(vectorOnly), candidate(shared)));
+    when(lexicalSearchRepository.search(anyString(), anyInt(), any()))
+        .thenReturn(List.of(candidate(shared), candidate(lexicalOnly)));
+    Set<String> threadNames = ConcurrentHashMap.newKeySet();
+    ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
+
+    try {
+      List<ChunkCandidate> results =
+          service(
+                  properties(true, true),
+                  task ->
+                      searchExecutor.execute(
+                          () -> {
+                            threadNames.add(Thread.currentThread().getName());
+                            task.run();
+                          }))
+              .search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase())
+              .candidates();
+
+      assertThat(results).extracting(ChunkCandidate::chunkId).containsExactly(shared, vectorOnly);
+      assertThat(threadNames).doesNotContain(Thread.currentThread().getName());
+    } finally {
+      searchExecutor.shutdownNow();
+    }
+  }
+
+  @Test
+  void degradesToVectorOnlyWhenLexicalSearchFailsOnAnotherThread() {
+    when(vectorSearchRepository.search(any(), anyInt(), any()))
+        .thenReturn(List.of(candidate(vectorOnly)));
+    when(lexicalSearchRepository.search(anyString(), anyInt(), any()))
+        .thenThrow(
+            new InvalidDataAccessResourceUsageException("column content_tsv does not exist"));
+    ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
+
+    try {
+      List<ChunkCandidate> results =
+          service(properties(true, true), searchExecutor)
+              .search(QUERY, TOP_K, ChunkSearchScope.knowledgeBase())
+              .candidates();
+
+      assertThat(results).extracting(ChunkCandidate::chunkId).containsExactly(vectorOnly);
+    } finally {
+      searchExecutor.shutdownNow();
+    }
+  }
+
   private HybridSearchService service(HybridSearchProperties properties) {
+    return service(properties, Runnable::run);
+  }
+
+  private HybridSearchService service(HybridSearchProperties properties, Executor searchExecutor) {
     return new HybridSearchService(
         embeddingService,
         vectorSearchRepository,
         lexicalSearchRepository,
         new PassThroughReranker(),
-        properties);
+        properties,
+        searchExecutor);
   }
 
   private HybridSearchProperties properties(boolean lexicalEnabled, boolean rerankEnabled) {
     return new HybridSearchProperties(
         lexicalEnabled,
+        true,
         0.85,
         6,
         60,

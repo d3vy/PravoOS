@@ -4,8 +4,11 @@ import com.pravoos.ai.document.internal.service.EmbeddingService;
 import com.pravoos.ai.shared.config.HybridSearchProperties;
 import jakarta.persistence.PersistenceException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
@@ -22,18 +25,21 @@ public class HybridSearchService {
   private final LexicalChunkSearchRepository lexicalSearchRepository;
   private final Reranker reranker;
   private final HybridSearchProperties properties;
+  private final Executor searchExecutor;
 
   public HybridSearchService(
       EmbeddingService embeddingService,
       VectorChunkSearchRepository vectorSearchRepository,
       LexicalChunkSearchRepository lexicalSearchRepository,
       Reranker reranker,
-      HybridSearchProperties properties) {
+      HybridSearchProperties properties,
+      @Qualifier("hybridSearchExecutor") Executor searchExecutor) {
     this.embeddingService = embeddingService;
     this.vectorSearchRepository = vectorSearchRepository;
     this.lexicalSearchRepository = lexicalSearchRepository;
     this.reranker = reranker;
     this.properties = properties;
+    this.searchExecutor = searchExecutor;
   }
 
   public HybridSearchResult search(String query, int topK, ChunkSearchScope scope) {
@@ -50,9 +56,12 @@ public class HybridSearchService {
     }
 
     int candidateLimit = properties.candidateLimit(topK);
+    CompletableFuture<List<ChunkCandidate>> pendingLexicalCandidates =
+        CompletableFuture.supplyAsync(
+            () -> lexicalCandidates(query, candidateLimit, scope), searchExecutor);
     List<ChunkCandidate> vectorCandidates =
         vectorSearchRepository.search(queryEmbedding, candidateLimit, scope);
-    List<ChunkCandidate> lexicalCandidates = lexicalCandidates(query, candidateLimit, scope);
+    List<ChunkCandidate> lexicalCandidates = pendingLexicalCandidates.join();
 
     List<ChunkCandidate> fused =
         ReciprocalRankFusion.fuse(

@@ -17,6 +17,7 @@ class RerankerConfigTest {
   private HybridSearchProperties properties(boolean rerankEnabled) {
     return new HybridSearchProperties(
         true,
+        true,
         0.5,
         3,
         50,
