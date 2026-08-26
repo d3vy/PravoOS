@@ -79,6 +79,7 @@ llm:
   guard:
     fail-open: ${LLM_GUARD_FAIL_OPEN:true}
   history-max-chars: ${LLM_HISTORY_MAX_CHARS:12000}
+  context-parallel-enabled: ${LLM_CONTEXT_PARALLEL_ENABLED:true}
 
 chat:
   retention-days: ${CHAT_RETENTION_DAYS:0}
@@ -127,6 +128,7 @@ document:
     max-tokens: ${DOCUMENT_SUMMARY_MAX_TOKENS:900}
   search:
     lexical-enabled: ${RAG_LEXICAL_ENABLED:true}
+    parallel-enabled: ${RAG_PARALLEL_ENABLED:true}
     max-distance: ${RAG_MAX_DISTANCE:0.85}
     candidate-multiplier: ${RAG_CANDIDATE_MULTIPLIER:6}
     max-candidates: ${RAG_MAX_CANDIDATES:60}
@@ -205,6 +207,12 @@ invoice:
   overdue:
     reminder:
       cron: ${INVOICE_OVERDUE_REMINDER_CRON:0 0 9 * * *}
+
+search:
+  parallel-enabled: ${SEARCH_PARALLEL_ENABLED:true}
+
+dashboard:
+  parallel-enabled: ${DASHBOARD_PARALLEL_ENABLED:true}
 
 lawyer:
   digest:

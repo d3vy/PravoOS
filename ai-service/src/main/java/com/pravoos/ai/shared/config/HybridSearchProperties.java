@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "document.search")
 public record HybridSearchProperties(
     boolean lexicalEnabled,
+    boolean parallelEnabled,
     double maxDistance,
     int candidateMultiplier,
     int maxCandidates,

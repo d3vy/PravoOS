@@ -9,7 +9,7 @@ class HybridSearchPropertiesTest {
   private HybridSearchProperties properties(
       int candidateMultiplier, int maxCandidates, HybridSearchProperties.Rerank rerank) {
     return new HybridSearchProperties(
-        true, 0.85, candidateMultiplier, maxCandidates, 60.0, 0.5, 0.5, 0.005, rerank);
+        true, true, 0.85, candidateMultiplier, maxCandidates, 60.0, 0.5, 0.5, 0.005, rerank);
   }
 
   @Test

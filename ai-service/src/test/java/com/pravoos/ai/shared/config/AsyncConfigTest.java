@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -40,6 +41,18 @@ class AsyncConfigTest {
   void backgroundExecutorsKeepQueueingInsteadOfRejecting() {
     assertThat(config.tabularReviewExecutor().getQueueCapacity()).isPositive();
     assertThat(config.tabularReviewCellExecutor().getQueueCapacity()).isPositive();
+  }
+
+  @Test
+  void dashboardExecutorRunsInlineWhenParallelismDisabled() {
+    String callerThread = Thread.currentThread().getName();
+    AtomicReference<String> branchThread = new AtomicReference<>();
+
+    config
+        .dashboardExecutor(false)
+        .execute(() -> branchThread.set(Thread.currentThread().getName()));
+
+    assertThat(branchThread.get()).isEqualTo(callerThread);
   }
 
   private void awaitQuietly(CountDownLatch latch) {

@@ -6,6 +6,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
@@ -84,6 +85,81 @@ public class AsyncConfig implements AsyncConfigurer {
     executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
     executor.setWaitForTasksToCompleteOnShutdown(true);
     executor.setAwaitTerminationSeconds(30);
+    executor.initialize();
+    return executor;
+  }
+
+  @Bean(name = "hybridSearchExecutor")
+  public Executor hybridSearchExecutor(HybridSearchProperties hybridSearchProperties) {
+    if (!hybridSearchProperties.parallelEnabled()) {
+      return Runnable::run;
+    }
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(4);
+    executor.setMaxPoolSize(8);
+    executor.setQueueCapacity(0);
+    executor.setThreadNamePrefix("hybrid-search-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
+    executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+    executor.setWaitForTasksToCompleteOnShutdown(true);
+    executor.setAwaitTerminationSeconds(15);
+    executor.initialize();
+    return executor;
+  }
+
+  @Bean(name = "chatContextExecutor")
+  public Executor chatContextExecutor(
+      @Value("${llm.context-parallel-enabled:true}") boolean contextParallelEnabled) {
+    if (!contextParallelEnabled) {
+      return Runnable::run;
+    }
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(4);
+    executor.setMaxPoolSize(12);
+    executor.setQueueCapacity(0);
+    executor.setThreadNamePrefix("chat-context-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
+    executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+    executor.setWaitForTasksToCompleteOnShutdown(true);
+    executor.setAwaitTerminationSeconds(30);
+    executor.initialize();
+    return executor;
+  }
+
+  @Bean(name = "globalSearchExecutor")
+  public Executor globalSearchExecutor(
+      @Value("${search.parallel-enabled:true}") boolean searchParallelEnabled) {
+    if (!searchParallelEnabled) {
+      return Runnable::run;
+    }
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(4);
+    executor.setMaxPoolSize(12);
+    executor.setQueueCapacity(0);
+    executor.setThreadNamePrefix("global-search-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
+    executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+    executor.setWaitForTasksToCompleteOnShutdown(true);
+    executor.setAwaitTerminationSeconds(15);
+    executor.initialize();
+    return executor;
+  }
+
+  @Bean(name = "dashboardExecutor")
+  public Executor dashboardExecutor(
+      @Value("${dashboard.parallel-enabled:true}") boolean dashboardParallelEnabled) {
+    if (!dashboardParallelEnabled) {
+      return Runnable::run;
+    }
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(4);
+    executor.setMaxPoolSize(8);
+    executor.setQueueCapacity(0);
+    executor.setThreadNamePrefix("dashboard-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
+    executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+    executor.setWaitForTasksToCompleteOnShutdown(true);
+    executor.setAwaitTerminationSeconds(15);
     executor.initialize();
     return executor;
   }
