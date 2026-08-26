@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { invoicesApi } from '../../api/invoices'
 import type { InvoiceResponse, InvoiceStatus } from '../../types'
+import { usePageContext } from '../../hooks/usePageContext'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
@@ -32,6 +33,17 @@ export default function InvoiceDetailPage(): JSX.Element {
     queryFn: () => invoicesApi.get(invoiceId),
     enabled: invoiceId !== '',
   })
+
+  usePageContext(
+    invoice
+      ? {
+          route: `/invoices/${invoice.id}`,
+          label: t('invoices.invoiceNumber', { number: invoice.number }),
+          entityType: 'INVOICE',
+          entityId: invoice.id,
+        }
+      : null
+  )
 
   const invalidate = (): void => {
     queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })

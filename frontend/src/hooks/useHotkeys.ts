@@ -7,6 +7,7 @@ import type { TimeEntryResponse } from '../types'
 import { useToast } from './useToast'
 import { useCommandPaletteStore } from '../store/commandPaletteStore'
 import { useShortcutsDialogStore } from '../store/shortcutsDialogStore'
+import { useAiChatStore } from '../store/aiChatStore'
 
 const SEQUENCE_TIMEOUT_MS = 900
 const CASE_ROUTE = /^\/cases\/([^/]+)$/
@@ -25,6 +26,7 @@ export function useHotkeys(): void {
   const toast = useToast()
   const toggleCommandPalette = useCommandPaletteStore((state) => state.toggle)
   const toggleShortcutsDialog = useShortcutsDialogStore((state) => state.toggle)
+  const toggleAiWidget = useAiChatStore((state) => state.toggle)
 
   const locationRef = useRef(location)
   locationRef.current = location
@@ -119,6 +121,9 @@ export function useHotkeys(): void {
       } else if (key === '?') {
         event.preventDefault()
         toggleShortcutsDialog()
+      } else if (key === 'a') {
+        event.preventDefault()
+        toggleAiWidget()
       }
     }
 
@@ -127,5 +132,5 @@ export function useHotkeys(): void {
       window.removeEventListener('keydown', handleKeyDown)
       clearPending()
     }
-  }, [navigate, queryClient, toast, toggleCommandPalette, toggleShortcutsDialog, t])
+  }, [navigate, queryClient, toast, toggleCommandPalette, toggleShortcutsDialog, toggleAiWidget, t])
 }

@@ -17,7 +17,7 @@ public class RagService {
   private static final String CHUNK_SEPARATOR = "\n\n---\n\n";
   private static final Pattern PLACEHOLDER =
       Pattern.compile(
-          "\\{(instruction|context|legislationNotice|caseCard|timeline|checklist|documentTitle|documentSummary)\\}");
+          "\\{(instruction|context|legislationNotice|pageContext|caseCard|timeline|checklist|documentTitle|documentSummary)\\}");
 
   private static final String CONTEXT_FENCE_OPEN = "<<<КОНТЕКСТ_НАЧАЛО>>>";
   private static final String CONTEXT_FENCE_CLOSE = "<<<КОНТЕКСТ_КОНЕЦ>>>";
@@ -72,7 +72,7 @@ public class RagService {
             Отвечайте на том языке, на котором задан вопрос. \
             Будьте точны и опирайтесь на контекст. \
             Если ответ не содержится в предоставленном контексте — прямо скажите об этом.
-
+            {pageContext}
             """
           + CITATION_INSTRUCTION
           + """
@@ -122,6 +122,7 @@ public class RagService {
             какого документа или сведения не хватает. Не додумывайте факты, суммы, даты и \
             наименования сторон.
 
+            {pageContext}
             КАРТОЧКА ДЕЛА:
             {caseCard}
 
@@ -155,6 +156,7 @@ public class RagService {
             додумывайте условия, суммы, даты и наименования сторон. Когда вопрос касается \
             конкретной формулировки — цитируйте её дословно.
 
+            {pageContext}
             ДОКУМЕНТ: {documentTitle}
 
             КРАТКОЕ СОДЕРЖАНИЕ:
@@ -179,14 +181,17 @@ public class RagService {
     this.contextMaxChars = documentProperties.contextMaxChars();
   }
 
-  public String buildSystemPrompt(List<String> relevantChunks, boolean legislationPresent) {
+  public String buildSystemPrompt(
+      List<String> relevantChunks, boolean legislationPresent, String pageContextLine) {
     return fill(
         SYSTEM_PROMPT_TEMPLATE,
         Map.of(
             "context",
             joinContext(relevantChunks),
             "legislationNotice",
-            legislationPresent ? "" : NO_LEGISLATION_CAUTION));
+            legislationPresent ? "" : NO_LEGISLATION_CAUTION,
+            "pageContext",
+            pageContextLine == null ? "" : pageContextLine));
   }
 
   public String buildCaseSystemPrompt(
@@ -194,7 +199,8 @@ public class RagService {
       String hearingTimeline,
       String checklist,
       List<String> relevantChunks,
-      boolean legislationPresent) {
+      boolean legislationPresent,
+      String pageContextLine) {
     return fill(
         CASE_PROMPT_TEMPLATE,
         Map.of(
@@ -207,14 +213,17 @@ public class RagService {
             "context",
             joinContext(relevantChunks),
             "legislationNotice",
-            legislationPresent ? "" : NO_LEGISLATION_CAUTION));
+            legislationPresent ? "" : NO_LEGISLATION_CAUTION,
+            "pageContext",
+            pageContextLine == null ? "" : pageContextLine));
   }
 
   public String buildDocumentSystemPrompt(
       String documentTitle,
       String documentSummary,
       List<String> relevantChunks,
-      boolean legislationPresent) {
+      boolean legislationPresent,
+      String pageContextLine) {
     String summary = sanitizeChunk(documentSummary);
     return fill(
         DOCUMENT_PROMPT_TEMPLATE,
@@ -226,7 +235,9 @@ public class RagService {
             "context",
             joinContext(relevantChunks),
             "legislationNotice",
-            legislationPresent ? "" : NO_LEGISLATION_CAUTION));
+            legislationPresent ? "" : NO_LEGISLATION_CAUTION,
+            "pageContext",
+            pageContextLine == null ? "" : pageContextLine));
   }
 
   public String buildWorkflowPrompt(String instruction, List<String> relevantChunks) {

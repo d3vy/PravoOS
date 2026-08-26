@@ -33,6 +33,12 @@ public class CaseAccessProviderImpl implements CaseAccessProvider {
 
   @Override
   @Transactional(readOnly = true)
+  public UUID caseOrgId(UUID caseId) {
+    return caseRepository.findById(caseId).map(Case::getOrgId).orElse(null);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public Set<UUID> retainCasesOwnedBy(Set<UUID> caseIds, UUID lawyerId) {
     if (caseIds == null || caseIds.isEmpty()) {
       return Set.of();

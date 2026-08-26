@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import type { CaseDraftDto, CaseDraftVersionDto } from '../../types'
+import { usePageContext } from '../../hooks/usePageContext'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -45,6 +46,17 @@ export default function DraftEditorPage(): JSX.Element {
     queryFn: () => casesApi.getDraft(draftId),
     enabled: draftId !== '',
   })
+
+  usePageContext(
+    draft
+      ? {
+          route: `/cases/${caseId}/drafts/${draft.id}`,
+          label: draft.title,
+          entityType: 'DRAFT',
+          entityId: draft.id,
+        }
+      : null
+  )
 
   useEffect(() => {
     if (draft && draft.id !== loadedId) {

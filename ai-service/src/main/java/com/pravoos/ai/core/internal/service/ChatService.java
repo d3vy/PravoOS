@@ -3,6 +3,8 @@ package com.pravoos.ai.core.internal.service;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.PageContextResolver;
+import com.pravoos.ai.core.api.PageContextScope;
 import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.model.mongo.Message;
@@ -34,6 +36,8 @@ import com.pravoos.ai.shared.service.LlmQuotaService;
 import com.pravoos.ai.shared.util.Futures;
 import com.pravoos.ai.shared.util.PageRequests;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -70,6 +74,7 @@ public class ChatService {
   private final CaseAccessProvider caseAccessProvider;
   private final CaseContextProvider caseContextProvider;
   private final DocumentAccessGuard documentAccessGuard;
+  private final PageContextResolver pageContextResolver;
   private final RagService ragService;
   private final LlmClient llmClient;
   private final DocumentProperties documentProperties;
@@ -87,6 +92,7 @@ public class ChatService {
       CaseAccessProvider caseAccessProvider,
       CaseContextProvider caseContextProvider,
       DocumentAccessGuard documentAccessGuard,
+      PageContextResolver pageContextResolver,
       RagService ragService,
       LlmClient llmClient,
       DocumentProperties documentProperties,
@@ -102,6 +108,7 @@ public class ChatService {
     this.caseAccessProvider = caseAccessProvider;
     this.caseContextProvider = caseContextProvider;
     this.documentAccessGuard = documentAccessGuard;
+    this.pageContextResolver = pageContextResolver;
     this.ragService = ragService;
     this.llmClient = llmClient;
     this.documentProperties = documentProperties;
@@ -112,13 +119,16 @@ public class ChatService {
     this.historyMaxChars = historyMaxChars;
   }
 
-  public ChatResponse chat(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
+  public ChatResponse chat(ChatRequest incoming, UUID lawyerId, List<UUID> orgIds) {
+    ScopedRequest scoped = applyPageContext(incoming, lawyerId, orgIds);
+    ChatRequest request = scoped.request();
     DocumentSummaryView scopedDocument = resolveAccessibleScope(request, lawyerId, orgIds);
     llmQuotaService.assertWithinQuota(lawyerId);
     Conversation conversation =
         resolveConversation(
             request.conversationId(),
             lawyerId,
+            resolveConversationOrgId(request.caseId(), scopedDocument, orgIds),
             request.message(),
             request.caseId(),
             request.documentId());
@@ -140,6 +150,7 @@ public class ChatService {
             isNewConversation,
             attachedDocuments,
             scopedDocument,
+            scoped.promptLine(),
             lawyerId,
             orgIds);
 
@@ -170,13 +181,16 @@ public class ChatService {
         parsed.followUps());
   }
 
-  public SseEmitter chatStream(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
+  public SseEmitter chatStream(ChatRequest incoming, UUID lawyerId, List<UUID> orgIds) {
+    ScopedRequest scoped = applyPageContext(incoming, lawyerId, orgIds);
+    ChatRequest request = scoped.request();
     DocumentSummaryView scopedDocument = resolveAccessibleScope(request, lawyerId, orgIds);
     llmQuotaService.assertWithinQuota(lawyerId);
     Conversation conversation =
         resolveConversation(
             request.conversationId(),
             lawyerId,
+            resolveConversationOrgId(request.caseId(), scopedDocument, orgIds),
             request.message(),
             request.caseId(),
             request.documentId());
@@ -310,6 +324,7 @@ public class ChatService {
       boolean isNewConversation,
       List<DocumentRef> attachedDocuments,
       DocumentSummaryView scopedDocument,
+      String pageContextLine,
       UUID lawyerId,
       List<UUID> orgIds) {
     int topK = documentProperties.topKResults();
@@ -357,6 +372,7 @@ public class ChatService {
           attachedChunks,
           knowledgeBaseMatches,
           legislationPresent,
+          pageContextLine,
           historyForLlm);
     }
 
@@ -382,7 +398,9 @@ public class ChatService {
 
     if (caseContext == null) {
       return new PreparedContext(
-          ragService.buildSystemPrompt(relevantChunks, legislationPresent), sources, historyForLlm);
+          ragService.buildSystemPrompt(relevantChunks, legislationPresent, pageContextLine),
+          sources,
+          historyForLlm);
     }
 
     return new PreparedContext(
@@ -391,7 +409,8 @@ public class ChatService {
             caseContext.hearingTimeline(),
             caseContext.checklist(),
             relevantChunks,
-            legislationPresent),
+            legislationPresent,
+            pageContextLine),
         sources,
         historyForLlm);
   }
@@ -403,6 +422,7 @@ public class ChatService {
       List<String> attachedChunks,
       List<RetrievedChunk> knowledgeBaseMatches,
       boolean legislationPresent,
+      String pageContextLine,
       List<LlmMessage> historyForLlm) {
     List<String> relevantChunks = new ArrayList<>(attachedChunks);
     relevantChunks.addAll(matches.matches().stream().map(DocumentChunkMatch::content).toList());
@@ -417,7 +437,11 @@ public class ChatService {
 
     return new PreparedContext(
         ragService.buildDocumentSystemPrompt(
-            document.title(), summaryText(document), relevantChunks, legislationPresent),
+            document.title(),
+            summaryText(document),
+            relevantChunks,
+            legislationPresent,
+            pageContextLine),
         sources,
         historyForLlm);
   }
@@ -478,6 +502,22 @@ public class ChatService {
     return result.isBlank() ? chunk.documentTitle() : result;
   }
 
+  private UUID resolveConversationOrgId(
+      UUID caseId, DocumentSummaryView scopedDocument, List<UUID> orgIds) {
+    UUID scopeCaseId = caseId != null ? caseId : scopedDocumentCaseId(scopedDocument);
+    if (scopeCaseId != null) {
+      UUID caseOrgId = caseAccessProvider.caseOrgId(scopeCaseId);
+      if (caseOrgId != null) {
+        return caseOrgId;
+      }
+    }
+    return orgIds != null && orgIds.size() == 1 ? orgIds.get(0) : null;
+  }
+
+  private UUID scopedDocumentCaseId(DocumentSummaryView scopedDocument) {
+    return scopedDocument == null ? null : scopedDocument.caseId();
+  }
+
   private PersistedExchange persistExchange(
       Conversation conversation,
       boolean isNewConversation,
@@ -491,6 +531,11 @@ public class ChatService {
     Message assistantMessage =
         messageRepository.save(
             new Message(persisted.getId(), MessageRole.ASSISTANT, answer, sources));
+    if (!isNewConversation) {
+      LocalDateTime lastActivity = assistantMessage.getCreatedAt();
+      conversationRepository.touch(persisted.getId(), lastActivity);
+      persisted.setUpdatedAt(lastActivity);
+    }
     return new PersistedExchange(persisted, assistantMessage.getId());
   }
 
@@ -606,38 +651,21 @@ public class ChatService {
     if (documentId != null) {
       documentAccessGuard.requireVisible(documentId, lawyerId, orgIds);
     }
-    var pageRequest = PageRequests.of(page, size);
-    boolean filtered = query != null && !query.isBlank();
-    String title = filtered ? query.trim() : null;
-    Page<Conversation> conversations;
-    if (documentId != null) {
-      conversations =
-          filtered
-              ? conversationRepository
-                  .findByLawyerIdAndDocumentIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-                      lawyerId, documentId, title, pageRequest)
-              : conversationRepository.findByLawyerIdAndDocumentIdOrderByCreatedAtDesc(
-                  lawyerId, documentId, pageRequest);
-    } else if (caseId == null) {
-      conversations =
-          filtered
-              ? conversationRepository
-                  .findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-                      lawyerId, title, pageRequest)
-              : conversationRepository
-                  .findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullOrderByCreatedAtDesc(
-                      lawyerId, pageRequest);
-    } else {
-      conversations =
-          filtered
-              ? conversationRepository
-                  .findByLawyerIdAndCaseIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-                      lawyerId, caseId, title, pageRequest)
-              : conversationRepository.findByLawyerIdAndCaseIdOrderByCreatedAtDesc(
-                  lawyerId, caseId, pageRequest);
+    return conversationRepository
+        .searchForLawyer(lawyerId, caseId, documentId, query, PageRequests.of(page, size))
+        .map(ConversationResponse::from);
+  }
+
+  public void deleteConversation(String conversationId, UUID lawyerId) {
+    LocalDateTime deletedAt = LocalDateTime.now(ZoneOffset.UTC);
+    if (!conversationRepository.softDelete(conversationId, lawyerId, deletedAt)) {
+      log.warn(
+          "Lawyer {} attempted to delete conversation {} that is missing or not owned",
+          lawyerId,
+          conversationId);
+      throw new ConversationNotFoundException(conversationId);
     }
-    return conversations.map(
-        c -> new ConversationResponse(c.getId(), c.getTitle(), c.getCreatedAt()));
+    log.info("Conversation {} moved to bin by lawyer {}", conversationId, lawyerId);
   }
 
   public MessageResponse rateMessage(String messageId, RateRequest request, UUID lawyerId) {
@@ -647,7 +675,7 @@ public class ChatService {
             .orElseThrow(() -> new MessageNotFoundException(messageId));
     Conversation conversation =
         conversationRepository
-            .findById(message.getConversationId())
+            .findActiveById(message.getConversationId())
             .orElseThrow(() -> new MessageNotFoundException(messageId));
     if (!conversation.getLawyerId().equals(lawyerId)) {
       log.warn("Lawyer {} attempted to rate message {} owned by another user", lawyerId, messageId);
@@ -665,7 +693,7 @@ public class ChatService {
       String conversationId, UUID lawyerId, int page, int size) {
     Conversation conversation =
         conversationRepository
-            .findById(conversationId)
+            .findActiveById(conversationId)
             .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
     if (!conversation.getLawyerId().equals(lawyerId)) {
@@ -686,11 +714,16 @@ public class ChatService {
   }
 
   private Conversation resolveConversation(
-      String conversationId, UUID lawyerId, String firstMessage, UUID caseId, UUID documentId) {
+      String conversationId,
+      UUID lawyerId,
+      UUID orgId,
+      String firstMessage,
+      UUID caseId,
+      UUID documentId) {
     if (conversationId != null) {
       Conversation existing =
           conversationRepository
-              .findById(conversationId)
+              .findActiveById(conversationId)
               .filter(c -> c.getLawyerId().equals(lawyerId))
               .orElseThrow(() -> new ConversationNotFoundException(conversationId));
       if (!Objects.equals(existing.getCaseId(), caseId)) {
@@ -717,7 +750,7 @@ public class ChatService {
         firstMessage.length() > TITLE_MAX_LENGTH
             ? firstMessage.substring(0, TITLE_MAX_LENGTH) + "..."
             : firstMessage;
-    return new Conversation(lawyerId, title, caseId, documentId);
+    return new Conversation(lawyerId, orgId, title, caseId, documentId);
   }
 
   private List<LlmMessage> buildLlmHistory(List<Message> recentDescending) {

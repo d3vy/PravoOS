@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -193,8 +194,8 @@ class DocumentChatContextTest {
 
   @Test
   void rejectsConversationBoundToAnotherDocument() {
-    Conversation conversation = new Conversation(lawyerId, "Беседа", null, UUID.randomUUID());
-    when(conversationRepository.findById("c1")).thenReturn(Optional.of(conversation));
+    Conversation conversation = new Conversation(lawyerId, null, "Беседа", null, UUID.randomUUID());
+    when(conversationRepository.findActiveById("c1")).thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(
             () ->
@@ -218,15 +219,15 @@ class DocumentChatContextTest {
 
   @Test
   void listsConversationsScopedToDocument() {
-    when(conversationRepository.findByLawyerIdAndDocumentIdOrderByCreatedAtDesc(
-            eq(lawyerId), eq(documentId), any()))
+    when(conversationRepository.searchForLawyer(
+            eq(lawyerId), isNull(), eq(documentId), isNull(), any()))
         .thenReturn(org.springframework.data.domain.Page.empty());
 
     service.getConversations(lawyerId, null, null, documentId, orgIds, 0, 20);
 
     verify(conversationRepository)
-        .findByLawyerIdAndDocumentIdOrderByCreatedAtDesc(eq(lawyerId), eq(documentId), any());
+        .searchForLawyer(eq(lawyerId), isNull(), eq(documentId), isNull(), any());
     verify(conversationRepository, never())
-        .findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullOrderByCreatedAtDesc(any(), any());
+        .searchForLawyer(eq(lawyerId), isNull(), isNull(), isNull(), any());
   }
 }

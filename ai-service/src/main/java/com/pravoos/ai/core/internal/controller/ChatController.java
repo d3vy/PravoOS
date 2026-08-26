@@ -99,6 +99,13 @@ public class ChatController {
         chatService.getMessages(id, SecurityUtils.currentUserId(authentication), page, size));
   }
 
+  @DeleteMapping("/conversations/{id}")
+  public ResponseEntity<Void> deleteConversation(
+      @PathVariable String id, Authentication authentication) {
+    chatService.deleteConversation(id, SecurityUtils.currentUserId(authentication));
+    return ResponseEntity.noContent().build();
+  }
+
   @PostMapping("/messages/{id}/rate")
   public ResponseEntity<MessageResponse> rateMessage(
       @PathVariable String id,

@@ -18,6 +18,7 @@ public class AccessAuditService {
 
   private static final Logger log = LoggerFactory.getLogger(AccessAuditService.class);
   private static final int USER_AGENT_MAX_LENGTH = 500;
+  private static final int RESOURCE_REF_MAX_LENGTH = 64;
   private static final String UNKNOWN_ROLE = "UNKNOWN";
 
   private final AccessAuditRepository accessAuditRepository;
@@ -31,6 +32,23 @@ public class AccessAuditService {
       AuditAction action,
       UUID resourceId,
       HttpServletRequest request) {
+    record(authentication, action, resourceId, null, request);
+  }
+
+  public void recordRef(
+      Authentication authentication,
+      AuditAction action,
+      String resourceRef,
+      HttpServletRequest request) {
+    record(authentication, action, null, resourceRef, request);
+  }
+
+  private void record(
+      Authentication authentication,
+      AuditAction action,
+      UUID resourceId,
+      String resourceRef,
+      HttpServletRequest request) {
     try {
       AccessAudit entry = new AccessAudit();
       entry.setActorId(SecurityUtils.currentUserId(authentication));
@@ -38,6 +56,7 @@ public class AccessAuditService {
       entry.setAction(action.name());
       entry.setResourceType(action.resourceType());
       entry.setResourceId(resourceId);
+      entry.setResourceRef(truncateRef(resourceRef));
       entry.setIpAddress(ClientIpResolver.resolve(request));
       entry.setUserAgent(truncate(request.getHeader("User-Agent")));
       accessAuditRepository.save(entry);
@@ -45,9 +64,18 @@ public class AccessAuditService {
       log.warn(
           "Failed to record access audit for action {} on {}: {}",
           action,
-          resourceId,
+          resourceId != null ? resourceId : resourceRef,
           e.getMessage());
     }
+  }
+
+  private String truncateRef(String resourceRef) {
+    if (resourceRef == null) {
+      return null;
+    }
+    return resourceRef.length() > RESOURCE_REF_MAX_LENGTH
+        ? resourceRef.substring(0, RESOURCE_REF_MAX_LENGTH)
+        : resourceRef;
   }
 
   private String resolveRole(Authentication authentication) {

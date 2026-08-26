@@ -150,12 +150,19 @@ export interface UpdateApplicationRequest {
   phone: string
 }
 
+export interface PageContextRef {
+  route: string
+  entityType?: string
+  entityId?: string
+}
+
 export interface ChatRequest {
   conversationId?: string
   message: string
   attachedDocumentIds?: string[]
   caseId?: string
   documentId?: string
+  pageContext?: PageContextRef
 }
 
 export interface ChatResponse {
@@ -170,6 +177,18 @@ export interface ConversationResponse {
   id: string
   title: string
   createdAt: string
+  updatedAt: string
+}
+
+export interface AdminConversationResponse {
+  id: string
+  lawyerId: string
+  orgId: string | null
+  title: string
+  caseId: string | null
+  documentId: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface MessageResponse {

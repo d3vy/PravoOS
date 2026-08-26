@@ -1,5 +1,5 @@
 import apiClient, { multipartRequest, refreshSession } from './client'
-import { MAX_PAGE_SIZE } from './pagination'
+import { MAX_PAGE_SIZE, readTotal, type Page } from './pagination'
 import { useAuthStore } from '../store/authStore'
 import i18n from '../i18n'
 import type {
@@ -13,6 +13,8 @@ import type {
 } from '../types'
 
 const baseURL = import.meta.env.VITE_API_URL || ''
+export const CONVERSATION_PAGE_SIZE = 30
+
 const genericStreamError = (): string => i18n.t('chat.streamError')
 
 export interface ChatStreamCallbacks {
@@ -131,18 +133,24 @@ export const chatApi = {
   getConversations: async (
     q?: string,
     caseId?: string,
-    documentId?: string
-  ): Promise<ConversationResponse[]> => {
+    documentId?: string,
+    page = 0,
+    size = CONVERSATION_PAGE_SIZE
+  ): Promise<Page<ConversationResponse>> => {
     const response = await apiClient.get<ConversationResponse[]>('/api/ai/conversations', {
       params: {
         ...(q ? { q } : {}),
         ...(caseId ? { caseId } : {}),
         ...(documentId ? { documentId } : {}),
-        page: 0,
-        size: MAX_PAGE_SIZE,
+        page,
+        size,
       },
     })
-    return response.data
+    return { items: response.data, total: readTotal(response.headers, response.data.length) }
+  },
+
+  deleteConversation: async (conversationId: string): Promise<void> => {
+    await apiClient.delete(`/api/ai/conversations/${conversationId}`)
   },
 
   getMessages: async (conversationId: string): Promise<MessageResponse[]> => {

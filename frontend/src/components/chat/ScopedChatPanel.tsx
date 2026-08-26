@@ -1,11 +1,14 @@
-import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
+import { useCallback, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
-import { chatApi, streamMessage } from '../../api/chat'
-import type { ConversationResponse, MessageResponse } from '../../types'
+import { chatApi } from '../../api/chat'
+import type { ChatRequest, ConversationResponse } from '../../types'
+import { useChatSession } from '../../hooks/useChatSession'
+import { useScrollToBottom } from '../../hooks/useScrollToBottom'
+import { autosizeTextarea, resetTextareaHeight } from '../../lib/chat/chatSession'
 import { Spinner } from '../ui/Spinner'
-import { MessageBubble, type LocalMessage } from './ChatMessageBubble'
+import { MessageBubble } from './ChatMessageBubble'
 
 const TEXTAREA_MAX_HEIGHT = 160
 
@@ -28,130 +31,47 @@ export function ScopedChatPanel({
     `${i18nPrefix}.suggestion2`,
     `${i18nPrefix}.suggestion3`,
   ]
-  const queryClient = useQueryClient()
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<LocalMessage[]>([])
   const [inputValue, setInputValue] = useState('')
-  const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const skipNextHistorySyncRef = useRef(false)
-  const streamAbortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => () => streamAbortRef.current?.abort(), [])
+  const buildRequest = useCallback(
+    (message: string, conversationId?: string): ChatRequest => ({
+      conversationId,
+      message,
+      caseId,
+      documentId,
+    }),
+    [caseId, documentId]
+  )
+
+  const {
+    messages,
+    isSending,
+    messagesLoading,
+    activeConversationId,
+    followUps,
+    send,
+    rate,
+    selectConversation,
+    startNewChat,
+  } = useChatSession({ buildRequest, conversationsQueryKey })
 
   const { data: conversations = [] } = useQuery<ConversationResponse[]>({
     queryKey: conversationsQueryKey,
-    queryFn: () => chatApi.getConversations(undefined, caseId, documentId),
+    queryFn: async () => (await chatApi.getConversations(undefined, caseId, documentId)).items,
     enabled: caseId !== '' && documentId !== '',
   })
 
-  const { data: historyMessages, isLoading: messagesLoading } = useQuery<MessageResponse[]>({
-    queryKey: ['messages', activeConversationId],
-    queryFn: () => chatApi.getMessages(activeConversationId!),
-    enabled: activeConversationId !== null,
-  })
+  useScrollToBottom(messagesEndRef, messages)
 
-  useEffect(() => {
-    if (!historyMessages) return
-    if (skipNextHistorySyncRef.current) {
-      skipNextHistorySyncRef.current = false
-      return
-    }
-    setMessages(
-      historyMessages.map((m) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content,
-        sources: m.sources,
-        rating: m.rating,
-      }))
-    )
-  }, [historyMessages])
-
-  useEffect(() => {
-    if (messages.length > 0) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const rateMutation = useMutation({
-    mutationFn: ({
-      messageId,
-      rating,
-      comment,
-    }: {
-      messageId: string
-      rating: number
-      comment?: string
-    }) => chatApi.rateMessage(messageId, { rating, comment }),
-    onMutate: ({ messageId, rating }) => {
-      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, rating } : m)))
-    },
-  })
-
-  const handleSend = useCallback(
-    (text?: string): void => {
-      const message = (text ?? inputValue).trim()
-      if (!message || isSending) return
-
-      setInputValue('')
-      setIsSending(true)
-
-      const baseId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      const streamingId = `loading-${baseId}`
-      setMessages((prev) => [
-        ...prev,
-        { id: `user-${baseId}`, role: 'USER', content: message },
-        { id: streamingId, role: 'ASSISTANT', content: '', isStreaming: true },
-      ])
-      if (textareaRef.current) textareaRef.current.style.height = 'auto'
-
-      streamAbortRef.current?.abort()
-      const abortController = new AbortController()
-      streamAbortRef.current = abortController
-
-      void streamMessage(
-        { conversationId: activeConversationId ?? undefined, message, caseId, documentId },
-        {
-          onToken: (token) => {
-            setMessages((prev) =>
-              prev.map((m) => (m.id === streamingId ? { ...m, content: m.content + token } : m))
-            )
-          },
-          onDone: (data) => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === streamingId
-                  ? {
-                      id: data.messageId ?? `assistant-${baseId}`,
-                      role: 'ASSISTANT' as const,
-                      content: data.answer,
-                      sources: data.sources,
-                      followUps: data.followUps ?? [],
-                      autoCheckCitations: true,
-                    }
-                  : m
-              )
-            )
-            if (data.conversationId !== activeConversationId) {
-              skipNextHistorySyncRef.current = true
-              setActiveConversationId(data.conversationId)
-            }
-            queryClient.invalidateQueries({ queryKey: conversationsQueryKey })
-            setIsSending(false)
-          },
-          onError: (errorMessage) => {
-            setMessages((prev) => [
-              ...prev.filter((m) => m.id !== streamingId),
-              { id: `error-${Date.now()}`, role: 'ASSISTANT', content: errorMessage },
-            ])
-            setIsSending(false)
-          },
-        },
-        abortController.signal
-      )
-    },
-    [inputValue, isSending, activeConversationId, caseId, documentId, conversationsQueryKey, queryClient]
-  )
+  const handleSend = (text?: string): void => {
+    const message = text ?? inputValue
+    if (!message.trim() || isSending) return
+    setInputValue('')
+    resetTextareaHeight(textareaRef.current)
+    send(message)
+  }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -161,25 +81,10 @@ export function ScopedChatPanel({
   }
 
   const handleTextareaInput = (): void => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-    textarea.style.height = 'auto'
-    textarea.style.height = Math.min(textarea.scrollHeight, TEXTAREA_MAX_HEIGHT) + 'px'
+    autosizeTextarea(textareaRef.current, TEXTAREA_MAX_HEIGHT)
   }
 
-  const startNewChat = (): void => {
-    setActiveConversationId(null)
-    setMessages([])
-  }
-
-  const lastAssistantFollowUps = (() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'ASSISTANT' && !messages[i].isStreaming) {
-        return messages[i].followUps ?? []
-      }
-    }
-    return []
-  })()
+  const lastAssistantFollowUps = followUps
 
   return (
     <div>
@@ -203,7 +108,7 @@ export function ScopedChatPanel({
             <button
               key={conversation.id}
               type="button"
-              onClick={() => setActiveConversationId(conversation.id)}
+              onClick={() => selectConversation(conversation.id)}
               title={conversation.title}
               className={`text-xs px-2.5 py-1 rounded-full border transition-colors truncate max-w-[220px] ${
                 conversation.id === activeConversationId
@@ -246,9 +151,7 @@ export function ScopedChatPanel({
                   key={message.id}
                   message={message}
                   caseId={caseId}
-                  onRate={(rating, comment) =>
-                    rateMutation.mutate({ messageId: message.id, rating, comment })
-                  }
+                  onRate={(rating, comment) => rate(message.id, rating, comment)}
                 />
               ))}
             </AnimatePresence>

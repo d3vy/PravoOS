@@ -168,8 +168,8 @@ class CaseChatContextTest {
 
   @Test
   void rejectsConversationBoundToAnotherCase() {
-    Conversation conversation = new Conversation(lawyerId, "Беседа", UUID.randomUUID(), null);
-    when(conversationRepository.findById("c1")).thenReturn(Optional.of(conversation));
+    Conversation conversation = new Conversation(lawyerId, null, "Беседа", UUID.randomUUID(), null);
+    when(conversationRepository.findActiveById("c1")).thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(
             () ->
@@ -181,7 +181,7 @@ class CaseChatContextTest {
   @Test
   void rejectsCaseMessageInGeneralConversation() {
     Conversation conversation = new Conversation(lawyerId, "Общая беседа");
-    when(conversationRepository.findById("c1")).thenReturn(Optional.of(conversation));
+    when(conversationRepository.findActiveById("c1")).thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(
             () ->

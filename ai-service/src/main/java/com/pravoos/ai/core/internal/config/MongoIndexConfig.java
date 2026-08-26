@@ -11,7 +11,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.AggregationUpdate;
 import org.springframework.data.mongodb.core.index.Index;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 
 @Configuration
 public class MongoIndexConfig {
@@ -37,21 +40,63 @@ public class MongoIndexConfig {
                   .on("createdAt", Sort.Direction.ASC)
                   .named("messages_conversation_created"));
 
+      backfillConversationUpdatedAt(mongoTemplate);
+
       mongoTemplate
           .indexOps(Conversation.class)
           .ensureIndex(
               new Index()
                   .on("lawyerId", Sort.Direction.ASC)
-                  .on("createdAt", Sort.Direction.DESC)
-                  .named("conversations_lawyer_created"));
+                  .on("updatedAt", Sort.Direction.DESC)
+                  .named("conversations_lawyer_updated"));
+
+      mongoTemplate
+          .indexOps(Conversation.class)
+          .ensureIndex(
+              new Index()
+                  .on("lawyerId", Sort.Direction.ASC)
+                  .on("caseId", Sort.Direction.ASC)
+                  .on("updatedAt", Sort.Direction.DESC)
+                  .named("conversations_lawyer_case_updated"));
+
+      mongoTemplate
+          .indexOps(Conversation.class)
+          .ensureIndex(
+              new Index()
+                  .on("lawyerId", Sort.Direction.ASC)
+                  .on("documentId", Sort.Direction.ASC)
+                  .on("updatedAt", Sort.Direction.DESC)
+                  .named("conversations_lawyer_document_updated"));
+
+      mongoTemplate
+          .indexOps(Conversation.class)
+          .ensureIndex(
+              new Index()
+                  .on("orgId", Sort.Direction.ASC)
+                  .on("updatedAt", Sort.Direction.DESC)
+                  .named("conversations_org_updated"));
 
       dropIfExists(mongoTemplate, Message.class, "conversationId_1");
       dropIfExists(mongoTemplate, Conversation.class, "lawyerId_1");
+      dropIfExists(mongoTemplate, Conversation.class, "conversations_lawyer_created");
 
       applyRetentionPolicy(mongoTemplate);
 
       log.info("MongoDB indexes ensured (messages, conversations)");
     };
+  }
+
+  private void backfillConversationUpdatedAt(MongoTemplate mongoTemplate) {
+    long updated =
+        mongoTemplate
+            .updateMulti(
+                Query.query(Criteria.where("updatedAt").is(null)),
+                AggregationUpdate.update().set("updatedAt").toValue("$createdAt"),
+                Conversation.class)
+            .getModifiedCount();
+    if (updated > 0) {
+      log.info("Backfilled updatedAt on {} conversation(s)", updated);
+    }
   }
 
   private void applyRetentionPolicy(MongoTemplate mongoTemplate) {

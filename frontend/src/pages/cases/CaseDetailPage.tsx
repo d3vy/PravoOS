@@ -4,6 +4,7 @@ import { Link, useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { casesApi } from '../../api/cases'
 import type { AiResponseDto, CaseDraftSummaryDto, CaseResponse, DocumentResponse } from '../../types'
+import { usePageContext } from '../../hooks/usePageContext'
 import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
 import { Spinner } from '../../components/ui/Spinner'
 import { CaseHeaderSection } from '../../components/cases/CaseHeaderSection'
@@ -67,6 +68,17 @@ export default function CaseDetailPage(): JSX.Element {
     queryFn: () => casesApi.get(caseId),
     enabled: caseId !== '',
   })
+
+  usePageContext(
+    caseItem
+      ? {
+          route: `/cases/${caseItem.id}`,
+          label: caseItem.title,
+          entityType: 'CASE',
+          entityId: caseItem.id,
+        }
+      : null
+  )
 
   const recordRecentEntity = useRecentEntitiesStore((state) => state.record)
   useEffect(() => {

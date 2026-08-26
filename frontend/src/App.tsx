@@ -5,6 +5,7 @@ import { useAuthBootstrap } from './hooks/useAuthBootstrap'
 import { useLanguageSync } from './hooks/useLanguage'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { CookieBanner } from './components/CookieBanner'
+import { AiWidget } from './components/ai/AiWidget'
 import { FullScreenLoader } from './components/ui/FullScreenLoader'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { LawyerLayout } from './components/layout/LawyerLayout'
@@ -25,7 +26,7 @@ const PortalCaseDetailPage = lazy(() => import('./pages/portal/PortalCaseDetailP
 const PortalInvoicesPage = lazy(() => import('./pages/portal/PortalInvoicesPage'))
 const PortalInvoiceDetailPage = lazy(() => import('./pages/portal/PortalInvoiceDetailPage'))
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
-const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
+const AiPage = lazy(() => import('./pages/ai/AiPage'))
 const CalendarPage = lazy(() => import('./pages/calendar/CalendarPage'))
 const CasesPage = lazy(() => import('./pages/cases/CasesPage'))
 const CaseDetailPage = lazy(() => import('./pages/cases/CaseDetailPage'))
@@ -42,6 +43,7 @@ const InvitePage = lazy(() => import('./pages/team/InvitePage'))
 const ApplicationsPage = lazy(() => import('./pages/admin/ApplicationsPage'))
 const DocumentsPage = lazy(() => import('./pages/admin/DocumentsPage'))
 const AiStatsPage = lazy(() => import('./pages/admin/AiStatsPage'))
+const AiConversationsPage = lazy(() => import('./pages/admin/AiConversationsPage'))
 const UsersPage = lazy(() => import('./pages/admin/UsersPage'))
 const BillingPage = lazy(() => import('./pages/billing/BillingPage'))
 const InvoicesPage = lazy(() => import('./pages/invoices/InvoicesPage'))
@@ -68,6 +70,7 @@ export default function App(): JSX.Element {
   return (
     <Suspense fallback={<FullScreenLoader />}>
       <CookieBanner />
+      {isAuthenticated() && effectiveRole() !== 'CLIENT' && <AiWidget />}
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -124,7 +127,8 @@ export default function App(): JSX.Element {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/ai" element={<AiPage />} />
+          <Route path="/chat" element={<Navigate to="/ai" replace />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/cases" element={<CasesPage />} />
           <Route path="/cases/:caseId" element={<CaseDetailPage />} />
@@ -160,6 +164,7 @@ export default function App(): JSX.Element {
           <Route path="users" element={<UsersPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="ai-stats" element={<AiStatsPage />} />
+          <Route path="ai-conversations" element={<AiConversationsPage />} />
         </Route>
 
         {/* Fallback */}

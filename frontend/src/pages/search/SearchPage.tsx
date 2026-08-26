@@ -3,12 +3,18 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { searchApi } from '../../api/search'
+import { useAiChatStore } from '../../store/aiChatStore'
 import type { GlobalSearchResponse } from '../../types'
 import { Spinner } from '../../components/ui/Spinner'
 import { CaseStatusBadge } from '../../components/ui/Badge'
 import { PageHeader } from '../../components/ui/PageHeader'
 
 const MIN_QUERY_LENGTH = 2
+
+function openConversation(conversationId: string): void {
+  void useAiChatStore.getState().selectConversation(conversationId)
+  useAiChatStore.getState().openWidget()
+}
 
 export default function SearchPage(): JSX.Element {
   const { t } = useTranslation()
@@ -102,13 +108,14 @@ export default function SearchPage(): JSX.Element {
               {data!.conversations.length > 0 && (
                 <ResultGroup title={t('search.groupConversations')} count={data!.conversations.length}>
                   {data!.conversations.map((hit) => (
-                    <Link
+                    <button
                       key={hit.id}
-                      to={`/chat?conversation=${hit.id}`}
-                      className="block p-3 rounded-lg bg-surface border border-line hover:border-accent/50 transition-colors"
+                      type="button"
+                      onClick={() => openConversation(hit.id)}
+                      className="block w-full text-left p-3 rounded-lg bg-surface border border-line hover:border-accent/50 transition-colors"
                     >
                       <p className="text-sm text-fg truncate">{hit.title}</p>
-                    </Link>
+                    </button>
                   ))}
                 </ResultGroup>
               )}

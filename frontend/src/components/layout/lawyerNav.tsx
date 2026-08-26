@@ -4,7 +4,6 @@ import {
   BillingIcon,
   CalendarIcon,
   CasesIcon,
-  ChatIcon,
   ClientsIcon,
   DashboardIcon,
   InvoiceIcon,
@@ -31,7 +30,6 @@ export function useLawyerNavSections(): LawyerNavSection[] {
       title: t('nav.sectionMain'),
       items: [
         { to: '/dashboard', label: t('nav.dashboard'), icon: <DashboardIcon /> },
-        { to: '/chat', label: t('nav.chat'), icon: <ChatIcon /> },
         { to: '/cases', label: t('nav.cases'), icon: <CasesIcon /> },
         { to: '/clients', label: t('nav.clients'), icon: <ClientsIcon /> },
         { to: '/calendar', label: t('nav.calendar'), icon: <CalendarIcon /> },

@@ -10,5 +10,7 @@ public interface CaseAccessProvider {
 
   void assertCaseOwned(UUID caseId, UUID lawyerId);
 
+  UUID caseOrgId(UUID caseId);
+
   Set<UUID> retainCasesOwnedBy(Set<UUID> caseIds, UUID lawyerId);
 }

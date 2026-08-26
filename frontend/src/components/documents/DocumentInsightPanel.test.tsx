@@ -58,7 +58,7 @@ function renderPanel(): void {
 
 beforeEach(async () => {
   await i18n.changeLanguage('ru')
-  mockedChatApi.getConversations.mockResolvedValue([])
+  mockedChatApi.getConversations.mockResolvedValue({ items: [], total: 0 })
   mockedChatApi.getMessages.mockResolvedValue([])
   mockedStreamMessage.mockResolvedValue(undefined)
   mockedDocumentsApi.getInsight.mockResolvedValue(insight())

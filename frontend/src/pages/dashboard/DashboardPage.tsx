@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Trans, useTranslation } from 'react-i18next'
 import { dashboardApi } from '../../api/dashboard'
+import { useAiChatStore } from '../../store/aiChatStore'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useDensity } from '../../hooks/useDensity'
@@ -132,7 +133,7 @@ function QuickStartCard(): JSX.Element | null {
   const steps = [
     { to: '/cases?new=1', title: t('dashboard.step1Title'), description: t('dashboard.step1Desc') },
     { to: '/clients?new=1', title: t('dashboard.step2Title'), description: t('dashboard.step2Desc') },
-    { to: '/chat', title: t('dashboard.step3Title'), description: t('dashboard.step3Desc') },
+    { to: null, title: t('dashboard.step3Title'), description: t('dashboard.step3Desc') },
   ]
 
   const dismiss = (): void => {
@@ -160,16 +161,30 @@ function QuickStartCard(): JSX.Element | null {
         </button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {steps.map((step) => (
-          <Link
-            key={step.to}
-            to={step.to}
-            className="block p-4 rounded-2xl border border-line hover:border-accent/50 transition-colors"
-          >
-            <p className="text-sm font-medium text-fg mb-1">{step.title}</p>
-            <p className="text-xs text-fg-muted">{step.description}</p>
-          </Link>
-        ))}
+        {steps.map((step) => {
+          const stepClassName =
+            'block w-full text-left p-4 rounded-2xl border border-line hover:border-accent/50 transition-colors'
+          const stepContent = (
+            <>
+              <p className="text-sm font-medium text-fg mb-1">{step.title}</p>
+              <p className="text-xs text-fg-muted">{step.description}</p>
+            </>
+          )
+          return step.to === null ? (
+            <button
+              key={step.title}
+              type="button"
+              onClick={() => useAiChatStore.getState().openWidget()}
+              className={stepClassName}
+            >
+              {stepContent}
+            </button>
+          ) : (
+            <Link key={step.to} to={step.to} className={stepClassName}>
+              {stepContent}
+            </Link>
+          )
+        })}
       </div>
     </div>
   )
@@ -177,12 +192,12 @@ function QuickStartCard(): JSX.Element | null {
 
 function QuickAskWidget(): JSX.Element {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const [question, setQuestion] = useState('')
 
   const submit = (): void => {
     const trimmed = question.trim()
-    navigate(trimmed ? `/chat?ask=${encodeURIComponent(trimmed)}` : '/chat')
+    useAiChatStore.getState().openWidget(trimmed)
+    setQuestion('')
   }
 
   return (

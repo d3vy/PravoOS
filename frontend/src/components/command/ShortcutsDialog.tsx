@@ -28,6 +28,7 @@ const GROUPS: ShortcutGroup[] = [
       { keys: ['t'], labelKey: 'hotkeys.toggleTimer' },
       { keys: ['/'], labelKey: 'hotkeys.openSearch' },
       { keys: ['?'], labelKey: 'hotkeys.openCheatsheet' },
+      { keys: ['a'], labelKey: 'hotkeys.toggleAi' },
     ],
   },
   {

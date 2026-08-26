@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -57,6 +58,7 @@ import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -188,7 +190,7 @@ class ChatServiceTest {
   }
 
   private Conversation existingConversation(UUID caseId, UUID documentId) {
-    Conversation conversation = new Conversation(lawyerId, "title", caseId, documentId);
+    Conversation conversation = new Conversation(lawyerId, null, "title", caseId, documentId);
     ReflectionTestUtils.setField(conversation, "id", UUID.randomUUID().toString());
     return conversation;
   }
@@ -264,7 +266,7 @@ class ChatServiceTest {
     Conversation conversation = existingConversation(null, null);
     ChatRequest request =
         new ChatRequest(conversation.getId(), "Продолжение", List.of(), null, null);
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
     when(messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId()))
         .thenReturn(
@@ -363,7 +365,7 @@ class ChatServiceTest {
     Conversation conversation = existingConversation(UUID.randomUUID(), null);
     ChatRequest request =
         new ChatRequest(conversation.getId(), "Вопрос", List.of(), UUID.randomUUID(), null);
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
@@ -376,7 +378,7 @@ class ChatServiceTest {
     Conversation conversation = existingConversation(null, documentId);
     ChatRequest request =
         new ChatRequest(conversation.getId(), "Вопрос", List.of(), null, UUID.randomUUID());
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
@@ -386,7 +388,7 @@ class ChatServiceTest {
   @Test
   void chatOnMissingConversationThrowsNotFound() {
     ChatRequest request = new ChatRequest("missing-id", "Вопрос", List.of(), null, null);
-    when(conversationRepository.findById("missing-id")).thenReturn(Optional.empty());
+    when(conversationRepository.findActiveById("missing-id")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
         .isInstanceOf(ConversationNotFoundException.class);
@@ -396,7 +398,7 @@ class ChatServiceTest {
   void chatOnConversationOwnedByAnotherLawyerThrowsNotFound() {
     Conversation conversation = existingConversation(null, null);
     ChatRequest request = new ChatRequest(conversation.getId(), "Вопрос", List.of(), null, null);
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(() -> service.chat(request, UUID.randomUUID(), List.of()))
@@ -436,9 +438,7 @@ class ChatServiceTest {
   @Test
   void getConversationsWithoutScopeReturnsUnscopedPage() {
     Page<Conversation> page = new PageImpl<>(List.of(existingConversation(null, null)));
-    when(conversationRepository
-            .findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullOrderByCreatedAtDesc(
-                eq(lawyerId), any()))
+    when(conversationRepository.searchForLawyer(eq(lawyerId), isNull(), isNull(), isNull(), any()))
         .thenReturn(page);
 
     Page<ConversationResponse> result =
@@ -450,24 +450,22 @@ class ChatServiceTest {
   @Test
   void getConversationsWithQueryFiltersByTitle() {
     Page<Conversation> page = new PageImpl<>(List.of());
-    when(conversationRepository
-            .findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-                eq(lawyerId), eq("иск"), any()))
+    when(conversationRepository.searchForLawyer(
+            eq(lawyerId), isNull(), isNull(), eq("  иск  "), any()))
         .thenReturn(page);
 
     service.getConversations(lawyerId, "  иск  ", null, null, List.of(), 0, 20);
 
     verify(conversationRepository)
-        .findByLawyerIdAndCaseIdIsNullAndDocumentIdIsNullAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-            eq(lawyerId), eq("иск"), any());
+        .searchForLawyer(eq(lawyerId), isNull(), isNull(), eq("  иск  "), any());
   }
 
   @Test
   void getConversationsWithCaseIdChecksVisibilityAndFilters() {
     UUID caseId = UUID.randomUUID();
     Page<Conversation> page = new PageImpl<>(List.of());
-    when(conversationRepository.findByLawyerIdAndCaseIdOrderByCreatedAtDesc(
-            eq(lawyerId), eq(caseId), any()))
+    when(conversationRepository.searchForLawyer(
+            eq(lawyerId), eq(caseId), isNull(), isNull(), any()))
         .thenReturn(page);
 
     service.getConversations(lawyerId, null, caseId, null, List.of(), 0, 20);
@@ -479,13 +477,113 @@ class ChatServiceTest {
   void getConversationsWithDocumentIdChecksVisibility() {
     UUID documentId = UUID.randomUUID();
     Page<Conversation> page = new PageImpl<>(List.of());
-    when(conversationRepository.findByLawyerIdAndDocumentIdOrderByCreatedAtDesc(
-            eq(lawyerId), eq(documentId), any()))
+    when(conversationRepository.searchForLawyer(
+            eq(lawyerId), isNull(), eq(documentId), isNull(), any()))
         .thenReturn(page);
 
     service.getConversations(lawyerId, null, null, documentId, List.of(), 0, 20);
 
     verify(documentAccessGuard).requireVisible(documentId, lawyerId, List.of());
+  }
+
+  @Test
+  void chatOnExistingConversationTouchesUpdatedAt() {
+    Conversation conversation = existingConversation(null, null);
+    ChatRequest request =
+        new ChatRequest(conversation.getId(), "Продолжение", List.of(), null, null);
+    when(conversationRepository.findActiveById(conversation.getId()))
+        .thenReturn(Optional.of(conversation));
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
+    when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
+    when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение")))
+        .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.chat(request, lawyerId, List.of());
+
+    verify(conversationRepository).touch(eq(conversation.getId()), any());
+  }
+
+  @Test
+  void newConversationTakesOrgIdFromSingleMembership() {
+    UUID orgId = UUID.randomUUID();
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
+    when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
+    when(llmClient.complete(anyString(), anyList(), anyString()))
+        .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
+    when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.chat(request, lawyerId, List.of(orgId));
+
+    ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
+    verify(conversationRepository).save(captor.capture());
+    assertThat(captor.getValue().getOrgId()).isEqualTo(orgId);
+  }
+
+  @Test
+  void newConversationWithoutSingleMembershipHasNoOrgId() {
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
+    when(ragService.buildSystemPrompt(anyList(), eq(false))).thenReturn("system-prompt");
+    when(llmClient.complete(anyString(), anyList(), anyString()))
+        .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
+    when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.chat(request, lawyerId, List.of(UUID.randomUUID(), UUID.randomUUID()));
+
+    ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
+    verify(conversationRepository).save(captor.capture());
+    assertThat(captor.getValue().getOrgId()).isNull();
+  }
+
+  @Test
+  void caseScopedConversationTakesOrgIdFromCase() {
+    UUID caseId = UUID.randomUUID();
+    UUID caseOrgId = UUID.randomUUID();
+    ChatRequest request = new ChatRequest(null, "Что по делу?", List.of(), caseId, null);
+    when(caseAccessProvider.caseOrgId(caseId)).thenReturn(caseOrgId);
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
+        .thenReturn(RetrievedChunks.empty());
+    when(caseContextProvider.loadContext(eq(caseId), eq(lawyerId), anyList()))
+        .thenReturn(new CaseContext("card", "timeline", "checklist"));
+    when(ragService.buildCaseSystemPrompt(
+            anyString(), anyString(), anyString(), anyList(), anyBoolean()))
+        .thenReturn("case-prompt");
+    when(llmClient.complete(anyString(), anyList(), anyString()))
+        .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
+    when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.chat(request, lawyerId, List.of(UUID.randomUUID(), UUID.randomUUID()));
+
+    ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
+    verify(conversationRepository).save(captor.capture());
+    assertThat(captor.getValue().getOrgId()).isEqualTo(caseOrgId);
+  }
+
+  @Test
+  void deleteConversationMarksItDeleted() {
+    when(conversationRepository.softDelete(eq("conv-1"), eq(lawyerId), any())).thenReturn(true);
+
+    service.deleteConversation("conv-1", lawyerId);
+
+    verify(conversationRepository).softDelete(eq("conv-1"), eq(lawyerId), any());
+  }
+
+  @Test
+  void deleteConversationThrowsWhenNotOwnedOrMissing() {
+    when(conversationRepository.softDelete(eq("conv-1"), eq(lawyerId), any())).thenReturn(false);
+
+    assertThatThrownBy(() -> service.deleteConversation("conv-1", lawyerId))
+        .isInstanceOf(ConversationNotFoundException.class);
   }
 
   @Test
@@ -501,7 +599,7 @@ class ChatServiceTest {
     Message message = new Message("conv-x", MessageRole.ASSISTANT, "text", List.of());
     ReflectionTestUtils.setField(message, "id", "m1");
     when(messageRepository.findById("m1")).thenReturn(Optional.of(message));
-    when(conversationRepository.findById("conv-x")).thenReturn(Optional.empty());
+    when(conversationRepository.findActiveById("conv-x")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.rateMessage("m1", new RateRequest(1, null), lawyerId))
         .isInstanceOf(MessageNotFoundException.class);
@@ -513,7 +611,7 @@ class ChatServiceTest {
     Message message = new Message(conversation.getId(), MessageRole.ASSISTANT, "text", List.of());
     ReflectionTestUtils.setField(message, "id", "m1");
     when(messageRepository.findById("m1")).thenReturn(Optional.of(message));
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(() -> service.rateMessage("m1", new RateRequest(1, null), UUID.randomUUID()))
@@ -526,7 +624,7 @@ class ChatServiceTest {
     Message message = new Message(conversation.getId(), MessageRole.ASSISTANT, "text", List.of());
     ReflectionTestUtils.setField(message, "id", "m1");
     when(messageRepository.findById("m1")).thenReturn(Optional.of(message));
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -538,7 +636,7 @@ class ChatServiceTest {
 
   @Test
   void getMessagesThrowsWhenConversationMissing() {
-    when(conversationRepository.findById("conv-x")).thenReturn(Optional.empty());
+    when(conversationRepository.findActiveById("conv-x")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.getMessages("conv-x", lawyerId, 0, 20))
         .isInstanceOf(ConversationNotFoundException.class);
@@ -547,7 +645,7 @@ class ChatServiceTest {
   @Test
   void getMessagesThrowsWhenOwnedByAnotherLawyer() {
     Conversation conversation = existingConversation(null, null);
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
     assertThatThrownBy(() -> service.getMessages(conversation.getId(), UUID.randomUUID(), 0, 20))
@@ -557,7 +655,7 @@ class ChatServiceTest {
   @Test
   void getMessagesReturnsChronologicalOrder() {
     Conversation conversation = existingConversation(null, null);
-    when(conversationRepository.findById(conversation.getId()))
+    when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
     Message newer = new Message(conversation.getId(), MessageRole.ASSISTANT, "новее", List.of());
     ReflectionTestUtils.setField(newer, "id", "m-newer");

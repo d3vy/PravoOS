@@ -45,6 +45,7 @@ function conversation(overrides: Partial<ConversationResponse> = {}): Conversati
     id: 'conv-1',
     title: 'Сроки по договору',
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     ...overrides,
   }
 }
@@ -62,7 +63,7 @@ function assistantMessage(): MessageResponse {
 
 beforeEach(async () => {
   await i18n.changeLanguage('ru')
-  mockedChatApi.getConversations.mockResolvedValue([])
+  mockedChatApi.getConversations.mockResolvedValue({ items: [], total: 0 })
   mockedChatApi.getMessages.mockResolvedValue([])
   mockedStreamMessage.mockResolvedValue(undefined)
 })
@@ -120,7 +121,7 @@ describe('CaseChatSection', () => {
   })
 
   it('opens the history of a selected case conversation', async () => {
-    mockedChatApi.getConversations.mockResolvedValue([conversation()])
+    mockedChatApi.getConversations.mockResolvedValue({ items: [conversation()], total: 1 })
     mockedChatApi.getMessages.mockResolvedValue([assistantMessage()])
 
     renderSection()

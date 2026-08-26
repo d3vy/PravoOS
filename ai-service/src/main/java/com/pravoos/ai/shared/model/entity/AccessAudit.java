@@ -27,6 +27,9 @@ public class AccessAudit {
 
   @Column private UUID resourceId;
 
+  @Column(length = 64)
+  private String resourceRef;
+
   @Column(length = 45)
   private String ipAddress;
 
@@ -83,6 +86,14 @@ public class AccessAudit {
 
   public void setResourceId(UUID resourceId) {
     this.resourceId = resourceId;
+  }
+
+  public String getResourceRef() {
+    return resourceRef;
+  }
+
+  public void setResourceRef(String resourceRef) {
+    this.resourceRef = resourceRef;
   }
 
   public String getIpAddress() {

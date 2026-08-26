@@ -5,7 +5,7 @@ import { timeApi } from '../../api/time'
 import type { TimeEntryResponse } from '../../types'
 import { useMoreSheetStore } from '../../store/moreSheetStore'
 import { useMobileTimerSheetStore } from '../../store/mobileTimerSheetStore'
-import { CalendarIcon, CasesIcon, ChatIcon } from './navIcons'
+import { CalendarIcon, CasesIcon } from './navIcons'
 
 function MoreIcon(): JSX.Element {
   return (
@@ -73,15 +73,6 @@ export function MobileTabBar(): JSX.Element {
         <TimerIcon />
         {t('globalTimer.idle')}
       </button>
-      <NavLink
-        to="/chat"
-        className={({ isActive }) =>
-          `${TAB_ITEM_CLASS} ${isActive ? 'text-accent' : 'text-fg-muted hover:text-fg'}`
-        }
-      >
-        <ChatIcon />
-        {t('nav.chat')}
-      </NavLink>
       <button type="button" onClick={toggleMore} className={`${TAB_ITEM_CLASS} text-fg-muted hover:text-fg`}>
         <MoreIcon />
         {t('nav.more')}

@@ -13,6 +13,8 @@ public class Conversation {
 
   private UUID lawyerId;
 
+  private UUID orgId;
+
   private String title;
 
   private UUID caseId;
@@ -21,18 +23,24 @@ public class Conversation {
 
   private LocalDateTime createdAt;
 
+  private LocalDateTime updatedAt;
+
+  private LocalDateTime deletedAt;
+
   public Conversation() {}
 
   public Conversation(UUID lawyerId, String title) {
-    this(lawyerId, title, null, null);
+    this(lawyerId, null, title, null, null);
   }
 
-  public Conversation(UUID lawyerId, String title, UUID caseId, UUID documentId) {
+  public Conversation(UUID lawyerId, UUID orgId, String title, UUID caseId, UUID documentId) {
     this.lawyerId = lawyerId;
+    this.orgId = orgId;
     this.title = title;
     this.caseId = caseId;
     this.documentId = documentId;
     this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
+    this.updatedAt = this.createdAt;
   }
 
   public String getId() {
@@ -41,6 +49,10 @@ public class Conversation {
 
   public UUID getLawyerId() {
     return lawyerId;
+  }
+
+  public UUID getOrgId() {
+    return orgId;
   }
 
   public String getTitle() {
@@ -61,5 +73,21 @@ public class Conversation {
 
   public LocalDateTime getCreatedAt() {
     return createdAt;
+  }
+
+  public LocalDateTime getUpdatedAt() {
+    return updatedAt;
+  }
+
+  public void setUpdatedAt(LocalDateTime updatedAt) {
+    this.updatedAt = updatedAt;
+  }
+
+  public LocalDateTime getDeletedAt() {
+    return deletedAt;
+  }
+
+  public void setDeletedAt(LocalDateTime deletedAt) {
+    this.deletedAt = deletedAt;
   }
 }

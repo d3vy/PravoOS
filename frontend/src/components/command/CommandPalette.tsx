@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { casesApi } from '../../api/cases'
 import { searchApi } from '../../api/search'
 import { timeApi } from '../../api/time'
+import { useAiChatStore } from '../../store/aiChatStore'
 import { useCommandPaletteStore } from '../../store/commandPaletteStore'
 import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
 import { useTheme } from '../../hooks/useTheme'
@@ -124,6 +125,18 @@ export function CommandPalette(): JSX.Element | null {
     [setOpen],
   )
 
+  const openAiWidget = useCallback((draft?: string): void => {
+    useAiChatStore.getState().openWidget(draft)
+  }, [])
+
+  const openAiConversation = useCallback(
+    (conversationId: string): void => {
+      void useAiChatStore.getState().selectConversation(conversationId)
+      openAiWidget()
+    },
+    [openAiWidget]
+  )
+
   const actionGroup = useMemo<CommandGroup>(() => {
     const sectionNavItems: CommandItem[] = lawyerNavSections.flatMap((section) =>
       section.items.map((item) => ({
@@ -178,7 +191,7 @@ export function CommandPalette(): JSX.Element | null {
         hint: t('command.aiChat'),
         keywords: 'вопрос спросить ai чат chat ask',
         icon: <ChatIcon />,
-        perform: () => run(() => navigate('/chat')),
+        perform: () => run(() => openAiWidget()),
       },
       {
         id: 'action:start-timer',
@@ -202,7 +215,7 @@ export function CommandPalette(): JSX.Element | null {
       },
     ]
     return { title: t('command.actions'), items: [...quickItems, ...navItems] }
-  }, [navigate, toggleTheme, lawyerNavSections, lawyerAccountLinks, t, run])
+  }, [navigate, toggleTheme, lawyerNavSections, lawyerAccountLinks, t, run, openAiWidget])
 
   const recentGroup = useMemo<CommandGroup | null>(() => {
     if (debouncedQuery.length >= MIN_SEARCH_LENGTH || recentEntities.length === 0) return null
@@ -255,7 +268,7 @@ export function CommandPalette(): JSX.Element | null {
             id: `conversation:${hit.id}`,
             label: hit.title,
             icon: <ChatIcon />,
-            perform: () => run(() => navigate(`/chat?conversation=${hit.id}`)),
+            perform: () => run(() => openAiConversation(hit.id)),
           })),
         })
       }
@@ -307,6 +320,7 @@ export function CommandPalette(): JSX.Element | null {
     startTimer,
     t,
     run,
+    openAiConversation,
   ])
 
   const timerGroups = useMemo<CommandGroup[]>(() => {

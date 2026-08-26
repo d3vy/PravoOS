@@ -5,7 +5,8 @@ public enum AuditAction {
   CLIENT_VIEW("CLIENT"),
   CONSENT_GRANT("CLIENT"),
   CONSENT_REVOKE("CLIENT"),
-  PERSONAL_DATA_EXPORT("CLIENT");
+  PERSONAL_DATA_EXPORT("CLIENT"),
+  AI_CONVERSATION_VIEW("CONVERSATION");
 
   private final String resourceType;
 

@@ -142,7 +142,6 @@ export function Navbar(): JSX.Element {
 const CREATE_ACTIONS: { to: string; labelKey: string }[] = [
   { to: '/cases?new=1', labelKey: 'nav.newCase' },
   { to: '/clients?new=1', labelKey: 'nav.newClient' },
-  { to: '/chat', labelKey: 'nav.askAi' },
 ]
 
 function CreateMenu(): JSX.Element {

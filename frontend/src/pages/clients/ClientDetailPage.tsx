@@ -11,6 +11,7 @@ import { ClientForm } from '../../components/clients/ClientForm'
 import { ClientContactsSection } from '../../components/clients/ClientContactsSection'
 import { ClientEmailSection } from '../../components/clients/ClientEmailSection'
 import { ClientPortalSection } from '../../components/clients/ClientPortalSection'
+import { usePageContext } from '../../hooks/usePageContext'
 import { useRecentEntitiesStore } from '../../store/recentEntitiesStore'
 import { PageHeader } from '../../components/ui/PageHeader'
 
@@ -29,6 +30,17 @@ export default function ClientDetailPage(): JSX.Element {
     queryFn: () => clientsApi.get(clientId),
     enabled: clientId !== '',
   })
+
+  usePageContext(
+    data
+      ? {
+          route: `/clients/${data.client.id}`,
+          label: data.client.name,
+          entityType: 'CLIENT',
+          entityId: data.client.id,
+        }
+      : null
+  )
 
   const recordRecentEntity = useRecentEntitiesStore((state) => state.record)
   useEffect(() => {
