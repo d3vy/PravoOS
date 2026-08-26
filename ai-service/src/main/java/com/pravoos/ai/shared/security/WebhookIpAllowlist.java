@@ -24,13 +24,16 @@ public class WebhookIpAllowlist {
             .filter(range -> range != null)
             .toList();
     if (allowedRanges.isEmpty()) {
-      log.warn("YooKassa webhook IP allowlist is empty — webhook callers are not restricted by IP");
+      log.error(
+          "YooKassa webhook IP allowlist is empty — every webhook call will be rejected. "
+              + "Configure YOOKASSA_WEBHOOK_IPS.");
     }
   }
 
   public boolean permits(HttpServletRequest request) {
     if (allowedRanges.isEmpty()) {
-      return true;
+      log.warn("Webhook rejected: the YooKassa IP allowlist is not configured");
+      return false;
     }
     String clientIp = ClientIpResolver.resolve(request);
     byte[] address = toAddress(clientIp);

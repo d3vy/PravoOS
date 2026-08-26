@@ -46,11 +46,11 @@ class WebhookIpAllowlistTest {
   }
 
   @Test
-  void permitsEverythingWhenAllowlistIsNotConfigured() {
+  void rejectsEverythingWhenAllowlistIsNotConfigured() {
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.addHeader("X-Client-Ip", "203.0.113.9");
 
-    assertThat(allowlist(List.of()).permits(request)).isTrue();
+    assertThat(allowlist(List.of()).permits(request)).isFalse();
   }
 
   @Test

@@ -46,8 +46,8 @@ class WebhookIpAllowlistTest {
   }
 
   @Test
-  void emptyAllowlistPermitsEveryone() {
-    assertThat(allowlist(List.of()).permits(requestFrom("8.8.8.8", null))).isTrue();
+  void emptyAllowlistRejectsEveryone() {
+    assertThat(allowlist(List.of()).permits(requestFrom("8.8.8.8", null))).isFalse();
   }
 
   private WebhookIpAllowlist allowlist(List<String> allowedIps) {
