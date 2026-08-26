@@ -51,6 +51,9 @@ import com.pravoos.ai.shared.service.LlmQuotaService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -103,7 +106,85 @@ class ChatServiceTest {
             legalDomainGuard,
             llmQuotaService,
             chatStreamExecutor,
+            Runnable::run,
             12000);
+  }
+
+  private ChatService serviceWith(Executor contextExecutor) {
+    return new ChatService(
+        conversationRepository,
+        messageRepository,
+        documentRetrieval,
+        documentAccess,
+        caseAccessProvider,
+        caseContextProvider,
+        documentAccessGuard,
+        ragService,
+        llmClient,
+        new DocumentProperties("/tmp", 1000, 100, 5, 20000, 50, 200, 1_000_000L, 10),
+        legalDomainGuard,
+        llmQuotaService,
+        chatStreamExecutor,
+        contextExecutor,
+        12000);
+  }
+
+  @Test
+  void buildsSameCaseContextWhenBranchesRunOnAnotherThread() {
+    UUID caseId = UUID.randomUUID();
+    ChatRequest request = new ChatRequest(null, "Вопрос по делу", List.of(), caseId, null);
+    when(caseContextProvider.loadContext(eq(caseId), eq(lawyerId), anyList()))
+        .thenReturn(new CaseContext("Карточка", "Хронология", "Задачи"));
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(new RetrievedChunks(List.of(), 7L));
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
+        .thenReturn(
+            new RetrievedChunks(
+                List.of(new RetrievedChunk("фрагмент", "Иск.pdf", 0.8, false, null, null, null)),
+                4L));
+    when(ragService.buildCaseSystemPrompt(
+            eq("Карточка"), eq("Хронология"), eq("Задачи"), anyList(), anyBoolean()))
+        .thenReturn("case-prompt");
+    when(llmClient.complete(eq("case-prompt"), anyList(), eq("Вопрос по делу")))
+        .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
+    when(conversationRepository.save(any()))
+        .thenAnswer(
+            invocation -> {
+              Conversation conversation = invocation.getArgument(0);
+              ReflectionTestUtils.setField(conversation, "id", "conv-parallel");
+              return conversation;
+            });
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    ExecutorService contextExecutor = Executors.newFixedThreadPool(3);
+
+    try {
+      ChatResponse response = serviceWith(contextExecutor).chat(request, lawyerId, List.of());
+
+      assertThat(response.sources()).containsExactly("Материалы дела: Иск.pdf");
+      verify(llmQuotaService).recordTokenUsage(lawyerId, 7L);
+      verify(llmQuotaService).recordTokenUsage(lawyerId, 4L);
+    } finally {
+      contextExecutor.shutdownNow();
+    }
+  }
+
+  @Test
+  void unwrapsDomainExceptionRaisedInsideParallelBranch() {
+    ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null);
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenThrow(new LlmException("реранкер недоступен"));
+    ExecutorService contextExecutor = Executors.newFixedThreadPool(3);
+
+    try {
+      ChatService parallelService = serviceWith(contextExecutor);
+
+      assertThatThrownBy(() -> parallelService.chat(request, lawyerId, List.of()))
+          .isInstanceOf(LlmException.class)
+          .hasMessage("реранкер недоступен");
+      verifyNoInteractions(llmClient);
+    } finally {
+      contextExecutor.shutdownNow();
+    }
   }
 
   private Conversation existingConversation(UUID caseId, UUID documentId) {

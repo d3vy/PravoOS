@@ -31,9 +31,13 @@ import com.pravoos.ai.shared.exception.MessageNotFoundException;
 import com.pravoos.ai.shared.model.enums.DocumentSummaryStatus;
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import com.pravoos.ai.shared.util.Futures;
 import com.pravoos.ai.shared.util.PageRequests;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +76,7 @@ public class ChatService {
   private final LegalDomainGuard legalDomainGuard;
   private final LlmQuotaService llmQuotaService;
   private final ThreadPoolTaskExecutor chatStreamExecutor;
+  private final Executor chatContextExecutor;
   private final int historyMaxChars;
 
   public ChatService(
@@ -88,6 +93,7 @@ public class ChatService {
       LegalDomainGuard legalDomainGuard,
       LlmQuotaService llmQuotaService,
       @Qualifier("chatStreamExecutor") ThreadPoolTaskExecutor chatStreamExecutor,
+      @Qualifier("chatContextExecutor") Executor chatContextExecutor,
       @Value("${llm.history-max-chars:12000}") int historyMaxChars) {
     this.conversationRepository = conversationRepository;
     this.messageRepository = messageRepository;
@@ -102,11 +108,12 @@ public class ChatService {
     this.legalDomainGuard = legalDomainGuard;
     this.llmQuotaService = llmQuotaService;
     this.chatStreamExecutor = chatStreamExecutor;
+    this.chatContextExecutor = chatContextExecutor;
     this.historyMaxChars = historyMaxChars;
   }
 
   public ChatResponse chat(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
-    assertScopeAccessible(request, lawyerId, orgIds);
+    DocumentSummaryView scopedDocument = resolveAccessibleScope(request, lawyerId, orgIds);
     llmQuotaService.assertWithinQuota(lawyerId);
     Conversation conversation =
         resolveConversation(
@@ -128,7 +135,13 @@ public class ChatService {
         loadOwnedAttachedDocuments(request.attachedDocumentIds(), lawyerId);
     PreparedContext context =
         prepareContext(
-            request, conversation, isNewConversation, attachedDocuments, lawyerId, orgIds);
+            request,
+            conversation,
+            isNewConversation,
+            attachedDocuments,
+            scopedDocument,
+            lawyerId,
+            orgIds);
 
     LlmResult completion =
         llmClient.complete(context.systemPrompt(), context.history(), request.message());
@@ -158,7 +171,7 @@ public class ChatService {
   }
 
   public SseEmitter chatStream(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
-    assertScopeAccessible(request, lawyerId, orgIds);
+    DocumentSummaryView scopedDocument = resolveAccessibleScope(request, lawyerId, orgIds);
     llmQuotaService.assertWithinQuota(lawyerId);
     Conversation conversation =
         resolveConversation(
@@ -191,7 +204,8 @@ public class ChatService {
                   orgIds,
                   resolved,
                   isNewConversation,
-                  attachedDocuments));
+                  attachedDocuments,
+                  scopedDocument));
     } catch (TaskRejectedException e) {
       log.warn("Chat stream rejected: executor saturated (lawyer {})", lawyerId);
       throw new LlmException("Сервис перегружен, попробуйте позже");
@@ -206,11 +220,18 @@ public class ChatService {
       List<UUID> orgIds,
       Conversation conversation,
       boolean isNewConversation,
-      List<DocumentRef> attachedDocuments) {
+      List<DocumentRef> attachedDocuments,
+      DocumentSummaryView scopedDocument) {
     try {
       PreparedContext context =
           prepareContext(
-              request, conversation, isNewConversation, attachedDocuments, lawyerId, orgIds);
+              request,
+              conversation,
+              isNewConversation,
+              attachedDocuments,
+              scopedDocument,
+              lawyerId,
+              orgIds);
 
       StreamingAnswerAccumulator accumulator = new StreamingAnswerAccumulator(emitter);
       LlmUsage usage =
@@ -262,56 +283,85 @@ public class ChatService {
     }
   }
 
+  private <T> CompletableFuture<T> supplyContext(Supplier<T> source) {
+    return CompletableFuture.supplyAsync(source, chatContextExecutor);
+  }
+
+  private List<String> attachedChunkContents(List<DocumentRef> attachedDocuments) {
+    if (attachedDocuments.isEmpty()) {
+      return List.of();
+    }
+    return documentAccess.chunkContentsForDocuments(
+        attachedDocuments.stream().map(DocumentRef::id).toList());
+  }
+
+  private List<LlmMessage> conversationHistory(
+      Conversation conversation, boolean isNewConversation) {
+    if (isNewConversation) {
+      return List.of();
+    }
+    return buildLlmHistory(
+        messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(conversation.getId()));
+  }
+
   private PreparedContext prepareContext(
       ChatRequest request,
       Conversation conversation,
       boolean isNewConversation,
       List<DocumentRef> attachedDocuments,
+      DocumentSummaryView scopedDocument,
       UUID lawyerId,
       List<UUID> orgIds) {
-    List<String> attachedChunks =
-        attachedDocuments.isEmpty()
-            ? List.of()
-            : documentAccess.chunkContentsForDocuments(
-                attachedDocuments.stream().map(DocumentRef::id).toList());
+    int topK = documentProperties.topKResults();
+    UUID documentId = request.documentId();
+    UUID caseId = request.caseId();
 
-    List<LlmMessage> historyForLlm =
-        isNewConversation
-            ? List.of()
-            : buildLlmHistory(
-                messageRepository.findTop10ByConversationIdOrderByCreatedAtDesc(
-                    conversation.getId()));
+    CompletableFuture<List<String>> pendingAttachedChunks =
+        supplyContext(() -> attachedChunkContents(attachedDocuments));
+    CompletableFuture<List<LlmMessage>> pendingHistory =
+        supplyContext(() -> conversationHistory(conversation, isNewConversation));
+    CompletableFuture<RetrievedChunks> pendingKnowledgeBase =
+        supplyContext(() -> documentRetrieval.retrieveKnowledgeBase(request.message(), topK));
+    CompletableFuture<DocumentChunkMatches> pendingDocumentMatches =
+        documentId == null
+            ? CompletableFuture.completedFuture(DocumentChunkMatches.empty())
+            : supplyContext(
+                () ->
+                    documentRetrieval.retrieveInDocument(
+                        List.of(request.message()), topK, documentId));
+    CompletableFuture<CaseContext> pendingCaseContext =
+        caseId == null
+            ? CompletableFuture.completedFuture(null)
+            : supplyContext(() -> caseContextProvider.loadContext(caseId, lawyerId, orgIds));
+    CompletableFuture<RetrievedChunks> pendingCaseRetrieval =
+        caseId == null
+            ? CompletableFuture.completedFuture(RetrievedChunks.empty())
+            : supplyContext(
+                () -> documentRetrieval.retrieveForCase(request.message(), topK, caseId));
 
-    RetrievedChunks knowledgeBaseRetrieval =
-        documentRetrieval.retrieveKnowledgeBase(
-            request.message(), documentProperties.topKResults());
+    List<String> attachedChunks = Futures.join(pendingAttachedChunks);
+    List<LlmMessage> historyForLlm = Futures.join(pendingHistory);
+    RetrievedChunks knowledgeBaseRetrieval = Futures.join(pendingKnowledgeBase);
     llmQuotaService.recordTokenUsage(lawyerId, knowledgeBaseRetrieval.llmTokens());
     List<RetrievedChunk> knowledgeBaseMatches = knowledgeBaseRetrieval.chunks();
     boolean legislationPresent =
         knowledgeBaseMatches.stream().anyMatch(RetrievedChunk::legislation);
 
-    if (request.documentId() != null) {
-      return prepareDocumentContext(
-          request,
+    if (documentId != null) {
+      DocumentChunkMatches matches = Futures.join(pendingDocumentMatches);
+      llmQuotaService.recordTokenUsage(lawyerId, matches.totalTokens());
+      return buildDocumentContext(
+          scopedDocument,
+          matches,
           attachedDocuments,
           attachedChunks,
           knowledgeBaseMatches,
           legislationPresent,
-          historyForLlm,
-          lawyerId,
-          orgIds);
+          historyForLlm);
     }
 
-    CaseContext caseContext =
-        request.caseId() == null
-            ? null
-            : caseContextProvider.loadContext(request.caseId(), lawyerId, orgIds);
-
-    RetrievedChunks caseRetrieval =
-        caseContext == null
-            ? RetrievedChunks.empty()
-            : documentRetrieval.retrieveForCase(
-                request.message(), documentProperties.topKResults(), request.caseId());
+    CaseContext caseContext = Futures.join(pendingCaseContext);
+    RetrievedChunks caseRetrieval = Futures.join(pendingCaseRetrieval);
     llmQuotaService.recordTokenUsage(lawyerId, caseRetrieval.llmTokens());
     List<RetrievedChunk> caseMatches = caseRetrieval.chunks();
 
@@ -346,22 +396,14 @@ public class ChatService {
         historyForLlm);
   }
 
-  private PreparedContext prepareDocumentContext(
-      ChatRequest request,
+  private PreparedContext buildDocumentContext(
+      DocumentSummaryView document,
+      DocumentChunkMatches matches,
       List<DocumentRef> attachedDocuments,
       List<String> attachedChunks,
       List<RetrievedChunk> knowledgeBaseMatches,
       boolean legislationPresent,
-      List<LlmMessage> historyForLlm,
-      UUID lawyerId,
-      List<UUID> orgIds) {
-    DocumentSummaryView document =
-        documentAccessGuard.requireVisible(request.documentId(), lawyerId, orgIds);
-    DocumentChunkMatches matches =
-        documentRetrieval.retrieveInDocument(
-            List.of(request.message()), documentProperties.topKResults(), request.documentId());
-    llmQuotaService.recordTokenUsage(lawyerId, matches.totalTokens());
-
+      List<LlmMessage> historyForLlm) {
     List<String> relevantChunks = new ArrayList<>(attachedChunks);
     relevantChunks.addAll(matches.matches().stream().map(DocumentChunkMatch::content).toList());
     relevantChunks.addAll(knowledgeBaseMatches.stream().map(RetrievedChunk::content).toList());
@@ -406,14 +448,16 @@ public class ChatService {
     }
   }
 
-  private void assertScopeAccessible(ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
+  private DocumentSummaryView resolveAccessibleScope(
+      ChatRequest request, UUID lawyerId, List<UUID> orgIds) {
     if (request.caseId() != null && request.documentId() != null) {
       throw new ChatScopeConflictException();
     }
     assertCaseAccessible(request.caseId(), lawyerId, orgIds);
-    if (request.documentId() != null) {
-      documentAccessGuard.requireVisible(request.documentId(), lawyerId, orgIds);
+    if (request.documentId() == null) {
+      return null;
     }
+    return documentAccessGuard.requireVisible(request.documentId(), lawyerId, orgIds);
   }
 
   private static String sourceLabel(RetrievedChunk chunk) {

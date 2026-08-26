@@ -91,6 +91,7 @@ class DocumentChatContextTest {
             legalDomainGuard,
             quotaService,
             chatStreamExecutor,
+            Runnable::run,
             12000);
 
     when(llmClient.complete(anyString(), anyList(), anyString()))

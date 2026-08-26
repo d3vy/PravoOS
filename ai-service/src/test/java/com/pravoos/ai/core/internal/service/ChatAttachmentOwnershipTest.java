@@ -74,6 +74,7 @@ class ChatAttachmentOwnershipTest {
             legalDomainGuard,
             llmQuotaService,
             chatStreamExecutor,
+            Runnable::run,
             12000);
   }
 
