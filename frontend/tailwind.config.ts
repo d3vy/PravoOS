@@ -49,8 +49,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
-        script: ['Caveat', 'cursive'],
+        display: ['CoFo Cinema1909 Trial', 'Fraunces', 'ui-serif', 'Georgia', 'serif'],
+        script: ['Better Land RUS', 'Caveat', 'cursive'],
       },
       borderWidth: {
         '3': '3px',

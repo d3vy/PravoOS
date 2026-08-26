@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'CoFo Cinema1909 Trial';
+  src: url('/fonts/cofo-cinema1909-regular-trial.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Better Land RUS';
+  src: url('/fonts/better-land-rus.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --bg: 247 247 244;
@@ -160,5 +176,50 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply rounded-full bg-line;
+  }
+}
+
+/* Перекрашиваем прозрачную иллюстрацию колонны в цвет CTA-заголовка. */
+.landing-cta-figure {
+  filter: brightness(0) saturate(100%) invert(86%) sepia(25%) saturate(847%) hue-rotate(320deg)
+    brightness(104%) contrast(98%);
+  opacity: 1;
+}
+
+/* Сохраняем типографику и геометрию мобильного макета на ширине 360 px. */
+@media (max-width: 767px) {
+  .landing-product-card {
+    min-height: 437px;
+  }
+
+  .landing-product-card > div:last-child {
+    margin-top: 20px;
+  }
+
+  .landing-product-card > div:last-child > div {
+    min-height: 196px;
+  }
+
+  .landing-why-card {
+    min-height: 363px;
+  }
+
+  .landing-why-card > div:last-child {
+    min-height: 126px;
+  }
+
+  .landing-footer > div:last-child {
+    margin-top: 40px;
+  }
+}
+
+/* Фиксируем размеры эталонного desktop-макета без изменения композиции на широких экранах. */
+@media (min-width: 768px) {
+  .landing-product-card > div:last-child > div {
+    height: 636px;
+  }
+
+  .landing-why-card > div:last-child {
+    height: 398px;
   }
 }
