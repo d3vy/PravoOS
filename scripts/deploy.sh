@@ -70,20 +70,15 @@ compose() {
   docker compose "${COMPOSE_FILES[@]}" "$@"
 }
 
-build_jars() {
-  log "Building JARs (mvn package)..."
-  mkdir -p ~/.m2 docker/jars
-  cp docker/maven/settings.xml ~/.m2/settings.xml
-  mvn package -DskipTests -B -q
-  cp user-service/target/user-service-*.jar docker/jars/user-service.jar
-  cp ai-service/target/ai-service-*.jar docker/jars/ai-service.jar
-  cp api-gateway/target/api-gateway-*.jar docker/jars/api-gateway.jar
-  cp notification-service/target/notification-service-*.jar docker/jars/notification-service.jar
-}
-
 build_images() {
+  # No explicit service list: every Dockerfile stage runs its own `mvn package`
+  # from source (see docker/Dockerfile's `build` stage), so plain `compose build`
+  # rebuilds every buildable service — services without a `build:` section
+  # (postgres, redis, kafka, ...) are skipped automatically by Compose. This is
+  # deliberate: a hardcoded per-service list here is exactly what silently left
+  # llm-service on a month-old image (see git history) — never reintroduce one.
   log "Building Docker images..."
-  compose build user-service ai-service llm-service api-gateway notification-service frontend
+  compose build
 }
 
 start_stack() {
@@ -114,8 +109,6 @@ obtain_ssl_certificate() {
 main() {
   require_command docker
   require_command envsubst
-  require_command mvn
-  require_command java
   load_env
   validate_env
 
@@ -125,9 +118,8 @@ main() {
   fi
 
   log "Building application..."
-  mkdir -p logs/{user-service,ai-service,api-gateway,notification-service}
+  mkdir -p logs/{discovery-server,config-server,user-service,llm-service,ai-service,notification-service,api-gateway}
   chmod -R a+rwx logs 2>/dev/null || true
-  build_jars
   build_images
 
   log "Starting stack (HTTP, certificate bootstrap)..."
