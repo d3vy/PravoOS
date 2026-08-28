@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.service;
 import com.pravoos.ai.core.api.AiDataCleanup;
 import com.pravoos.ai.practice.internal.model.entity.PendingLawyerPurge;
 import com.pravoos.ai.practice.internal.repository.jpa.*;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +32,7 @@ public class LawyerDataCleanupService {
   private final ClientRepository clientRepository;
   private final ClientContactRepository clientContactRepository;
   private final DocumentTemplateRepository documentTemplateRepository;
+  private final RecycleBin recycleBin;
   private final SavedViewRepository savedViewRepository;
   private final SignatureRequestRepository signatureRequestRepository;
   private final TimeEntryRepository timeEntryRepository;
@@ -50,6 +52,7 @@ public class LawyerDataCleanupService {
       ClientRepository clientRepository,
       ClientContactRepository clientContactRepository,
       DocumentTemplateRepository documentTemplateRepository,
+      RecycleBin recycleBin,
       SavedViewRepository savedViewRepository,
       SignatureRequestRepository signatureRequestRepository,
       TimeEntryRepository timeEntryRepository,
@@ -67,6 +70,7 @@ public class LawyerDataCleanupService {
     this.clientRepository = clientRepository;
     this.clientContactRepository = clientContactRepository;
     this.documentTemplateRepository = documentTemplateRepository;
+    this.recycleBin = recycleBin;
     this.savedViewRepository = savedViewRepository;
     this.signatureRequestRepository = signatureRequestRepository;
     this.timeEntryRepository = timeEntryRepository;
@@ -159,6 +163,7 @@ public class LawyerDataCleanupService {
     int orphanedSignatures = signatureRequestRepository.cancelPendingBySignerLawyer(lawyerId);
     int signatures = signatureRequestRepository.deleteByRequestedBy(lawyerId);
     int savedViews = savedViewRepository.deleteByLawyerId(lawyerId);
+    recycleBin.forgetOwner(lawyerId);
     log.info(
         "Deleted {} time entries, {} invoices, {} workflow runs, {} analyses, {} tasks, {} drafts, "
             + "{} parties, {} cases, {} workflow definitions, {} contacts, {} clients, {} templates "

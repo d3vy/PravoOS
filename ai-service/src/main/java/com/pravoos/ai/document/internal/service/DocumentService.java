@@ -10,7 +10,10 @@ import com.pravoos.ai.document.internal.model.entity.DocumentChunk;
 import com.pravoos.ai.document.internal.pipeline.ChunkData;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
+import com.pravoos.ai.recyclebin.api.BinSnapshot;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.config.DocumentProperties;
+import com.pravoos.ai.shared.exception.DocumentAlreadyLinkedException;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.exception.DocumentProcessingException;
 import com.pravoos.ai.shared.exception.StorageQuotaExceededException;
@@ -26,7 +29,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -274,32 +282,79 @@ public class DocumentService {
             });
   }
 
-  @Transactional
-  public void delete(UUID documentId) {
+  @Transactional(readOnly = true)
+  public void requireDeletable(UUID documentId) {
     Document document =
         documentRepository
             .findById(documentId)
             .orElseThrow(() -> new DocumentNotFoundException(documentId));
     requireKnowledgeBaseDocument(document);
-
-    String filePath = document.getFilePath();
-    documentChunkRepository.deleteByDocumentId(documentId);
-    documentRepository.delete(document);
-    deleteFileAfterCommit(filePath);
-
-    log.info("Document deleted: {}", documentId);
   }
 
   @Transactional
-  public void deleteByCase(UUID caseId) {
+  public BinSnapshot moveToBin(UUID documentId) {
+    Document document =
+        documentRepository
+            .findById(documentId)
+            .orElseThrow(() -> new DocumentNotFoundException(documentId));
+    BinSnapshot snapshot = toSnapshot(document);
+    documentRepository.softDelete(documentId, LocalDateTime.now(ZoneOffset.UTC));
+    log.info("Document {} moved to recycle bin", documentId);
+    return snapshot;
+  }
+
+  @Transactional
+  public List<BinSnapshot> moveCaseDocumentsToBin(UUID caseId) {
     List<Document> documents = documentRepository.findByCaseIdOrderByUploadedAtDesc(caseId);
+    List<BinSnapshot> snapshots = new ArrayList<>(documents.size());
+    LocalDateTime deletedAt = LocalDateTime.now(ZoneOffset.UTC);
     for (Document document : documents) {
-      String filePath = document.getFilePath();
-      documentChunkRepository.deleteByDocumentId(document.getId());
-      documentRepository.delete(document);
-      deleteFileAfterCommit(filePath);
+      snapshots.add(toSnapshot(document));
+      documentRepository.softDelete(document.getId(), deletedAt);
     }
-    log.info("Deleted {} document(s) of case {}", documents.size(), caseId);
+    log.info("Moved {} document(s) of case {} to recycle bin", snapshots.size(), caseId);
+    return snapshots;
+  }
+
+  @Transactional
+  public void restoreFromBin(UUID documentId) {
+    documentRepository.restore(documentId);
+  }
+
+  @Transactional
+  public void purge(UUID documentId) {
+    String filePath = documentRepository.findFilePathIncludingDeleted(documentId).orElse(null);
+    documentChunkRepository.deleteByDocumentId(documentId);
+    documentRepository.hardDelete(documentId);
+    deleteFileAfterCommit(filePath);
+    log.info("Document purged: {}", documentId);
+  }
+
+  private BinSnapshot toSnapshot(Document document) {
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("fileName", document.getFileName());
+    payload.put("fileType", document.getFileType());
+    payload.put("sizeBytes", document.getSizeBytes());
+    payload.put("uploadedAt", String.valueOf(document.getUploadedAt()));
+    if (document.getCaseId() != null) {
+      payload.put("caseId", document.getCaseId().toString());
+    }
+    return new BinSnapshot(
+        RecycleBinEntityType.DOCUMENT,
+        document.getId().toString(),
+        document.getTitle(),
+        document.getUploadedBy(),
+        null,
+        payload);
+  }
+
+  @Transactional
+  public void purgeByCase(UUID caseId) {
+    List<UUID> documentIds = documentRepository.findIdsByCaseIdIncludingDeleted(caseId);
+    for (UUID documentId : documentIds) {
+      purge(documentId);
+    }
+    log.info("Purged {} document(s) of case {}", documentIds.size(), caseId);
   }
 
   @Transactional(readOnly = true)
@@ -416,6 +471,34 @@ public class DocumentService {
   }
 
   @Transactional
+  public DocumentResponse attachToCase(UUID documentId, UUID caseId) {
+    Document document =
+        documentRepository
+            .findById(documentId)
+            .orElseThrow(() -> new DocumentNotFoundException(documentId));
+    if (caseId.equals(document.getCaseId())) {
+      return toDocumentResponse(document);
+    }
+    if (document.getCaseId() != null) {
+      log.warn(
+          "Refusing to move document {} from case {} to case {}",
+          documentId,
+          document.getCaseId(),
+          caseId);
+      throw new DocumentAlreadyLinkedException(documentId, document.getCaseId());
+    }
+    long existing = documentRepository.countByCaseId(caseId);
+    if (existing >= documentProperties.maxPerCase()) {
+      throw new DocumentProcessingException(
+          "Достигнут лимит документов на дело (" + documentProperties.maxPerCase() + ")");
+    }
+    document.setCaseId(caseId);
+    document.setDocumentKind(DocumentKind.GENERAL);
+    Document saved = documentRepository.save(document);
+    log.info("Document {} linked to case {}", documentId, caseId);
+    return toDocumentResponse(saved);
+  }
+
   public DocumentResponse setClientVisibility(
       UUID documentId, UUID caseId, boolean visibleToClient) {
     Document document =

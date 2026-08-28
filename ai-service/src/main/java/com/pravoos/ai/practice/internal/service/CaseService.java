@@ -16,6 +16,9 @@ import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.CaseTransferNotAllowedException;
@@ -52,6 +55,7 @@ public class CaseService {
   private final SignatureRequestRepository signatureRequestRepository;
   private final CourtSyncService courtSyncService;
   private final UserServiceClient userServiceClient;
+  private final RecycleBin recycleBin;
 
   public CaseService(
       CaseRepository caseRepository,
@@ -62,7 +66,8 @@ public class CaseService {
       CasePartyRepository casePartyRepository,
       SignatureRequestRepository signatureRequestRepository,
       CourtSyncService courtSyncService,
-      UserServiceClient userServiceClient) {
+      UserServiceClient userServiceClient,
+      RecycleBin recycleBin) {
     this.caseRepository = caseRepository;
     this.clientRepository = clientRepository;
     this.documentCommand = documentCommand;
@@ -72,6 +77,7 @@ public class CaseService {
     this.signatureRequestRepository = signatureRequestRepository;
     this.courtSyncService = courtSyncService;
     this.userServiceClient = userServiceClient;
+    this.recycleBin = recycleBin;
   }
 
   @Transactional
@@ -249,13 +255,9 @@ public class CaseService {
   }
 
   @Transactional
-  public void delete(UUID caseId, UUID lawyerId) {
-    Case caseEntity = requireOwnedCase(caseId, lawyerId);
-    signatureRequestRepository.deleteByCaseId(caseId);
-    documentCommand.deleteByCase(caseId);
-    casePartyRepository.deleteByCaseId(caseId);
-    caseRepository.delete(caseEntity);
-    log.info("Case deleted: {} by lawyer {}", caseId, lawyerId);
+  public void delete(UUID caseId, DeletionActor actor) {
+    requireOwnedCase(caseId, actor.userId());
+    recycleBin.moveToBin(RecycleBinEntityType.CASE, caseId.toString(), actor);
   }
 
   public DocumentUploadResponse uploadDocument(

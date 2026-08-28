@@ -8,10 +8,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "cases")
+@SQLRestriction("deleted_at IS NULL")
 public class Case {
+
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)

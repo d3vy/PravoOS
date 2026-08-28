@@ -11,6 +11,7 @@ import com.pravoos.ai.practice.internal.service.CaseService;
 import com.pravoos.ai.practice.internal.service.CaseTaskService;
 import com.pravoos.ai.practice.internal.service.WorkflowExecutionService;
 import com.pravoos.ai.practice.internal.service.WorkflowService;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.ai.shared.util.SecureFileHeaders;
@@ -133,7 +134,7 @@ public class CaseController {
 
   @DeleteMapping("/{caseId}")
   public ResponseEntity<Void> delete(@PathVariable UUID caseId, Authentication authentication) {
-    caseService.delete(caseId, SecurityUtils.currentUserId(authentication));
+    caseService.delete(caseId, DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 

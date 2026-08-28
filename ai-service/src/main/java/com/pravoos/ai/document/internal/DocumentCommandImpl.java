@@ -6,6 +6,8 @@ import com.pravoos.ai.document.api.DocumentRef;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.document.internal.service.DocumentService;
+import com.pravoos.ai.recyclebin.api.BinSnapshot;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,8 +40,18 @@ public class DocumentCommandImpl implements DocumentCommand {
   }
 
   @Override
-  public void deleteByCase(UUID caseId) {
-    documentService.deleteByCase(caseId);
+  public void purgeByCase(UUID caseId) {
+    documentService.purgeByCase(caseId);
+  }
+
+  @Override
+  public List<BinSnapshot> moveCaseDocumentsToBin(UUID caseId) {
+    return documentService.moveCaseDocumentsToBin(caseId);
+  }
+
+  @Override
+  public DocumentResponse attachToCase(UUID documentId, UUID caseId) {
+    return documentService.attachToCase(documentId, caseId);
   }
 
   @Override

@@ -7,9 +7,14 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
+import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentProperties;
+import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
 import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
@@ -20,9 +25,11 @@ import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -39,6 +46,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ChatAttachmentOwnershipTest {
 
+  private static final AgentProperties AGENT_PROPERTIES =
+      new AgentProperties(
+          8, 12, 8000, 8000, Duration.ofSeconds(120), 120_000L, Duration.ofMinutes(30), 30);
+
   @Mock private ConversationRepository conversationRepository;
   @Mock private MessageRepository messageRepository;
   @Mock private DocumentRetrieval documentRetrieval;
@@ -52,6 +63,8 @@ class ChatAttachmentOwnershipTest {
   @Mock private LegalDomainGuard legalDomainGuard;
   @Mock private LlmQuotaService llmQuotaService;
   @Mock private ThreadPoolTaskExecutor chatStreamExecutor;
+  @Mock private AiActionProposalService proposalService;
+  @Mock private RecycleBin recycleBin;
 
   private ChatService service;
 
@@ -72,10 +85,13 @@ class ChatAttachmentOwnershipTest {
             documentAccessGuard,
             pageContextResolver,
             ragService,
-            llmClient,
+            agentLoop(),
+            AGENT_PROPERTIES,
             properties,
             legalDomainGuard,
             llmQuotaService,
+            proposalService,
+            recycleBin,
             chatStreamExecutor,
             Runnable::run,
             12000);
@@ -91,7 +107,7 @@ class ChatAttachmentOwnershipTest {
         .thenReturn(RetrievedChunks.empty());
     when(ragService.buildSystemPrompt(anyList(), any(Boolean.class), anyString()))
         .thenReturn("prompt");
-    when(llmClient.complete(anyString(), anyList(), anyString()))
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -99,7 +115,8 @@ class ChatAttachmentOwnershipTest {
     service.chat(
         new ChatRequest(null, "Проверь договор", List.of(documentId), null, null, null),
         lawyerId,
-        List.of());
+        List.of(),
+        AiActorRole.LAWYER);
   }
 
   @Test
@@ -113,7 +130,8 @@ class ChatAttachmentOwnershipTest {
                 service.chat(
                     new ChatRequest(null, "Проверь договор", List.of(documentId), null, null, null),
                     lawyerId,
-                    List.of()))
+                    List.of(),
+                    AiActorRole.LAWYER))
         .isInstanceOf(DocumentNotFoundException.class);
   }
 
@@ -129,7 +147,8 @@ class ChatAttachmentOwnershipTest {
                 service.chat(
                     new ChatRequest(null, "Проверь договор", List.of(documentId), null, null, null),
                     lawyerId,
-                    List.of()))
+                    List.of(),
+                    AiActorRole.LAWYER))
         .isInstanceOf(DocumentNotFoundException.class);
   }
 
@@ -146,7 +165,13 @@ class ChatAttachmentOwnershipTest {
                 service.chat(
                     new ChatRequest(null, "Проверь договор", List.of(documentId), null, null, null),
                     lawyerId,
-                    List.of()))
+                    List.of(),
+                    AiActorRole.LAWYER))
         .isInstanceOf(DocumentNotFoundException.class);
+  }
+
+  private AgentLoop agentLoop() {
+    return new AgentLoop(
+        llmClient, new AiToolRegistry(List.of()), AGENT_PROPERTIES, new ObjectMapper());
   }
 }

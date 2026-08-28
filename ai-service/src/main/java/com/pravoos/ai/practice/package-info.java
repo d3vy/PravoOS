@@ -1,3 +1,9 @@
 @org.springframework.modulith.ApplicationModule(
-    allowedDependencies = {"shared", "core :: api", "document :: api", "court :: api"})
+    allowedDependencies = {
+      "shared",
+      "core :: api",
+      "document :: api",
+      "court :: api",
+      "recyclebin :: api"
+    })
 package com.pravoos.ai.practice;

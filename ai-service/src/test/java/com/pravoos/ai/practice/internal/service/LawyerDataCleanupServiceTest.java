@@ -4,6 +4,7 @@ import static org.mockito.Mockito.*;
 
 import com.pravoos.ai.core.api.AiDataCleanup;
 import com.pravoos.ai.practice.internal.repository.jpa.*;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class LawyerDataCleanupServiceTest {
   @Mock private InvoiceRepository invoiceRepository;
   @Mock private AiDataCleanup aiDataCleanup;
   @Mock private PendingLawyerPurgeRepository pendingLawyerPurgeRepository;
+  @Mock private RecycleBin recycleBin;
 
   private LawyerDataCleanupService service(LawyerDataCleanupService self) {
     return new LawyerDataCleanupService(
@@ -44,6 +46,7 @@ class LawyerDataCleanupServiceTest {
         clientRepository,
         clientContactRepository,
         documentTemplateRepository,
+        recycleBin,
         savedViewRepository,
         signatureRequestRepository,
         timeEntryRepository,

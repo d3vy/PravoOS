@@ -11,7 +11,8 @@ public record MessageResponse(
     String content,
     List<String> sources,
     Integer rating,
-    LocalDateTime createdAt) {
+    LocalDateTime createdAt,
+    List<ToolStepResponse> toolSteps) {
   public static MessageResponse from(Message message) {
     return new MessageResponse(
         message.getId(),
@@ -19,6 +20,7 @@ public record MessageResponse(
         message.getContent(),
         message.getSources() != null ? message.getSources() : List.of(),
         message.getRating(),
-        message.getCreatedAt());
+        message.getCreatedAt(),
+        message.getToolSteps().stream().map(ToolStepResponse::from).toList());
   }
 }

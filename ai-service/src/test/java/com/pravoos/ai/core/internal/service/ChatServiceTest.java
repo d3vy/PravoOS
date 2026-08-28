@@ -15,10 +15,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
+import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentProperties;
+import com.pravoos.ai.core.internal.agent.AiToolRegistry;
+import com.pravoos.ai.core.internal.dto.AiActionProposalResponse;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.dto.ChatResponse;
 import com.pravoos.ai.core.internal.dto.ConversationResponse;
@@ -38,6 +44,10 @@ import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.DeletionRole;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.ChatScopeConflictException;
 import com.pravoos.ai.shared.exception.ConversationCaseMismatchException;
@@ -50,6 +60,7 @@ import com.pravoos.ai.shared.exception.NonLegalQueryException;
 import com.pravoos.ai.shared.model.enums.DocumentSummaryStatus;
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -73,6 +84,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ChatServiceTest {
 
+  private static final AgentProperties AGENT_PROPERTIES =
+      new AgentProperties(
+          8, 12, 8000, 8000, Duration.ofSeconds(120), 120_000L, Duration.ofMinutes(30), 30);
+
   @Mock private ConversationRepository conversationRepository;
   @Mock private MessageRepository messageRepository;
   @Mock private DocumentRetrieval documentRetrieval;
@@ -86,6 +101,8 @@ class ChatServiceTest {
   @Mock private LegalDomainGuard legalDomainGuard;
   @Mock private LlmQuotaService llmQuotaService;
   @Mock private ThreadPoolTaskExecutor chatStreamExecutor;
+  @Mock private AiActionProposalService proposalService;
+  @Mock private RecycleBin recycleBin;
 
   private ChatService service;
 
@@ -106,10 +123,13 @@ class ChatServiceTest {
             documentAccessGuard,
             pageContextResolver,
             ragService,
-            llmClient,
+            agentLoop(),
+            AGENT_PROPERTIES,
             properties,
             legalDomainGuard,
             llmQuotaService,
+            proposalService,
+            recycleBin,
             chatStreamExecutor,
             Runnable::run,
             12000);
@@ -126,10 +146,13 @@ class ChatServiceTest {
         documentAccessGuard,
         pageContextResolver,
         ragService,
-        llmClient,
+        agentLoop(),
+        AGENT_PROPERTIES,
         new DocumentProperties("/tmp", 1000, 100, 5, 20000, 50, 200, 1_000_000L, 10),
         legalDomainGuard,
         llmQuotaService,
+        proposalService,
+        recycleBin,
         chatStreamExecutor,
         contextExecutor,
         12000);
@@ -151,7 +174,7 @@ class ChatServiceTest {
     when(ragService.buildCaseSystemPrompt(
             eq("Карточка"), eq("Хронология"), eq("Задачи"), anyList(), anyBoolean(), anyString()))
         .thenReturn("case-prompt");
-    when(llmClient.complete(eq("case-prompt"), anyList(), eq("Вопрос по делу")))
+    when(llmClient.complete(eq("case-prompt"), anyList(), eq("Вопрос по делу"), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any()))
         .thenAnswer(
@@ -164,7 +187,8 @@ class ChatServiceTest {
     ExecutorService contextExecutor = Executors.newFixedThreadPool(3);
 
     try {
-      ChatResponse response = serviceWith(contextExecutor).chat(request, lawyerId, List.of());
+      ChatResponse response =
+          serviceWith(contextExecutor).chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
 
       assertThat(response.sources()).containsExactly("Материалы дела: Иск.pdf");
       verify(llmQuotaService).recordTokenUsage(lawyerId, 7L);
@@ -184,7 +208,8 @@ class ChatServiceTest {
     try {
       ChatService parallelService = serviceWith(contextExecutor);
 
-      assertThatThrownBy(() -> parallelService.chat(request, lawyerId, List.of()))
+      assertThatThrownBy(
+              () -> parallelService.chat(request, lawyerId, List.of(), AiActorRole.LAWYER))
           .isInstanceOf(LlmException.class)
           .hasMessage("реранкер недоступен");
       verifyNoInteractions(llmClient);
@@ -204,7 +229,7 @@ class ChatServiceTest {
     ChatRequest request =
         new ChatRequest(null, "Вопрос", List.of(), UUID.randomUUID(), UUID.randomUUID(), null);
 
-    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
+    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER))
         .isInstanceOf(ChatScopeConflictException.class);
     verifyNoInteractions(llmQuotaService);
   }
@@ -212,9 +237,11 @@ class ChatServiceTest {
   @Test
   void chatPropagatesQuotaExceeded() {
     ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
-    doThrow(new LlmQuotaExceededException()).when(llmQuotaService).assertWithinQuota(lawyerId);
+    doThrow(new LlmQuotaExceededException())
+        .when(llmQuotaService)
+        .assertQuotaHeadroom(eq(lawyerId), anyInt());
 
-    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
+    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER))
         .isInstanceOf(LlmQuotaExceededException.class);
     verifyNoInteractions(llmClient);
   }
@@ -224,7 +251,7 @@ class ChatServiceTest {
     ChatRequest request = new ChatRequest(null, "Погода", List.of(), null, null, null);
     doThrow(new NonLegalQueryException()).when(legalDomainGuard).assertLegalQuery("Погода");
 
-    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
+    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER))
         .isInstanceOf(NonLegalQueryException.class);
     verifyNoInteractions(llmClient);
   }
@@ -239,7 +266,7 @@ class ChatServiceTest {
                 0L));
     when(ragService.buildSystemPrompt(anyList(), eq(true), anyString()))
         .thenReturn("system-prompt");
-    when(llmClient.complete(eq("system-prompt"), anyList(), eq("Что такое иск?")))
+    when(llmClient.complete(eq("system-prompt"), anyList(), eq("Что такое иск?"), any()))
         .thenReturn(new LlmResult("Ответ на вопрос", new LlmUsage(5, 5, 10)));
     when(conversationRepository.save(any()))
         .thenAnswer(
@@ -256,14 +283,82 @@ class ChatServiceTest {
               return message;
             });
 
-    ChatResponse response = service.chat(request, lawyerId, List.of());
+    ChatResponse response = service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
 
     assertThat(response.conversationId()).isEqualTo("conv-1");
     assertThat(response.answer()).isEqualTo("Ответ на вопрос");
     assertThat(response.sources()).containsExactly("ст. 15 ГК РФ");
-    verify(llmQuotaService).recordUsage(lawyerId, 10);
+    verify(llmQuotaService).recordUsage(lawyerId, 10, 1);
     verify(conversationRepository).save(any());
     verify(messageRepository, org.mockito.Mockito.times(2)).save(any());
+  }
+
+  @Test
+  void chatWithoutStreamingCarriesProposalsRaisedInThisTurn() {
+    ChatRequest request = new ChatRequest(null, "Заведи дело", List.of(), null, null, null);
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
+    when(ragService.buildSystemPrompt(
+            anyList(), org.mockito.ArgumentMatchers.anyBoolean(), anyString()))
+        .thenReturn("system-prompt");
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
+        .thenReturn(new LlmResult("Подготовил действие", new LlmUsage(5, 5, 10)));
+    when(conversationRepository.save(any()))
+        .thenAnswer(
+            invocation -> {
+              Conversation conversation = invocation.getArgument(0);
+              ReflectionTestUtils.setField(conversation, "id", "conv-1");
+              return conversation;
+            });
+    when(messageRepository.save(any()))
+        .thenAnswer(
+            invocation -> {
+              Message message = invocation.getArgument(0);
+              ReflectionTestUtils.setField(message, "id", UUID.randomUUID().toString());
+              return message;
+            });
+    when(proposalService.bindToMessage(eq(lawyerId), eq("conv-1"), any(), anyString()))
+        .thenReturn(List.of(pendingProposal()));
+
+    ChatResponse response = service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
+
+    assertThat(response.proposals())
+        .extracting(AiActionProposalResponse::toolName, AiActionProposalResponse::status)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple("create_case", "PENDING"));
+  }
+
+  @Test
+  void chatWithoutProposalsReturnsAnEmptyListNotNull() {
+    ChatRequest request = new ChatRequest(null, "Что такое иск?", List.of(), null, null, null);
+    when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
+        .thenReturn(RetrievedChunks.empty());
+    when(ragService.buildSystemPrompt(
+            anyList(), org.mockito.ArgumentMatchers.anyBoolean(), anyString()))
+        .thenReturn("system-prompt");
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
+        .thenReturn(new LlmResult("Ответ", new LlmUsage(5, 5, 10)));
+    when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    ChatResponse response = service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
+
+    assertThat(response.proposals()).isEmpty();
+  }
+
+  private static AiActionProposalResponse pendingProposal() {
+    java.time.LocalDateTime now = java.time.LocalDateTime.now();
+    return new AiActionProposalResponse(
+        UUID.randomUUID(),
+        "conv-1",
+        "msg-1",
+        "create_case",
+        "Завести дело",
+        "PENDING",
+        new ObjectMapper().createObjectNode(),
+        null,
+        null,
+        now,
+        now.plusMinutes(30));
   }
 
   @Test
@@ -280,11 +375,11 @@ class ChatServiceTest {
         .thenReturn(RetrievedChunks.empty());
     when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
         .thenReturn("system-prompt");
-    when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение")))
+    when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение"), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    ChatResponse response = service.chat(request, lawyerId, List.of());
+    ChatResponse response = service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
 
     assertThat(response.conversationId()).isEqualTo(conversation.getId());
     verify(conversationRepository, never()).save(any());
@@ -306,7 +401,7 @@ class ChatServiceTest {
     when(ragService.buildCaseSystemPrompt(
             eq("card"), eq("timeline"), eq("checklist"), anyList(), eq(false), anyString()))
         .thenReturn("case-prompt");
-    when(llmClient.complete(eq("case-prompt"), anyList(), eq("Что по делу?")))
+    when(llmClient.complete(eq("case-prompt"), anyList(), eq("Что по делу?"), any()))
         .thenReturn(new LlmResult("Ответ по делу", new LlmUsage(2, 2, 4)));
     when(conversationRepository.save(any()))
         .thenAnswer(
@@ -317,7 +412,7 @@ class ChatServiceTest {
             });
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    ChatResponse response = service.chat(request, lawyerId, List.of());
+    ChatResponse response = service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
 
     assertThat(response.sources()).containsExactly("Материалы дела: Иск.pdf");
     verify(caseAccessProvider).assertCaseVisible(caseId, lawyerId, List.of());
@@ -350,7 +445,7 @@ class ChatServiceTest {
     when(ragService.buildDocumentSystemPrompt(
             eq("Договор.pdf"), anyString(), anyList(), anyBoolean(), anyString()))
         .thenReturn("doc-prompt");
-    when(llmClient.complete(eq("doc-prompt"), anyList(), eq("Разбери документ")))
+    when(llmClient.complete(eq("doc-prompt"), anyList(), eq("Разбери документ"), any()))
         .thenReturn(new LlmResult("Ответ по документу", new LlmUsage(3, 3, 6)));
     when(conversationRepository.save(any()))
         .thenAnswer(
@@ -361,7 +456,7 @@ class ChatServiceTest {
             });
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    ChatResponse response = service.chat(request, lawyerId, List.of());
+    ChatResponse response = service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
 
     assertThat(response.sources()).containsExactly("Документ: Договор.pdf");
     verify(llmQuotaService).recordTokenUsage(lawyerId, 5L);
@@ -375,7 +470,7 @@ class ChatServiceTest {
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
-    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
+    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER))
         .isInstanceOf(ConversationCaseMismatchException.class);
   }
 
@@ -388,7 +483,7 @@ class ChatServiceTest {
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
-    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
+    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER))
         .isInstanceOf(ConversationDocumentMismatchException.class);
   }
 
@@ -397,7 +492,7 @@ class ChatServiceTest {
     ChatRequest request = new ChatRequest("missing-id", "Вопрос", List.of(), null, null, null);
     when(conversationRepository.findActiveById("missing-id")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of()))
+    assertThatThrownBy(() -> service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER))
         .isInstanceOf(ConversationNotFoundException.class);
   }
 
@@ -409,7 +504,8 @@ class ChatServiceTest {
     when(conversationRepository.findActiveById(conversation.getId()))
         .thenReturn(Optional.of(conversation));
 
-    assertThatThrownBy(() -> service.chat(request, UUID.randomUUID(), List.of()))
+    assertThatThrownBy(
+            () -> service.chat(request, UUID.randomUUID(), List.of(), AiActorRole.LAWYER))
         .isInstanceOf(ConversationNotFoundException.class);
   }
 
@@ -420,7 +516,7 @@ class ChatServiceTest {
         .when(chatStreamExecutor)
         .execute(any());
 
-    assertThatThrownBy(() -> service.chatStream(request, lawyerId, List.of()))
+    assertThatThrownBy(() -> service.chatStream(request, lawyerId, List.of(), AiActorRole.LAWYER))
         .isInstanceOf(LlmException.class);
   }
 
@@ -428,7 +524,7 @@ class ChatServiceTest {
   void chatStreamSubmitsWorkToExecutor() {
     ChatRequest request = new ChatRequest(null, "Вопрос", List.of(), null, null, null);
 
-    var emitter = service.chatStream(request, lawyerId, List.of());
+    var emitter = service.chatStream(request, lawyerId, List.of(), AiActorRole.LAWYER);
 
     assertThat(emitter).isNotNull();
     verify(chatStreamExecutor).execute(any());
@@ -505,11 +601,11 @@ class ChatServiceTest {
         .thenReturn(RetrievedChunks.empty());
     when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
         .thenReturn("system-prompt");
-    when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение")))
+    when(llmClient.complete(eq("system-prompt"), anyList(), eq("Продолжение"), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    service.chat(request, lawyerId, List.of());
+    service.chat(request, lawyerId, List.of(), AiActorRole.LAWYER);
 
     verify(conversationRepository).touch(eq(conversation.getId()), any());
   }
@@ -522,12 +618,12 @@ class ChatServiceTest {
         .thenReturn(RetrievedChunks.empty());
     when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
         .thenReturn("system-prompt");
-    when(llmClient.complete(anyString(), anyList(), anyString()))
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    service.chat(request, lawyerId, List.of(orgId));
+    service.chat(request, lawyerId, List.of(orgId), AiActorRole.LAWYER);
 
     ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
     verify(conversationRepository).save(captor.capture());
@@ -541,12 +637,13 @@ class ChatServiceTest {
         .thenReturn(RetrievedChunks.empty());
     when(ragService.buildSystemPrompt(anyList(), eq(false), anyString()))
         .thenReturn("system-prompt");
-    when(llmClient.complete(anyString(), anyList(), anyString()))
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    service.chat(request, lawyerId, List.of(UUID.randomUUID(), UUID.randomUUID()));
+    service.chat(
+        request, lawyerId, List.of(UUID.randomUUID(), UUID.randomUUID()), AiActorRole.LAWYER);
 
     ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
     verify(conversationRepository).save(captor.capture());
@@ -568,12 +665,13 @@ class ChatServiceTest {
     when(ragService.buildCaseSystemPrompt(
             anyString(), anyString(), anyString(), anyList(), anyBoolean(), anyString()))
         .thenReturn("case-prompt");
-    when(llmClient.complete(anyString(), anyList(), anyString()))
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 2, 3)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-    service.chat(request, lawyerId, List.of(UUID.randomUUID(), UUID.randomUUID()));
+    service.chat(
+        request, lawyerId, List.of(UUID.randomUUID(), UUID.randomUUID()), AiActorRole.LAWYER);
 
     ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
     verify(conversationRepository).save(captor.capture());
@@ -581,20 +679,28 @@ class ChatServiceTest {
   }
 
   @Test
-  void deleteConversationMarksItDeleted() {
-    when(conversationRepository.softDelete(eq("conv-1"), eq(lawyerId), any())).thenReturn(true);
+  void deleteConversationMovesItToRecycleBin() {
+    Conversation owned = new Conversation(lawyerId, "Диалог");
+    ReflectionTestUtils.setField(owned, "id", "conv-1");
+    when(conversationRepository.findActiveById("conv-1")).thenReturn(Optional.of(owned));
 
-    service.deleteConversation("conv-1", lawyerId);
+    service.deleteConversation("conv-1", lawyerActor());
 
-    verify(conversationRepository).softDelete(eq("conv-1"), eq(lawyerId), any());
+    verify(recycleBin).moveToBin(RecycleBinEntityType.CONVERSATION, "conv-1", lawyerActor());
   }
 
   @Test
   void deleteConversationThrowsWhenNotOwnedOrMissing() {
-    when(conversationRepository.softDelete(eq("conv-1"), eq(lawyerId), any())).thenReturn(false);
+    Conversation foreign = new Conversation(UUID.randomUUID(), "Чужой диалог");
+    when(conversationRepository.findActiveById("conv-1")).thenReturn(Optional.of(foreign));
 
-    assertThatThrownBy(() -> service.deleteConversation("conv-1", lawyerId))
+    assertThatThrownBy(() -> service.deleteConversation("conv-1", lawyerActor()))
         .isInstanceOf(ConversationNotFoundException.class);
+    verifyNoInteractions(recycleBin);
+  }
+
+  private DeletionActor lawyerActor() {
+    return new DeletionActor(lawyerId, DeletionRole.LAWYER, null, List.of());
   }
 
   @Test
@@ -682,5 +788,10 @@ class ChatServiceTest {
     assertThat(result.getContent())
         .extracting(MessageResponse::id)
         .containsExactly("m-older", "m-newer");
+  }
+
+  private AgentLoop agentLoop() {
+    return new AgentLoop(
+        llmClient, new AiToolRegistry(List.of()), AGENT_PROPERTIES, new ObjectMapper());
   }
 }

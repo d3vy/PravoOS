@@ -93,7 +93,8 @@ class AdminConversationControllerTest {
                         "Вопрос",
                         List.of(),
                         null,
-                        LocalDateTime.now(ZoneOffset.UTC))),
+                        LocalDateTime.now(ZoneOffset.UTC),
+                        List.of())),
                 PageRequest.of(0, 50),
                 1));
 

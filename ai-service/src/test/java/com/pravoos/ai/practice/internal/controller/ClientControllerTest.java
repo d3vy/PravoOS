@@ -20,6 +20,7 @@ import com.pravoos.ai.practice.internal.dto.CreateClientRequest;
 import com.pravoos.ai.practice.internal.dto.UpdateClientRequest;
 import com.pravoos.ai.practice.internal.service.ClientService;
 import com.pravoos.ai.practice.internal.service.ConflictCheckService;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.ClientType;
 import com.pravoos.ai.shared.service.AccessAuditService;
@@ -202,7 +203,7 @@ class ClientControllerTest {
     mockMvc
         .perform(delete("/api/ai/clients/{clientId}", clientId).principal(authentication))
         .andExpect(status().isNoContent());
-    verify(clientService).delete(clientId, lawyerId, false);
+    verify(clientService).delete(eq(clientId), any(DeletionActor.class), eq(false));
   }
 
   @Test
@@ -215,6 +216,6 @@ class ClientControllerTest {
                 .param("cascade", "true")
                 .principal(authentication))
         .andExpect(status().isNoContent());
-    verify(clientService).delete(clientId, lawyerId, true);
+    verify(clientService).delete(eq(clientId), any(DeletionActor.class), eq(true));
   }
 }

@@ -6,6 +6,7 @@ import com.pravoos.ai.practice.internal.dto.InvoiceResponse;
 import com.pravoos.ai.practice.internal.dto.InvoiceSummary;
 import com.pravoos.ai.practice.internal.dto.UpdateInvoiceStatusRequest;
 import com.pravoos.ai.practice.internal.service.InvoiceService;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.ai.shared.util.SecureFileHeaders;
 import com.pravoos.common.web.SecurityUtils;
@@ -67,7 +68,7 @@ public class InvoiceController {
 
   @DeleteMapping("/{invoiceId}")
   public ResponseEntity<Void> delete(@PathVariable UUID invoiceId, Authentication authentication) {
-    invoiceService.delete(invoiceId, SecurityUtils.currentUserId(authentication));
+    invoiceService.delete(invoiceId, DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 

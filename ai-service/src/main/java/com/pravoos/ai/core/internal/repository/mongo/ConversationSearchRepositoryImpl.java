@@ -77,6 +77,20 @@ public class ConversationSearchRepositoryImpl implements ConversationSearchRepos
         > 0;
   }
 
+  @Override
+  public void restore(String conversationId) {
+    mongoTemplate.updateFirst(
+        Query.query(Criteria.where("id").is(conversationId)),
+        new Update().unset("deletedAt"),
+        Conversation.class);
+  }
+
+  @Override
+  public Optional<Conversation> findDeletedById(String conversationId) {
+    Query query = Query.query(Criteria.where("id").is(conversationId).and("deletedAt").ne(null));
+    return Optional.ofNullable(mongoTemplate.findOne(query, Conversation.class));
+  }
+
   private Criteria activeCriteria() {
     return Criteria.where("deletedAt").is(null);
   }

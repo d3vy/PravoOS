@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.pravoos.ai.document.api.DocumentCommand;
@@ -25,6 +26,10 @@ import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.DeletionRole;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.ClientNotFoundException;
@@ -59,6 +64,7 @@ class CaseServiceRemainingTest {
   @Mock private SignatureRequestRepository signatureRequestRepository;
   @Mock private CourtSyncService courtSyncService;
   @Mock private UserServiceClient userServiceClient;
+  @Mock private RecycleBin recycleBin;
 
   private CaseService caseService() {
     return new CaseService(
@@ -70,7 +76,8 @@ class CaseServiceRemainingTest {
         casePartyRepository,
         signatureRequestRepository,
         courtSyncService,
-        userServiceClient);
+        userServiceClient,
+        recycleBin);
   }
 
   private Client clientWithId(UUID id, UUID lawyerId, String name) {
@@ -394,33 +401,34 @@ class CaseServiceRemainingTest {
   }
 
   @Test
-  void deleteRemovesOwnedCaseAndCascadesRelatedData() {
+  void deleteMovesOwnedCaseToRecycleBin() {
     UUID lawyerId = UUID.randomUUID();
     UUID caseId = UUID.randomUUID();
     Case owned = caseWithId(caseId, lawyerId, null);
     when(caseRepository.findById(caseId)).thenReturn(Optional.of(owned));
+    DeletionActor actor = actor(lawyerId);
 
-    caseService().delete(caseId, lawyerId);
+    caseService().delete(caseId, actor);
 
-    verify(signatureRequestRepository).deleteByCaseId(caseId);
-    verify(documentCommand).deleteByCase(caseId);
-    verify(casePartyRepository).deleteByCaseId(caseId);
-    verify(caseRepository).delete(owned);
+    verify(recycleBin).moveToBin(RecycleBinEntityType.CASE, caseId.toString(), actor);
+    verify(caseRepository, never()).delete(any());
   }
 
   @Test
-  void deleteThrowsWhenNotOwnedAndDoesNotCascadeAnything() {
+  void deleteThrowsWhenNotOwnedAndDoesNotTouchTheBin() {
     UUID lawyerId = UUID.randomUUID();
     UUID caseId = UUID.randomUUID();
     Case foreign = caseWithId(caseId, UUID.randomUUID(), null);
     when(caseRepository.findById(caseId)).thenReturn(Optional.of(foreign));
 
-    assertThatThrownBy(() -> caseService().delete(caseId, lawyerId))
+    assertThatThrownBy(() -> caseService().delete(caseId, actor(lawyerId)))
         .isInstanceOf(CaseNotFoundException.class);
-    verify(signatureRequestRepository, never()).deleteByCaseId(any());
-    verify(documentCommand, never()).deleteByCase(any());
-    verify(casePartyRepository, never()).deleteByCaseId(any());
+    verifyNoInteractions(recycleBin);
     verify(caseRepository, never()).delete(any());
+  }
+
+  private static DeletionActor actor(UUID lawyerId) {
+    return new DeletionActor(lawyerId, DeletionRole.LAWYER, null, List.of());
   }
 
   // --- documents ---

@@ -16,7 +16,7 @@ final class ChunkSearchSql {
       " FROM document_chunks dc JOIN documents d ON d.id = dc.document_id ";
 
   static final String VISIBILITY_FILTER =
-      " d.superseded = FALSE AND d.document_kind <> 'CHAT_ATTACHMENT' ";
+      " d.deleted_at IS NULL AND d.superseded = FALSE AND d.document_kind <> 'CHAT_ATTACHMENT' ";
 
   private static final int SCORE_COLUMN = 8;
 

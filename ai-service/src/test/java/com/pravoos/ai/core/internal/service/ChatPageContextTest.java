@@ -10,11 +10,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.api.PageContextScope;
+import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentProperties;
+import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.dto.PageContextRef;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
@@ -27,10 +32,12 @@ import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.model.enums.DocumentSummaryStatus;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +54,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ChatPageContextTest {
 
+  private static final AgentProperties AGENT_PROPERTIES =
+      new AgentProperties(
+          8, 12, 8000, 8000, Duration.ofSeconds(120), 120_000L, Duration.ofMinutes(30), 30);
+
   @Mock private ConversationRepository conversationRepository;
   @Mock private MessageRepository messageRepository;
   @Mock private DocumentRetrieval documentRetrieval;
@@ -60,6 +71,8 @@ class ChatPageContextTest {
   @Mock private LegalDomainGuard legalDomainGuard;
   @Mock private LlmQuotaService quotaService;
   @Mock private ThreadPoolTaskExecutor chatStreamExecutor;
+  @Mock private AiActionProposalService proposalService;
+  @Mock private RecycleBin recycleBin;
 
   private ChatService service;
 
@@ -83,15 +96,18 @@ class ChatPageContextTest {
             documentAccessGuard,
             pageContextResolver,
             ragService,
-            llmClient,
+            agentLoop(),
+            AGENT_PROPERTIES,
             properties,
             legalDomainGuard,
             quotaService,
+            proposalService,
+            recycleBin,
             chatStreamExecutor,
             Runnable::run,
             12000);
 
-    when(llmClient.complete(anyString(), anyList(), anyString()))
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -126,7 +142,7 @@ class ChatPageContextTest {
     when(pageContextResolver.resolve("CASE", caseId, lawyerId, orgIds))
         .thenReturn(PageContextScope.ofCase(caseId, "Иванов против ООО Ромашка"));
 
-    service.chat(requestWithPageContext("CASE", caseId), lawyerId, orgIds);
+    service.chat(requestWithPageContext("CASE", caseId), lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(caseAccessProvider).assertCaseVisible(caseId, lawyerId, orgIds);
     verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId));
@@ -138,7 +154,7 @@ class ChatPageContextTest {
     when(pageContextResolver.resolve("CASE", caseId, lawyerId, orgIds))
         .thenReturn(PageContextScope.ofCase(caseId, "Иванов против ООО Ромашка"));
 
-    service.chat(requestWithPageContext("CASE", caseId), lawyerId, orgIds);
+    service.chat(requestWithPageContext("CASE", caseId), lawyerId, orgIds, AiActorRole.LAWYER);
 
     ArgumentCaptor<String> pageContextLine = ArgumentCaptor.forClass(String.class);
     verify(ragService)
@@ -151,8 +167,24 @@ class ChatPageContextTest {
             pageContextLine.capture());
     assertThat(pageContextLine.getValue())
         .contains("Иванов против ООО Ромашка")
+        .contains("CASE id: " + caseId)
         .contains("<<<КОНТЕКСТ_СТРАНИЦЫ_НАЧАЛО>>>")
         .contains("<<<КОНТЕКСТ_СТРАНИЦЫ_КОНЕЦ>>>");
+  }
+
+  @Test
+  void labelOnlyContextCarriesNoEntityIdIntoThePrompt() {
+    UUID clientId = UUID.randomUUID();
+    when(pageContextResolver.resolve("CLIENT", clientId, lawyerId, orgIds))
+        .thenReturn(PageContextScope.ofLabel("ООО Ромашка"));
+
+    service.chat(requestWithPageContext("CLIENT", clientId), lawyerId, orgIds, AiActorRole.LAWYER);
+
+    ArgumentCaptor<String> pageContextLine = ArgumentCaptor.forClass(String.class);
+    verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), pageContextLine.capture());
+    assertThat(pageContextLine.getValue())
+        .doesNotContain(clientId.toString())
+        .doesNotContain("id:");
   }
 
   @Test
@@ -160,7 +192,7 @@ class ChatPageContextTest {
     when(pageContextResolver.resolve("CASE", caseId, lawyerId, orgIds))
         .thenReturn(PageContextScope.none());
 
-    service.chat(requestWithPageContext("CASE", caseId), lawyerId, orgIds);
+    service.chat(requestWithPageContext("CASE", caseId), lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(caseAccessProvider, never()).assertCaseVisible(any(), any(), anyList());
     verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), eq(""));
@@ -171,7 +203,8 @@ class ChatPageContextTest {
     when(documentAccessGuard.requireVisible(documentId, lawyerId, orgIds))
         .thenThrow(new DocumentNotFoundException(documentId));
 
-    service.chat(requestWithPageContext("DOCUMENT", documentId), lawyerId, orgIds);
+    service.chat(
+        requestWithPageContext("DOCUMENT", documentId), lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), eq(""));
   }
@@ -194,7 +227,8 @@ class ChatPageContextTest {
     when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
         .thenReturn(DocumentChunkMatches.empty());
 
-    service.chat(requestWithPageContext("DOCUMENT", documentId), lawyerId, orgIds);
+    service.chat(
+        requestWithPageContext("DOCUMENT", documentId), lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(documentRetrieval).retrieveInDocument(anyList(), anyInt(), eq(documentId));
   }
@@ -210,7 +244,7 @@ class ChatPageContextTest {
             null,
             new PageContextRef("/clients/1", "CLIENT", UUID.randomUUID()));
 
-    service.chat(request, lawyerId, orgIds);
+    service.chat(request, lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(pageContextResolver, never()).resolve(anyString(), any(), any(), anyList());
     verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId));
@@ -222,11 +256,16 @@ class ChatPageContextTest {
     when(pageContextResolver.resolve("CLIENT", clientId, lawyerId, orgIds))
         .thenReturn(PageContextScope.ofLabel("ООО Ромашка"));
 
-    service.chat(requestWithPageContext("CLIENT", clientId), lawyerId, orgIds);
+    service.chat(requestWithPageContext("CLIENT", clientId), lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
     ArgumentCaptor<String> pageContextLine = ArgumentCaptor.forClass(String.class);
     verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), pageContextLine.capture());
     assertThat(pageContextLine.getValue()).contains("ООО Ромашка");
+  }
+
+  private AgentLoop agentLoop() {
+    return new AgentLoop(
+        llmClient, new AiToolRegistry(List.of()), AGENT_PROPERTIES, new ObjectMapper());
   }
 }

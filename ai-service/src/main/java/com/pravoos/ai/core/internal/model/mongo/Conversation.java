@@ -3,6 +3,7 @@ package com.pravoos.ai.core.internal.model.mongo;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -34,6 +35,7 @@ public class Conversation {
   }
 
   public Conversation(UUID lawyerId, UUID orgId, String title, UUID caseId, UUID documentId) {
+    this.id = new ObjectId().toString();
     this.lawyerId = lawyerId;
     this.orgId = orgId;
     this.title = title;

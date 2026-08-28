@@ -1,14 +1,22 @@
 package com.pravoos.ai.core.internal.service;
 
+import com.pravoos.ai.core.api.AiActorRole;
+import com.pravoos.ai.core.api.AiToolContext;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.api.PageContextScope;
+import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentProperties;
+import com.pravoos.ai.core.internal.agent.AgentResult;
+import com.pravoos.ai.core.internal.agent.ToolStep;
 import com.pravoos.ai.core.internal.dto.*;
+import com.pravoos.ai.core.internal.dto.ChatStreamToolStep;
 import com.pravoos.ai.core.internal.dto.PageContextRef;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.model.mongo.Message;
+import com.pravoos.ai.core.internal.model.mongo.ToolStepDoc;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
 import com.pravoos.ai.core.internal.repository.mongo.MessageRepository;
 import com.pravoos.ai.document.api.DocumentAccess;
@@ -19,10 +27,10 @@ import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.document.api.RetrievedChunk;
 import com.pravoos.ai.document.api.RetrievedChunks;
-import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmMessage;
-import com.pravoos.ai.llm.api.LlmResult;
-import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.ChatScopeConflictException;
 import com.pravoos.ai.shared.exception.ConversationCaseMismatchException;
@@ -67,6 +75,7 @@ public class ChatService {
   private static final String DOCUMENT_SOURCE_PREFIX = "Документ: ";
   private static final long STREAM_TIMEOUT_MS = 180_000L;
   private static final String DOCUMENT_ENTITY_TYPE = "DOCUMENT";
+  private static final String CASE_ENTITY_TYPE = "CASE";
   private static final String PAGE_CONTEXT_PREFIX =
       "\nПользователь сейчас открыл в интерфейсе PravoOS следующий объект. "
           + "Название приведено только как подсказка о том, о чём идёт речь, "
@@ -84,10 +93,13 @@ public class ChatService {
   private final DocumentAccessGuard documentAccessGuard;
   private final PageContextResolver pageContextResolver;
   private final RagService ragService;
-  private final LlmClient llmClient;
+  private final AgentLoop agentLoop;
+  private final AgentProperties agentProperties;
   private final DocumentProperties documentProperties;
   private final LegalDomainGuard legalDomainGuard;
   private final LlmQuotaService llmQuotaService;
+  private final AiActionProposalService proposalService;
+  private final RecycleBin recycleBin;
   private final ThreadPoolTaskExecutor chatStreamExecutor;
   private final Executor chatContextExecutor;
   private final int historyMaxChars;
@@ -102,10 +114,13 @@ public class ChatService {
       DocumentAccessGuard documentAccessGuard,
       PageContextResolver pageContextResolver,
       RagService ragService,
-      LlmClient llmClient,
+      AgentLoop agentLoop,
+      AgentProperties agentProperties,
       DocumentProperties documentProperties,
       LegalDomainGuard legalDomainGuard,
       LlmQuotaService llmQuotaService,
+      AiActionProposalService proposalService,
+      RecycleBin recycleBin,
       @Qualifier("chatStreamExecutor") ThreadPoolTaskExecutor chatStreamExecutor,
       @Qualifier("chatContextExecutor") Executor chatContextExecutor,
       @Value("${llm.history-max-chars:12000}") int historyMaxChars) {
@@ -118,20 +133,24 @@ public class ChatService {
     this.documentAccessGuard = documentAccessGuard;
     this.pageContextResolver = pageContextResolver;
     this.ragService = ragService;
-    this.llmClient = llmClient;
+    this.agentLoop = agentLoop;
+    this.agentProperties = agentProperties;
     this.documentProperties = documentProperties;
     this.legalDomainGuard = legalDomainGuard;
     this.llmQuotaService = llmQuotaService;
+    this.proposalService = proposalService;
+    this.recycleBin = recycleBin;
     this.chatStreamExecutor = chatStreamExecutor;
     this.chatContextExecutor = chatContextExecutor;
     this.historyMaxChars = historyMaxChars;
   }
 
-  public ChatResponse chat(ChatRequest incoming, UUID lawyerId, List<UUID> orgIds) {
+  public ChatResponse chat(
+      ChatRequest incoming, UUID lawyerId, List<UUID> orgIds, AiActorRole role) {
     ScopedRequest scoped = applyPageContext(incoming, lawyerId, orgIds);
     ChatRequest request = scoped.request();
     DocumentSummaryView scopedDocument = resolveAccessibleScope(request, lawyerId, orgIds);
-    llmQuotaService.assertWithinQuota(lawyerId);
+    llmQuotaService.assertQuotaHeadroom(lawyerId, agentProperties.maxIterations());
     Conversation conversation =
         resolveConversation(
             request.conversationId(),
@@ -140,7 +159,7 @@ public class ChatService {
             request.message(),
             request.caseId(),
             request.documentId());
-    boolean isNewConversation = conversation.getId() == null;
+    boolean isNewConversation = request.conversationId() == null;
 
     legalDomainGuard.assertLegalQuery(request.message());
 
@@ -162,20 +181,33 @@ public class ChatService {
             lawyerId,
             orgIds);
 
-    LlmResult completion =
-        llmClient.complete(context.systemPrompt(), context.history(), request.message());
-    llmQuotaService.recordUsage(lawyerId, completion.usage().totalTokens());
-    FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(completion.content());
+    LocalDateTime turnStartedAt = LocalDateTime.now(ZoneOffset.UTC);
+    AgentResult agentResult =
+        agentLoop.run(
+            context.systemPrompt(),
+            context.history(),
+            request.message(),
+            new AiToolContext(lawyerId, orgIds, role, conversation.getId(), turnStartedAt),
+            step -> {});
+    llmQuotaService.recordUsage(
+        lawyerId, agentResult.usage().totalTokens(), agentResult.iterations());
+    FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(agentResult.content());
     log.info(
-        "LLM chat tokens for lawyer {}: total={}, prompt={}, completion={}",
+        "LLM chat tokens for lawyer {}: total={}, prompt={}, completion={}, tool step(s)={}",
         lawyerId,
-        completion.usage().totalTokens(),
-        completion.usage().promptTokens(),
-        completion.usage().completionTokens());
+        agentResult.usage().totalTokens(),
+        agentResult.usage().promptTokens(),
+        agentResult.usage().completionTokens(),
+        agentResult.steps().size());
 
     PersistedExchange persisted =
         persistExchange(
-            conversation, isNewConversation, request.message(), parsed.answer(), context.sources());
+            conversation,
+            isNewConversation,
+            request.message(),
+            parsed.answer(),
+            context.sources(),
+            agentResult.steps());
 
     log.info(
         "Chat response generated for conversation: {} ({} source(s))",
@@ -186,14 +218,20 @@ public class ChatService {
         persisted.assistantMessageId(),
         parsed.answer(),
         context.sources(),
-        parsed.followUps());
+        parsed.followUps(),
+        proposalService.bindToMessage(
+            lawyerId,
+            persisted.conversation().getId(),
+            turnStartedAt,
+            persisted.assistantMessageId()));
   }
 
-  public SseEmitter chatStream(ChatRequest incoming, UUID lawyerId, List<UUID> orgIds) {
+  public SseEmitter chatStream(
+      ChatRequest incoming, UUID lawyerId, List<UUID> orgIds, AiActorRole role) {
     ScopedRequest scoped = applyPageContext(incoming, lawyerId, orgIds);
     ChatRequest request = scoped.request();
     DocumentSummaryView scopedDocument = resolveAccessibleScope(request, lawyerId, orgIds);
-    llmQuotaService.assertWithinQuota(lawyerId);
+    llmQuotaService.assertQuotaHeadroom(lawyerId, agentProperties.maxIterations());
     Conversation conversation =
         resolveConversation(
             request.conversationId(),
@@ -202,7 +240,7 @@ public class ChatService {
             request.message(),
             request.caseId(),
             request.documentId());
-    boolean isNewConversation = conversation.getId() == null;
+    boolean isNewConversation = request.conversationId() == null;
 
     legalDomainGuard.assertLegalQuery(request.message());
 
@@ -224,6 +262,7 @@ public class ChatService {
                   request,
                   lawyerId,
                   orgIds,
+                  role,
                   resolved,
                   isNewConversation,
                   attachedDocuments,
@@ -241,6 +280,7 @@ public class ChatService {
       ChatRequest request,
       UUID lawyerId,
       List<UUID> orgIds,
+      AiActorRole role,
       Conversation conversation,
       boolean isNewConversation,
       List<DocumentRef> attachedDocuments,
@@ -259,10 +299,17 @@ public class ChatService {
               orgIds);
 
       StreamingAnswerAccumulator accumulator = new StreamingAnswerAccumulator(emitter);
-      LlmUsage usage =
-          llmClient.streamComplete(
-              context.systemPrompt(), context.history(), request.message(), accumulator::onDelta);
-      llmQuotaService.recordUsage(lawyerId, usage.totalTokens());
+      LocalDateTime turnStartedAt = LocalDateTime.now(ZoneOffset.UTC);
+      AgentResult agentResult =
+          agentLoop.run(
+              context.systemPrompt(),
+              context.history(),
+              request.message(),
+              new AiToolContext(lawyerId, orgIds, role, conversation.getId(), turnStartedAt),
+              accumulator::onDelta,
+              step -> sendToolStep(emitter, step));
+      llmQuotaService.recordUsage(
+          lawyerId, agentResult.usage().totalTokens(), agentResult.iterations());
 
       FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(accumulator.rawContent());
       PersistedExchange persisted =
@@ -271,13 +318,23 @@ public class ChatService {
               isNewConversation,
               request.message(),
               parsed.answer(),
-              context.sources());
+              context.sources(),
+              agentResult.steps());
+
+      List<AiActionProposalResponse> proposals =
+          proposalService.bindToMessage(
+              lawyerId,
+              persisted.conversation().getId(),
+              turnStartedAt,
+              persisted.assistantMessageId());
+      sendProposals(emitter, proposals);
 
       log.info(
-          "Chat stream completed for conversation {} ({} source(s), {} tokens)",
+          "Chat stream completed for conversation {} ({} source(s), {} tool step(s), {} tokens)",
           persisted.conversation().getId(),
           context.sources().size(),
-          usage.totalTokens());
+          agentResult.steps().size(),
+          agentResult.usage().totalTokens());
       emitter.send(
           SseEmitter.event()
               .name("done")
@@ -287,7 +344,8 @@ public class ChatService {
                       persisted.assistantMessageId(),
                       parsed.answer(),
                       context.sources(),
-                      parsed.followUps())));
+                      parsed.followUps(),
+                      proposals)));
       emitter.complete();
     } catch (StreamAbortedException e) {
       log.info("Chat stream aborted by client for lawyer {}", lawyerId);
@@ -296,6 +354,36 @@ public class ChatService {
       log.error("Chat stream failed for lawyer {}: {}", lawyerId, e.getMessage(), e);
       trySendStreamError(emitter);
     }
+  }
+
+  private void sendToolStep(SseEmitter emitter, ToolStep step) {
+    try {
+      emitter.send(
+          SseEmitter.event()
+              .name("tool_step")
+              .data(new ChatStreamToolStep(step.name(), step.status().name())));
+    } catch (IOException e) {
+      throw new StreamAbortedException(e);
+    }
+  }
+
+  private void sendProposals(SseEmitter emitter, List<AiActionProposalResponse> proposals) {
+    for (AiActionProposalResponse proposal : proposals) {
+      try {
+        emitter.send(SseEmitter.event().name("proposal").data(proposal));
+      } catch (IOException e) {
+        throw new StreamAbortedException(e);
+      }
+    }
+  }
+
+  private static List<ToolStepDoc> toolStepDocs(List<ToolStep> toolSteps) {
+    return toolSteps.stream()
+        .map(
+            step ->
+                new ToolStepDoc(
+                    step.name(), step.status().name(), step.resultPreview(), step.durationMs()))
+        .toList();
   }
 
   private void trySendStreamError(SseEmitter emitter) {
@@ -503,9 +591,10 @@ public class ChatService {
     }
     if (scope.caseId() != null) {
       return new ScopedRequest(
-          request.withScope(scope.caseId(), null), pageContextLine(scope.label()));
+          request.withScope(scope.caseId(), null),
+          pageContextLine(scope.label(), CASE_ENTITY_TYPE, scope.caseId()));
     }
-    return new ScopedRequest(request, pageContextLine(scope.label()));
+    return new ScopedRequest(request, pageContextLine(scope.label(), null, null));
   }
 
   private ScopedRequest scopeToDocument(
@@ -514,18 +603,20 @@ public class ChatService {
       DocumentSummaryView document =
           documentAccessGuard.requireVisible(documentId, lawyerId, orgIds);
       return new ScopedRequest(
-          request.withScope(null, documentId), pageContextLine(document.title()));
+          request.withScope(null, documentId),
+          pageContextLine(document.title(), DOCUMENT_ENTITY_TYPE, documentId));
     } catch (RuntimeException ex) {
       log.debug("Page context document {} is not visible to lawyer {}", documentId, lawyerId);
       return new ScopedRequest(request, "");
     }
   }
 
-  private static String pageContextLine(String label) {
+  private static String pageContextLine(String label, String entityType, UUID entityId) {
     if (label == null || label.isBlank()) {
       return "";
     }
-    return PAGE_CONTEXT_PREFIX + PAGE_CONTEXT_FENCE.wrap(label);
+    String body = entityId == null ? label : label + "\n" + entityType + " id: " + entityId;
+    return PAGE_CONTEXT_PREFIX + PAGE_CONTEXT_FENCE.wrap(body);
   }
 
   private DocumentSummaryView resolveAccessibleScope(
@@ -579,14 +670,15 @@ public class ChatService {
       boolean isNewConversation,
       String userMessage,
       String answer,
-      List<String> sources) {
+      List<String> sources,
+      List<ToolStep> toolSteps) {
     Conversation persisted =
         isNewConversation ? conversationRepository.save(conversation) : conversation;
     messageRepository.save(
         new Message(persisted.getId(), MessageRole.USER, userMessage, List.of()));
-    Message assistantMessage =
-        messageRepository.save(
-            new Message(persisted.getId(), MessageRole.ASSISTANT, answer, sources));
+    Message assistant = new Message(persisted.getId(), MessageRole.ASSISTANT, answer, sources);
+    assistant.setToolSteps(toolStepDocs(toolSteps));
+    Message assistantMessage = messageRepository.save(assistant);
     if (!isNewConversation) {
       LocalDateTime lastActivity = assistantMessage.getCreatedAt();
       conversationRepository.touch(persisted.getId(), lastActivity);
@@ -712,16 +804,21 @@ public class ChatService {
         .map(ConversationResponse::from);
   }
 
-  public void deleteConversation(String conversationId, UUID lawyerId) {
-    LocalDateTime deletedAt = LocalDateTime.now(ZoneOffset.UTC);
-    if (!conversationRepository.softDelete(conversationId, lawyerId, deletedAt)) {
-      log.warn(
-          "Lawyer {} attempted to delete conversation {} that is missing or not owned",
-          lawyerId,
-          conversationId);
-      throw new ConversationNotFoundException(conversationId);
-    }
-    log.info("Conversation {} moved to bin by lawyer {}", conversationId, lawyerId);
+  public void deleteConversation(String conversationId, DeletionActor actor) {
+    Conversation conversation =
+        conversationRepository
+            .findActiveById(conversationId)
+            .filter(candidate -> actor.userId().equals(candidate.getLawyerId()))
+            .orElseThrow(
+                () -> {
+                  log.warn(
+                      "User {} attempted to delete conversation {} that is missing or not owned",
+                      actor.userId(),
+                      conversationId);
+                  return new ConversationNotFoundException(conversationId);
+                });
+    recycleBin.moveToBin(RecycleBinEntityType.CONVERSATION, conversation.getId(), actor);
+    log.info("Conversation {} moved to recycle bin by {}", conversationId, actor.userId());
   }
 
   public MessageResponse rateMessage(String messageId, RateRequest request, UUID lawyerId) {

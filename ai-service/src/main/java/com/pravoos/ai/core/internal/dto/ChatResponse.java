@@ -7,4 +7,10 @@ public record ChatResponse(
     String messageId,
     String answer,
     List<String> sources,
-    List<String> followUps) {}
+    List<String> followUps,
+    List<AiActionProposalResponse> proposals) {
+
+  public ChatResponse {
+    proposals = proposals == null ? List.of() : List.copyOf(proposals);
+  }
+}

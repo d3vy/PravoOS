@@ -15,6 +15,7 @@ import com.pravoos.ai.practice.internal.repository.jpa.CasePartyRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.SignatureRequestRepository;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.OrganizationAccessException;
@@ -38,6 +39,7 @@ class CaseServiceVisibilityTest {
   @Mock private SignatureRequestRepository signatureRequestRepository;
   @Mock private CourtSyncService courtSyncService;
   @Mock private UserServiceClient userServiceClient;
+  @Mock private RecycleBin recycleBin;
 
   private CaseService caseService() {
     return new CaseService(
@@ -49,7 +51,8 @@ class CaseServiceVisibilityTest {
         casePartyRepository,
         signatureRequestRepository,
         courtSyncService,
-        userServiceClient);
+        userServiceClient,
+        recycleBin);
   }
 
   @Test

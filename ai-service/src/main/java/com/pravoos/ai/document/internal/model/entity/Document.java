@@ -10,9 +10,11 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "documents")
+@SQLRestriction("deleted_at IS NULL")
 public class Document {
 
   @Id
@@ -80,6 +82,9 @@ public class Document {
   @Column(name = "summary_generated_at")
   private LocalDateTime summaryGeneratedAt;
 
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
+
   @PrePersist
   void prePersist() {
     uploadedAt = LocalDateTime.now(ZoneOffset.UTC);
@@ -96,6 +101,14 @@ public class Document {
 
   public UUID getId() {
     return id;
+  }
+
+  public LocalDateTime getDeletedAt() {
+    return deletedAt;
+  }
+
+  public void setDeletedAt(LocalDateTime deletedAt) {
+    this.deletedAt = deletedAt;
   }
 
   public String getTitle() {

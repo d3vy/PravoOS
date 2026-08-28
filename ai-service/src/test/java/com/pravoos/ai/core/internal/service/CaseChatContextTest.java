@@ -12,10 +12,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
+import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentProperties;
+import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
 import com.pravoos.ai.core.internal.model.mongo.Conversation;
 import com.pravoos.ai.core.internal.repository.mongo.ConversationRepository;
@@ -27,10 +32,12 @@ import com.pravoos.ai.document.api.RetrievedChunks;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.ConversationCaseMismatchException;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,6 +54,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CaseChatContextTest {
+
+  private static final AgentProperties AGENT_PROPERTIES =
+      new AgentProperties(
+          8, 12, 8000, 8000, Duration.ofSeconds(120), 120_000L, Duration.ofMinutes(30), 30);
 
   @Mock private ConversationRepository conversationRepository;
   @Mock private MessageRepository messageRepository;
@@ -68,6 +79,8 @@ class CaseChatContextTest {
   private final List<UUID> orgIds = List.of(UUID.randomUUID());
 
   @Mock private LlmQuotaService quotaService;
+  @Mock private AiActionProposalService proposalService;
+  @Mock private RecycleBin recycleBin;
 
   @BeforeEach
   void setUp() {
@@ -84,15 +97,18 @@ class CaseChatContextTest {
             documentAccessGuard,
             pageContextResolver,
             ragService,
-            llmClient,
+            agentLoop(),
+            AGENT_PROPERTIES,
             properties,
             legalDomainGuard,
             quotaService,
+            proposalService,
+            recycleBin,
             chatStreamExecutor,
             Runnable::run,
             12000);
 
-    when(llmClient.complete(anyString(), anyList(), anyString()))
+    when(llmClient.complete(anyString(), anyList(), anyString(), any()))
         .thenReturn(new LlmResult("Ответ", new LlmUsage(1, 1, 2)));
     when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -127,7 +143,8 @@ class CaseChatContextTest {
         service.chat(
             new ChatRequest(null, "Какие сроки по договору?", null, caseId, null, null),
             lawyerId,
-            orgIds);
+            orgIds,
+            AiActorRole.LAWYER);
 
     verify(caseAccessProvider).assertCaseVisible(caseId, lawyerId, orgIds);
     verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId));
@@ -149,7 +166,10 @@ class CaseChatContextTest {
         .thenReturn(RetrievedChunks.empty());
 
     service.chat(
-        new ChatRequest(null, "Вопрос по делу", null, caseId, null, null), lawyerId, orgIds);
+        new ChatRequest(null, "Вопрос по делу", null, caseId, null, null),
+        lawyerId,
+        orgIds,
+        AiActorRole.LAWYER);
 
     verify(conversationRepository)
         .save(ArgumentMatchers.argThat(conversation -> caseId.equals(conversation.getCaseId())));
@@ -166,7 +186,8 @@ class CaseChatContextTest {
                 service.chat(
                     new ChatRequest(null, "Вопрос по чужому делу", null, caseId, null, null),
                     lawyerId,
-                    orgIds))
+                    orgIds,
+                    AiActorRole.LAWYER))
         .isInstanceOf(CaseNotFoundException.class);
 
     verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
@@ -182,7 +203,8 @@ class CaseChatContextTest {
                 service.chat(
                     new ChatRequest("c1", "Вопрос по делу", null, caseId, null, null),
                     lawyerId,
-                    orgIds))
+                    orgIds,
+                    AiActorRole.LAWYER))
         .isInstanceOf(ConversationCaseMismatchException.class);
   }
 
@@ -196,16 +218,26 @@ class CaseChatContextTest {
                 service.chat(
                     new ChatRequest("c1", "Вопрос по делу", null, caseId, null, null),
                     lawyerId,
-                    orgIds))
+                    orgIds,
+                    AiActorRole.LAWYER))
         .isInstanceOf(ConversationCaseMismatchException.class);
   }
 
   @Test
   void generalChatKeepsKnowledgeBaseOnlyPath() {
-    service.chat(new ChatRequest(null, "Общий вопрос", null, null, null, null), lawyerId, orgIds);
+    service.chat(
+        new ChatRequest(null, "Общий вопрос", null, null, null, null),
+        lawyerId,
+        orgIds,
+        AiActorRole.LAWYER);
 
     verify(caseAccessProvider, never()).assertCaseVisible(any(), any(), anyList());
     verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
     verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), anyString());
+  }
+
+  private AgentLoop agentLoop() {
+    return new AgentLoop(
+        llmClient, new AiToolRegistry(List.of()), AGENT_PROPERTIES, new ObjectMapper());
   }
 }

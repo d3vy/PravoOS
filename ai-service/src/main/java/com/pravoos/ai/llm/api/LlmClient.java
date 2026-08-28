@@ -10,10 +10,19 @@ public interface LlmClient {
   LlmResult complete(
       String systemPrompt, List<LlmMessage> history, String userMessage, LlmOptions options);
 
-  LlmUsage streamComplete(
+  default LlmStreamResult streamComplete(
       String systemPrompt,
       List<LlmMessage> history,
       String userMessage,
+      Consumer<String> tokenConsumer) {
+    return streamComplete(systemPrompt, history, userMessage, LlmOptions.DEFAULT, tokenConsumer);
+  }
+
+  LlmStreamResult streamComplete(
+      String systemPrompt,
+      List<LlmMessage> history,
+      String userMessage,
+      LlmOptions options,
       Consumer<String> tokenConsumer);
 
   float[] embed(String text);

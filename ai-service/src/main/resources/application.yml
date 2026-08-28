@@ -109,6 +109,24 @@ draft-editing:
   max-content-chars: ${DRAFT_EDITING_MAX_CONTENT_CHARS:60000}
   max-refine-chars: ${DRAFT_EDITING_MAX_REFINE_CHARS:20000}
 
+agent:
+  max-iterations: ${AGENT_MAX_ITERATIONS:8}
+  max-tool-calls: ${AGENT_MAX_TOOL_CALLS:12}
+  max-result-chars: ${AGENT_MAX_RESULT_CHARS:8000}
+  max-arguments-chars: ${AGENT_MAX_ARGUMENTS_CHARS:8000}
+  max-duration: ${AGENT_MAX_DURATION:PT120S}
+  max-total-tokens: ${AGENT_MAX_TOTAL_TOKENS:120000}
+  proposal-ttl: ${AGENT_PROPOSAL_TTL:PT30M}
+  max-write-actions-per-hour: ${AGENT_MAX_WRITE_ACTIONS_PER_HOUR:30}
+  proposal-expiry-cron: ${AGENT_PROPOSAL_EXPIRY_CRON:0 */5 * * * *}
+
+recycle-bin:
+  enabled: ${RECYCLE_BIN_ENABLED:true}
+  retention: ${RECYCLE_BIN_RETENTION:P7D}
+  purge:
+    cron: ${RECYCLE_BIN_PURGE_CRON:0 30 3 * * *}
+    batch-size: ${RECYCLE_BIN_PURGE_BATCH:100}
+
 document:
   storage-path: ${DOCUMENT_STORAGE_PATH:/app/documents}
   chunk-size: 512

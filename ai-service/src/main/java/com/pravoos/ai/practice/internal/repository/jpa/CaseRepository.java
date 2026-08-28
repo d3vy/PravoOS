@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.repository.jpa;
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -248,5 +249,21 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
       @Param("orgId") UUID orgId,
       @Param("newOwnerId") UUID newOwnerId);
 
-  int deleteByLawyerId(UUID lawyerId);
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "DELETE FROM cases WHERE lawyer_id = :lawyerId", nativeQuery = true)
+  int deleteByLawyerId(@Param("lawyerId") UUID lawyerId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      value = "UPDATE cases SET deleted_at = :deletedAt WHERE id = :id AND deleted_at IS NULL",
+      nativeQuery = true)
+  int softDelete(@Param("id") UUID id, @Param("deletedAt") LocalDateTime deletedAt);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "UPDATE cases SET deleted_at = NULL WHERE id = :id", nativeQuery = true)
+  int restore(@Param("id") UUID id);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "DELETE FROM cases WHERE id = :id", nativeQuery = true)
+  int hardDelete(@Param("id") UUID id);
 }

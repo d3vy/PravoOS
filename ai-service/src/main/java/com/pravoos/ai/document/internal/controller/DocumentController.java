@@ -5,6 +5,9 @@ import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.document.internal.dto.LegislationResponse;
 import com.pravoos.ai.document.internal.service.DocumentService;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.shared.util.PagedResponse;
@@ -28,11 +31,15 @@ public class DocumentController {
 
   private final DocumentService documentService;
   private final AccessAuditService accessAuditService;
+  private final RecycleBin recycleBin;
 
   public DocumentController(
-      DocumentService documentService, AccessAuditService accessAuditService) {
+      DocumentService documentService,
+      AccessAuditService accessAuditService,
+      RecycleBin recycleBin) {
     this.documentService = documentService;
     this.accessAuditService = accessAuditService;
+    this.recycleBin = recycleBin;
   }
 
   @PostMapping
@@ -108,8 +115,10 @@ public class DocumentController {
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
-    documentService.delete(id);
+  public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication authentication) {
+    documentService.requireDeletable(id);
+    recycleBin.moveToBin(
+        RecycleBinEntityType.DOCUMENT, id.toString(), DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 }

@@ -98,6 +98,8 @@ public class SecurityConfig {
                     .hasRole("LAWYER")
                     .requestMatchers("/api/ai/billing-profile/**")
                     .hasRole("LAWYER")
+                    .requestMatchers("/api/ai/recycle-bin/**")
+                    .hasRole("LAWYER")
                     .requestMatchers("/api/ai/saved-views/**")
                     .hasRole("LAWYER")
                     .requestMatchers("/api/ai/time/**")

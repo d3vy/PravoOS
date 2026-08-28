@@ -1,12 +1,21 @@
 package com.pravoos.ai.llm.internal;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pravoos.ai.llm.api.EmbeddingResult;
+import com.pravoos.ai.llm.api.LlmMessage;
+import com.pravoos.ai.llm.api.LlmOptions;
 import com.pravoos.ai.llm.api.LlmResult;
+import com.pravoos.ai.llm.api.LlmStreamResult;
+import com.pravoos.ai.llm.api.LlmToolCall;
 import com.pravoos.ai.llm.api.LlmUsage;
+import com.pravoos.ai.llm.api.ToolSpec;
 import com.pravoos.ai.shared.config.LlmServiceProperties;
 import com.pravoos.ai.shared.exception.LlmException;
 import com.pravoos.ai.shared.security.AiProcessingGuard;
@@ -148,10 +157,11 @@ class RemoteLlmClientTest {
         });
 
     List<String> tokens = new ArrayList<>();
-    LlmUsage usage = client.streamComplete("system", List.of(), "hi", tokens::add);
+    LlmStreamResult result = client.streamComplete("system", List.of(), "hi", tokens::add);
 
     assertThat(tokens).containsExactly("Hel", "lo");
-    assertThat(usage.totalTokens()).isEqualTo(7);
+    assertThat(result.usage().totalTokens()).isEqualTo(7);
+    assertThat(result.hasToolCalls()).isFalse();
   }
 
   @Test
@@ -168,9 +178,9 @@ class RemoteLlmClientTest {
           }
         });
 
-    LlmUsage usage = client.streamComplete("system", List.of(), "hi", token -> {});
+    LlmStreamResult result = client.streamComplete("system", List.of(), "hi", token -> {});
 
-    assertThat(usage).isEqualTo(LlmUsage.EMPTY);
+    assertThat(result.usage()).isEqualTo(LlmUsage.EMPTY);
   }
 
   @Test
@@ -203,5 +213,148 @@ class RemoteLlmClientTest {
 
     assertThatThrownBy(() -> client.streamComplete("system", List.of(), "hi", token -> {}))
         .isInstanceOf(LlmException.class);
+  }
+
+  @Test
+  void completeSendsToolSpecsAndParsesToolCallsBack() throws Exception {
+    AtomicReference<String> capturedBody = new AtomicReference<>();
+    String response =
+        objectMapper.writeValueAsString(
+            new LlmResult(
+                "",
+                new LlmUsage(1, 1, 2),
+                List.of(new LlmToolCall("call_1", "create_client", "{\"fullName\":\"Пётр\"}")),
+                "tool_calls"));
+    server.createContext(
+        "/internal/llm/complete",
+        exchange -> {
+          capturedBody.set(new String(exchange.getRequestBody().readAllBytes(), UTF_8));
+          byte[] bytes = response.getBytes(UTF_8);
+          exchange.getResponseHeaders().add("Content-Type", "application/json");
+          exchange.sendResponseHeaders(200, bytes.length);
+          try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+          }
+        });
+
+    LlmResult result = client.complete("system", List.of(), "создай клиента", createClientTools());
+
+    JsonNode sentTools = objectMapper.readTree(capturedBody.get()).path("options").path("tools");
+    assertThat(sentTools.get(0).path("name").textValue()).isEqualTo("create_client");
+    assertThat(sentTools.get(0).path("parameters").path("type").textValue()).isEqualTo("object");
+    assertThat(
+            objectMapper
+                .readTree(capturedBody.get())
+                .path("options")
+                .path("toolChoice")
+                .textValue())
+        .isEqualTo("auto");
+    assertThat(result.finishReason()).isEqualTo("tool_calls");
+    assertThat(result.toolCalls())
+        .containsExactly(new LlmToolCall("call_1", "create_client", "{\"fullName\":\"Пётр\"}"));
+  }
+
+  @Test
+  void streamCompleteParsesTheToolCallsEvent() {
+    String sse =
+        "event: token\ndata: {\"token\":\"Секунду\"}\n\n"
+            + "event: tool_calls\ndata: {\"toolCalls\":[{\"id\":\"call_1\","
+            + "\"name\":\"create_client\",\"argumentsJson\":\"{\\\"fullName\\\":\\\"Пётр\\\"}\"}]}\n\n"
+            + "event: usage\ndata: {\"promptTokens\":5,\"completionTokens\":2,\"totalTokens\":7}\n\n";
+    respondStream(sse);
+
+    List<String> tokens = new ArrayList<>();
+    LlmStreamResult result =
+        client.streamComplete(
+            "system", List.of(), "создай клиента", createClientTools(), tokens::add);
+
+    assertThat(tokens).containsExactly("Секунду");
+    assertThat(result.usage().totalTokens()).isEqualTo(7);
+    assertThat(result.finishReason()).isEqualTo("tool_calls");
+    assertThat(result.toolCalls())
+        .containsExactly(new LlmToolCall("call_1", "create_client", "{\"fullName\":\"Пётр\"}"));
+  }
+
+  @Test
+  void streamCompleteSendsToolSpecsToLlmService() throws Exception {
+    AtomicReference<String> capturedBody = new AtomicReference<>();
+    byte[] bytes =
+        "event: usage\ndata: {\"promptTokens\":1,\"completionTokens\":1,\"totalTokens\":2}\n\n"
+            .getBytes(UTF_8);
+    server.createContext(
+        "/internal/llm/stream",
+        exchange -> {
+          capturedBody.set(new String(exchange.getRequestBody().readAllBytes(), UTF_8));
+          exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
+          exchange.sendResponseHeaders(200, bytes.length);
+          try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+          }
+        });
+
+    client.streamComplete("system", List.of(), "создай клиента", createClientTools(), token -> {});
+
+    assertThat(
+            objectMapper
+                .readTree(capturedBody.get())
+                .path("options")
+                .path("tools")
+                .get(0)
+                .path("name")
+                .textValue())
+        .isEqualTo("create_client");
+  }
+
+  @Test
+  void streamCompleteSendsAssistantToolCallsAndToolResultsInHistory() throws Exception {
+    AtomicReference<String> capturedBody = new AtomicReference<>();
+    byte[] bytes =
+        "event: usage\ndata: {\"promptTokens\":1,\"completionTokens\":1,\"totalTokens\":2}\n\n"
+            .getBytes(UTF_8);
+    server.createContext(
+        "/internal/llm/stream",
+        exchange -> {
+          capturedBody.set(new String(exchange.getRequestBody().readAllBytes(), UTF_8));
+          exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
+          exchange.sendResponseHeaders(200, bytes.length);
+          try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+          }
+        });
+
+    List<LlmMessage> history =
+        List.of(
+            LlmMessage.assistant(null, List.of(new LlmToolCall("call_1", "create_client", "{}"))),
+            LlmMessage.tool("call_1", "{\"clientId\":\"7\"}"));
+
+    client.streamComplete("system", history, null, LlmOptions.DEFAULT, token -> {});
+
+    JsonNode sentHistory = objectMapper.readTree(capturedBody.get()).path("history");
+    assertThat(sentHistory.get(0).path("toolCalls").get(0).path("id").textValue())
+        .isEqualTo("call_1");
+    assertThat(sentHistory.get(1).path("role").textValue()).isEqualTo("tool");
+    assertThat(sentHistory.get(1).path("toolCallId").textValue()).isEqualTo("call_1");
+  }
+
+  private void respondStream(String sse) {
+    server.createContext(
+        "/internal/llm/stream",
+        exchange -> {
+          byte[] bytes = sse.getBytes(UTF_8);
+          exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
+          exchange.sendResponseHeaders(200, bytes.length);
+          try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+          }
+        });
+  }
+
+  private static LlmOptions createClientTools() {
+    ObjectNode parameters = JsonNodeFactory.instance.objectNode();
+    parameters.put("type", "object");
+    parameters.putObject("properties").putObject("fullName").put("type", "string");
+    return LlmOptions.withTools(
+        List.of(new ToolSpec("create_client", "Создать клиента", parameters)),
+        LlmOptions.TOOL_CHOICE_AUTO);
   }
 }

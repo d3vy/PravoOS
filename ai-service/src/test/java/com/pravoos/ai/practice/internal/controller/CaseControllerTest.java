@@ -27,6 +27,7 @@ import com.pravoos.ai.practice.internal.service.CaseService;
 import com.pravoos.ai.practice.internal.service.CaseTaskService;
 import com.pravoos.ai.practice.internal.service.WorkflowExecutionService;
 import com.pravoos.ai.practice.internal.service.WorkflowService;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
@@ -209,7 +210,7 @@ class CaseControllerTest {
     mockMvc
         .perform(delete("/api/ai/cases/{caseId}", caseId).principal(authentication))
         .andExpect(status().isNoContent());
-    verify(caseService).delete(caseId, lawyerId);
+    verify(caseService).delete(eq(caseId), any(DeletionActor.class));
   }
 
   @Test

@@ -35,7 +35,8 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UU
             SELECT EXISTS (
                 SELECT 1 FROM document_chunks dc
                 JOIN documents d ON d.id = dc.document_id
-                WHERE d.case_id IS NULL AND d.document_kind <> 'CHAT_ATTACHMENT'
+                WHERE d.deleted_at IS NULL
+                  AND d.case_id IS NULL AND d.document_kind <> 'CHAT_ATTACHMENT'
                   AND dc.content LIKE :pattern ESCAPE '!'
             )
             """,

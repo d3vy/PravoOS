@@ -14,6 +14,7 @@ import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.document.internal.pipeline.ChunkData;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentChunkRepository;
 import com.pravoos.ai.document.internal.repository.jpa.DocumentRepository;
+import com.pravoos.ai.recyclebin.api.BinSnapshot;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.exception.DocumentProcessingException;
@@ -42,6 +43,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceTest {
@@ -411,52 +413,67 @@ class DocumentServiceTest {
   }
 
   @Test
-  void delete_throwsNotFound_whenDocumentMissing() {
+  void requireDeletable_throwsNotFound_whenDocumentMissing() {
     UUID documentId = UUID.randomUUID();
     when(documentRepository.findById(documentId)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.delete(documentId))
+    assertThatThrownBy(() -> service.requireDeletable(documentId))
         .isInstanceOf(DocumentNotFoundException.class);
   }
 
   @Test
-  void delete_throwsNotFound_whenDocumentBelongsToCase() {
+  void requireDeletable_throwsNotFound_whenDocumentBelongsToCase() {
     UUID documentId = UUID.randomUUID();
     Document document = new Document();
     document.setCaseId(UUID.randomUUID());
     when(documentRepository.findById(documentId)).thenReturn(Optional.of(document));
 
-    assertThatThrownBy(() -> service.delete(documentId))
+    assertThatThrownBy(() -> service.requireDeletable(documentId))
         .isInstanceOf(DocumentNotFoundException.class);
     verify(documentChunkRepository, never()).deleteByDocumentId(any());
   }
 
   @Test
-  void delete_removesChunksAndDocument_whenKnowledgeBaseDocument() {
+  void moveToBin_marksDocumentDeletedAndKeepsChunks() {
     UUID documentId = UUID.randomUUID();
     Document document = new Document();
-    document.setFilePath(null);
+    ReflectionTestUtils.setField(document, "id", documentId);
+    document.setTitle("Договор");
+    document.setUploadedBy(UUID.randomUUID());
     when(documentRepository.findById(documentId)).thenReturn(Optional.of(document));
 
-    service.delete(documentId);
+    BinSnapshot snapshot = service.moveToBin(documentId);
 
-    verify(documentChunkRepository).deleteByDocumentId(documentId);
-    verify(documentRepository).delete(document);
+    assertThat(snapshot.entityId()).isEqualTo(documentId.toString());
+    assertThat(snapshot.title()).isEqualTo("Договор");
+    verify(documentRepository).softDelete(eq(documentId), any());
+    verify(documentChunkRepository, never()).deleteByDocumentId(any());
   }
 
   @Test
-  void deleteByCase_removesAllDocumentsAndChunks() {
+  void purge_removesChunksAndDocumentRow() {
+    UUID documentId = UUID.randomUUID();
+    when(documentRepository.findFilePathIncludingDeleted(documentId)).thenReturn(Optional.empty());
+
+    service.purge(documentId);
+
+    verify(documentChunkRepository).deleteByDocumentId(documentId);
+    verify(documentRepository).hardDelete(documentId);
+  }
+
+  @Test
+  void purgeByCase_purgesEveryDocumentIncludingSoftDeleted() {
     UUID caseId = UUID.randomUUID();
-    Document first = new Document();
-    Document second = new Document();
-    when(documentRepository.findByCaseIdOrderByUploadedAtDesc(caseId))
+    UUID first = UUID.randomUUID();
+    UUID second = UUID.randomUUID();
+    when(documentRepository.findIdsByCaseIdIncludingDeleted(caseId))
         .thenReturn(List.of(first, second));
 
-    service.deleteByCase(caseId);
+    service.purgeByCase(caseId);
 
     verify(documentChunkRepository, times(2)).deleteByDocumentId(any());
-    verify(documentRepository).delete(first);
-    verify(documentRepository).delete(second);
+    verify(documentRepository).hardDelete(first);
+    verify(documentRepository).hardDelete(second);
   }
 
   @Test

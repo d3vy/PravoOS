@@ -1,5 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -15,6 +16,7 @@ import com.pravoos.ai.shared.model.enums.TrustMetric;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class LegalDomainGuardTest {
 
@@ -113,6 +115,22 @@ class LegalDomainGuardTest {
 
     assertThatThrownBy(() -> failOpenGuard.assertLegalQuery("Вопрос"))
         .isInstanceOf(NonLegalQueryException.class);
+  }
+
+  @Test
+  void classifierPromptAllowsCrmCommandsSoTheAgentCanBeReached() {
+    when(llmClient.complete(anySystemPrompt(), any(), any(), any()))
+        .thenReturn(new LlmResult("YES", LlmUsage.EMPTY));
+
+    failOpenGuard.assertLegalQuery("Создай клиента Иванова Ивана Ивановича");
+
+    ArgumentCaptor<String> systemPrompt = ArgumentCaptor.forClass(String.class);
+    verify(llmClient).complete(systemPrompt.capture(), any(), any(), any());
+    assertThat(systemPrompt.getValue())
+        .contains("CRM")
+        .contains("создать")
+        .contains("архивировать")
+        .contains("подтвердить");
   }
 
   private String anySystemPrompt() {

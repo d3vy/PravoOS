@@ -20,6 +20,7 @@ import com.pravoos.ai.practice.internal.dto.InvoiceResponse;
 import com.pravoos.ai.practice.internal.dto.InvoiceSummary;
 import com.pravoos.ai.practice.internal.dto.UpdateInvoiceStatusRequest;
 import com.pravoos.ai.practice.internal.service.InvoiceService;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
@@ -195,7 +196,7 @@ class InvoiceControllerTest {
     mockMvc
         .perform(delete("/api/ai/invoices/{invoiceId}", invoiceId).principal(authentication))
         .andExpect(status().isNoContent());
-    verify(invoiceService).delete(invoiceId, lawyerId);
+    verify(invoiceService).delete(eq(invoiceId), any(DeletionActor.class));
   }
 
   @Test

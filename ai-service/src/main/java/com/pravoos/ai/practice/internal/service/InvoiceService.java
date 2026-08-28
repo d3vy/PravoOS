@@ -13,6 +13,9 @@ import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.TimeEntryRepository;
 import com.pravoos.ai.practice.internal.util.BillingAmounts;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.exception.InvoiceStateException;
 import com.pravoos.ai.shared.exception.NoBillableTimeException;
@@ -48,6 +51,7 @@ public class InvoiceService {
   private final InvoicePdfWriter invoicePdfWriter;
   private final BillingProfileService billingProfileService;
   private final InvoicePaidPublisher invoicePaidPublisher;
+  private final RecycleBin recycleBin;
 
   public InvoiceService(
       InvoiceRepository invoiceRepository,
@@ -57,7 +61,8 @@ public class InvoiceService {
       InvoiceNumberGenerator invoiceNumberGenerator,
       InvoicePdfWriter invoicePdfWriter,
       BillingProfileService billingProfileService,
-      InvoicePaidPublisher invoicePaidPublisher) {
+      InvoicePaidPublisher invoicePaidPublisher,
+      RecycleBin recycleBin) {
     this.invoiceRepository = invoiceRepository;
     this.timeEntryRepository = timeEntryRepository;
     this.clientRepository = clientRepository;
@@ -66,6 +71,7 @@ public class InvoiceService {
     this.invoicePdfWriter = invoicePdfWriter;
     this.billingProfileService = billingProfileService;
     this.invoicePaidPublisher = invoicePaidPublisher;
+    this.recycleBin = recycleBin;
   }
 
   @Transactional
@@ -159,14 +165,12 @@ public class InvoiceService {
   }
 
   @Transactional
-  public void delete(UUID invoiceId, UUID lawyerId) {
-    Invoice invoice = requireOwnedInvoice(invoiceId, lawyerId);
+  public void delete(UUID invoiceId, DeletionActor actor) {
+    Invoice invoice = requireOwnedInvoice(invoiceId, actor.userId());
     if (invoice.getStatus() != InvoiceStatus.DRAFT) {
       throw new InvoiceStateException("Only draft invoices can be deleted; cancel it instead");
     }
-    timeEntryRepository.releaseByInvoiceId(invoiceId);
-    invoiceRepository.delete(invoice);
-    log.info("Invoice {} deleted by lawyer {}", invoiceId, lawyerId);
+    recycleBin.moveToBin(RecycleBinEntityType.INVOICE, invoiceId.toString(), actor);
   }
 
   @Transactional(readOnly = true)

@@ -18,12 +18,18 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, UUID> {
 
   Optional<TimeEntry> findByLawyerIdAndRunningTrue(UUID lawyerId);
 
-  List<TimeEntry> findByLawyerIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalse(UUID lawyerId);
+  @Query(
+      "SELECT t FROM TimeEntry t WHERE t.lawyerId = :lawyerId "
+          + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "
+          + "AND EXISTS (SELECT 1 FROM Case c WHERE c.id = t.caseId)")
+  List<TimeEntry> findByLawyerIdAndBillableTrueAndInvoiceIdIsNullAndRunningFalse(
+      @Param("lawyerId") UUID lawyerId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
       "SELECT t FROM TimeEntry t WHERE t.clientId = :clientId AND t.lawyerId = :lawyerId "
           + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "
+          + "AND EXISTS (SELECT 1 FROM Case c WHERE c.id = t.caseId) "
           + "ORDER BY t.activityDate ASC")
   List<TimeEntry> lockBillableForClient(
       @Param("clientId") UUID clientId, @Param("lawyerId") UUID lawyerId);
@@ -33,6 +39,7 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, UUID> {
       "SELECT t FROM TimeEntry t WHERE t.clientId = :clientId AND t.caseId = :caseId "
           + "AND t.lawyerId = :lawyerId "
           + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "
+          + "AND EXISTS (SELECT 1 FROM Case c WHERE c.id = t.caseId) "
           + "ORDER BY t.activityDate ASC")
   List<TimeEntry> lockBillableForClientAndCase(
       @Param("clientId") UUID clientId,
@@ -44,6 +51,7 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, UUID> {
       "SELECT t FROM TimeEntry t WHERE t.id IN :ids AND t.clientId = :clientId "
           + "AND t.lawyerId = :lawyerId "
           + "AND t.billable = true AND t.invoiceId IS NULL AND t.running = false "
+          + "AND EXISTS (SELECT 1 FROM Case c WHERE c.id = t.caseId) "
           + "ORDER BY t.activityDate ASC")
   List<TimeEntry> lockBillableByIds(
       @Param("ids") Collection<UUID> ids,

@@ -1,10 +1,12 @@
 package com.pravoos.ai.core.internal.controller;
 
+import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.internal.dto.*;
 import com.pravoos.ai.core.internal.service.ChatAttachmentService;
 import com.pravoos.ai.core.internal.service.ChatService;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletResponse;
@@ -54,7 +56,8 @@ public class ChatController {
         chatService.chat(
             request,
             SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+            SecurityUtils.currentOrgIds(authentication),
+            AiActorRole.of(authentication)));
   }
 
   @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -67,7 +70,8 @@ public class ChatController {
     return chatService.chatStream(
         request,
         SecurityUtils.currentUserId(authentication),
-        SecurityUtils.currentOrgIds(authentication));
+        SecurityUtils.currentOrgIds(authentication),
+        AiActorRole.of(authentication));
   }
 
   @GetMapping("/conversations")
@@ -102,7 +106,7 @@ public class ChatController {
   @DeleteMapping("/conversations/{id}")
   public ResponseEntity<Void> deleteConversation(
       @PathVariable String id, Authentication authentication) {
-    chatService.deleteConversation(id, SecurityUtils.currentUserId(authentication));
+    chatService.deleteConversation(id, DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 

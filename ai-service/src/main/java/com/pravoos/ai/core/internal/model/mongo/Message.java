@@ -20,6 +20,8 @@ public class Message {
 
   private List<String> sources;
 
+  private List<ToolStepDoc> toolSteps;
+
   private Integer rating;
 
   private String ratingComment;
@@ -54,6 +56,14 @@ public class Message {
 
   public List<String> getSources() {
     return sources;
+  }
+
+  public List<ToolStepDoc> getToolSteps() {
+    return toolSteps == null ? List.of() : toolSteps;
+  }
+
+  public void setToolSteps(List<ToolStepDoc> toolSteps) {
+    this.toolSteps = toolSteps;
   }
 
   public Integer getRating() {

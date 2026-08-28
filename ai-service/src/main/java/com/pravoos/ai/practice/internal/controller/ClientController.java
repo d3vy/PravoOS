@@ -9,6 +9,7 @@ import com.pravoos.ai.practice.internal.dto.PersonalDataExportResponse;
 import com.pravoos.ai.practice.internal.dto.UpdateClientRequest;
 import com.pravoos.ai.practice.internal.service.ClientService;
 import com.pravoos.ai.practice.internal.service.ConflictCheckService;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.service.AccessAuditService;
@@ -143,7 +144,7 @@ public class ClientController {
       @PathVariable UUID clientId,
       @RequestParam(defaultValue = "false") boolean cascade,
       Authentication authentication) {
-    clientService.delete(clientId, SecurityUtils.currentUserId(authentication), cascade);
+    clientService.delete(clientId, DeletionActor.of(authentication), cascade);
     return ResponseEntity.noContent().build();
   }
 }

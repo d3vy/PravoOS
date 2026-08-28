@@ -1,5 +1,7 @@
 package com.pravoos.ai.document.api;
 
+import com.pravoos.ai.recyclebin.api.BinSnapshot;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,9 +14,13 @@ public interface DocumentCommand {
   DocumentUploadResponse upload(
       MultipartFile file, String title, UUID uploadedBy, UUID caseId, boolean visibleToClient);
 
-  void deleteByCase(UUID caseId);
+  void purgeByCase(UUID caseId);
+
+  List<BinSnapshot> moveCaseDocumentsToBin(UUID caseId);
 
   DocumentResponse setClientVisibility(UUID documentId, UUID caseId, boolean visibleToClient);
+
+  DocumentResponse attachToCase(UUID documentId, UUID caseId);
 
   DocumentContent loadClientContent(UUID documentId, UUID caseId);
 

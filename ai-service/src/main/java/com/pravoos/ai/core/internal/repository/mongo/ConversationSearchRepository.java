@@ -20,4 +20,8 @@ public interface ConversationSearchRepository {
   void touch(String conversationId, LocalDateTime updatedAt);
 
   boolean softDelete(String conversationId, UUID lawyerId, LocalDateTime deletedAt);
+
+  void restore(String conversationId);
+
+  Optional<Conversation> findDeletedById(String conversationId);
 }

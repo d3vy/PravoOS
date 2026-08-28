@@ -93,11 +93,15 @@ public class LlmQuotaService {
   }
 
   public void recordUsage(UUID lawyerId, long totalTokens) {
+    recordUsage(lawyerId, totalTokens, 1);
+  }
+
+  public void recordUsage(UUID lawyerId, long totalTokens, int requestCount) {
     if (planLimitsProvider.currentLimits().quotaDisabled()) {
       return;
     }
     try {
-      incrementWithTtl(requestKey(lawyerId), 1L);
+      incrementWithTtl(requestKey(lawyerId), Math.max(1L, requestCount));
       if (totalTokens > 0) {
         incrementWithTtl(tokenKey(lawyerId), totalTokens);
       }

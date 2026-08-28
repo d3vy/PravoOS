@@ -6,6 +6,8 @@ import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmMessage;
 import com.pravoos.ai.llm.api.LlmOptions;
 import com.pravoos.ai.llm.api.LlmResult;
+import com.pravoos.ai.llm.api.LlmStreamResult;
+import com.pravoos.ai.llm.api.LlmToolCall;
 import com.pravoos.ai.llm.api.LlmUsage;
 import com.pravoos.ai.shared.config.LlmServiceProperties;
 import com.pravoos.ai.shared.exception.LlmException;
@@ -109,10 +111,11 @@ public class RemoteLlmClient implements LlmClient {
   }
 
   @Override
-  public LlmUsage streamComplete(
+  public LlmStreamResult streamComplete(
       String systemPrompt,
       List<LlmMessage> history,
       String userMessage,
+      LlmOptions options,
       Consumer<String> tokenConsumer) {
     aiProcessingGuard.ensureRemoteCallAllowed();
     try {
@@ -121,7 +124,12 @@ public class RemoteLlmClient implements LlmClient {
           .uri("/internal/llm/stream")
           .contentType(MediaType.APPLICATION_JSON)
           .accept(MediaType.TEXT_EVENT_STREAM)
-          .body(new CompleteRequest(systemPrompt, history, userMessage, LlmOptions.DEFAULT))
+          .body(
+              new CompleteRequest(
+                  systemPrompt,
+                  history,
+                  userMessage,
+                  options == null ? LlmOptions.DEFAULT : options))
           .exchange(
               (clientRequest, clientResponse) -> {
                 if (clientResponse.getStatusCode().isError()) {
@@ -137,8 +145,9 @@ public class RemoteLlmClient implements LlmClient {
     }
   }
 
-  private LlmUsage consumeSse(InputStream body, Consumer<String> tokenConsumer) throws IOException {
-    LlmUsage usage = LlmUsage.EMPTY;
+  private LlmStreamResult consumeSse(InputStream body, Consumer<String> tokenConsumer)
+      throws IOException {
+    StreamAccumulator accumulator = new StreamAccumulator();
     String currentEvent = null;
     StringBuilder data = new StringBuilder();
     try (BufferedReader reader =
@@ -146,10 +155,7 @@ public class RemoteLlmClient implements LlmClient {
       String line;
       while ((line = reader.readLine()) != null) {
         if (line.isEmpty()) {
-          LlmUsage dispatched = dispatchEvent(currentEvent, data.toString(), tokenConsumer);
-          if (dispatched != null) {
-            usage = dispatched;
-          }
+          dispatchEvent(currentEvent, data.toString(), tokenConsumer, accumulator);
           currentEvent = null;
           data.setLength(0);
           continue;
@@ -163,28 +169,33 @@ public class RemoteLlmClient implements LlmClient {
           data.append(line.substring("data:".length()).trim());
         }
       }
-      LlmUsage trailing = dispatchEvent(currentEvent, data.toString(), tokenConsumer);
-      if (trailing != null) {
-        usage = trailing;
-      }
+      dispatchEvent(currentEvent, data.toString(), tokenConsumer, accumulator);
     }
-    return usage;
+    return accumulator.toResult();
   }
 
-  private LlmUsage dispatchEvent(String event, String data, Consumer<String> tokenConsumer)
+  private void dispatchEvent(
+      String event, String data, Consumer<String> tokenConsumer, StreamAccumulator accumulator)
       throws IOException {
     if (event == null || data.isEmpty()) {
-      return null;
+      return;
     }
     if ("token".equals(event)) {
       StreamToken token = objectMapper.readValue(data, StreamToken.class);
       if (token.token() != null && !token.token().isEmpty()) {
         tokenConsumer.accept(token.token());
       }
-      return null;
+      return;
+    }
+    if ("tool_calls".equals(event)) {
+      StreamToolCalls toolCalls = objectMapper.readValue(data, StreamToolCalls.class);
+      accumulator.toolCalls =
+          toolCalls.toolCalls() == null ? List.of() : List.copyOf(toolCalls.toolCalls());
+      return;
     }
     if ("usage".equals(event)) {
-      return objectMapper.readValue(data, LlmUsage.class);
+      accumulator.usage = objectMapper.readValue(data, LlmUsage.class);
+      return;
     }
     if ("error".equals(event)) {
       StreamError error = objectMapper.readValue(data, StreamError.class);
@@ -193,7 +204,15 @@ public class RemoteLlmClient implements LlmClient {
           "llm-service stream failed: "
               + (error.message() == null ? "unknown error" : error.message()));
     }
-    return null;
+  }
+
+  private static final class StreamAccumulator {
+    private LlmUsage usage = LlmUsage.EMPTY;
+    private List<LlmToolCall> toolCalls = List.of();
+
+    private LlmStreamResult toResult() {
+      return new LlmStreamResult(usage, toolCalls, toolCalls.isEmpty() ? null : "tool_calls");
+    }
   }
 
   @Override
@@ -258,4 +277,6 @@ public class RemoteLlmClient implements LlmClient {
   private record StreamToken(String token) {}
 
   private record StreamError(String message) {}
+
+  private record StreamToolCalls(List<LlmToolCall> toolCalls) {}
 }

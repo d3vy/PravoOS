@@ -70,6 +70,7 @@ class SecurityRouteMatrixTest {
           "/api/ai/messages/1",
           "/api/ai/conversations/1",
           "/api/ai/chat/stream",
+          "/api/ai/chat/proposals",
           "/api/ai/unmatched-by-any-rule");
 
   private static final List<String> LAWYER_ONLY_PATHS =

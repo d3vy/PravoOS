@@ -13,6 +13,10 @@ import com.pravoos.ai.practice.internal.model.entity.TimeEntry;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.TimeEntryRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.DeletionRole;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.exception.InvoiceStateException;
 import com.pravoos.ai.shared.exception.NoBillableTimeException;
 import com.pravoos.ai.shared.model.enums.ClientType;
@@ -41,6 +45,7 @@ class InvoiceServiceTest {
 
   @Mock private BillingProfileService billingProfileService;
   @Mock private InvoicePaidPublisher invoicePaidPublisher;
+  @Mock private RecycleBin recycleBin;
 
   private InvoiceService service;
 
@@ -59,7 +64,8 @@ class InvoiceServiceTest {
             numberGenerator,
             invoicePdfWriter,
             billingProfileService,
-            invoicePaidPublisher);
+            invoicePaidPublisher,
+            recycleBin);
     lenient()
         .when(invoiceRepository.saveAndFlush(any(Invoice.class)))
         .thenAnswer(
@@ -213,21 +219,27 @@ class InvoiceServiceTest {
     when(invoiceRepository.findByIdAndLawyerId(invoice.getId(), lawyerId))
         .thenReturn(Optional.of(invoice));
 
-    assertThatThrownBy(() -> service.delete(invoice.getId(), lawyerId))
+    assertThatThrownBy(() -> service.delete(invoice.getId(), actor()))
         .isInstanceOf(InvoiceStateException.class);
-    verify(invoiceRepository, never()).delete(any());
+    verifyNoInteractions(recycleBin);
   }
 
   @Test
-  void delete_draftReleasesEntriesAndRemovesInvoice() {
+  void delete_draftMovesInvoiceToRecycleBinAndKeepsEntriesLocked() {
     Invoice invoice = savedInvoice(InvoiceStatus.DRAFT);
     when(invoiceRepository.findByIdAndLawyerId(invoice.getId(), lawyerId))
         .thenReturn(Optional.of(invoice));
+    DeletionActor actor = actor();
 
-    service.delete(invoice.getId(), lawyerId);
+    service.delete(invoice.getId(), actor);
 
-    verify(timeEntryRepository).releaseByInvoiceId(invoice.getId());
-    verify(invoiceRepository).delete(invoice);
+    verify(recycleBin).moveToBin(RecycleBinEntityType.INVOICE, invoice.getId().toString(), actor);
+    verify(timeEntryRepository, never()).releaseByInvoiceId(any());
+    verify(invoiceRepository, never()).delete(any());
+  }
+
+  private DeletionActor actor() {
+    return new DeletionActor(lawyerId, DeletionRole.LAWYER, null, List.of());
   }
 
   private Invoice savedInvoice(InvoiceStatus status) {

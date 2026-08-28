@@ -3,12 +3,14 @@ package com.pravoos.ai.document.internal.repository.jpa;
 import com.pravoos.ai.document.internal.model.entity.Document;
 import com.pravoos.ai.shared.model.enums.DocumentKind;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -68,4 +70,24 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
       @Param("pattern") String pattern,
       @Param("searchContent") boolean searchContent,
       Pageable pageable);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      value = "UPDATE documents SET deleted_at = :deletedAt WHERE id = :id AND deleted_at IS NULL",
+      nativeQuery = true)
+  int softDelete(@Param("id") UUID id, @Param("deletedAt") LocalDateTime deletedAt);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "UPDATE documents SET deleted_at = NULL WHERE id = :id", nativeQuery = true)
+  int restore(@Param("id") UUID id);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "DELETE FROM documents WHERE id = :id", nativeQuery = true)
+  int hardDelete(@Param("id") UUID id);
+
+  @Query(value = "SELECT file_path FROM documents WHERE id = :id", nativeQuery = true)
+  Optional<String> findFilePathIncludingDeleted(@Param("id") UUID id);
+
+  @Query(value = "SELECT id FROM documents WHERE case_id = :caseId", nativeQuery = true)
+  List<UUID> findIdsByCaseIdIncludingDeleted(@Param("caseId") UUID caseId);
 }

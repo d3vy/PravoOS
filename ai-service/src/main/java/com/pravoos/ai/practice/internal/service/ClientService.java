@@ -8,6 +8,9 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientConsentRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.config.PersonalDataConsentProperties;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
@@ -40,6 +43,7 @@ public class ClientService {
   private final CaseService caseService;
   private final UserServiceClient userServiceClient;
   private final PersonalDataConsentProperties consentProperties;
+  private final RecycleBin recycleBin;
 
   public ClientService(
       ClientRepository clientRepository,
@@ -48,7 +52,8 @@ public class ClientService {
       InvoiceRepository invoiceRepository,
       CaseService caseService,
       UserServiceClient userServiceClient,
-      PersonalDataConsentProperties consentProperties) {
+      PersonalDataConsentProperties consentProperties,
+      RecycleBin recycleBin) {
     this.clientRepository = clientRepository;
     this.clientConsentRepository = clientConsentRepository;
     this.caseRepository = caseRepository;
@@ -56,6 +61,7 @@ public class ClientService {
     this.caseService = caseService;
     this.userServiceClient = userServiceClient;
     this.consentProperties = consentProperties;
+    this.recycleBin = recycleBin;
   }
 
   public void invitePortal(UUID clientId, UUID lawyerId) {
@@ -196,23 +202,10 @@ public class ClientService {
   }
 
   @Transactional
-  public void delete(UUID clientId, UUID lawyerId, boolean cascade) {
-    Client client = requireOwnedClient(clientId, lawyerId);
+  public void delete(UUID clientId, DeletionActor actor, boolean cascade) {
+    requireOwnedClient(clientId, actor.userId());
     requireNoIssuedInvoices(clientId);
-
-    if (cascade) {
-      List<Case> cases =
-          caseRepository.findByClientIdAndLawyerIdOrderByCreatedAtDesc(clientId, lawyerId);
-      for (Case caseEntity : cases) {
-        caseService.delete(caseEntity.getId(), lawyerId);
-      }
-      log.info(
-          "Cascade-deleted {} cases for client {} by lawyer {}", cases.size(), clientId, lawyerId);
-    }
-
-    clientConsentRepository.deleteByClientId(clientId);
-    clientRepository.delete(client);
-    log.info("Client deleted: {} (cascade={}) by lawyer {}", clientId, cascade, lawyerId);
+    recycleBin.moveToBin(RecycleBinEntityType.CLIENT, clientId.toString(), actor, cascade);
   }
 
   private void requireNoIssuedInvoices(UUID clientId) {

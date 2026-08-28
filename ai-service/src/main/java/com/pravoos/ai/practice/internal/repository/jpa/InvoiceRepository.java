@@ -3,6 +3,7 @@ package com.pravoos.ai.practice.internal.repository.jpa;
 import com.pravoos.ai.practice.internal.model.entity.Invoice;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -62,7 +63,21 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
   List<Invoice> findByClientIdInOrderByCreatedAtDesc(List<UUID> clientIds);
 
-  @Modifying
-  @Query("DELETE FROM Invoice i WHERE i.lawyerId = :lawyerId")
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "DELETE FROM invoices WHERE lawyer_id = :lawyerId", nativeQuery = true)
   int deleteByLawyerId(@Param("lawyerId") UUID lawyerId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      value = "UPDATE invoices SET deleted_at = :deletedAt WHERE id = :id AND deleted_at IS NULL",
+      nativeQuery = true)
+  int softDelete(@Param("id") UUID id, @Param("deletedAt") LocalDateTime deletedAt);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "UPDATE invoices SET deleted_at = NULL WHERE id = :id", nativeQuery = true)
+  int restore(@Param("id") UUID id);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "DELETE FROM invoices WHERE id = :id", nativeQuery = true)
+  int hardDelete(@Param("id") UUID id);
 }

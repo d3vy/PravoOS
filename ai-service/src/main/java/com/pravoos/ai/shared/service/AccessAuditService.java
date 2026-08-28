@@ -43,6 +43,26 @@ public class AccessAuditService {
     record(authentication, action, null, resourceRef, request);
   }
 
+  public void recordAgentAction(
+      UUID actorId, String actorRole, AuditAction action, UUID resourceId, String resourceRef) {
+    try {
+      AccessAudit entry = new AccessAudit();
+      entry.setActorId(actorId);
+      entry.setActorRole(actorRole == null ? UNKNOWN_ROLE : actorRole);
+      entry.setAction(action.name());
+      entry.setResourceType(action.resourceType());
+      entry.setResourceId(resourceId);
+      entry.setResourceRef(truncateRef(resourceRef));
+      accessAuditRepository.save(entry);
+    } catch (Exception e) {
+      log.warn(
+          "Failed to record agent audit for action {} on {}: {}",
+          action,
+          resourceId != null ? resourceId : resourceRef,
+          e.getMessage());
+    }
+  }
+
   private void record(
       Authentication authentication,
       AuditAction action,

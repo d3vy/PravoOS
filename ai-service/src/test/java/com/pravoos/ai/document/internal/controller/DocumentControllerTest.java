@@ -16,6 +16,8 @@ import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.document.internal.dto.LegislationResponse;
 import com.pravoos.ai.document.internal.service.DocumentService;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import com.pravoos.ai.shared.service.AccessAuditService;
@@ -44,13 +46,15 @@ class DocumentControllerTest {
   @Mock private DocumentService documentService;
   @Mock private AccessAuditService accessAuditService;
   @Mock private Authentication authentication;
+  @Mock private RecycleBin recycleBin;
 
   private MockMvc mockMvc;
   private final UUID lawyerId = UUID.randomUUID();
 
   @BeforeEach
   void setUp() {
-    DocumentController controller = new DocumentController(documentService, accessAuditService);
+    DocumentController controller =
+        new DocumentController(documentService, accessAuditService, recycleBin);
     mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
   }
 
@@ -181,11 +185,16 @@ class DocumentControllerTest {
   }
 
   @Test
-  void delete_returns204() throws Exception {
+  void delete_movesDocumentToRecycleBin() throws Exception {
     UUID documentId = UUID.randomUUID();
+    when(authentication.getPrincipal()).thenReturn(lawyerId.toString());
 
-    mockMvc.perform(delete("/api/ai/documents/{id}", documentId)).andExpect(status().isNoContent());
+    mockMvc
+        .perform(delete("/api/ai/documents/{id}", documentId).principal(authentication))
+        .andExpect(status().isNoContent());
 
-    verify(documentService).delete(documentId);
+    verify(documentService).requireDeletable(documentId);
+    verify(recycleBin)
+        .moveToBin(eq(RecycleBinEntityType.DOCUMENT), eq(documentId.toString()), any());
   }
 }
