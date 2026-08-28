@@ -43,16 +43,19 @@ public class AgentLoop {
   private final AiToolRegistry toolRegistry;
   private final AgentProperties agentProperties;
   private final ObjectMapper objectMapper;
+  private final AgentMetrics agentMetrics;
 
   public AgentLoop(
       LlmClient llmClient,
       AiToolRegistry toolRegistry,
       AgentProperties agentProperties,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      AgentMetrics agentMetrics) {
     this.llmClient = llmClient;
     this.toolRegistry = toolRegistry;
     this.agentProperties = agentProperties;
     this.objectMapper = objectMapper;
+    this.agentMetrics = agentMetrics;
   }
 
   public AgentResult run(
@@ -215,6 +218,7 @@ public class AgentLoop {
       long elapsedMs,
       Consumer<ToolStep> stepConsumer) {
     ToolStep finished = started.finished(status, content, elapsedMs);
+    agentMetrics.recordToolCall(started.name(), status);
     stepConsumer.accept(finished);
     return new ToolOutcome(finished, content);
   }

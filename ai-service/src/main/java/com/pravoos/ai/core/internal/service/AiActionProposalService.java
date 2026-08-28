@@ -6,6 +6,7 @@ import com.pravoos.ai.core.api.AiToolContext;
 import com.pravoos.ai.core.api.AiToolResult;
 import com.pravoos.ai.core.api.AiWriteTool;
 import com.pravoos.ai.core.api.ProposedAction;
+import com.pravoos.ai.core.internal.agent.AgentMetrics;
 import com.pravoos.ai.core.internal.agent.AgentProperties;
 import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.AiActionProposalResponse;
@@ -41,18 +42,21 @@ public class AiActionProposalService implements AiActionProposals {
   private final AgentProperties agentProperties;
   private final AccessAuditService accessAuditService;
   private final AiTrustedToolRepository trustedToolRepository;
+  private final AgentMetrics agentMetrics;
 
   public AiActionProposalService(
       AiActionProposalStore proposalStore,
       AiToolRegistry toolRegistry,
       AgentProperties agentProperties,
       AccessAuditService accessAuditService,
-      AiTrustedToolRepository trustedToolRepository) {
+      AiTrustedToolRepository trustedToolRepository,
+      AgentMetrics agentMetrics) {
     this.proposalStore = proposalStore;
     this.toolRegistry = toolRegistry;
     this.agentProperties = agentProperties;
     this.accessAuditService = accessAuditService;
     this.trustedToolRepository = trustedToolRepository;
+    this.agentMetrics = agentMetrics;
   }
 
   @Override
@@ -81,6 +85,7 @@ public class AiActionProposalService implements AiActionProposals {
         AuditAction.AI_ACTION_PROPOSE,
         saved.getId(),
         toolName);
+    agentMetrics.recordProposal(toolName, "created");
     log.info(
         "AI action proposed: tool={}, proposal={}, user={}",
         toolName,
@@ -124,10 +129,12 @@ public class AiActionProposalService implements AiActionProposals {
     if (outcome.ok()) {
       proposalStore.recordSuccess(proposalId, outcome.content());
       proposal.setResult(outcome.content());
+      agentMetrics.recordProposal(proposal.getToolName(), "approved");
     } else {
       proposalStore.recordFailure(proposalId, outcome.content());
       proposal.setStatus(AiActionProposalStatus.FAILED);
       proposal.setFailureReason(outcome.content());
+      agentMetrics.recordProposal(proposal.getToolName(), "failed");
     }
 
     accessAuditService.recordAgentAction(
@@ -149,6 +156,7 @@ public class AiActionProposalService implements AiActionProposals {
         AuditAction.AI_ACTION_REJECT,
         proposalId,
         proposal.getToolName());
+    agentMetrics.recordProposal(proposal.getToolName(), "rejected");
     return AiActionProposalResponse.from(proposal);
   }
 
@@ -186,6 +194,7 @@ public class AiActionProposalService implements AiActionProposals {
     int expired = proposalStore.expireOverdue(LocalDateTime.now(ZoneOffset.UTC));
     if (expired > 0) {
       log.info("Expired {} pending AI action proposal(s)", expired);
+      agentMetrics.recordProposal("ALL", "expired", expired);
     }
     return expired;
   }

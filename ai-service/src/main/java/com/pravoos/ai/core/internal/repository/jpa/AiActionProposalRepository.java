@@ -37,4 +37,8 @@ public interface AiActionProposalRepository extends JpaRepository<AiActionPropos
       UUID userId, String conversationId, AiActionProposalStatus status);
 
   long countByUserIdAndCreatedAtAfter(UUID userId, LocalDateTime since);
+
+  @Query(
+      "SELECT p.toolName, p.status, COUNT(p) FROM AiActionProposal p GROUP BY p.toolName, p.status")
+  List<Object[]> aggregateByToolAndStatus();
 }

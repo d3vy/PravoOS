@@ -8,6 +8,7 @@ import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.api.PageContextScope;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentMetrics;
 import com.pravoos.ai.core.internal.agent.AgentProperties;
 import com.pravoos.ai.core.internal.agent.AgentResult;
 import com.pravoos.ai.core.internal.agent.ToolStep;
@@ -46,6 +47,7 @@ import com.pravoos.ai.shared.util.Futures;
 import com.pravoos.ai.shared.util.PageRequests;
 import com.pravoos.ai.shared.util.PromptFence;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -94,6 +96,7 @@ public class ChatService {
   private final PageContextResolver pageContextResolver;
   private final RagService ragService;
   private final AgentLoop agentLoop;
+  private final AgentMetrics agentMetrics;
   private final AgentProperties agentProperties;
   private final DocumentProperties documentProperties;
   private final LegalDomainGuard legalDomainGuard;
@@ -115,6 +118,7 @@ public class ChatService {
       PageContextResolver pageContextResolver,
       RagService ragService,
       AgentLoop agentLoop,
+      AgentMetrics agentMetrics,
       AgentProperties agentProperties,
       DocumentProperties documentProperties,
       LegalDomainGuard legalDomainGuard,
@@ -134,6 +138,7 @@ public class ChatService {
     this.pageContextResolver = pageContextResolver;
     this.ragService = ragService;
     this.agentLoop = agentLoop;
+    this.agentMetrics = agentMetrics;
     this.agentProperties = agentProperties;
     this.documentProperties = documentProperties;
     this.legalDomainGuard = legalDomainGuard;
@@ -189,6 +194,10 @@ public class ChatService {
             request.message(),
             new AiToolContext(lawyerId, orgIds, role, conversation.getId(), turnStartedAt),
             step -> {});
+    agentMetrics.recordTurn(
+        agentResult.iterations(),
+        agentResult.usage().totalTokens(),
+        Duration.between(turnStartedAt, LocalDateTime.now(ZoneOffset.UTC)));
     llmQuotaService.recordUsage(
         lawyerId, agentResult.usage().totalTokens(), agentResult.iterations());
     FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(agentResult.content());
@@ -308,6 +317,10 @@ public class ChatService {
               new AiToolContext(lawyerId, orgIds, role, conversation.getId(), turnStartedAt),
               accumulator::onDelta,
               step -> sendToolStep(emitter, step));
+      agentMetrics.recordTurn(
+          agentResult.iterations(),
+          agentResult.usage().totalTokens(),
+          Duration.between(turnStartedAt, LocalDateTime.now(ZoneOffset.UTC)));
       llmQuotaService.recordUsage(
           lawyerId, agentResult.usage().totalTokens(), agentResult.iterations());
 

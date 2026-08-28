@@ -15,6 +15,7 @@ import com.pravoos.ai.core.api.AiToolContext;
 import com.pravoos.ai.core.api.AiToolResult;
 import com.pravoos.ai.core.api.AiWriteTool;
 import com.pravoos.ai.core.api.ProposedAction;
+import com.pravoos.ai.core.internal.agent.AgentMetrics;
 import com.pravoos.ai.core.internal.agent.AgentProperties;
 import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.AiActionProposalResponse;
@@ -25,6 +26,7 @@ import com.pravoos.ai.shared.exception.AiActionProposalNotPendingException;
 import com.pravoos.ai.shared.exception.AiWriteActionRateLimitException;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.service.AccessAuditService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -69,7 +71,8 @@ class AiActionProposalServiceTest {
             new AiToolRegistry(List.of(writeTool)),
             PROPERTIES,
             accessAuditService,
-            trustedToolRepository);
+            trustedToolRepository,
+            new AgentMetrics(new SimpleMeterRegistry()));
   }
 
   @Test
@@ -268,7 +271,8 @@ class AiActionProposalServiceTest {
             new AiToolRegistry(List.of()),
             PROPERTIES,
             accessAuditService,
-            trustedToolRepository);
+            trustedToolRepository,
+            new AgentMetrics(new SimpleMeterRegistry()));
 
     AiActionProposalResponse response = service.approve(stored.getId(), CONTEXT);
 

@@ -1,11 +1,15 @@
 package com.pravoos.ai.core.internal.service;
 
 import com.pravoos.ai.core.api.AiResponseDto;
+import com.pravoos.ai.core.internal.dto.AgentToolStat;
 import com.pravoos.ai.core.internal.dto.AiStatsResponse;
 import com.pravoos.ai.core.internal.dto.WorkflowStat;
+import com.pravoos.ai.core.internal.model.entity.AiActionProposalStatus;
+import com.pravoos.ai.core.internal.repository.jpa.AiActionProposalRepository;
 import com.pravoos.ai.core.internal.repository.jpa.AiResponseRepository;
 import com.pravoos.ai.shared.model.enums.BankruptcyWorkflow;
 import com.pravoos.ai.shared.model.enums.TrustMetric;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -16,11 +20,15 @@ public class AdminStatsService {
 
   private final AiResponseRepository aiResponseRepository;
   private final TrustMetricsRecorder trustMetricsRecorder;
+  private final AiActionProposalRepository proposalRepository;
 
   public AdminStatsService(
-      AiResponseRepository aiResponseRepository, TrustMetricsRecorder trustMetricsRecorder) {
+      AiResponseRepository aiResponseRepository,
+      TrustMetricsRecorder trustMetricsRecorder,
+      AiActionProposalRepository proposalRepository) {
     this.aiResponseRepository = aiResponseRepository;
     this.trustMetricsRecorder = trustMetricsRecorder;
+    this.proposalRepository = proposalRepository;
   }
 
   @Transactional(readOnly = true)
@@ -43,6 +51,8 @@ public class AdminStatsService {
     List<WorkflowStat> workflows =
         aiResponseRepository.aggregateByWorkflow().stream().map(this::toWorkflowStat).toList();
 
+    List<AgentToolStat> agentTools = aggregateAgentTools();
+
     return new AiStatsResponse(
         total,
         rated,
@@ -52,7 +62,37 @@ public class AdminStatsService {
         guardRefusals,
         citationsChecked,
         citationsVerified,
-        workflows);
+        workflows,
+        agentTools);
+  }
+
+  private List<AgentToolStat> aggregateAgentTools() {
+    // index: 0=created(all statuses), 1=approved, 2=rejected, 3=expired, 4=failed
+    Map<String, long[]> byTool = new LinkedHashMap<>();
+    for (Object[] row : proposalRepository.aggregateByToolAndStatus()) {
+      String toolName = (String) row[0];
+      AiActionProposalStatus status = (AiActionProposalStatus) row[1];
+      long count = ((Number) row[2]).longValue();
+      long[] counts = byTool.computeIfAbsent(toolName, key -> new long[5]);
+      counts[0] += count;
+      switch (status) {
+        case APPROVED -> counts[1] += count;
+        case REJECTED -> counts[2] += count;
+        case EXPIRED -> counts[3] += count;
+        case FAILED -> counts[4] += count;
+        case PENDING -> {
+          // still open, counted only toward "created"
+        }
+      }
+    }
+    return byTool.entrySet().stream()
+        .map(
+            entry -> {
+              long[] counts = entry.getValue();
+              return new AgentToolStat(
+                  entry.getKey(), counts[0], counts[1], counts[2], counts[3], counts[4]);
+            })
+        .toList();
   }
 
   @Transactional(readOnly = true)

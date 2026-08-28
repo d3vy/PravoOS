@@ -11,4 +11,5 @@ public record AiStatsResponse(
     long guardRefusals,
     long citationsChecked,
     long citationsVerified,
-    List<WorkflowStat> workflows) {}
+    List<WorkflowStat> workflows,
+    List<AgentToolStat> agentTools) {}

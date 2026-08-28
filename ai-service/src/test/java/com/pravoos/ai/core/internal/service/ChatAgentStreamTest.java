@@ -20,6 +20,7 @@ import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentMetrics;
 import com.pravoos.ai.core.internal.agent.AgentProperties;
 import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.AiActionProposalResponse;
@@ -42,6 +43,7 @@ import com.pravoos.ai.recyclebin.api.RecycleBin;
 import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -126,7 +128,13 @@ class ChatAgentStreamTest {
         documentAccessGuard,
         pageContextResolver,
         ragService,
-        new AgentLoop(llmClient, new AiToolRegistry(List.of(tool)), AGENT_PROPERTIES, MAPPER),
+        new AgentLoop(
+            llmClient,
+            new AiToolRegistry(List.of(tool)),
+            AGENT_PROPERTIES,
+            MAPPER,
+            new AgentMetrics(new SimpleMeterRegistry())),
+        new AgentMetrics(new SimpleMeterRegistry()),
         AGENT_PROPERTIES,
         new DocumentProperties("/tmp", 1000, 100, 5, 20000, 50, 200, 1_000_000L, 10),
         legalDomainGuard,

@@ -22,6 +22,7 @@ import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmStreamResult;
 import com.pravoos.ai.llm.api.LlmToolCall;
 import com.pravoos.ai.llm.api.LlmUsage;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,12 @@ class AgentLoopTest {
   private final List<ToolStep> steps = new ArrayList<>();
 
   private AgentLoop loopWith(AgentProperties properties, AiTool... tools) {
-    return new AgentLoop(llmClient, new AiToolRegistry(List.of(tools)), properties, MAPPER);
+    return new AgentLoop(
+        llmClient,
+        new AiToolRegistry(List.of(tools)),
+        properties,
+        MAPPER,
+        new AgentMetrics(new SimpleMeterRegistry()));
   }
 
   private AgentLoop loopWith(AiTool... tools) {

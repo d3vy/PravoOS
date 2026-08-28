@@ -8,8 +8,7 @@ import java.util.List;
 public record OpenAiChatStreamRequest(
     String model,
     List<OpenAiMessage> messages,
-    @JsonProperty("max_tokens") int maxTokens,
-    double temperature,
+    @JsonProperty("max_completion_tokens") int maxTokens,
     boolean stream,
     @JsonProperty("stream_options") StreamOptions streamOptions,
     List<OpenAiTool> tools,
@@ -21,10 +20,9 @@ public record OpenAiChatStreamRequest(
       String model,
       List<OpenAiMessage> messages,
       int maxTokens,
-      double temperature,
       List<OpenAiTool> tools,
       String toolChoice) {
     return new OpenAiChatStreamRequest(
-        model, messages, maxTokens, temperature, true, new StreamOptions(true), tools, toolChoice);
+        model, messages, maxTokens, true, new StreamOptions(true), tools, toolChoice);
   }
 }

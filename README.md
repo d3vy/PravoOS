@@ -37,7 +37,7 @@ B2B-платформа для юристов и юрфирм. Вход — за�
 | **Хранилища** | PostgreSQL + pgvector · MongoDB · Redis |
 | **Миграции** | Flyway |
 | **Шина** | Apache Kafka (Transactional Outbox + DLT) |
-| **LLM** | OpenAI `gpt-4o-mini` + `text-embedding-3-small` (swappable через `LlmClient`) |
+| **LLM** | OpenAI `gpt-5.6-luna` + `text-embedding-3-small` (swappable через `LlmClient`) |
 | **Парсинг** | Apache PDFBox 3.x, Apache POI 5.x |
 | **Уведомления** | Telegram Bot (telegrambots 6.9), Resend (email) |
 | **Frontend** | React 18, TypeScript, Vite, Tailwind 3, Zustand, React Query |
@@ -126,7 +126,7 @@ B2B-платформа для юристов и юрфирм. Вход — за�
 Вопрос юриста
    └─▶ LegalDomainGuard (юр.запрос?) ─▶ embed ─▶ cosine top-K (порог по distance)
         └─▶ промпт = система + top-K чанков + история + вопрос
-             └─▶ gpt-4o-mini ─▶ ответ
+             └─▶ gpt-5.6-luna ─▶ ответ
 ```
 
 Устойчивость к внешним сбоям: retry+backoff+jitter, bulkhead (semaphore), дневная квота запросов/токенов, token-бюджет контекста, кэш guard'а. Детерминированный RAG (embed → top-K → 1 промпт), а не агент-в-цикле — предсказуемая стоимость и латентность.

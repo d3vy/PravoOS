@@ -22,6 +22,7 @@ import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentMetrics;
 import com.pravoos.ai.core.internal.agent.AgentProperties;
 import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.AiActionProposalResponse;
@@ -60,6 +61,7 @@ import com.pravoos.ai.shared.exception.NonLegalQueryException;
 import com.pravoos.ai.shared.model.enums.DocumentSummaryStatus;
 import com.pravoos.ai.shared.model.enums.MessageRole;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -124,6 +126,7 @@ class ChatServiceTest {
             pageContextResolver,
             ragService,
             agentLoop(),
+            new AgentMetrics(new SimpleMeterRegistry()),
             AGENT_PROPERTIES,
             properties,
             legalDomainGuard,
@@ -147,6 +150,7 @@ class ChatServiceTest {
         pageContextResolver,
         ragService,
         agentLoop(),
+        new AgentMetrics(new SimpleMeterRegistry()),
         AGENT_PROPERTIES,
         new DocumentProperties("/tmp", 1000, 100, 5, 20000, 50, 200, 1_000_000L, 10),
         legalDomainGuard,
@@ -792,6 +796,10 @@ class ChatServiceTest {
 
   private AgentLoop agentLoop() {
     return new AgentLoop(
-        llmClient, new AiToolRegistry(List.of()), AGENT_PROPERTIES, new ObjectMapper());
+        llmClient,
+        new AiToolRegistry(List.of()),
+        AGENT_PROPERTIES,
+        new ObjectMapper(),
+        new AgentMetrics(new SimpleMeterRegistry()));
   }
 }

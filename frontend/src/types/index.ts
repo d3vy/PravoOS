@@ -930,6 +930,15 @@ export interface WorkflowStat {
   avgRating: number | null
 }
 
+export interface AgentToolStat {
+  toolName: string
+  created: number
+  approved: number
+  rejected: number
+  expired: number
+  failed: number
+}
+
 export interface AiStatsResponse {
   totalResponses: number
   ratedResponses: number
@@ -940,6 +949,7 @@ export interface AiStatsResponse {
   citationsChecked: number
   citationsVerified: number
   workflows: WorkflowStat[]
+  agentTools: AgentToolStat[]
 }
 
 export interface ClientStatsResponse {

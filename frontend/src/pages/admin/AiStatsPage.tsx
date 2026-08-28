@@ -111,6 +111,38 @@ export default function AiStatsPage(): JSX.Element {
         </div>
       )}
 
+      <h2 className="text-sm font-semibold text-fg mb-3">{t('aiStats.agentTitle')}</h2>
+      {stats.agentTools.length === 0 ? (
+        <p className="text-sm text-fg-muted mb-8">{t('aiStats.agentNoData')}</p>
+      ) : (
+        <div className="flex flex-col gap-2 mb-8">
+          {stats.agentTools.map((tool) => {
+            const decided = tool.approved + tool.rejected + tool.expired + tool.failed
+            const approvalRate = decided > 0 ? Math.round((tool.approved / decided) * 100) : null
+            return (
+              <div
+                key={tool.toolName}
+                className="flex items-center justify-between p-4 rounded-xl bg-surface border border-line"
+              >
+                <span className="text-sm text-fg">
+                  {t(`chat.toolStep.${tool.toolName}`, { defaultValue: tool.toolName })}
+                </span>
+                <div className="flex items-center gap-4 text-xs text-fg-muted">
+                  <span>{t('aiStats.agentCreated')}: {tool.created}</span>
+                  <span>{t('aiStats.agentApproved')}: {tool.approved}</span>
+                  <span>{t('aiStats.agentRejected')}: {tool.rejected}</span>
+                  <span>{t('aiStats.agentExpired')}: {tool.expired}</span>
+                  <span>{t('aiStats.agentFailed')}: {tool.failed}</span>
+                  <span className="text-fg w-24 text-right">
+                    {approvalRate === null ? '—' : `${approvalRate}%`}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       <h2 className="text-sm font-semibold text-fg mb-3">{t('aiStats.recentTitle')}</h2>
       {recent.length === 0 ? (
         <p className="text-sm text-fg-muted">{t('aiStats.noResponses')}</p>

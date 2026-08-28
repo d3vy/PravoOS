@@ -18,6 +18,7 @@ import com.pravoos.ai.core.api.CaseContextProvider;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.api.PageContextScope;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
+import com.pravoos.ai.core.internal.agent.AgentMetrics;
 import com.pravoos.ai.core.internal.agent.AgentProperties;
 import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.core.internal.dto.ChatRequest;
@@ -37,6 +38,7 @@ import com.pravoos.ai.shared.config.DocumentProperties;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.model.enums.DocumentSummaryStatus;
 import com.pravoos.ai.shared.service.LlmQuotaService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -97,6 +99,7 @@ class ChatPageContextTest {
             pageContextResolver,
             ragService,
             agentLoop(),
+            new AgentMetrics(new SimpleMeterRegistry()),
             AGENT_PROPERTIES,
             properties,
             legalDomainGuard,
@@ -266,6 +269,10 @@ class ChatPageContextTest {
 
   private AgentLoop agentLoop() {
     return new AgentLoop(
-        llmClient, new AiToolRegistry(List.of()), AGENT_PROPERTIES, new ObjectMapper());
+        llmClient,
+        new AiToolRegistry(List.of()),
+        AGENT_PROPERTIES,
+        new ObjectMapper(),
+        new AgentMetrics(new SimpleMeterRegistry()));
   }
 }

@@ -48,7 +48,6 @@ public class OpenAiEngine {
   private static final int MAX_ATTEMPTS = 3;
   private static final long BASE_BACKOFF_MS = 500L;
   private static final long MAX_BACKOFF_MS = 8000L;
-  private static final double DEFAULT_TEMPERATURE = 0.1;
   private static final Set<Integer> RETRYABLE_STATUSES = Set.of(429, 500, 502, 503, 504);
   private static final String STREAM_DONE_MARKER = "[DONE]";
 
@@ -86,7 +85,6 @@ public class OpenAiEngine {
             resolveModel(resolved),
             messages,
             resolveMaxTokens(resolved),
-            resolveTemperature(resolved),
             OpenAiTool.from(resolved.tools()),
             resolved.toolChoice());
 
@@ -129,7 +127,6 @@ public class OpenAiEngine {
             resolveModel(resolved),
             messages,
             resolveMaxTokens(resolved),
-            resolveTemperature(resolved),
             OpenAiTool.from(resolved.tools()),
             resolved.toolChoice());
 
@@ -252,10 +249,6 @@ public class OpenAiEngine {
 
   private int resolveMaxTokens(LlmOptions options) {
     return options.maxTokens() == null ? properties.maxTokens() : options.maxTokens();
-  }
-
-  private double resolveTemperature(LlmOptions options) {
-    return options.temperature() == null ? DEFAULT_TEMPERATURE : options.temperature();
   }
 
   private <T> T executeWithRetry(String operation, Supplier<T> call) {
