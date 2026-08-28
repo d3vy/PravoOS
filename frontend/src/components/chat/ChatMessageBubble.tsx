@@ -5,11 +5,31 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { citationsApi } from '../../api/citations'
 import { casesApi } from '../../api/cases'
-import type { DraftTypeInfo } from '../../types'
+import type { AiActionProposal, ChatToolStep, DraftTypeInfo } from '../../types'
 import { Spinner } from '../ui/Spinner'
 import { PravoIcon } from '../ui/Logo'
 import { RatingButtons } from '../ui/RatingButtons'
 import { CitationList, citationSummary } from '../ui/CitationList'
+import { ProposalCard } from './ProposalCard'
+
+function ToolStepList({ steps }: { steps: ChatToolStep[] }) {
+  const { t } = useTranslation()
+  return (
+    <div className="flex flex-col gap-1">
+      {steps.map((step, idx) => (
+        <div key={`${step.name}-${idx}`} className="flex items-center gap-1.5 text-xs text-fg-muted">
+          {step.status === 'RUNNING' ? (
+            <Spinner size="sm" />
+          ) : (
+            <span aria-hidden="true">{step.status === 'OK' ? '✓' : '×'}</span>
+          )}
+          <span>{t(`chat.toolStep.${step.name}`, { defaultValue: step.name })}</span>
+          {step.status === 'ERROR' && <span>— {t('chat.toolStep.error')}</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export interface LocalMessage {
   id: string
@@ -20,6 +40,8 @@ export interface LocalMessage {
   followUps?: string[]
   isStreaming?: boolean
   autoCheckCitations?: boolean
+  toolSteps?: ChatToolStep[]
+  proposals?: AiActionProposal[]
 }
 
 const LOCAL_ID_PREFIXES = ['user-', 'assistant-', 'loading-', 'error-']
@@ -135,10 +157,12 @@ export function MessageBubble({
   message,
   caseId,
   onRate,
+  onProposalDecided,
 }: {
   message: LocalMessage
   caseId?: string
   onRate: (rating: number, comment?: string) => void
+  onProposalDecided?: (proposal: AiActionProposal) => void
 }): JSX.Element {
   const { t } = useTranslation()
   const isUser = message.role === 'USER'
@@ -163,6 +187,10 @@ export function MessageBubble({
       </div>
 
       <div className={`flex flex-col gap-2 min-w-0 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+        {!isUser && message.toolSteps && message.toolSteps.length > 0 && (
+          <ToolStepList steps={message.toolSteps} />
+        )}
+
         <div
           className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
             isUser
@@ -197,6 +225,14 @@ export function MessageBubble({
 
         {showCitations && (
           <ChatCitations text={message.content} auto={message.autoCheckCitations} />
+        )}
+
+        {!isUser && message.proposals && message.proposals.length > 0 && (
+          <div className="w-full flex flex-col gap-2">
+            {message.proposals.map((proposal) => (
+              <ProposalCard key={proposal.id} proposal={proposal} onDecided={onProposalDecided} />
+            ))}
+          </div>
         )}
 
         {!isUser && !message.isStreaming && message.content && (

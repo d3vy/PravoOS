@@ -31,6 +31,7 @@ export function AiWidgetPanel({ onClose }: AiWidgetPanelProps): JSX.Element {
   const setWidth = useAiChatStore((state) => state.setWidth)
   const messages = useAiChatStore((state) => state.messages)
   const isSending = useAiChatStore((state) => state.isSending)
+  const remoteBusy = useAiChatStore((state) => state.remoteBusy)
   const historyLoading = useAiChatStore((state) => state.historyLoading)
   const conversationId = useAiChatStore((state) => state.conversationId)
   const draft = useAiChatStore((state) => state.draft)
@@ -42,6 +43,7 @@ export function AiWidgetPanel({ onClose }: AiWidgetPanelProps): JSX.Element {
   const send = useAiChatStore((state) => state.send)
   const stop = useAiChatStore((state) => state.stop)
   const rate = useAiChatStore((state) => state.rate)
+  const proposalDecided = useAiChatStore((state) => state.proposalDecided)
   const startNewChat = useAiChatStore((state) => state.startNewChat)
   const pageContext = usePageContextStore((state) => state.context)
   const canOpenFullPage = useAuthStore((state) => state.effectiveRole()) === 'LAWYER'
@@ -90,12 +92,12 @@ export function AiWidgetPanel({ onClose }: AiWidgetPanelProps): JSX.Element {
   const handleSend = useCallback(
     (text?: string): void => {
       const message = text ?? draft
-      if (!message.trim() || isSending || hasIndexingAttachment) return
+      if (!message.trim() || isSending || remoteBusy || hasIndexingAttachment) return
       resetTextareaHeight(textareaRef.current)
       send(message)
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
-    [draft, hasIndexingAttachment, isSending, queryClient, send]
+    [draft, hasIndexingAttachment, isSending, remoteBusy, queryClient, send]
   )
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -249,6 +251,7 @@ export function AiWidgetPanel({ onClose }: AiWidgetPanelProps): JSX.Element {
                   key={message.id}
                   message={message}
                   onRate={(rating, comment) => void rate(message.id, rating, comment)}
+                  onProposalDecided={proposalDecided}
                 />
               ))}
             </AnimatePresence>
@@ -346,8 +349,14 @@ export function AiWidgetPanel({ onClose }: AiWidgetPanelProps): JSX.Element {
           <button
             type="button"
             onClick={() => (isSending ? stop() : handleSend())}
-            disabled={!isSending && (!draft.trim() || hasIndexingAttachment)}
-            title={hasIndexingAttachment ? t('chat.waitIndexing') : undefined}
+            disabled={!isSending && (!draft.trim() || remoteBusy || hasIndexingAttachment)}
+            title={
+              remoteBusy
+                ? t('aiWidget.remoteBusy')
+                : hasIndexingAttachment
+                  ? t('chat.waitIndexing')
+                  : undefined
+            }
             aria-label={isSending ? t('aiWidget.stop') : t('chat.send')}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-solid text-accent-fg transition-all hover:bg-accent-solid-hover disabled:cursor-not-allowed disabled:opacity-40"
           >

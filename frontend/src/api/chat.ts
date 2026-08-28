@@ -3,8 +3,11 @@ import { MAX_PAGE_SIZE, readTotal, type Page } from './pagination'
 import { useAuthStore } from '../store/authStore'
 import i18n from '../i18n'
 import type {
+  AiActionProposal,
+  AiTrustedTool,
   ChatRequest,
   ChatResponse,
+  ChatToolStep,
   ConversationResponse,
   DocumentResponse,
   DocumentUploadResponse,
@@ -21,6 +24,8 @@ export interface ChatStreamCallbacks {
   onToken: (token: string) => void
   onDone: (data: ChatResponse) => void
   onError: (message: string) => void
+  onToolStep?: (step: ChatToolStep) => void
+  onProposal?: (proposal: AiActionProposal) => void
 }
 
 export async function streamMessage(
@@ -119,6 +124,8 @@ function dispatchEvent(rawEvent: string, callbacks: ChatStreamCallbacks): void {
     if (eventName === 'token') callbacks.onToken((JSON.parse(payload) as { content: string }).content)
     else if (eventName === 'done') callbacks.onDone(JSON.parse(payload) as ChatResponse)
     else if (eventName === 'error') callbacks.onError((JSON.parse(payload) as { message: string }).message)
+    else if (eventName === 'tool_step') callbacks.onToolStep?.(JSON.parse(payload) as ChatToolStep)
+    else if (eventName === 'proposal') callbacks.onProposal?.(JSON.parse(payload) as AiActionProposal)
   } catch {
     callbacks.onError(genericStreamError())
   }
@@ -164,6 +171,41 @@ export const chatApi = {
   rateMessage: async (messageId: string, data: RateRequest): Promise<MessageResponse> => {
     const response = await apiClient.post<MessageResponse>(`/api/ai/messages/${messageId}/rate`, data)
     return response.data
+  },
+
+  getPendingProposals: async (conversationId: string): Promise<AiActionProposal[]> => {
+    const response = await apiClient.get<AiActionProposal[]>('/api/ai/chat/proposals', {
+      params: { conversationId },
+    })
+    return response.data
+  },
+
+  approveProposal: async (
+    proposalId: string,
+    alwaysAllow?: boolean
+  ): Promise<AiActionProposal> => {
+    const response = await apiClient.post<AiActionProposal>(
+      `/api/ai/chat/proposals/${proposalId}/approve`,
+      undefined,
+      { params: alwaysAllow ? { alwaysAllow: true } : undefined }
+    )
+    return response.data
+  },
+
+  rejectProposal: async (proposalId: string): Promise<AiActionProposal> => {
+    const response = await apiClient.post<AiActionProposal>(
+      `/api/ai/chat/proposals/${proposalId}/reject`
+    )
+    return response.data
+  },
+
+  getTrustedTools: async (): Promise<AiTrustedTool[]> => {
+    const response = await apiClient.get<AiTrustedTool[]>('/api/ai/chat/trusted-tools')
+    return response.data
+  },
+
+  revokeTrustedTool: async (toolName: string): Promise<void> => {
+    await apiClient.delete(`/api/ai/chat/trusted-tools/${toolName}`)
   },
 
   getAttachments: async (): Promise<DocumentResponse[]> => {

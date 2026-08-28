@@ -171,6 +171,7 @@ export interface ChatResponse {
   answer: string
   sources: string[]
   followUps: string[]
+  proposals?: AiActionProposal[]
 }
 
 export interface ConversationResponse {
@@ -191,6 +192,45 @@ export interface AdminConversationResponse {
   updatedAt: string
 }
 
+export interface ToolStepResponse {
+  name: string
+  status: ToolStepStatus
+  durationMs: number
+}
+
+export type ToolStepStatus = 'RUNNING' | 'OK' | 'ERROR' | 'SKIPPED'
+
+export interface ChatToolStep {
+  name: string
+  status: ToolStepStatus
+}
+
+export type AiActionProposalStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'FAILED'
+
+export interface AiActionProposal {
+  id: string
+  conversationId: string
+  messageId?: string | null
+  toolName: string
+  title: string
+  status: AiActionProposalStatus
+  arguments: Record<string, unknown>
+  result?: string | null
+  failureReason?: string | null
+  createdAt: string
+  expiresAt: string
+}
+
+export interface AiTrustedTool {
+  toolName: string
+  grantedAt: string
+}
+
 export interface MessageResponse {
   id: string
   role: MessageRole
@@ -198,6 +238,7 @@ export interface MessageResponse {
   sources?: string[]
   rating?: number | null
   createdAt: string
+  toolSteps?: ToolStepResponse[]
 }
 
 export interface DocumentResponse {

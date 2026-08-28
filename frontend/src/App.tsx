@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useAuthBootstrap } from './hooks/useAuthBootstrap'
 import { useLanguageSync } from './hooks/useLanguage'
+import { useAiChatListSync } from './hooks/useAiChatListSync'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { CookieBanner } from './components/CookieBanner'
 import { AiWidget } from './components/ai/AiWidget'
@@ -62,6 +63,7 @@ export default function App(): JSX.Element {
   const { isAuthenticated, bootstrapped, effectiveRole } = useAuthStore()
   useAuthBootstrap()
   useLanguageSync()
+  useAiChatListSync()
 
   if (!bootstrapped) {
     return <FullScreenLoader />

@@ -48,11 +48,13 @@ export function ScopedChatPanel({
   const {
     messages,
     isSending,
+    remoteBusy,
     messagesLoading,
     activeConversationId,
     followUps,
     send,
     rate,
+    proposalDecided,
     selectConversation,
     startNewChat,
   } = useChatSession({ buildRequest, conversationsQueryKey })
@@ -67,7 +69,7 @@ export function ScopedChatPanel({
 
   const handleSend = (text?: string): void => {
     const message = text ?? inputValue
-    if (!message.trim() || isSending) return
+    if (!message.trim() || isSending || remoteBusy) return
     setInputValue('')
     resetTextareaHeight(textareaRef.current)
     send(message)
@@ -152,6 +154,7 @@ export function ScopedChatPanel({
                   message={message}
                   caseId={caseId}
                   onRate={(rating, comment) => rate(message.id, rating, comment)}
+                  onProposalDecided={proposalDecided}
                 />
               ))}
             </AnimatePresence>
@@ -189,7 +192,8 @@ export function ScopedChatPanel({
             <button
               type="button"
               onClick={() => handleSend()}
-              disabled={isSending || inputValue.trim() === ''}
+              disabled={isSending || remoteBusy || inputValue.trim() === ''}
+              title={remoteBusy ? t('aiWidget.remoteBusy') : undefined}
               className="px-4 py-2 rounded-lg bg-accent-solid text-accent-fg text-sm hover:bg-accent-solid-hover transition-colors disabled:opacity-50"
             >
               {isSending ? <Spinner size="sm" /> : t(`${i18nPrefix}.send`)}

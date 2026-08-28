@@ -10,9 +10,11 @@ import type { DocumentResponse } from '../../types'
 import { useAiChatStore } from '../../store/aiChatStore'
 import { useScrollToBottom } from '../../hooks/useScrollToBottom'
 import { autosizeTextarea, resetTextareaHeight, lastFollowUps } from '../../lib/chat/chatSession'
+import { broadcastListChanged } from '../../lib/chat/chatSync'
 import { Spinner } from '../../components/ui/Spinner'
 import { PravoIcon } from '../../components/ui/Logo'
 import { MessageBubble } from '../../components/chat/ChatMessageBubble'
+import { TrustedToolsPanel } from '../../components/chat/TrustedToolsPanel'
 
 const TEXTAREA_MAX_HEIGHT = 160
 const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3']
@@ -32,6 +34,7 @@ export default function AiPage(): JSX.Element {
 
   const messages = useAiChatStore((state) => state.messages)
   const isSending = useAiChatStore((state) => state.isSending)
+  const remoteBusy = useAiChatStore((state) => state.remoteBusy)
   const historyLoading = useAiChatStore((state) => state.historyLoading)
   const conversationId = useAiChatStore((state) => state.conversationId)
   const draft = useAiChatStore((state) => state.draft)
@@ -41,6 +44,7 @@ export default function AiPage(): JSX.Element {
   const send = useAiChatStore((state) => state.send)
   const stop = useAiChatStore((state) => state.stop)
   const rate = useAiChatStore((state) => state.rate)
+  const proposalDecided = useAiChatStore((state) => state.proposalDecided)
   const startNewChat = useAiChatStore((state) => state.startNewChat)
   const selectConversation = useAiChatStore((state) => state.selectConversation)
 
@@ -121,7 +125,7 @@ export default function AiPage(): JSX.Element {
 
   const handleSend = (text?: string): void => {
     const message = text ?? draft
-    if (!message.trim() || isSending || hasIndexingAttachment) return
+    if (!message.trim() || isSending || remoteBusy || hasIndexingAttachment) return
     setAttachPickerOpen(false)
     resetTextareaHeight(textareaRef.current)
     send(message)
@@ -163,6 +167,7 @@ export default function AiPage(): JSX.Element {
     if (conversationId === conversation.id) {
       startNewChat()
     }
+    broadcastListChanged('deleted', conversation.id)
     await queryClient.invalidateQueries({ queryKey: ['conversations'] })
   }
 
@@ -218,18 +223,21 @@ export default function AiPage(): JSX.Element {
               {t('chat.newChat')}
             </button>
 
-            <div className="relative">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={t('chat.searchPlaceholder')}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-line bg-bg text-fg placeholder-fg-muted focus:outline-none focus:ring-1 focus:ring-accent"
-              />
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={t('chat.searchPlaceholder')}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-line bg-bg text-fg placeholder-fg-muted focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+              <TrustedToolsPanel />
             </div>
           </div>
 
@@ -336,6 +344,7 @@ export default function AiPage(): JSX.Element {
                       key={message.id}
                       message={message}
                       onRate={(rating, comment) => void rate(message.id, rating, comment)}
+                      onProposalDecided={proposalDecided}
                     />
                   ))}
                 </AnimatePresence>
@@ -492,8 +501,14 @@ export default function AiPage(): JSX.Element {
                 />
                 <button
                   onClick={() => (isSending ? stop() : handleSend())}
-                  disabled={!isSending && (!draft.trim() || hasIndexingAttachment)}
-                  title={hasIndexingAttachment ? t('chat.waitIndexing') : undefined}
+                  disabled={!isSending && (!draft.trim() || remoteBusy || hasIndexingAttachment)}
+                  title={
+                    remoteBusy
+                      ? t('aiWidget.remoteBusy')
+                      : hasIndexingAttachment
+                        ? t('chat.waitIndexing')
+                        : undefined
+                  }
                   className="shrink-0 w-9 h-9 rounded-lg bg-accent-solid text-accent-fg flex items-center justify-center hover:bg-accent-solid-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   aria-label={isSending ? t('aiWidget.stop') : t('chat.send')}
                 >
