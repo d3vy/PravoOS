@@ -1,6 +1,7 @@
 package com.pravoos.llm.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -15,7 +16,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.llm.domain.EmbeddingResult;
+import com.pravoos.llm.domain.LlmMessage;
 import com.pravoos.llm.domain.LlmResult;
+import com.pravoos.llm.domain.LlmStreamResult;
+import com.pravoos.llm.domain.LlmToolCall;
 import com.pravoos.llm.domain.LlmUsage;
 import com.pravoos.llm.exception.GlobalExceptionHandler;
 import com.pravoos.llm.openai.OpenAiEngine;
@@ -150,7 +154,7 @@ class LlmControllerTest {
               @SuppressWarnings("unchecked")
               Consumer<String> restorer = invocation.getArgument(4);
               restorer.accept("Привет");
-              return new LlmUsage(1, 1, 2);
+              return LlmStreamResult.usageOnly(new LlmUsage(1, 1, 2));
             })
         .when(engine)
         .streamComplete(anyString(), anyList(), anyString(), any(), any());
@@ -177,5 +181,120 @@ class LlmControllerTest {
     executor.capturedTask.run();
 
     verify(piiRedactor, org.mockito.Mockito.never()).recordSession(any());
+  }
+
+  @Test
+  void completeRestoresToolCallArgumentsBeforeReturningThem() throws Exception {
+    LlmToolCall redacted = new LlmToolCall("call_1", "create_client", "{\"name\":\"[NAME_1]\"}");
+    LlmToolCall restored = new LlmToolCall("call_1", "create_client", "{\"name\":\"Пётр\"}");
+    when(engine.complete(anyString(), anyList(), anyString(), any()))
+        .thenReturn(new LlmResult("", new LlmUsage(1, 1, 2), List.of(redacted), "tool_calls"));
+    when(piiRedactor.restoreToolCalls(anyList(), any())).thenReturn(List.of(restored));
+
+    mockMvc
+        .perform(
+            post("/internal/llm/complete")
+                .contentType("application/json")
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CompleteRequest("system", List.of(), "создай клиента", null))))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Пётр")))
+        .andExpect(content().string(containsString("\"finishReason\":\"tool_calls\"")));
+
+    verify(piiRedactor).restoreToolCalls(eq(List.of(redacted)), any());
+  }
+
+  @Test
+  void completeAcceptsAHistoryOnlyRequestWithoutAUserMessage() throws Exception {
+    when(engine.complete(any(), anyList(), any(), any()))
+        .thenReturn(new LlmResult("Готово", new LlmUsage(1, 1, 2)));
+
+    mockMvc
+        .perform(
+            post("/internal/llm/complete")
+                .contentType("application/json")
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CompleteRequest(
+                            "system",
+                            List.of(LlmMessage.tool("call_1", "{\"id\":7}")),
+                            null,
+                            null))))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void completeRejectsARequestWithNeitherUserMessageNorHistory() throws Exception {
+    mockMvc
+        .perform(
+            post("/internal/llm/complete")
+                .contentType("application/json")
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CompleteRequest("system", List.of(), null, null))))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void streamEmitsRestoredToolCallsBetweenTokensAndUsage() throws Exception {
+    LlmToolCall redacted = new LlmToolCall("call_1", "create_client", "{\"name\":\"[NAME_1]\"}");
+    LlmToolCall restored = new LlmToolCall("call_1", "create_client", "{\"name\":\"Пётр\"}");
+    doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              Consumer<String> restorer = invocation.getArgument(4);
+              restorer.accept("Секунду");
+              return new LlmStreamResult(new LlmUsage(1, 1, 2), List.of(redacted), "tool_calls");
+            })
+        .when(engine)
+        .streamComplete(anyString(), anyList(), anyString(), any(), any());
+    when(piiRedactor.restoreToolCalls(anyList(), any())).thenReturn(List.of(restored));
+
+    String body =
+        mockMvc
+            .perform(
+                post("/internal/llm/stream")
+                    .contentType("application/json")
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CompleteRequest("system", List.of(), "создай клиента", null))))
+            .andReturn()
+            .getResponse()
+            .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+
+    assertThat(body.indexOf("event:token"))
+        .isLessThan(body.indexOf("event:tool_calls"))
+        .isNotNegative();
+    assertThat(body.indexOf("event:tool_calls")).isLessThan(body.indexOf("event:usage"));
+    assertThat(body).contains("Пётр").doesNotContain("[NAME_1]");
+  }
+
+  @Test
+  void streamOmitsTheToolCallsEventWhenTheModelOnlyAnswers() throws Exception {
+    doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              Consumer<String> restorer = invocation.getArgument(4);
+              restorer.accept("Привет");
+              return LlmStreamResult.usageOnly(new LlmUsage(1, 1, 2));
+            })
+        .when(engine)
+        .streamComplete(anyString(), anyList(), anyString(), any(), any());
+
+    String body =
+        mockMvc
+            .perform(
+                post("/internal/llm/stream")
+                    .contentType("application/json")
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CompleteRequest("system", List.of(), "привет", null))))
+            .andReturn()
+            .getResponse()
+            .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+
+    assertThat(body).contains("event:token", "event:usage").doesNotContain("event:tool_calls");
+    verify(piiRedactor, org.mockito.Mockito.never()).restoreToolCalls(anyList(), any());
   }
 }

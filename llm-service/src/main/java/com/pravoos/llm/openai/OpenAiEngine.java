@@ -6,6 +6,8 @@ import com.pravoos.llm.domain.EmbeddingResult;
 import com.pravoos.llm.domain.LlmMessage;
 import com.pravoos.llm.domain.LlmOptions;
 import com.pravoos.llm.domain.LlmResult;
+import com.pravoos.llm.domain.LlmStreamResult;
+import com.pravoos.llm.domain.LlmToolCall;
 import com.pravoos.llm.domain.LlmUsage;
 import com.pravoos.llm.exception.LlmException;
 import com.pravoos.llm.openai.dto.OpenAiChatRequest;
@@ -13,7 +15,9 @@ import com.pravoos.llm.openai.dto.OpenAiChatResponse;
 import com.pravoos.llm.openai.dto.OpenAiChatStreamRequest;
 import com.pravoos.llm.openai.dto.OpenAiEmbeddingRequest;
 import com.pravoos.llm.openai.dto.OpenAiEmbeddingResponse;
+import com.pravoos.llm.openai.dto.OpenAiMessage;
 import com.pravoos.llm.openai.dto.OpenAiStreamChunk;
+import com.pravoos.llm.openai.dto.OpenAiTool;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -54,6 +58,7 @@ public class OpenAiEngine {
   private final ObjectMapper objectMapper;
   private final Semaphore inFlightLimit;
   private final long acquireTimeoutMs;
+  private final int maxToolArgumentChars;
 
   public OpenAiEngine(
       RestClient openAiRestClient,
@@ -61,25 +66,29 @@ public class OpenAiEngine {
       LlmMetrics llmMetrics,
       ObjectMapper objectMapper,
       @Value("${llm.openai.max-concurrent-requests:20}") int maxConcurrentRequests,
-      @Value("${llm.openai.acquire-timeout-ms:2000}") long acquireTimeoutMs) {
+      @Value("${llm.openai.acquire-timeout-ms:2000}") long acquireTimeoutMs,
+      @Value("${llm.openai.max-tool-argument-chars:32768}") int maxToolArgumentChars) {
     this.restClient = openAiRestClient;
     this.properties = properties;
     this.llmMetrics = llmMetrics;
     this.objectMapper = objectMapper;
     this.inFlightLimit = new Semaphore(maxConcurrentRequests);
     this.acquireTimeoutMs = acquireTimeoutMs;
+    this.maxToolArgumentChars = maxToolArgumentChars;
   }
 
   public LlmResult complete(
       String systemPrompt, List<LlmMessage> history, String userMessage, LlmOptions options) {
     LlmOptions resolved = LlmOptions.orDefault(options);
-    List<LlmMessage> messages = buildMessages(systemPrompt, history, userMessage);
+    List<OpenAiMessage> messages = buildMessages(systemPrompt, history, userMessage);
     OpenAiChatRequest request =
         new OpenAiChatRequest(
             resolveModel(resolved),
             messages,
             resolveMaxTokens(resolved),
-            resolveTemperature(resolved));
+            resolveTemperature(resolved),
+            OpenAiTool.from(resolved.tools()),
+            resolved.toolChoice());
 
     OpenAiChatResponse response =
         executeWithRetry(
@@ -97,29 +106,36 @@ public class OpenAiEngine {
     }
     LlmUsage usage = response.toLlmUsage();
     llmMetrics.recordCompletion(usage);
+    List<LlmToolCall> toolCalls = response.firstToolCalls();
+    llmMetrics.recordToolCalls(toolCalls);
     log.debug(
-        "LLM completion successful, model: {}, tokens: {}", request.model(), usage.totalTokens());
-    return new LlmResult(response.firstContent(), usage);
+        "LLM completion successful, model: {}, tokens: {}, tool calls: {}",
+        request.model(),
+        usage.totalTokens(),
+        toolCalls.size());
+    return new LlmResult(response.firstContent(), usage, toolCalls, response.firstFinishReason());
   }
 
-  public LlmUsage streamComplete(
+  public LlmStreamResult streamComplete(
       String systemPrompt,
       List<LlmMessage> history,
       String userMessage,
       LlmOptions options,
       Consumer<String> tokenConsumer) {
     LlmOptions resolved = LlmOptions.orDefault(options);
-    List<LlmMessage> messages = buildMessages(systemPrompt, history, userMessage);
+    List<OpenAiMessage> messages = buildMessages(systemPrompt, history, userMessage);
     OpenAiChatStreamRequest request =
         OpenAiChatStreamRequest.withUsage(
             resolveModel(resolved),
             messages,
             resolveMaxTokens(resolved),
-            resolveTemperature(resolved));
+            resolveTemperature(resolved),
+            OpenAiTool.from(resolved.tools()),
+            resolved.toolChoice());
 
     acquireSlot("chat stream");
     try {
-      LlmUsage usage =
+      LlmStreamResult result =
           restClient
               .post()
               .uri("/chat/completions")
@@ -139,21 +155,25 @@ public class OpenAiEngine {
                     return consumeStream(clientResponse.getBody(), tokenConsumer);
                   });
 
-      LlmUsage resolvedUsage = usage == null ? LlmUsage.EMPTY : usage;
-      llmMetrics.recordCompletion(resolvedUsage);
+      LlmStreamResult resolvedResult = result == null ? LlmStreamResult.EMPTY : result;
+      llmMetrics.recordCompletion(resolvedResult.usage());
+      llmMetrics.recordToolCalls(resolvedResult.toolCalls());
       log.debug(
-          "LLM stream completed, model: {}, tokens: {}",
+          "LLM stream completed, model: {}, tokens: {}, tool calls: {}",
           request.model(),
-          resolvedUsage.totalTokens());
-      return resolvedUsage;
+          resolvedResult.usage().totalTokens(),
+          resolvedResult.toolCalls().size());
+      return resolvedResult;
     } finally {
       inFlightLimit.release();
     }
   }
 
-  private LlmUsage consumeStream(java.io.InputStream body, Consumer<String> tokenConsumer)
+  private LlmStreamResult consumeStream(java.io.InputStream body, Consumer<String> tokenConsumer)
       throws IOException {
     LlmUsage usage = LlmUsage.EMPTY;
+    String finishReason = null;
+    ToolCallAccumulator toolCalls = new ToolCallAccumulator(maxToolArgumentChars);
     try (BufferedReader reader =
         new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
       String line;
@@ -172,13 +192,17 @@ public class OpenAiEngine {
         if (chunk.usage() != null) {
           usage = chunk.toLlmUsage();
         }
+        if (chunk.firstFinishReason() != null) {
+          finishReason = chunk.firstFinishReason();
+        }
+        toolCalls.accept(chunk.firstToolCallDeltas());
         String delta = chunk.firstDelta();
         if (delta != null && !delta.isEmpty()) {
           tokenConsumer.accept(delta);
         }
       }
     }
-    return usage;
+    return new LlmStreamResult(usage, toolCalls.build(), finishReason);
   }
 
   private String readErrorBody(java.io.InputStream body) {
@@ -340,14 +364,16 @@ public class OpenAiEngine {
     }
   }
 
-  private List<LlmMessage> buildMessages(
+  private List<OpenAiMessage> buildMessages(
       String systemPrompt, List<LlmMessage> history, String userMessage) {
     List<LlmMessage> messages = new ArrayList<>();
-    messages.add(new LlmMessage("system", systemPrompt));
+    messages.add(LlmMessage.system(systemPrompt));
     if (history != null) {
       messages.addAll(history);
     }
-    messages.add(new LlmMessage("user", userMessage));
-    return messages;
+    if (userMessage != null && !userMessage.isBlank()) {
+      messages.add(LlmMessage.user(userMessage));
+    }
+    return messages.stream().map(OpenAiMessage::from).toList();
   }
 }

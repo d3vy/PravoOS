@@ -26,6 +26,7 @@ llm:
     max-tokens: ${OPENAI_MAX_TOKENS:4096}
     max-concurrent-requests: ${OPENAI_MAX_CONCURRENT_REQUESTS:20}
     acquire-timeout-ms: ${OPENAI_ACQUIRE_TIMEOUT_MS:2000}
+    max-tool-argument-chars: ${OPENAI_MAX_TOOL_ARGUMENT_CHARS:32768}
 
 internal:
   callers:

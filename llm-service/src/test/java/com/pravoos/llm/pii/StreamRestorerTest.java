@@ -2,6 +2,7 @@ package com.pravoos.llm.pii;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.llm.config.PiiRedactionProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.ArrayList;
@@ -12,7 +13,9 @@ class StreamRestorerTest {
 
   private final PromptPiiRedactor redactor =
       new PromptPiiRedactor(
-          new PiiRedactionProperties(true, true, null), new SimpleMeterRegistry());
+          new PiiRedactionProperties(true, true, null),
+          new SimpleMeterRegistry(),
+          new ObjectMapper());
 
   @Test
   void restoresPlaceholderSplitAcrossTokens() {

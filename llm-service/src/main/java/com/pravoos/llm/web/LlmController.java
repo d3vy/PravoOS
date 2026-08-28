@@ -2,7 +2,8 @@ package com.pravoos.llm.web;
 
 import com.pravoos.llm.domain.EmbeddingResult;
 import com.pravoos.llm.domain.LlmResult;
-import com.pravoos.llm.domain.LlmUsage;
+import com.pravoos.llm.domain.LlmStreamResult;
+import com.pravoos.llm.domain.LlmToolCall;
 import com.pravoos.llm.openai.OpenAiEngine;
 import com.pravoos.llm.pii.PromptPiiRedactor;
 import com.pravoos.llm.pii.RedactionSession;
@@ -13,8 +14,10 @@ import com.pravoos.llm.web.dto.EmbedRequest;
 import com.pravoos.llm.web.dto.EmbedResponse;
 import com.pravoos.llm.web.dto.StreamError;
 import com.pravoos.llm.web.dto.StreamToken;
+import com.pravoos.llm.web.dto.StreamToolCalls;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -53,7 +56,11 @@ public class LlmController {
             piiRedactor.redact(request.userMessage(), session),
             request.options());
     piiRedactor.recordSession(session);
-    return new LlmResult(session.restore(result.content()), result.usage());
+    return new LlmResult(
+        session.restore(result.content()),
+        result.usage(),
+        piiRedactor.restoreToolCalls(result.toolCalls(), session),
+        result.finishReason());
   }
 
   @PostMapping("/embed")
@@ -86,7 +93,7 @@ public class LlmController {
           try {
             StreamRestorer restorer =
                 new StreamRestorer(session, token -> sendToken(emitter, token));
-            LlmUsage usage =
+            LlmStreamResult result =
                 engine.streamComplete(
                     piiRedactor.redact(request.systemPrompt(), session),
                     piiRedactor.redact(request.history(), session),
@@ -95,7 +102,11 @@ public class LlmController {
                     restorer);
             restorer.flush();
             piiRedactor.recordSession(session);
-            emitter.send(SseEmitter.event().name("usage").data(usage, MediaType.APPLICATION_JSON));
+            if (result.hasToolCalls()) {
+              sendToolCalls(emitter, piiRedactor.restoreToolCalls(result.toolCalls(), session));
+            }
+            emitter.send(
+                SseEmitter.event().name("usage").data(result.usage(), MediaType.APPLICATION_JSON));
             emitter.complete();
           } catch (StreamClosedException e) {
             log.info("Streaming completion aborted: client closed the connection");
@@ -117,6 +128,17 @@ public class LlmController {
       emitter.complete();
     } catch (IOException | RuntimeException sendFailure) {
       emitter.completeWithError(failure);
+    }
+  }
+
+  private void sendToolCalls(SseEmitter emitter, List<LlmToolCall> toolCalls) {
+    try {
+      emitter.send(
+          SseEmitter.event()
+              .name("tool_calls")
+              .data(new StreamToolCalls(toolCalls), MediaType.APPLICATION_JSON));
+    } catch (IOException e) {
+      throw new StreamClosedException(e);
     }
   }
 
