@@ -7,15 +7,35 @@ import com.pravoos.common.web.RequestIdFilter;
 import com.pravoos.common.web.UtcTimestampModule;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.context.TypeExcludeFilter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.ComponentScan.Filter;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.modulith.Modulithic;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
+@SpringBootConfiguration
+@EnableAutoConfiguration(exclude = UserDetailsServiceAutoConfiguration.class)
+// @Modulithic replaces @SpringBootApplication as the modularity root marker Spring Modulith
+// looks for, since @SpringBootApplication can't carry our extra excludeFilters below.
+@Modulithic
+// Replaces @SpringBootApplication so we can add a filter keeping test-only @DataJpaTest slice
+// bootstrap classes (compiled to target/test-classes, on the classpath during test runs) out of
+// the real app's scan; the first two filters are @SpringBootApplication's own defaults.
+@ComponentScan(
+    excludeFilters = {
+      @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+      @Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class),
+      @Filter(type = FilterType.REGEX, pattern = ".*\\.JpaSliceConfiguration")
+    })
 @EnableConfigurationProperties({
   LlmServiceProperties.class,
   DocumentProperties.class,
