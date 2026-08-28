@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -46,7 +47,7 @@ public class AiActionProposalService implements AiActionProposals {
 
   public AiActionProposalService(
       AiActionProposalStore proposalStore,
-      AiToolRegistry toolRegistry,
+      @Lazy AiToolRegistry toolRegistry,
       AgentProperties agentProperties,
       AccessAuditService accessAuditService,
       AiTrustedToolRepository trustedToolRepository,
