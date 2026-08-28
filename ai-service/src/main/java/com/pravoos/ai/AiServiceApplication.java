@@ -39,15 +39,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
   MailSyncProperties.class,
   MailAttachmentProperties.class
 })
-@EnableJpaRepositories(
-    basePackages = {
-      "com.pravoos.ai.shared.repository.jpa",
-      "com.pravoos.ai.core.internal.repository.jpa",
-      "com.pravoos.ai.document.internal.repository.jpa",
-      "com.pravoos.ai.practice.internal.repository.jpa",
-      "com.pravoos.ai.recyclebin.internal.repository.jpa"
-    })
-@EnableMongoRepositories(basePackages = "com.pravoos.ai.core.internal.repository.mongo")
+@EnableJpaRepositories(basePackages = "com.pravoos.ai")
+@EnableMongoRepositories(basePackages = "com.pravoos.ai")
 @EnableScheduling
 public class AiServiceApplication {
 
