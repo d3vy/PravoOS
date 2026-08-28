@@ -83,7 +83,7 @@ build_jars() {
 
 build_images() {
   log "Building Docker images..."
-  compose build user-service ai-service api-gateway notification-service frontend
+  compose build user-service ai-service llm-service api-gateway notification-service frontend
 }
 
 start_stack() {
