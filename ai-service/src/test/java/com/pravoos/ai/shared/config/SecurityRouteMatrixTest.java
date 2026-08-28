@@ -60,7 +60,7 @@ class SecurityRouteMatrixTest {
           "/swagger-ui.html");
 
   private static final List<String> ADMIN_ONLY_PATHS =
-      List.of("/api/ai/admin/lawyers", "/api/ai/documents/1");
+      List.of("/api/ai/admin/lawyers", "/api/ai/documents/1", "/api/ai/admin/recycle-bin");
 
   private static final List<String> CLIENT_ONLY_PATHS = List.of("/api/ai/portal/cases");
 
@@ -92,6 +92,7 @@ class SecurityRouteMatrixTest {
           "/api/ai/responses/1",
           "/api/ai/invoices/1",
           "/api/ai/billing-profile/current",
+          "/api/ai/recycle-bin/1",
           "/api/ai/saved-views/1",
           "/api/ai/time/entries",
           "/api/ai/mailboxes/1",
