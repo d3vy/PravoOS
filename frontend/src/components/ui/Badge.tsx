@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '../../i18n'
-import type { ApplicationStatus, CaseStatus, DocumentStatus } from '../../types'
+import type { ApplicationStatus, CaseStatus, DocumentStatus, SubjectRequestStatus } from '../../types'
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'neutral' | 'info'
 
@@ -76,4 +76,15 @@ export function DocumentStatusBadge({ status }: { status: DocumentStatus }): JSX
 export function CaseStatusBadge({ status }: { status: CaseStatus }): JSX.Element {
   const { t } = useTranslation()
   return <Badge variant={CASE_STATUS_VARIANT[status]}>{t(`status.case.${status}`)}</Badge>
+}
+
+const SUBJECT_REQUEST_STATUS_VARIANT: Record<SubjectRequestStatus, BadgeVariant> = {
+  PENDING: 'warning',
+  COMPLETED: 'success',
+  REJECTED: 'danger',
+}
+
+export function PrivacyRequestStatusBadge({ status }: { status: SubjectRequestStatus }): JSX.Element {
+  const { t } = useTranslation()
+  return <Badge variant={SUBJECT_REQUEST_STATUS_VARIANT[status]}>{t(`status.subjectRequest.${status}`)}</Badge>
 }

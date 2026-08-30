@@ -5,6 +5,9 @@ import type {
   ClientStatsResponse,
   LawyerProfileResponse,
   MessageResponse,
+  RecycleBinEntry,
+  RecycleBinFilterParams,
+  SubjectRequestResponse,
 } from '../types'
 import { DEFAULT_PAGE_SIZE, readTotal, type Page } from './pagination'
 
@@ -83,5 +86,52 @@ export const adminApi = {
       { params: { page, size } }
     )
     return { items: response.data, total: readTotal(response.headers, response.data.length) }
+  },
+
+  getRecycleBin: async (
+    filter: RecycleBinFilterParams & { orgId?: string } = {},
+    page = 0,
+    size = DEFAULT_PAGE_SIZE
+  ): Promise<Page<RecycleBinEntry>> => {
+    const params: Record<string, string | number> = { page, size }
+    if (filter.orgId) params.orgId = filter.orgId
+    if (filter.area) params.area = filter.area
+    if (filter.deletedByRole) params.deletedByRole = filter.deletedByRole
+    if (filter.from) params.from = filter.from
+    if (filter.to) params.to = filter.to
+    if (filter.q && filter.q.trim()) params.q = filter.q.trim()
+    const response = await apiClient.get<RecycleBinEntry[]>('/api/ai/admin/recycle-bin', {
+      params,
+    })
+    return { items: response.data, total: readTotal(response.headers, response.data.length) }
+  },
+
+  restoreRecycleBinEntry: async (entryId: string): Promise<void> => {
+    await apiClient.post(`/api/ai/admin/recycle-bin/${entryId}/restore`)
+  },
+
+  purgeRecycleBinEntry: async (entryId: string): Promise<void> => {
+    await apiClient.delete(`/api/ai/admin/recycle-bin/${entryId}`)
+  },
+
+  getPendingPrivacyRequests: async (): Promise<SubjectRequestResponse[]> => {
+    const response = await apiClient.get<SubjectRequestResponse[]>('/api/admin/privacy/requests')
+    return response.data
+  },
+
+  completePrivacyRequest: async (requestId: string, note?: string): Promise<SubjectRequestResponse> => {
+    const response = await apiClient.post<SubjectRequestResponse>(
+      `/api/admin/privacy/requests/${requestId}/complete`,
+      note ? { note } : {}
+    )
+    return response.data
+  },
+
+  rejectPrivacyRequest: async (requestId: string, reason?: string): Promise<SubjectRequestResponse> => {
+    const response = await apiClient.post<SubjectRequestResponse>(
+      `/api/admin/privacy/requests/${requestId}/reject`,
+      reason ? { reason } : {}
+    )
+    return response.data
   },
 }

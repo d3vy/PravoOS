@@ -25,6 +25,8 @@ export function AdminLayout(): JSX.Element {
     { to: '/admin/documents', label: t('admin.documents'), end: true },
     { to: '/admin/ai-stats', label: t('admin.aiMetrics'), end: true },
     { to: '/admin/ai-conversations', label: t('admin.aiConversations'), end: true },
+    { to: '/admin/recycle-bin', label: t('admin.recycleBin'), end: true },
+    { to: '/admin/privacy-requests', label: t('admin.privacyRequests'), end: true },
   ]
 
   useEffect(() => {

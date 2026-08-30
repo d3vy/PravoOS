@@ -13,6 +13,7 @@ import {
   SettingsIcon,
   TeamIcon,
   TemplatesIcon,
+  TrashIcon,
   WorkflowsIcon,
 } from './navIcons'
 
@@ -44,6 +45,7 @@ export function useLawyerNavSections(): LawyerNavSection[] {
         { to: '/review', label: t('nav.review'), icon: <ReviewIcon /> },
         { to: '/templates', label: t('nav.templates'), icon: <TemplatesIcon /> },
         { to: '/workflows', label: t('nav.workflows'), icon: <WorkflowsIcon /> },
+        { to: '/recycle-bin', label: t('nav.recycleBin'), icon: <TrashIcon /> },
       ],
     },
   ]

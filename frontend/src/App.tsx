@@ -52,6 +52,9 @@ const InvoiceDetailPage = lazy(() => import('./pages/invoices/InvoiceDetailPage'
 const MailboxesPage = lazy(() => import('./pages/mailboxes/MailboxesPage'))
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
+const RecycleBinPage = lazy(() => import('./pages/settings/RecycleBinPage'))
+const AdminRecycleBinPage = lazy(() => import('./pages/admin/RecycleBinPage'))
+const PrivacyRequestsPage = lazy(() => import('./pages/admin/PrivacyRequestsPage'))
 
 function homePathForRole(role: UserRole | undefined): string {
   if (role === 'ADMIN') return '/admin/applications'
@@ -151,6 +154,7 @@ export default function App(): JSX.Element {
           <Route path="/billing" element={<BillingPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/recycle-bin" element={<RecycleBinPage />} />
         </Route>
 
         <Route
@@ -167,6 +171,8 @@ export default function App(): JSX.Element {
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="ai-stats" element={<AiStatsPage />} />
           <Route path="ai-conversations" element={<AiConversationsPage />} />
+          <Route path="recycle-bin" element={<AdminRecycleBinPage />} />
+          <Route path="privacy-requests" element={<PrivacyRequestsPage />} />
         </Route>
 
         {/* Fallback */}

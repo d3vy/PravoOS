@@ -192,6 +192,63 @@ export interface AdminConversationResponse {
   updatedAt: string
 }
 
+export type RecycleBinEntityType =
+  | 'CASE'
+  | 'CLIENT'
+  | 'DOCUMENT'
+  | 'INVOICE'
+  | 'CONVERSATION'
+  | 'CASE_TASK'
+  | 'CLIENT_CONTACT'
+  | 'TEMPLATE'
+  | 'WORKFLOW_DEFINITION'
+  | 'MAILBOX'
+  | 'SAVED_VIEW'
+  | 'TABULAR_REVIEW'
+  | 'TIME_ENTRY'
+
+export type RecycleBinArea =
+  | 'CASES'
+  | 'CLIENTS'
+  | 'DOCUMENTS'
+  | 'INVOICES'
+  | 'CHAT'
+  | 'TEMPLATES'
+  | 'WORKFLOWS'
+  | 'MAILBOXES'
+  | 'VIEWS'
+  | 'REVIEW'
+  | 'TIME'
+
+export type DeletionRole = 'LAWYER' | 'CLIENT' | 'ADMIN' | 'SYSTEM'
+
+export interface RecycleBinEntry {
+  id: string
+  orgId: string | null
+  ownerId: string
+  entityType: RecycleBinEntityType
+  entityId: string
+  title: string
+  area: RecycleBinArea
+  deletedBy: string
+  deletedByRole: DeletionRole
+  deletedAt: string
+  purgeAfter: string
+  daysUntilPurge: number
+  cascadeGroupId: string
+  cascadeRoot: boolean
+  nestedCount: number
+  payload: Record<string, unknown>
+}
+
+export interface RecycleBinFilterParams {
+  area?: RecycleBinArea
+  deletedByRole?: DeletionRole
+  from?: string
+  to?: string
+  q?: string
+}
+
 export interface ToolStepResponse {
   name: string
   status: ToolStepStatus
