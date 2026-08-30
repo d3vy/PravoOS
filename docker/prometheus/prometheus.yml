@@ -27,6 +27,13 @@ scrape_configs:
         labels:
           service: ai-service
 
+  - job_name: llm-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["llm-service:8084"]
+        labels:
+          service: llm-service
+
   - job_name: notification-service
     metrics_path: /actuator/prometheus
     static_configs:

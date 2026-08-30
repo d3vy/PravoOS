@@ -238,7 +238,14 @@ cp .env.example .env && nano .env
 git pull && ./scripts/deploy.sh
 ```
 
-Бэкапы: `scripts/backup.sh` (pg_dumpall + mongodump → GPG AES-256 → `backups/` на сервере, crontab 02:00, хранение 30 дней). Внешнего отправителя нет — забирать вручную.
+Бэкапы: `scripts/backup.sh` (pg_dumpall + mongodump + файлы документов из тома `documents_data` → GPG AES-256 →
+`backups/` на сервере, crontab 02:00, хранение 30 дней). Внешнего отправителя нет — забирать вручную.
+Восстановление файлов: расшифровать архив, затем
+`docker exec -i pravoos-ai-service tar -xf - -C /app < documents.tar`.
+
+Общая база знаний (документы без `case_id`) наполняется отдельно от деплоя — `scripts/seed-knowledge-base.sh`
+(краулер по источникам из `scripts/*.yaml`, инкрементально по state-файлам; креды ADMIN берутся из `.env`).
+В `deploy.sh` он намеренно не вызывается: ходит по внешним сайтам.
 
 ### CI/CD
 

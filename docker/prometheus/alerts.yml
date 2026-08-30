@@ -119,3 +119,59 @@ groups:
         annotations:
           summary: "Отставание Kafka-консьюмера в {{ $labels.service }}"
           description: "Лаг консьюмера {{ $labels.client_id }} > 1000 сообщений последние 10 минут — консьюмер не успевает обрабатывать."
+
+  - name: pravoos-security
+    rules:
+      - alert: AccountLockoutSpike
+        expr: sum(rate(pravoos_login_total{result="locked"}[5m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Всплеск блокировок аккаунтов"
+          description: "LoginAttemptService блокирует входы чаще 0.2/с последние 10 минут — целевой перебор паролей либо намеренная блокировка чужих аккаунтов. Смотри login_lock_ip:* в Redis, чтобы отделить один источник от распределённого."
+
+      - alert: AuthorizationFailureSpike
+        expr: sum by (service) (rate(http_server_requests_seconds_count{status="403"}[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Всплеск отказов авторизации в {{ $labels.service }}"
+          description: "> 1 ответа 403 в секунду последние 10 минут. Это перебор чужих идентификаторов (IDOR) либо сломанный релиз фронта. Сверь с access-audit, чей аккаунт и какие entityId."
+
+      - alert: UnauthenticatedRequestSpike
+        expr: sum(rate(http_server_requests_seconds_count{service="api-gateway",status="401"}[5m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Всплеск 401 на шлюзе"
+          description: "> 5 неаутентифицированных запросов в секунду последние 10 минут — подбор или переигрывание токенов на периметре."
+
+      - alert: OutboxEventsParked
+        expr: pravoos_outbox_parked > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox-события запаркованы в {{ $labels.service }}"
+          description: "{{ $value }} событий исчерпали app.outbox.max-attempts и больше не будут опубликованы — потребители их никогда не увидят. Нужен ручной разбор таблицы outbox_events."
+
+      - alert: AiWriteProposalSpike
+        expr: sum(rate(pravoos_agent_proposals_total{status="created"}[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI-агент предлагает записи необычно часто"
+          description: "> 0.5 предложений записи в секунду последние 10 минут. Проверь, не зациклился ли агент и не идёт ли prompt injection через документы или почту."
+
+      - alert: LegalDomainGuardFailingOpen
+        expr: increase(pravoos_guard_total{result="allow_failopen"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LegalDomainGuard пропускает запросы без проверки"
+          description: "За 15 минут классификатор был недоступен и guard срабатывал fail-open — запросы вне юридического домена уходят в модель без фильтра. Проверь llm-service и дату /app/app.jar в контейнере: тихо устаревший образ уже давал этот эффект."

@@ -2,6 +2,8 @@ server {
     listen 80;
     server_name ${SERVER_DOMAIN} www.${SERVER_DOMAIN};
 
+    server_tokens off;
+
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
@@ -21,6 +23,8 @@ server {
     ssl_session_timeout 1d;
     ssl_session_cache shared:SSL:10m;
     ssl_protocols TLSv1.2 TLSv1.3;
+
+    server_tokens off;
 
     # Authenticated Origin Pulls: only Cloudflare edges holding the CF client
     # cert can complete the TLS handshake. Turn CF_ORIGIN_PULL=on only AFTER
@@ -62,9 +66,15 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
 
+        # add_header в location отменяет ВЕСЬ набор, унаследованный от server,
+        # поэтому заголовки повторяются здесь. CSP тут урезанный: полный набор
+        # приложения (default-src 'self') ломает inline-бутстрап Grafana, а от
+        # кликджекинга защищают frame-ancestors + X-Frame-Options.
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Frame-Options "DENY" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'" always;
     }
 
     location / {
@@ -78,5 +88,6 @@ server {
 server {
     listen 80 default_server;
     server_name _;
+    server_tokens off;
     return 444;
 }

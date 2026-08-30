@@ -82,3 +82,6 @@ jwt.pem
 !frontend/src/legal/*.md
 !claude.md
 plans/
+scripts/load/.env.load
+scripts/load/report/*/
+!scripts/load/.env.load.example

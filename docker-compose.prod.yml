@@ -118,7 +118,8 @@ services:
         condition: service_started
 
   certbot:
-    image: certbot/certbot:latest
+    # Пин версии: latest тянет неизвестный образ на каждом обновлении сертификата.
+    image: certbot/certbot:v5.7.0
     profiles: ["tools"]
     volumes:
       - certbot_conf:/etc/letsencrypt
