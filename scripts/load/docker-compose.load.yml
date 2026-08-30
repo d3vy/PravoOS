@@ -1,0 +1,86 @@
+# Оверлей нагрузочного стенда: профиль лимитеров и пулов, мок внешнего LLM,
+# смонтированные сиды и k6. Применяется только вместе с docker-compose.yml.
+services:
+  postgres:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/load/seed:/seed:ro
+
+  mongodb:
+    volumes:
+      - mongo_data:/data/db
+      - ./scripts/load/seed:/seed:ro
+
+  mock-openai:
+    image: node:22-alpine
+    container_name: pravoos-mock-openai
+    command: ["node", "/app/server.js"]
+    working_dir: /app
+    environment:
+      MOCK_PORT: "8090"
+      MOCK_TTFT_MS: ${MOCK_TTFT_MS:-400}
+      MOCK_CHUNK_MS: ${MOCK_CHUNK_MS:-25}
+      MOCK_CHUNKS: ${MOCK_CHUNKS:-60}
+      MOCK_COMPLETION_MS: ${MOCK_COMPLETION_MS:-250}
+      MOCK_EMBEDDING_MS: ${MOCK_EMBEDDING_MS:-40}
+      MOCK_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      MOCK_JITTER_PCT: ${MOCK_JITTER_PCT:-20}
+    volumes:
+      - ./scripts/load/mock-openai:/app:ro
+    ports:
+      - "8085:8090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8090/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  llm-service:
+    env_file:
+      - .env
+      - scripts/load/.env.load
+    environment:
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://mock-openai:8090/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-mock-key}
+    depends_on:
+      mock-openai:
+        condition: service_healthy
+
+  user-service:
+    env_file:
+      - .env
+      - scripts/load/.env.load
+    ports:
+      - "8081:8081"
+
+  ai-service:
+    env_file:
+      - .env
+      - scripts/load/.env.load
+    ports:
+      - "8082:8082"
+
+  api-gateway:
+    env_file:
+      - .env
+      - scripts/load/.env.load
+    ports:
+      - "8080:8080"
+      - "8090:8090"
+
+  k6:
+    image: ${K6_IMAGE:-grafana/k6:0.52.0}
+    container_name: pravoos-k6
+    profiles: ["load"]
+    entrypoint: ["k6"]
+    environment:
+      LOAD_BASE_URL: ${LOAD_BASE_URL:-http://api-gateway:8080}
+      LOAD_LAWYERS: ${LOAD_LAWYERS:-50}
+      LOAD_USER_PASSWORD: ${LOAD_USER_PASSWORD:-LoadTest!2026}
+      LOAD_VUS: ${LOAD_VUS:-20}
+      LOAD_DURATION: ${LOAD_DURATION:-3m}
+      LOAD_RAMP_MAX_VUS: ${LOAD_RAMP_MAX_VUS:-120}
+    volumes:
+      - ./scripts/load/scenarios:/scenarios:ro
+      - ./scripts/load/report:/report
