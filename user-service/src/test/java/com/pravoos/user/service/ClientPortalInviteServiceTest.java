@@ -3,6 +3,7 @@ package com.pravoos.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.pravoos.user.collaboration.internal.dto.CreatePortalInviteRequest;
@@ -133,12 +134,12 @@ class ClientPortalInviteServiceTest {
               return user;
             });
 
+    when(inviteRepository.accept(any(), eq(generatedUserId), any())).thenReturn(1);
+
     UUID result = service.accept(rawToken, "Passw0rd!");
 
     assertThat(result).isEqualTo(generatedUserId);
-    assertThat(invite.getStatus()).isEqualTo(InviteStatus.ACCEPTED);
-    assertThat(invite.getUserId()).isEqualTo(generatedUserId);
-    assertThat(invite.getAcceptedAt()).isNotNull();
+    verify(inviteRepository).accept(any(), eq(generatedUserId), any());
 
     ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
     verify(userRepository).save(userCaptor.capture());
@@ -147,6 +148,22 @@ class ClientPortalInviteServiceTest {
     assertThat(created.getStatus()).isEqualTo(UserStatus.ACTIVE);
     assertThat(created.getPasswordHash()).isEqualTo("hashed");
     assertThat(created.getEmail()).isEqualTo("client@example.com");
+  }
+
+  @Test
+  void acceptRejectsInviteClaimedConcurrently() {
+    String rawToken = "raw-token";
+    UUID existingUserId = UUID.randomUUID();
+    ClientPortalInvite invite = pendingInvite(UUID.randomUUID(), "client@example.com", rawToken);
+    User existing = clientUser(existingUserId, "existing-hash", UserStatus.ACTIVE);
+    when(inviteRepository.findByTokenHash(tokenHasher.sha256Hex(rawToken)))
+        .thenReturn(Optional.of(invite));
+    when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(existing));
+    when(passwordEncoder.matches("Passw0rd!", "existing-hash")).thenReturn(true);
+    when(inviteRepository.accept(any(), eq(existingUserId), any())).thenReturn(0);
+
+    assertThatThrownBy(() -> service.accept(rawToken, "Passw0rd!"))
+        .isInstanceOf(InvalidInviteException.class);
   }
 
   @Test
@@ -196,11 +213,12 @@ class ClientPortalInviteServiceTest {
     when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(existing));
     when(passwordEncoder.matches("Passw0rd!", "existing-hash")).thenReturn(true);
 
+    when(inviteRepository.accept(any(), eq(existingUserId), any())).thenReturn(1);
+
     UUID result = service.accept(rawToken, "Passw0rd!");
 
     assertThat(result).isEqualTo(existingUserId);
-    assertThat(invite.getStatus()).isEqualTo(InviteStatus.ACCEPTED);
-    assertThat(invite.getUserId()).isEqualTo(existingUserId);
+    verify(inviteRepository).accept(any(), eq(existingUserId), any());
     verify(userRepository, never()).save(any());
     verify(passwordEncoder, never()).encode(any());
   }

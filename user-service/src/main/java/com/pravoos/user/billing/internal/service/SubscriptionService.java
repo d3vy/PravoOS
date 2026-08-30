@@ -1,5 +1,7 @@
 package com.pravoos.user.billing.internal.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.pravoos.user.billing.api.PlanClaim;
 import com.pravoos.user.billing.internal.dto.BillingStatusResponse;
 import com.pravoos.user.billing.internal.dto.PlanResponse;
@@ -9,6 +11,7 @@ import com.pravoos.user.billing.internal.model.enums.SubscriptionStatus;
 import com.pravoos.user.billing.internal.repository.PlanRepository;
 import com.pravoos.user.billing.internal.repository.SubscriptionRepository;
 import com.pravoos.user.shared.exception.PravoosException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
@@ -30,24 +33,39 @@ public class SubscriptionService {
   private static final Logger log = LoggerFactory.getLogger(SubscriptionService.class);
   private static final Set<SubscriptionStatus> ENTITLED_STATUSES =
       EnumSet.of(SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING);
+  private static final Boolean ALL_PLANS_KEY = Boolean.TRUE;
 
   private final SubscriptionRepository subscriptionRepository;
   private final PlanRepository planRepository;
   private final String trialPlanCode;
   private final int trialDays;
   private final int graceDays;
+  private final boolean planCacheEnabled;
+  private final Cache<Boolean, List<PlanResponse>> allPlansCache =
+      Caffeine.newBuilder().maximumSize(1).expireAfterWrite(Duration.ofMinutes(15)).build();
+  private final Cache<UUID, Optional<Plan>> planByIdCache =
+      Caffeine.newBuilder().maximumSize(200).expireAfterWrite(Duration.ofMinutes(15)).build();
 
   public SubscriptionService(
       SubscriptionRepository subscriptionRepository,
       PlanRepository planRepository,
       @Value("${app.billing.trial-plan-code:SOLO}") String trialPlanCode,
       @Value("${app.billing.trial-days:14}") int trialDays,
-      @Value("${app.billing.grace-days:5}") int graceDays) {
+      @Value("${app.billing.grace-days:5}") int graceDays,
+      @Value("${billing.plan-cache.enabled:true}") boolean planCacheEnabled) {
     this.subscriptionRepository = subscriptionRepository;
     this.planRepository = planRepository;
     this.trialPlanCode = trialPlanCode;
     this.trialDays = trialDays;
     this.graceDays = graceDays;
+    this.planCacheEnabled = planCacheEnabled;
+  }
+
+  private Optional<Plan> findPlanById(UUID planId) {
+    if (!planCacheEnabled) {
+      return planRepository.findById(planId);
+    }
+    return planByIdCache.get(planId, planRepository::findById);
   }
 
   @Transactional
@@ -77,7 +95,7 @@ public class SubscriptionService {
     return subscriptionRepository
         .findByUserId(userId)
         .filter(subscription -> entitled(subscription, now))
-        .flatMap(subscription -> planRepository.findById(subscription.getPlanId()))
+        .flatMap(subscription -> findPlanById(subscription.getPlanId()))
         .or(planRepository::findByIsDefaultTrue)
         .map(plan -> new PlanClaim(plan.getCode(), plan.getDailyRequests(), plan.getDailyTokens()));
   }
@@ -145,14 +163,20 @@ public class SubscriptionService {
         subscription.getCurrentPeriodEnd());
 
     Plan plan =
-        planRepository
-            .findById(subscription.getPlanId())
+        findPlanById(subscription.getPlanId())
             .orElseThrow(() -> planNotFound(subscription.getPlanId().toString()));
     return toResponse(subscription, plan);
   }
 
   @Transactional(readOnly = true)
   public List<PlanResponse> listPlans() {
+    if (!planCacheEnabled) {
+      return loadAllPlans();
+    }
+    return allPlansCache.get(ALL_PLANS_KEY, key -> loadAllPlans());
+  }
+
+  private List<PlanResponse> loadAllPlans() {
     return planRepository.findAll().stream()
         .sorted(Comparator.comparingLong(Plan::getPriceKopecks))
         .map(
@@ -175,8 +199,7 @@ public class SubscriptionService {
             .findByUserId(userId)
             .orElseGet(() -> createDefaultSubscription(userId));
     Plan plan =
-        planRepository
-            .findById(subscription.getPlanId())
+        findPlanById(subscription.getPlanId())
             .orElseThrow(() -> planNotFound(subscription.getPlanId().toString()));
     return toResponse(subscription, plan);
   }

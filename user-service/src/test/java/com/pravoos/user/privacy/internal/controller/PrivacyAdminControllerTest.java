@@ -56,4 +56,22 @@ class PrivacyAdminControllerTest {
 
     verify(personalDataService).pendingRequests();
   }
+
+  @Test
+  void rejectExtractsReasonFromRequestBody() {
+    UUID requestId = UUID.randomUUID();
+
+    controller.reject(requestId, Map.of("reason", "Личность заявителя не подтверждена"));
+
+    verify(personalDataService).rejectRequest(requestId, "Личность заявителя не подтверждена");
+  }
+
+  @Test
+  void rejectPassesNullReasonWhenBodyIsAbsent() {
+    UUID requestId = UUID.randomUUID();
+
+    controller.reject(requestId, null);
+
+    verify(personalDataService).rejectRequest(requestId, null);
+  }
 }

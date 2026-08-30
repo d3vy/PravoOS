@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.pravoos.user.billing.api.PlanClaim;
 import com.pravoos.user.billing.internal.dto.BillingStatusResponse;
+import com.pravoos.user.billing.internal.dto.PlanResponse;
 import com.pravoos.user.billing.internal.model.entity.Plan;
 import com.pravoos.user.billing.internal.model.entity.Subscription;
 import com.pravoos.user.billing.internal.model.enums.SubscriptionStatus;
@@ -18,6 +20,7 @@ import com.pravoos.user.billing.internal.service.SubscriptionService;
 import com.pravoos.user.shared.exception.PravoosException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +51,7 @@ class SubscriptionServiceTest {
   void setup() {
     subscriptionService =
         new SubscriptionService(
-            subscriptionRepository, planRepository, TRIAL_PLAN_CODE, TRIAL_DAYS, GRACE_DAYS);
+            subscriptionRepository, planRepository, TRIAL_PLAN_CODE, TRIAL_DAYS, GRACE_DAYS, true);
     userId = UUID.randomUUID();
     trialPlan = buildPlan(TRIAL_PLAN_CODE, "Solo", 200, 200000L, 1);
     defaultPlan = buildPlan("FREE", "Free", 20, 20000L, 1);
@@ -218,6 +221,30 @@ class SubscriptionServiceTest {
     assertThat(existing.isCancelAtPeriodEnd()).isFalse();
     assertThat(existing.getCurrentPeriodEnd()).isEqualTo(periodEnd.plusDays(30));
     assertThat(existing.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+  }
+
+  @Test
+  void listPlansHitsRepositoryOnlyOnceWhileCacheIsWarm() {
+    when(planRepository.findAll()).thenReturn(List.of(trialPlan, defaultPlan));
+
+    List<PlanResponse> first = subscriptionService.listPlans();
+    List<PlanResponse> second = subscriptionService.listPlans();
+
+    assertThat(first).hasSize(2);
+    assertThat(second).hasSize(2);
+    verify(planRepository, times(1)).findAll();
+  }
+
+  @Test
+  void getStatusReusesCachedPlanAcrossCalls() {
+    Subscription existing = subscriptionOn(trialPlan, SubscriptionStatus.TRIALING);
+    when(subscriptionRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
+    when(planRepository.findById(trialPlan.getId())).thenReturn(Optional.of(trialPlan));
+
+    subscriptionService.getStatus(userId);
+    subscriptionService.getStatus(userId);
+
+    verify(planRepository, times(1)).findById(trialPlan.getId());
   }
 
   private Subscription subscriptionOn(Plan plan, SubscriptionStatus status) {

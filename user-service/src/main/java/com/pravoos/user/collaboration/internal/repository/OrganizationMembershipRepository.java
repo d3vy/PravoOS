@@ -24,7 +24,7 @@ public interface OrganizationMembershipRepository
 
   boolean existsByOrgIdAndUserId(UUID orgId, UUID userId);
 
-  List<OrganizationMembership> findByOrgIdOrderByCreatedAtAsc(UUID orgId);
+  List<OrganizationMembership> findTop2000ByOrgIdOrderByCreatedAtDesc(UUID orgId);
 
   long countByOrgId(UUID orgId);
 

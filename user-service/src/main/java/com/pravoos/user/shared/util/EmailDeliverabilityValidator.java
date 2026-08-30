@@ -1,9 +1,11 @@
 package com.pravoos.user.shared.util;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.pravoos.user.shared.exception.UndeliverableEmailException;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
+import java.util.Hashtable;
+import java.util.Locale;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
@@ -21,20 +23,8 @@ public class EmailDeliverabilityValidator {
   private static final Duration CACHE_TTL = Duration.ofHours(12);
   private static final int CACHE_MAX_SIZE = 10_000;
 
-  private final Map<String, CacheEntry> deliverabilityCache =
-      Collections.synchronizedMap(
-          new LinkedHashMap<>(16, 0.75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, CacheEntry> eldest) {
-              return size() > CACHE_MAX_SIZE;
-            }
-          });
-
-  private record CacheEntry(boolean deliverable, Instant expiresAt) {
-    boolean isFresh() {
-      return expiresAt.isAfter(Instant.now());
-    }
-  }
+  private final Cache<String, Boolean> deliverabilityCache =
+      Caffeine.newBuilder().maximumSize(CACHE_MAX_SIZE).expireAfterWrite(CACHE_TTL).build();
 
   public void validate(String email) {
     int atIndex = email.lastIndexOf('@');
@@ -48,9 +38,9 @@ public class EmailDeliverabilityValidator {
   }
 
   private boolean isDeliverable(String domain) {
-    CacheEntry cached = deliverabilityCache.get(domain);
-    if (cached != null && cached.isFresh()) {
-      return cached.deliverable();
+    Boolean cached = deliverabilityCache.getIfPresent(domain);
+    if (cached != null) {
+      return cached;
     }
 
     Boolean resolved = resolveMailRecords(domain);
@@ -58,7 +48,7 @@ public class EmailDeliverabilityValidator {
       return true;
     }
 
-    cacheResult(domain, resolved);
+    deliverabilityCache.put(domain, resolved);
     return resolved;
   }
 
@@ -83,10 +73,6 @@ public class EmailDeliverabilityValidator {
     } finally {
       closeQuietly(context);
     }
-  }
-
-  private void cacheResult(String domain, boolean deliverable) {
-    deliverabilityCache.put(domain, new CacheEntry(deliverable, Instant.now().plus(CACHE_TTL)));
   }
 
   private void closeQuietly(DirContext context) {

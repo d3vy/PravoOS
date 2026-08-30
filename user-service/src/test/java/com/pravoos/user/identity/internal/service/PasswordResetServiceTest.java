@@ -12,6 +12,7 @@ import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.internal.model.entity.PasswordResetToken;
 import com.pravoos.user.identity.internal.repository.PasswordResetTokenRepository;
 import com.pravoos.user.identity.model.entity.User;
+import com.pravoos.user.identity.model.enums.UserStatus;
 import com.pravoos.user.identity.repository.UserRepository;
 import com.pravoos.user.shared.config.ResendProperties;
 import com.pravoos.user.shared.exception.InvalidPasswordResetTokenException;
@@ -71,17 +72,19 @@ class PasswordResetServiceTest {
     User user = new User();
     user.setId(userId);
     user.setEmail("lawyer@example.com");
+    user.setStatus(UserStatus.ACTIVE);
     PasswordResetToken token =
         resetToken(userId, null, LocalDateTime.now(ZoneOffset.UTC).plusHours(1));
     when(passwordResetTokenRepository.findByTokenHash(tokenHasher.sha256Hex(RAW_TOKEN)))
         .thenReturn(Optional.of(token));
+    when(passwordResetTokenRepository.consume(any(), any())).thenReturn(1);
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
     when(passwordEncoder.encode(NEW_PASSWORD)).thenReturn(NEW_HASH);
 
     service.resetPassword(RAW_TOKEN, NEW_PASSWORD);
 
     assertThat(user.getPasswordHash()).isEqualTo(NEW_HASH);
-    assertThat(token.getUsedAt()).isNotNull();
+    verify(passwordResetTokenRepository).consume(any(), any());
     verify(refreshTokenFamilyRevoker).revokeAllActive(userId);
     verify(tokenDenylistService).revokeAccessTokensFor(userId);
     verify(loginAttemptService).reset(user.getEmail());
@@ -108,6 +111,7 @@ class PasswordResetServiceTest {
             LocalDateTime.now(ZoneOffset.UTC).plusHours(1));
     when(passwordResetTokenRepository.findByTokenHash(tokenHasher.sha256Hex(RAW_TOKEN)))
         .thenReturn(Optional.of(token));
+    when(passwordResetTokenRepository.consume(any(), any())).thenReturn(0);
 
     assertThatThrownBy(() -> service.resetPassword(RAW_TOKEN, NEW_PASSWORD))
         .isInstanceOf(InvalidPasswordResetTokenException.class);
@@ -123,11 +127,33 @@ class PasswordResetServiceTest {
         resetToken(userId, null, LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1));
     when(passwordResetTokenRepository.findByTokenHash(tokenHasher.sha256Hex(RAW_TOKEN)))
         .thenReturn(Optional.of(token));
+    when(passwordResetTokenRepository.consume(any(), any())).thenReturn(0);
 
     assertThatThrownBy(() -> service.resetPassword(RAW_TOKEN, NEW_PASSWORD))
         .isInstanceOf(InvalidPasswordResetTokenException.class);
 
     verify(refreshTokenFamilyRevoker, never()).revokeAllActive(any());
+  }
+
+  @Test
+  void resetPasswordThrowsWhenAccountIsNoLongerActive() {
+    UUID userId = UUID.randomUUID();
+    User rejected = new User();
+    rejected.setId(userId);
+    rejected.setEmail("lawyer@example.com");
+    rejected.setStatus(UserStatus.REJECTED);
+    PasswordResetToken token =
+        resetToken(userId, null, LocalDateTime.now(ZoneOffset.UTC).plusHours(1));
+    when(passwordResetTokenRepository.findByTokenHash(tokenHasher.sha256Hex(RAW_TOKEN)))
+        .thenReturn(Optional.of(token));
+    when(passwordResetTokenRepository.consume(any(), any())).thenReturn(1);
+    when(userRepository.findById(userId)).thenReturn(Optional.of(rejected));
+
+    assertThatThrownBy(() -> service.resetPassword(RAW_TOKEN, NEW_PASSWORD))
+        .isInstanceOf(InvalidPasswordResetTokenException.class);
+
+    verify(refreshTokenFamilyRevoker, never()).revokeAllActive(any());
+    verify(tokenDenylistService, never()).revokeAccessTokensFor(any());
   }
 
   @Test

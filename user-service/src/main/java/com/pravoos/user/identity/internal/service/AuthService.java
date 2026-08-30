@@ -108,7 +108,7 @@ public class AuthService {
   public LoginResult login(LoginRequest request, String ipAddress, String userAgent) {
     String email = EmailNormalizer.normalize(request.email());
     loginAttemptService
-        .remainingLockSeconds(email)
+        .remainingLockSeconds(email, ipAddress)
         .ifPresent(
             seconds -> {
               loginLockedCounter.increment();
@@ -120,14 +120,14 @@ public class AuthService {
 
     if (user == null) {
       passwordEncoder.matches(request.password(), DUMMY_PASSWORD_HASH);
-      loginAttemptService.recordFailure(email);
+      loginAttemptService.recordFailure(email, ipAddress);
       loginFailureCounter.increment();
       log.warn("Failed login attempt for unknown/inactive email: {}", EmailMasker.mask(email));
       throw new InvalidCredentialsException();
     }
 
     if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-      loginAttemptService.recordFailure(email);
+      loginAttemptService.recordFailure(email, ipAddress);
       loginFailureCounter.increment();
       log.warn("Failed login attempt for email: {}", EmailMasker.mask(email));
       throw new InvalidCredentialsException();
@@ -157,7 +157,7 @@ public class AuthService {
             .orElseThrow(InvalidCredentialsException::new);
 
     loginAttemptService
-        .remainingLockSeconds(user.getEmail())
+        .remainingLockSeconds(user.getEmail(), ipAddress)
         .ifPresent(
             seconds -> {
               loginLockedCounter.increment();
@@ -167,7 +167,7 @@ public class AuthService {
             });
 
     if (!mfaService.verifyLoginCode(userId, code)) {
-      loginAttemptService.recordFailure(user.getEmail());
+      loginAttemptService.recordFailure(user.getEmail(), ipAddress);
       loginFailureCounter.increment();
       log.warn("Invalid MFA code during login for user {}", userId);
       mfaChallengeService.registerFailedAttempt(mfaToken);

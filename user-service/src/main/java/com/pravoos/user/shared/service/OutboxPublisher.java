@@ -2,11 +2,14 @@ package com.pravoos.user.shared.service;
 
 import com.pravoos.user.shared.model.entity.OutboxEvent;
 import com.pravoos.user.shared.repository.OutboxEventRepository;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +30,19 @@ public class OutboxPublisher {
   private final OutboxEventRepository outboxEventRepository;
   private final KafkaTemplate<String, String> stringKafkaTemplate;
   private final int maxAttempts;
+  private final AtomicLong parkedEvents = new AtomicLong();
 
   public OutboxPublisher(
       OutboxEventRepository outboxEventRepository,
       KafkaTemplate<String, String> stringKafkaTemplate,
+      MeterRegistry meterRegistry,
       @Value("${app.outbox.max-attempts:10}") int maxAttempts) {
     this.outboxEventRepository = outboxEventRepository;
     this.stringKafkaTemplate = stringKafkaTemplate;
     this.maxAttempts = maxAttempts;
+    Gauge.builder("pravoos.outbox.parked", parkedEvents, AtomicLong::doubleValue)
+        .description("Outbox events that exhausted their retries and will never be published")
+        .register(meterRegistry);
   }
 
   @Scheduled(fixedDelayString = "${app.outbox.poll-interval-ms:5000}")
@@ -44,6 +52,7 @@ public class OutboxPublisher {
       lockAtLeastFor = "PT1S")
   @Transactional
   public void publishPending() {
+    parkedEvents.set(outboxEventRepository.countParked(maxAttempts));
     List<OutboxEvent> pending =
         outboxEventRepository.lockUnpublishedBatch(maxAttempts, PageRequest.of(0, BATCH_SIZE));
     if (pending.isEmpty()) {

@@ -149,6 +149,21 @@ class PersonalDataServiceTest {
     assertThat(response.note()).isEqualTo("Удалено вручную");
   }
 
+  @Test
+  void rejectRequest_marksPendingRequestRejected() {
+    SubjectRequest request = new SubjectRequest();
+    request.setUserId(USER_ID);
+    request.setType(SubjectRequestType.ERASURE);
+    request.setDueAt(LocalDateTime.now(ZoneOffset.UTC).plusDays(30));
+    UUID requestId = UUID.randomUUID();
+    when(subjectRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+
+    var response = service().rejectRequest(requestId, "Личность заявителя не подтверждена");
+
+    assertThat(response.status()).isEqualTo(SubjectRequestStatus.REJECTED);
+    assertThat(response.note()).isEqualTo("Личность заявителя не подтверждена");
+  }
+
   private User user() {
     User user = new User();
     user.setId(USER_ID);

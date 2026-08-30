@@ -29,4 +29,11 @@ public class PrivacyAdminController {
     String note = body == null ? null : body.get("note");
     return ResponseEntity.ok(personalDataService.completeRequest(requestId, note));
   }
+
+  @PostMapping("/requests/{requestId}/reject")
+  public ResponseEntity<SubjectRequestResponse> reject(
+      @PathVariable UUID requestId, @RequestBody(required = false) Map<String, String> body) {
+    String reason = body == null ? null : body.get("reason");
+    return ResponseEntity.ok(personalDataService.rejectRequest(requestId, reason));
+  }
 }

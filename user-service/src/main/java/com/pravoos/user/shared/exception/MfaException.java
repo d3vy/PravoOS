@@ -35,6 +35,13 @@ public class MfaException extends PravoosException {
         "Двухфакторная аутентификация не включена", HttpStatus.CONFLICT, "MFA_NOT_ENABLED");
   }
 
+  public static MfaException challengeStoreUnavailable() {
+    return new MfaException(
+        "Подтверждение входа временно недоступно. Попробуйте позже.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+        "MFA_CHALLENGE_STORE_UNAVAILABLE");
+  }
+
   public static MfaException mandatory() {
     return new MfaException(
         "Двухфакторная аутентификация обязательна для администраторов и не может быть отключена",

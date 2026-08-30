@@ -88,7 +88,7 @@ class AuthServiceTest {
   @Test
   void login_succeeds_withValidCredentials() {
     User user = activeUser();
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.of(user));
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -121,7 +121,7 @@ class AuthServiceTest {
   void login_publishesNewLoginEvent_forUnknownDevice() {
     User user = activeUser();
     user.setLoginAlertPush(false);
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.of(user));
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -142,7 +142,7 @@ class AuthServiceTest {
     user.setLoginAlertEmail(false);
     user.setLoginAlertTelegram(true);
     user.setLoginAlertPush(false);
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.of(user));
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -165,7 +165,7 @@ class AuthServiceTest {
     user.setLoginAlertEmail(false);
     user.setLoginAlertTelegram(false);
     user.setLoginAlertPush(true);
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.of(user));
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -189,7 +189,7 @@ class AuthServiceTest {
     User user = activeUser();
     user.setLoginAlertTelegram(true);
     user.setLoginAlertPush(true);
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.of(user));
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -207,7 +207,7 @@ class AuthServiceTest {
   @Test
   void login_returnsMfaChallenge_whenMfaEnabled() {
     User user = activeUser();
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.of(user));
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(true);
@@ -254,14 +254,14 @@ class AuthServiceTest {
     User user = activeUser();
     when(mfaChallengeService.resolve("challenge-token")).thenReturn(user.getId());
     when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(mfaService.verifyLoginCode(user.getId(), "000000")).thenReturn(false);
 
     assertThatThrownBy(() -> authService.completeMfaLogin("challenge-token", "000000", IP, UA))
         .isInstanceOf(MfaException.class);
 
     verify(mfaChallengeService).registerFailedAttempt("challenge-token");
-    verify(loginAttemptService).recordFailure(EMAIL);
+    verify(loginAttemptService).recordFailure(eq(EMAIL), any());
     verify(refreshTokenService, never()).issue(any(), any(), any());
   }
 
@@ -270,7 +270,7 @@ class AuthServiceTest {
     User user = activeUser();
     when(mfaChallengeService.resolve("challenge-token")).thenReturn(user.getId());
     when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.of(300L));
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.of(300L));
 
     assertThatThrownBy(() -> authService.completeMfaLogin("challenge-token", "000000", IP, UA))
         .isInstanceOf(AccountLockedException.class);
@@ -282,7 +282,7 @@ class AuthServiceTest {
   @Test
   void login_fails_andRecordsFailure_whenPasswordWrong() {
     User user = activeUser();
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.of(user));
     when(passwordEncoder.matches(RAW_PASSWORD, HASH)).thenReturn(false);
@@ -290,14 +290,14 @@ class AuthServiceTest {
     assertThatThrownBy(() -> authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA))
         .isInstanceOf(InvalidCredentialsException.class);
 
-    verify(loginAttemptService).recordFailure(EMAIL);
+    verify(loginAttemptService).recordFailure(eq(EMAIL), any());
     verify(refreshTokenService, never()).issue(any(), any(), any());
     assertThat(counter("failure")).isEqualTo(1.0);
   }
 
   @Test
   void login_fails_forUnknownUser_withoutLeakingExistence() {
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.empty());
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.empty());
     when(userRepository.findByEmailAndStatus(EMAIL, UserStatus.ACTIVE))
         .thenReturn(Optional.empty());
 
@@ -305,13 +305,13 @@ class AuthServiceTest {
         .isInstanceOf(InvalidCredentialsException.class);
 
     verify(passwordEncoder).matches(eq(RAW_PASSWORD), anyString());
-    verify(loginAttemptService).recordFailure(EMAIL);
+    verify(loginAttemptService).recordFailure(eq(EMAIL), any());
     assertThat(counter("failure")).isEqualTo(1.0);
   }
 
   @Test
   void login_isBlocked_whenAccountLocked() {
-    when(loginAttemptService.remainingLockSeconds(EMAIL)).thenReturn(Optional.of(120L));
+    when(loginAttemptService.remainingLockSeconds(eq(EMAIL), any())).thenReturn(Optional.of(120L));
 
     assertThatThrownBy(() -> authService.login(new LoginRequest(EMAIL, RAW_PASSWORD), IP, UA))
         .isInstanceOf(AccountLockedException.class);

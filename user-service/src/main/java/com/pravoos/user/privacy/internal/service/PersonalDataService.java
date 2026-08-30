@@ -150,6 +150,14 @@ public class PersonalDataService {
     return SubjectRequestResponse.from(request);
   }
 
+  @Transactional
+  public SubjectRequestResponse rejectRequest(UUID requestId, String reason) {
+    SubjectRequest request =
+        subjectRequestRepository.findById(requestId).orElseThrow(SubjectNotFoundException::new);
+    request.reject(reason == null || reason.isBlank() ? "Отклонено оператором" : reason);
+    return SubjectRequestResponse.from(request);
+  }
+
   private SubjectRequest record(User user, SubjectRequestType type, String ipAddress, int dueDays) {
     SubjectRequest request = new SubjectRequest();
     request.setUserId(user.getId());

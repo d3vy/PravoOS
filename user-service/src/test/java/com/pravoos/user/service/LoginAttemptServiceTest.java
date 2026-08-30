@@ -29,6 +29,9 @@ class LoginAttemptServiceTest {
   private static final String EMAIL = "User@Example.com";
   private static final String ATTEMPTS_KEY = "login_attempts:user@example.com";
   private static final String LOCK_KEY = "login_lock:user@example.com";
+  private static final String IP = "203.0.113.7";
+  private static final String IP_ATTEMPTS_KEY = "login_attempts_ip:203.0.113.7";
+  private static final String IP_LOCK_KEY = "login_lock_ip:203.0.113.7";
 
   @Mock private StringRedisTemplate redisTemplate;
   @Mock private ValueOperations<String, String> valueOperations;
@@ -38,7 +41,8 @@ class LoginAttemptServiceTest {
 
   @BeforeEach
   void setUp() {
-    properties = new BruteForceProperties(5, Duration.ofMinutes(15), Duration.ofMinutes(10), true);
+    properties =
+        new BruteForceProperties(5, 20, Duration.ofMinutes(15), Duration.ofMinutes(10), true);
     service = new LoginAttemptService(redisTemplate, properties);
   }
 
@@ -73,7 +77,8 @@ class LoginAttemptServiceTest {
 
   @Test
   void remainingLockSeconds_failsClosed_whenRedisUnavailableAndFailOpenDisabled() {
-    properties = new BruteForceProperties(5, Duration.ofMinutes(15), Duration.ofMinutes(10), false);
+    properties =
+        new BruteForceProperties(5, 20, Duration.ofMinutes(15), Duration.ofMinutes(10), false);
     service = new LoginAttemptService(redisTemplate, properties);
     when(redisTemplate.getExpire(LOCK_KEY, TimeUnit.SECONDS))
         .thenThrow(new QueryTimeoutException("redis down"));
@@ -161,6 +166,50 @@ class LoginAttemptServiceTest {
   }
 
   @Test
+  void recordFailure_countsPerIpAlongsideEmail() {
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(valueOperations.increment(ATTEMPTS_KEY)).thenReturn(1L);
+    when(valueOperations.increment(IP_ATTEMPTS_KEY)).thenReturn(1L);
+
+    service.recordFailure(EMAIL, IP);
+
+    verify(redisTemplate).expire(ATTEMPTS_KEY, Duration.ofMinutes(10));
+    verify(redisTemplate).expire(IP_ATTEMPTS_KEY, Duration.ofMinutes(10));
+  }
+
+  @Test
+  void recordFailure_locksSourceAddress_whenPerIpLimitReached() {
+    when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(valueOperations.increment(ATTEMPTS_KEY)).thenReturn(1L);
+    when(valueOperations.increment(IP_ATTEMPTS_KEY)).thenReturn(20L);
+    when(redisTemplate.getExpire(ATTEMPTS_KEY, TimeUnit.SECONDS)).thenReturn(300L);
+    when(redisTemplate.getExpire(IP_ATTEMPTS_KEY, TimeUnit.SECONDS)).thenReturn(300L);
+
+    service.recordFailure(EMAIL, IP);
+
+    verify(valueOperations).set(IP_LOCK_KEY, "1", Duration.ofMinutes(15));
+    verify(valueOperations, never()).set(eq(LOCK_KEY), anyString(), any(Duration.class));
+  }
+
+  @Test
+  void remainingLockSeconds_reportsIpLock_whenEmailIsNotLocked() {
+    when(redisTemplate.getExpire(LOCK_KEY, TimeUnit.SECONDS)).thenReturn(-2L);
+    when(redisTemplate.getExpire(IP_LOCK_KEY, TimeUnit.SECONDS)).thenReturn(600L);
+
+    assertThat(service.remainingLockSeconds(EMAIL, IP)).contains(600L);
+  }
+
+  @Test
+  void reset_leavesIpCounterIntact_soOneValidLoginCannotClearIt() {
+    service.reset(EMAIL);
+
+    verify(redisTemplate).delete(ATTEMPTS_KEY);
+    verify(redisTemplate).delete(LOCK_KEY);
+    verify(redisTemplate, never()).delete(IP_ATTEMPTS_KEY);
+    verify(redisTemplate, never()).delete(IP_LOCK_KEY);
+  }
+
+  @Test
   void recordFailure_failsOpen_whenRedisUnavailableAndFailOpenEnabled() {
     when(redisTemplate.opsForValue()).thenThrow(new QueryTimeoutException("redis down"));
 
@@ -169,7 +218,8 @@ class LoginAttemptServiceTest {
 
   @Test
   void recordFailure_failsClosed_whenRedisUnavailableAndFailOpenDisabled() {
-    properties = new BruteForceProperties(5, Duration.ofMinutes(15), Duration.ofMinutes(10), false);
+    properties =
+        new BruteForceProperties(5, 20, Duration.ofMinutes(15), Duration.ofMinutes(10), false);
     service = new LoginAttemptService(redisTemplate, properties);
     when(redisTemplate.opsForValue()).thenThrow(new QueryTimeoutException("redis down"));
 

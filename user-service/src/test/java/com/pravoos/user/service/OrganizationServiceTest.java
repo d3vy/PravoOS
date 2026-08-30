@@ -3,6 +3,7 @@ package com.pravoos.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.pravoos.user.collaboration.internal.dto.CreateOrganizationRequest;
@@ -14,6 +15,7 @@ import com.pravoos.user.collaboration.internal.repository.OrganizationMembership
 import com.pravoos.user.collaboration.internal.repository.OrganizationRepository;
 import com.pravoos.user.collaboration.internal.service.OrganizationAccessGuard;
 import com.pravoos.user.collaboration.internal.service.OrganizationService;
+import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.repository.UserRepository;
@@ -34,6 +36,7 @@ class OrganizationServiceTest {
   @Mock private OrganizationRepository organizationRepository;
   @Mock private OrganizationMembershipRepository membershipRepository;
   @Mock private UserRepository userRepository;
+  @Mock private TokenDenylistService tokenDenylistService;
 
   private OrganizationService service;
 
@@ -44,7 +47,8 @@ class OrganizationServiceTest {
             organizationRepository,
             membershipRepository,
             userRepository,
-            new OrganizationAccessGuard(membershipRepository));
+            new OrganizationAccessGuard(membershipRepository),
+            tokenDenylistService);
   }
 
   @Test
@@ -109,6 +113,39 @@ class OrganizationServiceTest {
 
     assertThatThrownBy(() -> service.removeMember(managerId, orgId, targetId))
         .isInstanceOf(OrganizationAccessDeniedException.class);
+  }
+
+  @Test
+  void removedMemberLosesTheOrgClaimImmediately() {
+    UUID orgId = UUID.randomUUID();
+    UUID ownerId = UUID.randomUUID();
+    UUID targetId = UUID.randomUUID();
+    when(membershipRepository.findByOrgIdAndUserId(orgId, ownerId))
+        .thenReturn(Optional.of(membership(orgId, ownerId, OrgRole.OWNER)));
+    Organization org = new Organization();
+    org.setOwnerId(ownerId);
+    when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+    when(membershipRepository.findByOrgIdAndUserId(orgId, targetId))
+        .thenReturn(Optional.of(membership(orgId, targetId, OrgRole.MEMBER)));
+
+    service.removeMember(ownerId, orgId, targetId);
+
+    verify(tokenDenylistService).revokeAccessTokensFor(targetId);
+  }
+
+  @Test
+  void leavingMemberLosesTheOrgClaimImmediately() {
+    UUID orgId = UUID.randomUUID();
+    UUID memberId = UUID.randomUUID();
+    Organization org = new Organization();
+    org.setOwnerId(UUID.randomUUID());
+    when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+    when(membershipRepository.findByOrgIdAndUserId(orgId, memberId))
+        .thenReturn(Optional.of(membership(orgId, memberId, OrgRole.MEMBER)));
+
+    service.leave(memberId, orgId);
+
+    verify(tokenDenylistService).revokeAccessTokensFor(memberId);
   }
 
   private User lawyer(UUID id) {

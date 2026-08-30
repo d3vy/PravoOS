@@ -21,6 +21,16 @@ public interface ClientPortalInviteRepository extends JpaRepository<ClientPortal
           + "WHERE i.clientId = :clientId AND i.status = com.pravoos.user.collaboration.internal.model.enums.InviteStatus.PENDING")
   void revokePendingByClientId(@Param("clientId") UUID clientId);
 
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      "UPDATE ClientPortalInvite i SET "
+          + "i.status = com.pravoos.user.collaboration.internal.model.enums.InviteStatus.ACCEPTED, "
+          + "i.acceptedAt = :now, i.userId = :userId "
+          + "WHERE i.id = :id "
+          + "AND i.status = com.pravoos.user.collaboration.internal.model.enums.InviteStatus.PENDING "
+          + "AND i.expiresAt > :now")
+  int accept(@Param("id") UUID id, @Param("userId") UUID userId, @Param("now") LocalDateTime now);
+
   @Query(
       "SELECT DISTINCT i.userId FROM ClientPortalInvite i "
           + "WHERE i.clientId = :clientId AND i.userId IS NOT NULL "

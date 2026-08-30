@@ -104,18 +104,18 @@ public class PasswordResetService {
             .findByTokenHash(tokenHasher.sha256Hex(rawToken))
             .orElseThrow(InvalidPasswordResetTokenException::new);
 
-    if (token.getUsedAt() != null
-        || token.getExpiresAt().isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
+    LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+    if (passwordResetTokenRepository.consume(token.getId(), now) == 0) {
       throw new InvalidPasswordResetTokenException();
     }
 
     User user =
         userRepository
             .findById(token.getUserId())
+            .filter(candidate -> candidate.getStatus() == UserStatus.ACTIVE)
             .orElseThrow(InvalidPasswordResetTokenException::new);
 
     user.setPasswordHash(passwordEncoder.encode(newPassword));
-    token.setUsedAt(LocalDateTime.now(ZoneOffset.UTC));
     refreshTokenFamilyRevoker.revokeAllActive(user.getId());
     tokenDenylistService.revokeAccessTokensFor(user.getId());
     loginAttemptService.reset(user.getEmail());

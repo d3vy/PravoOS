@@ -8,6 +8,7 @@ import com.pravoos.user.collaboration.internal.model.entity.OrganizationMembersh
 import com.pravoos.user.collaboration.internal.model.enums.OrgRole;
 import com.pravoos.user.collaboration.internal.repository.OrganizationMembershipRepository;
 import com.pravoos.user.collaboration.internal.repository.OrganizationRepository;
+import com.pravoos.user.identity.api.TokenDenylistService;
 import com.pravoos.user.identity.model.entity.User;
 import com.pravoos.user.identity.model.enums.UserRole;
 import com.pravoos.user.identity.repository.UserRepository;
@@ -27,21 +28,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrganizationService {
 
   private static final Logger log = LoggerFactory.getLogger(OrganizationService.class);
+  private static final int MAX_MEMBERS_LISTED = 2000;
 
   private final OrganizationRepository organizationRepository;
   private final OrganizationMembershipRepository membershipRepository;
   private final UserRepository userRepository;
   private final OrganizationAccessGuard accessGuard;
+  private final TokenDenylistService tokenDenylistService;
 
   public OrganizationService(
       OrganizationRepository organizationRepository,
       OrganizationMembershipRepository membershipRepository,
       UserRepository userRepository,
-      OrganizationAccessGuard accessGuard) {
+      OrganizationAccessGuard accessGuard,
+      TokenDenylistService tokenDenylistService) {
     this.organizationRepository = organizationRepository;
     this.membershipRepository = membershipRepository;
     this.userRepository = userRepository;
     this.accessGuard = accessGuard;
+    this.tokenDenylistService = tokenDenylistService;
   }
 
   @Transactional
@@ -110,8 +115,15 @@ public class OrganizationService {
   public List<OrganizationMemberResponse> listMembers(UUID userId, UUID orgId) {
     accessGuard.requireMember(orgId, userId);
 
-    List<OrganizationMembership> memberships =
-        membershipRepository.findByOrgIdOrderByCreatedAtAsc(orgId);
+    List<OrganizationMembership> latestFirst =
+        membershipRepository.findTop2000ByOrgIdOrderByCreatedAtDesc(orgId);
+    if (latestFirst.size() == MAX_MEMBERS_LISTED) {
+      log.warn(
+          "Organization {} has more than {} members; oldest members truncated from the response",
+          orgId,
+          MAX_MEMBERS_LISTED);
+    }
+    List<OrganizationMembership> memberships = latestFirst.reversed();
     List<UUID> memberIds = memberships.stream().map(OrganizationMembership::getUserId).toList();
 
     Map<UUID, User> usersById =
@@ -168,7 +180,12 @@ public class OrganizationService {
       throw new OrganizationAccessDeniedException();
     }
     membershipRepository.delete(target);
-    log.info("Member {} removed from org {} by {}", targetUserId, orgId, callerId);
+    tokenDenylistService.revokeAccessTokensFor(targetUserId);
+    log.info(
+        "Member {} removed from org {} by {}, access tokens denylisted",
+        targetUserId,
+        orgId,
+        callerId);
   }
 
   @Transactional
@@ -184,7 +201,8 @@ public class OrganizationService {
             .findByOrgIdAndUserId(orgId, callerId)
             .orElseThrow(NotOrganizationMemberException::new);
     membershipRepository.delete(membership);
-    log.info("User {} left org {}", callerId, orgId);
+    tokenDenylistService.revokeAccessTokensFor(callerId);
+    log.info("User {} left org {}, access tokens denylisted", callerId, orgId);
   }
 
   private OrganizationMemberResponse toMemberResponse(

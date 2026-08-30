@@ -20,4 +20,8 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
       "SELECT e FROM OutboxEvent e WHERE e.publishedAt IS NULL AND e.attempts < :maxAttempts "
           + "ORDER BY e.createdAt ASC")
   List<OutboxEvent> lockUnpublishedBatch(@Param("maxAttempts") int maxAttempts, Pageable pageable);
+
+  @Query(
+      "SELECT COUNT(e) FROM OutboxEvent e WHERE e.publishedAt IS NULL AND e.attempts >= :maxAttempts")
+  long countParked(@Param("maxAttempts") int maxAttempts);
 }

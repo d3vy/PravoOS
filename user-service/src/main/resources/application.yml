@@ -68,6 +68,7 @@ app:
       same-site: ${REFRESH_COOKIE_SAMESITE:Strict}
     brute-force:
       max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
+      max-attempts-per-ip: ${LOGIN_MAX_ATTEMPTS_PER_IP:20}
       lockout-duration: ${LOGIN_LOCKOUT_DURATION:PT15M}
       attempt-window: ${LOGIN_ATTEMPT_WINDOW:PT15M}
       fail-open: ${LOGIN_BRUTE_FORCE_FAIL_OPEN:false}

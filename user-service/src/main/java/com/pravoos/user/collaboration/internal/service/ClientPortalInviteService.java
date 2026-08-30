@@ -150,9 +150,9 @@ public class ClientPortalInviteService {
             .map(existing -> linkExistingAccount(existing, rawPassword))
             .orElseGet(() -> createClientAccount(invite.getEmail(), rawPassword));
 
-    invite.setStatus(InviteStatus.ACCEPTED);
-    invite.setAcceptedAt(LocalDateTime.now(ZoneOffset.UTC));
-    invite.setUserId(userId);
+    if (inviteRepository.accept(invite.getId(), userId, LocalDateTime.now(ZoneOffset.UTC)) == 0) {
+      throw new InvalidInviteException();
+    }
 
     log.info(
         "Client portal access granted for {} (client {})",

@@ -56,7 +56,7 @@ public class User {
   @Column(name = "digest_push", nullable = false)
   private boolean digestPush = true;
 
-  @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+  @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   private LawyerProfile lawyerProfile;
 
   @PrePersist
