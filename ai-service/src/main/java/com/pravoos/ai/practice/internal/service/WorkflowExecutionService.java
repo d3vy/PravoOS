@@ -23,6 +23,8 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class WorkflowExecutionService {
   private static final Logger log = LoggerFactory.getLogger(WorkflowExecutionService.class);
   private static final int DETAIL_MAX_LENGTH = 500;
   private static final int WORKFLOW_ID_MAX_LENGTH = 100;
+  private static final int STUCK_RUNS_PAGE_SIZE = 1000;
 
   private final WorkflowDefinitionService definitionService;
   private final WorkflowRunRepository runRepository;
@@ -122,21 +125,26 @@ public class WorkflowExecutionService {
   @Transactional
   public void failStuckRuns() {
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-    List<WorkflowRun> stuck =
-        runRepository.findByStatusAndStartedAtBefore(
-            WorkflowRunStatus.RUNNING, now.minusMinutes(stuckThresholdMinutes));
-    if (stuck.isEmpty()) {
-      return;
-    }
-    for (WorkflowRun run : stuck) {
-      run.setStatus(WorkflowRunStatus.FAILED);
-      run.setFinishedAt(now);
-      log.warn(
-          "Workflow run {} stuck in RUNNING since {}, marked FAILED by sweep",
-          run.getId(),
-          run.getStartedAt());
-    }
-    runRepository.saveAll(stuck);
+    LocalDateTime threshold = now.minusMinutes(stuckThresholdMinutes);
+    Pageable firstPage = PageRequest.of(0, STUCK_RUNS_PAGE_SIZE);
+    List<WorkflowRun> stuck;
+    do {
+      stuck =
+          runRepository
+              .findByStatusAndStartedAtBefore(WorkflowRunStatus.RUNNING, threshold, firstPage)
+              .getContent();
+      for (WorkflowRun run : stuck) {
+        run.setStatus(WorkflowRunStatus.FAILED);
+        run.setFinishedAt(now);
+        log.warn(
+            "Workflow run {} stuck in RUNNING since {}, marked FAILED by sweep",
+            run.getId(),
+            run.getStartedAt());
+      }
+      if (!stuck.isEmpty()) {
+        runRepository.saveAll(stuck);
+      }
+    } while (stuck.size() == STUCK_RUNS_PAGE_SIZE);
   }
 
   @Transactional(readOnly = true)
@@ -168,7 +176,7 @@ public class WorkflowExecutionService {
         legalAiPort.assertWithinQuota(lawyerId);
         AiResponseDto response =
             legalAiPort.runCaseWorkflow(
-                caseId, lawyerId, workflowId(config), config.title(), config.instruction());
+                caseId, lawyerId, orgIds, workflowId(config), config.title(), config.instruction());
         yield step.completed(truncate(response.result()), response.id(), null);
       }
       case GENERATE_DRAFT -> {
@@ -181,7 +189,7 @@ public class WorkflowExecutionService {
         legalAiPort.assertWithinQuota(lawyerId);
         AiResponseDto checklist =
             legalAiPort.runCaseWorkflow(
-                caseId, lawyerId, workflowId(config), config.title(), config.instruction());
+                caseId, lawyerId, orgIds, workflowId(config), config.title(), config.instruction());
         List<CaseTaskResponse> tasks =
             caseTaskService.createFromChecklist(caseId, checklist.result(), lawyerId);
         yield step.completed("Создано задач: " + tasks.size(), checklist.id(), null);

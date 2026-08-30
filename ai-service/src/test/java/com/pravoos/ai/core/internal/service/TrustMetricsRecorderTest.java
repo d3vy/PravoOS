@@ -13,6 +13,7 @@ import com.pravoos.ai.core.internal.repository.jpa.AiTrustCounterRepository;
 import com.pravoos.ai.shared.model.enums.TrustMetric;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,8 +44,10 @@ class TrustMetricsRecorderTest {
 
     recorder.flush();
 
-    verify(trustCounterWriter).addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_PASS), eq(2L));
-    verify(trustCounterWriter).addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_BLOCK), eq(1L));
+    verify(trustCounterWriter)
+        .addDelta(any(UUID.class), any(LocalDate.class), eq(TrustMetric.GUARD_PASS), eq(2L));
+    verify(trustCounterWriter)
+        .addDelta(any(UUID.class), any(LocalDate.class), eq(TrustMetric.GUARD_BLOCK), eq(1L));
   }
 
   @Test
@@ -61,14 +64,14 @@ class TrustMetricsRecorderTest {
     recorder.flush();
 
     verify(trustCounterWriter)
-        .addDelta(any(LocalDate.class), eq(TrustMetric.CITATION_VERIFIED), eq(1L));
+        .addDelta(any(UUID.class), any(LocalDate.class), eq(TrustMetric.CITATION_VERIFIED), eq(1L));
   }
 
   @Test
   void failedFlushKeepsDeltaForTheNextAttempt() {
     doThrow(new IllegalStateException("db down"))
         .when(trustCounterWriter)
-        .addDelta(any(LocalDate.class), any(TrustMetric.class), anyLong());
+        .addDelta(any(UUID.class), any(LocalDate.class), any(TrustMetric.class), anyLong());
     recorder.record(TrustMetric.GUARD_BLOCK);
 
     recorder.flush();
@@ -80,13 +83,14 @@ class TrustMetricsRecorderTest {
   void failureOfOneMetricDoesNotDiscardTheOthers() {
     doThrow(new IllegalStateException("db down"))
         .when(trustCounterWriter)
-        .addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_BLOCK), anyLong());
+        .addDelta(any(UUID.class), any(LocalDate.class), eq(TrustMetric.GUARD_BLOCK), anyLong());
     recorder.record(TrustMetric.GUARD_BLOCK);
     recorder.record(TrustMetric.GUARD_PASS);
 
     recorder.flush();
 
-    verify(trustCounterWriter).addDelta(any(LocalDate.class), eq(TrustMetric.GUARD_PASS), eq(1L));
+    verify(trustCounterWriter)
+        .addDelta(any(UUID.class), any(LocalDate.class), eq(TrustMetric.GUARD_PASS), eq(1L));
     assertThat(recorder.totals())
         .containsEntry(TrustMetric.GUARD_BLOCK, 1L)
         .containsEntry(TrustMetric.GUARD_PASS, 0L);
