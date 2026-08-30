@@ -27,6 +27,19 @@ llm:
     max-concurrent-requests: ${OPENAI_MAX_CONCURRENT_REQUESTS:20}
     acquire-timeout-ms: ${OPENAI_ACQUIRE_TIMEOUT_MS:2000}
     max-tool-argument-chars: ${OPENAI_MAX_TOOL_ARGUMENT_CHARS:32768}
+  stream:
+    pool-enabled: ${LLM_STREAM_POOL_ENABLED:true}
+
+# SSE-стримы исполняются на выделенном llmStreamExecutor, а не на дефолтном
+# applicationTaskExecutor с неограниченной очередью. queueCapacity = 0 + AbortPolicy:
+# при заполнении пула новый стрим получает 503, а не встаёт в невидимую очередь.
+# max-pool-size держим не выше llm.openai.max-concurrent-requests (Semaphore в OpenAiEngine),
+# иначе потоки будут копиться на acquire. llm.stream.pool-enabled=false — аварийный откат
+# на прежнее поведение (поток на запрос) без передеплоя.
+async:
+  llm-stream:
+    core-pool-size: ${LLM_STREAM_POOL_CORE:6}
+    max-pool-size: ${LLM_STREAM_POOL_MAX:16}
 
 internal:
   callers:

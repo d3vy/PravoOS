@@ -347,6 +347,58 @@ class OpenAiEngineTest {
     server.verify();
   }
 
+  @Test
+  void badRequestErrorNeverCarriesThePromptEchoedByOpenAi() {
+    String systemPrompt = "Ты — юридический ассистент PravoOS. СЕКРЕТНАЯ_ИНСТРУКЦИЯ_ПРОМПТА";
+    server
+        .expect(ExpectedCount.once(), requestTo(CHAT_URL))
+        .andRespond(
+            withStatus(HttpStatus.BAD_REQUEST)
+                .body(
+                    "{\"error\":{\"message\":\"Invalid prompt: "
+                        + systemPrompt
+                        + "\",\"type\":\"invalid_request_error\",\"code\":\"invalid_prompt\"}}")
+                .contentType(MediaType.APPLICATION_JSON));
+
+    assertThatThrownBy(() -> engine.complete(systemPrompt, List.of(), "вопрос", LlmOptions.DEFAULT))
+        .isInstanceOf(LlmException.class)
+        .hasMessage("OpenAI chat completion failed with status 400");
+    server.verify();
+  }
+
+  @Test
+  void streamErrorNeverCarriesTheUpstreamResponseBody() {
+    String systemPrompt = "Системный промпт с внутренними правилами";
+    server
+        .expect(ExpectedCount.once(), requestTo(CHAT_URL))
+        .andRespond(
+            withStatus(HttpStatus.BAD_REQUEST)
+                .body("{\"error\":{\"message\":\"" + systemPrompt + "\"}}")
+                .contentType(MediaType.APPLICATION_JSON));
+
+    assertThatThrownBy(
+            () ->
+                engine.streamComplete(
+                    systemPrompt, List.of(), "вопрос", LlmOptions.DEFAULT, token -> {}))
+        .isInstanceOf(LlmException.class)
+        .hasMessage("OpenAI chat stream failed with status 400");
+    server.verify();
+  }
+
+  @Test
+  void transportFailureAfterAllAttemptsReportsOnlyTheOperation() {
+    server
+        .expect(ExpectedCount.manyTimes(), requestTo(EMBED_URL))
+        .andRespond(
+            request -> {
+              throw new java.io.IOException("connect to openai.test with body Системный промпт");
+            });
+
+    assertThatThrownBy(() -> engine.embedBatch(List.of("текст")))
+        .isInstanceOf(LlmException.class)
+        .hasMessage("OpenAI embedding failed");
+  }
+
   private static LlmOptions createClientTools() {
     ObjectNode parameters = JsonNodeFactory.instance.objectNode();
     parameters.put("type", "object");

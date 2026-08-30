@@ -22,11 +22,14 @@ import com.pravoos.llm.domain.LlmStreamResult;
 import com.pravoos.llm.domain.LlmToolCall;
 import com.pravoos.llm.domain.LlmUsage;
 import com.pravoos.llm.exception.GlobalExceptionHandler;
+import com.pravoos.llm.openai.LlmMetrics;
 import com.pravoos.llm.openai.OpenAiEngine;
 import com.pravoos.llm.pii.PromptPiiRedactor;
 import com.pravoos.llm.pii.RedactionSession;
 import com.pravoos.llm.web.dto.CompleteRequest;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,11 +45,19 @@ class LlmControllerTest {
   private MockMvc mockMvc;
   private LlmController controller;
   private final ObjectMapper objectMapper = new ObjectMapper();
+  private final LlmMetrics metrics = new LlmMetrics(new SimpleMeterRegistry());
 
   private static final class SynchronousTaskExecutor implements AsyncTaskExecutor {
     @Override
     public void execute(Runnable task) {
       task.run();
+    }
+  }
+
+  private static final class RejectingTaskExecutor implements AsyncTaskExecutor {
+    @Override
+    public void execute(Runnable task) {
+      throw new RejectedExecutionException("pool is saturated");
     }
   }
 
@@ -59,7 +70,7 @@ class LlmControllerTest {
     when(piiRedactor.redact(anyList(), any())).thenAnswer(inv -> inv.getArgument(0));
     when(piiRedactor.redactForEmbedding(anyString(), any())).thenAnswer(inv -> inv.getArgument(0));
 
-    controller = new LlmController(engine, new SynchronousTaskExecutor(), piiRedactor);
+    controller = new LlmController(engine, new SynchronousTaskExecutor(), piiRedactor, metrics);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
@@ -159,7 +170,7 @@ class LlmControllerTest {
         .when(engine)
         .streamComplete(anyString(), anyList(), anyString(), any(), any());
     CapturingTaskExecutor executor = new CapturingTaskExecutor();
-    LlmController streamingController = new LlmController(engine, executor, piiRedactor);
+    LlmController streamingController = new LlmController(engine, executor, piiRedactor, metrics);
 
     SseEmitter emitter =
         streamingController.stream(new CompleteRequest("system", List.of(), "вопрос", null));
@@ -171,11 +182,24 @@ class LlmControllerTest {
   }
 
   @Test
+  void streamErrorEventCarriesOnlyOurOwnFailureMessages() {
+    assertThat(
+            LlmController.safeFailureMessage(
+                new RuntimeException("Invalid prompt: системный промпт целиком")))
+        .isEqualTo("Streaming completion failed");
+    assertThat(
+            LlmController.safeFailureMessage(
+                new com.pravoos.llm.exception.LlmException(
+                    "OpenAI chat stream failed with status 400")))
+        .isEqualTo("OpenAI chat stream failed with status 400");
+  }
+
+  @Test
   void streamCompletesWithoutPropagatingWhenEngineThrows() {
     when(engine.streamComplete(anyString(), anyList(), anyString(), any(), any()))
         .thenThrow(new RuntimeException("boom"));
     CapturingTaskExecutor executor = new CapturingTaskExecutor();
-    LlmController streamingController = new LlmController(engine, executor, piiRedactor);
+    LlmController streamingController = new LlmController(engine, executor, piiRedactor, metrics);
 
     streamingController.stream(new CompleteRequest("system", List.of(), "вопрос", null));
     executor.capturedTask.run();
@@ -296,5 +320,27 @@ class LlmControllerTest {
 
     assertThat(body).contains("event:token", "event:usage").doesNotContain("event:tool_calls");
     verify(piiRedactor, org.mockito.Mockito.never()).restoreToolCalls(anyList(), any());
+  }
+
+  @Test
+  void streamReturns503WhenThePoolRejectsTheTask() throws Exception {
+    LlmController saturatedController =
+        new LlmController(engine, new RejectingTaskExecutor(), piiRedactor, metrics);
+    MockMvc saturatedMockMvc =
+        MockMvcBuilders.standaloneSetup(saturatedController)
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .build();
+
+    saturatedMockMvc
+        .perform(
+            post("/internal/llm/stream")
+                .contentType("application/json")
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CompleteRequest("system", List.of(), "привет", null))))
+        .andExpect(status().isServiceUnavailable());
+
+    verify(engine, org.mockito.Mockito.never())
+        .streamComplete(anyString(), anyList(), anyString(), any(), any());
   }
 }

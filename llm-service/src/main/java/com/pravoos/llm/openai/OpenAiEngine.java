@@ -140,11 +140,11 @@ public class OpenAiEngine {
               .exchange(
                   (clientRequest, clientResponse) -> {
                     if (clientResponse.getStatusCode().isError()) {
-                      String body = readErrorBody(clientResponse.getBody());
                       log.error(
                           "OpenAI chat stream returned {}: {}",
                           clientResponse.getStatusCode().value(),
-                          body);
+                          OpenAiErrorSummary.of(
+                              objectMapper, readErrorBody(clientResponse.getBody())));
                       throw new LlmException(
                           "OpenAI chat stream failed with status "
                               + clientResponse.getStatusCode().value());
@@ -286,7 +286,11 @@ public class OpenAiEngine {
         lastException = e;
         int status = e.getStatusCode().value();
         if (!RETRYABLE_STATUSES.contains(status) || attempt == MAX_ATTEMPTS) {
-          log.error("OpenAI {} returned {}: {}", operation, status, e.getResponseBodyAsString());
+          log.error(
+              "OpenAI {} returned {}: {}",
+              operation,
+              status,
+              OpenAiErrorSummary.of(objectMapper, e.getResponseBodyAsString()));
           throw new LlmException("OpenAI " + operation + " failed with status " + status);
         }
         log.warn(
@@ -301,7 +305,7 @@ public class OpenAiEngine {
         lastException = e;
         if (attempt == MAX_ATTEMPTS) {
           log.error("OpenAI {} failed: {}", operation, e.getMessage());
-          throw new LlmException("OpenAI " + operation + " failed: " + e.getMessage());
+          throw new LlmException("OpenAI " + operation + " failed");
         }
         log.warn(
             "OpenAI {} failed (attempt {}/{}): {}, retrying",
@@ -312,13 +316,12 @@ public class OpenAiEngine {
       }
       backoff(attempt);
     }
-    throw new LlmException(
-        "OpenAI "
-            + operation
-            + " failed after "
-            + MAX_ATTEMPTS
-            + " attempts: "
-            + (lastException == null ? "unknown" : lastException.getMessage()));
+    log.error(
+        "OpenAI {} failed after {} attempts: {}",
+        operation,
+        MAX_ATTEMPTS,
+        lastException == null ? "unknown" : lastException.getMessage());
+    throw new LlmException("OpenAI " + operation + " failed after " + MAX_ATTEMPTS + " attempts");
   }
 
   private void backoff(int attempt) {

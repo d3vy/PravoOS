@@ -3,8 +3,10 @@ package com.pravoos.llm.openai;
 import com.pravoos.llm.domain.LlmToolCall;
 import com.pravoos.llm.domain.LlmUsage;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,6 +16,7 @@ public class LlmMetrics {
   private final Counter promptTokens;
   private final Counter completionTokens;
   private final MeterRegistry registry;
+  private final AtomicInteger activeStreams = new AtomicInteger();
 
   public LlmMetrics(MeterRegistry registry) {
     this.registry = registry;
@@ -31,6 +34,9 @@ public class LlmMetrics {
             .description("Tokens consumed by LLM chat-completion calls")
             .tag("type", "completion")
             .register(registry);
+    Gauge.builder("pravoos.llm.streams.active", activeStreams, AtomicInteger::get)
+        .description("Number of SSE completion streams currently open")
+        .register(registry);
   }
 
   public void recordCompletion(LlmUsage usage) {
@@ -50,5 +56,13 @@ public class LlmMetrics {
           .register(registry)
           .increment();
     }
+  }
+
+  public void streamStarted() {
+    activeStreams.incrementAndGet();
+  }
+
+  public void streamEnded() {
+    activeStreams.decrementAndGet();
   }
 }
