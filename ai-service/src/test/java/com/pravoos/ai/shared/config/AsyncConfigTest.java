@@ -16,7 +16,7 @@ class AsyncConfigTest {
 
   @Test
   void chatStreamExecutorRejectsInsteadOfQueueingWhenSaturated() throws InterruptedException {
-    ThreadPoolTaskExecutor executor = config.chatStreamExecutor();
+    ThreadPoolTaskExecutor executor = config.chatStreamExecutor(6, 16);
     CountDownLatch release = new CountDownLatch(1);
     CountDownLatch started = new CountDownLatch(executor.getMaxPoolSize());
     try {
@@ -39,8 +39,8 @@ class AsyncConfigTest {
 
   @Test
   void backgroundExecutorsKeepQueueingInsteadOfRejecting() {
-    assertThat(config.tabularReviewExecutor().getQueueCapacity()).isPositive();
-    assertThat(config.tabularReviewCellExecutor().getQueueCapacity()).isPositive();
+    assertThat(config.tabularReviewExecutor(2, 4).getQueueCapacity()).isPositive();
+    assertThat(config.tabularReviewCellExecutor(4, 8).getQueueCapacity()).isPositive();
   }
 
   @Test
@@ -49,7 +49,7 @@ class AsyncConfigTest {
     AtomicReference<String> branchThread = new AtomicReference<>();
 
     config
-        .dashboardExecutor(false)
+        .dashboardExecutor(false, 4, 8)
         .execute(() -> branchThread.set(Thread.currentThread().getName()));
 
     assertThat(branchThread.get()).isEqualTo(callerThread);

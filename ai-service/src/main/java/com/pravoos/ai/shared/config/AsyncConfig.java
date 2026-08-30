@@ -1,5 +1,6 @@
 package com.pravoos.ai.shared.config;
 
+import com.pravoos.common.web.ContextPropagatingTaskDecorator;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -30,10 +31,12 @@ public class AsyncConfig implements AsyncConfigurer {
   }
 
   @Bean(name = "taskExecutor")
-  public Executor taskExecutor() {
+  public Executor taskExecutor(
+      @Value("${async.embedding.core-pool-size:2}") int corePoolSize,
+      @Value("${async.embedding.max-pool-size:4}") int maxPoolSize) {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(2);
-    executor.setMaxPoolSize(4);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(50);
     executor.setThreadNamePrefix("embedding-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
@@ -45,10 +48,12 @@ public class AsyncConfig implements AsyncConfigurer {
   }
 
   @Bean(name = "tabularReviewExecutor")
-  public ThreadPoolTaskExecutor tabularReviewExecutor() {
+  public ThreadPoolTaskExecutor tabularReviewExecutor(
+      @Value("${async.tabular-review.core-pool-size:2}") int corePoolSize,
+      @Value("${async.tabular-review.max-pool-size:4}") int maxPoolSize) {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(2);
-    executor.setMaxPoolSize(4);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(50);
     executor.setThreadNamePrefix("review-run-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
@@ -60,10 +65,12 @@ public class AsyncConfig implements AsyncConfigurer {
   }
 
   @Bean(name = "tabularReviewCellExecutor")
-  public ThreadPoolTaskExecutor tabularReviewCellExecutor() {
+  public ThreadPoolTaskExecutor tabularReviewCellExecutor(
+      @Value("${async.tabular-review-cell.core-pool-size:4}") int corePoolSize,
+      @Value("${async.tabular-review-cell.max-pool-size:8}") int maxPoolSize) {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(4);
-    executor.setMaxPoolSize(8);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(200);
     executor.setThreadNamePrefix("review-doc-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
@@ -75,10 +82,12 @@ public class AsyncConfig implements AsyncConfigurer {
   }
 
   @Bean(name = "chatStreamExecutor")
-  public ThreadPoolTaskExecutor chatStreamExecutor() {
+  public ThreadPoolTaskExecutor chatStreamExecutor(
+      @Value("${async.chat-stream.core-pool-size:6}") int corePoolSize,
+      @Value("${async.chat-stream.max-pool-size:16}") int maxPoolSize) {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(8);
-    executor.setMaxPoolSize(25);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(0);
     executor.setThreadNamePrefix("chat-stream-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
@@ -90,13 +99,16 @@ public class AsyncConfig implements AsyncConfigurer {
   }
 
   @Bean(name = "hybridSearchExecutor")
-  public Executor hybridSearchExecutor(HybridSearchProperties hybridSearchProperties) {
+  public Executor hybridSearchExecutor(
+      HybridSearchProperties hybridSearchProperties,
+      @Value("${async.hybrid-search.core-pool-size:4}") int corePoolSize,
+      @Value("${async.hybrid-search.max-pool-size:8}") int maxPoolSize) {
     if (!hybridSearchProperties.parallelEnabled()) {
       return Runnable::run;
     }
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(4);
-    executor.setMaxPoolSize(8);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(0);
     executor.setThreadNamePrefix("hybrid-search-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
@@ -109,13 +121,15 @@ public class AsyncConfig implements AsyncConfigurer {
 
   @Bean(name = "chatContextExecutor")
   public Executor chatContextExecutor(
-      @Value("${llm.context-parallel-enabled:true}") boolean contextParallelEnabled) {
+      @Value("${llm.context-parallel-enabled:true}") boolean contextParallelEnabled,
+      @Value("${async.chat-context.core-pool-size:4}") int corePoolSize,
+      @Value("${async.chat-context.max-pool-size:8}") int maxPoolSize) {
     if (!contextParallelEnabled) {
       return Runnable::run;
     }
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(4);
-    executor.setMaxPoolSize(12);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(0);
     executor.setThreadNamePrefix("chat-context-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
@@ -128,13 +142,15 @@ public class AsyncConfig implements AsyncConfigurer {
 
   @Bean(name = "globalSearchExecutor")
   public Executor globalSearchExecutor(
-      @Value("${search.parallel-enabled:true}") boolean searchParallelEnabled) {
+      @Value("${search.parallel-enabled:true}") boolean searchParallelEnabled,
+      @Value("${async.global-search.core-pool-size:4}") int corePoolSize,
+      @Value("${async.global-search.max-pool-size:8}") int maxPoolSize) {
     if (!searchParallelEnabled) {
       return Runnable::run;
     }
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(4);
-    executor.setMaxPoolSize(12);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(0);
     executor.setThreadNamePrefix("global-search-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
@@ -147,13 +163,15 @@ public class AsyncConfig implements AsyncConfigurer {
 
   @Bean(name = "dashboardExecutor")
   public Executor dashboardExecutor(
-      @Value("${dashboard.parallel-enabled:true}") boolean dashboardParallelEnabled) {
+      @Value("${dashboard.parallel-enabled:true}") boolean dashboardParallelEnabled,
+      @Value("${async.dashboard.core-pool-size:4}") int corePoolSize,
+      @Value("${async.dashboard.max-pool-size:8}") int maxPoolSize) {
     if (!dashboardParallelEnabled) {
       return Runnable::run;
     }
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setCorePoolSize(4);
-    executor.setMaxPoolSize(8);
+    executor.setCorePoolSize(corePoolSize);
+    executor.setMaxPoolSize(maxPoolSize);
     executor.setQueueCapacity(0);
     executor.setThreadNamePrefix("dashboard-");
     executor.setTaskDecorator(new ContextPropagatingTaskDecorator());

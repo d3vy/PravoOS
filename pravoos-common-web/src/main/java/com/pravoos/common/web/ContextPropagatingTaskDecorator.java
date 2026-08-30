@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.config;
+package com.pravoos.common.web;
 
 import java.util.Map;
 import org.slf4j.MDC;

@@ -1,5 +1,6 @@
 package com.pravoos.user.shared.config;
 
+import com.pravoos.common.web.ContextPropagatingTaskDecorator;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -24,6 +25,7 @@ public class AsyncConfig implements AsyncConfigurer {
     executor.setMaxPoolSize(16);
     executor.setQueueCapacity(100);
     executor.setThreadNamePrefix("async-");
+    executor.setTaskDecorator(new ContextPropagatingTaskDecorator());
     executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
     executor.setWaitForTasksToCompleteOnShutdown(true);
     executor.setAwaitTerminationSeconds(30);

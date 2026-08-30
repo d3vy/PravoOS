@@ -1,4 +1,4 @@
-package com.pravoos.ai.shared.config;
+package com.pravoos.common.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
