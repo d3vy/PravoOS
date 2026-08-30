@@ -10,6 +10,7 @@ import com.pravoos.ai.llm.api.LlmStreamResult;
 import com.pravoos.ai.llm.api.LlmToolCall;
 import com.pravoos.ai.llm.api.LlmUsage;
 import com.pravoos.ai.shared.config.LlmServiceProperties;
+import com.pravoos.ai.shared.config.PooledClientHttpRequestFactories;
 import com.pravoos.ai.shared.exception.LlmException;
 import com.pravoos.ai.shared.security.AiProcessingGuard;
 import com.pravoos.cloud.DiscoveryAwareRestClients;
@@ -26,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -38,6 +39,8 @@ public class RemoteLlmClient implements LlmClient {
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(180);
   private static final Duration GUARD_READ_TIMEOUT = Duration.ofSeconds(12);
+  private static final int MAX_TOTAL_CONNECTIONS = 32;
+  private static final int GUARD_MAX_TOTAL_CONNECTIONS = 8;
   private static final String CALLER_NAME = "ai-service";
 
   private final RestClient restClient;
@@ -54,12 +57,14 @@ public class RemoteLlmClient implements LlmClient {
         buildClient(
             properties.baseUrl(),
             READ_TIMEOUT,
+            MAX_TOTAL_CONNECTIONS,
             properties.internalSecret(),
             loadBalancedRestClientBuilder);
     this.guardRestClient =
         buildClient(
             properties.baseUrl(),
             GUARD_READ_TIMEOUT,
+            GUARD_MAX_TOTAL_CONNECTIONS,
             properties.internalSecret(),
             loadBalancedRestClientBuilder);
     this.objectMapper = objectMapper;
@@ -69,11 +74,12 @@ public class RemoteLlmClient implements LlmClient {
   private static RestClient buildClient(
       String baseUrl,
       Duration readTimeout,
+      int maxTotalConnections,
       String internalSecret,
       RestClient.Builder loadBalancedBuilder) {
-    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-    requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
-    requestFactory.setReadTimeout(readTimeout);
+    ClientHttpRequestFactory requestFactory =
+        PooledClientHttpRequestFactories.create(
+            CONNECT_TIMEOUT, readTimeout, maxTotalConnections, maxTotalConnections);
     return DiscoveryAwareRestClients.builderFor(baseUrl, loadBalancedBuilder)
         .baseUrl(baseUrl)
         .defaultHeader(InternalCallerHeaders.CALLER, CALLER_NAME)
@@ -105,8 +111,7 @@ public class RemoteLlmClient implements LlmClient {
       }
       return result;
     } catch (RestClientException e) {
-      log.error("llm-service completion failed: {}", e.getMessage());
-      throw new LlmException("llm-service completion failed: " + e.getMessage());
+      throw upstreamFailure("completion", e);
     }
   }
 
@@ -140,9 +145,13 @@ public class RemoteLlmClient implements LlmClient {
                 return consumeSse(clientResponse.getBody(), tokenConsumer);
               });
     } catch (RestClientException e) {
-      log.error("llm-service stream failed: {}", e.getMessage());
-      throw new LlmException("llm-service stream failed: " + e.getMessage());
+      throw upstreamFailure("stream", e);
     }
+  }
+
+  private LlmException upstreamFailure(String operation, RestClientException cause) {
+    log.error("llm-service {} failed: {}", operation, cause.getMessage());
+    return new LlmException("llm-service " + operation + " failed");
   }
 
   private LlmStreamResult consumeSse(InputStream body, Consumer<String> tokenConsumer)
@@ -232,8 +241,7 @@ public class RemoteLlmClient implements LlmClient {
       }
       return response.embedding();
     } catch (RestClientException e) {
-      log.error("llm-service embedding failed: {}", e.getMessage());
-      throw new LlmException("llm-service embedding failed: " + e.getMessage());
+      throw upstreamFailure("embedding", e);
     }
   }
 
@@ -254,8 +262,7 @@ public class RemoteLlmClient implements LlmClient {
       }
       return result;
     } catch (RestClientException e) {
-      log.error("llm-service batch embedding failed: {}", e.getMessage());
-      throw new LlmException("llm-service batch embedding failed: " + e.getMessage());
+      throw upstreamFailure("batch embedding", e);
     }
   }
 

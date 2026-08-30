@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pravoos.ai.practice.internal.dto.GlobalSearchResponse;
 import com.pravoos.ai.practice.internal.service.SearchService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,7 @@ class SearchControllerTest {
     SearchController controller = new SearchController(searchService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     when(authentication.getPrincipal()).thenReturn(lawyerId.toString());

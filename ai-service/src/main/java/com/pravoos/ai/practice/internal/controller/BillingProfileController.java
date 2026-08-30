@@ -3,10 +3,9 @@ package com.pravoos.ai.practice.internal.controller;
 import com.pravoos.ai.practice.internal.dto.BillingProfileRequest;
 import com.pravoos.ai.practice.internal.dto.BillingProfileResponse;
 import com.pravoos.ai.practice.internal.service.BillingProfileService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.shared.security.CallerContext;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,17 +23,16 @@ public class BillingProfileController {
   }
 
   @GetMapping
-  public ResponseEntity<BillingProfileResponse> get(Authentication authentication) {
+  public ResponseEntity<BillingProfileResponse> get(CallerContext caller) {
     return billingProfileService
-        .find(SecurityUtils.currentUserId(authentication))
+        .find(caller.userId())
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
   @PutMapping
   public ResponseEntity<BillingProfileResponse> save(
-      @Valid @RequestBody BillingProfileRequest request, Authentication authentication) {
-    return ResponseEntity.ok(
-        billingProfileService.save(request, SecurityUtils.currentUserId(authentication)));
+      @Valid @RequestBody BillingProfileRequest request, CallerContext caller) {
+    return ResponseEntity.ok(billingProfileService.save(request, caller.userId()));
   }
 }

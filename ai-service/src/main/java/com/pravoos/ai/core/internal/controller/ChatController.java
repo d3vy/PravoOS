@@ -7,8 +7,8 @@ import com.pravoos.ai.core.internal.service.ChatService;
 import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.util.PagedResponse;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -37,41 +37,37 @@ public class ChatController {
   public ResponseEntity<DocumentUploadResponse> uploadAttachment(
       @RequestParam("file") MultipartFile file,
       @RequestParam(value = "title", required = false) String title,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(chatAttachmentService.upload(file, title, lawyerId));
   }
 
   @GetMapping("/chat/attachments")
-  public ResponseEntity<List<DocumentResponse>> getAttachments(Authentication authentication) {
-    return ResponseEntity.ok(
-        chatAttachmentService.findAll(SecurityUtils.currentUserId(authentication)));
+  public ResponseEntity<List<DocumentResponse>> getAttachments(CallerContext caller) {
+    return ResponseEntity.ok(chatAttachmentService.findAll(caller.userId()));
   }
 
   @PostMapping("/chat")
   public ResponseEntity<ChatResponse> chat(
-      @Valid @RequestBody ChatRequest request, Authentication authentication) {
+      @Valid @RequestBody ChatRequest request,
+      Authentication authentication,
+      CallerContext caller) {
     return ResponseEntity.ok(
         chatService.chat(
-            request,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication),
-            AiActorRole.of(authentication)));
+            request, caller.userId(), caller.orgIds(), AiActorRole.of(authentication)));
   }
 
   @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public SseEmitter chatStream(
       @Valid @RequestBody ChatRequest request,
       Authentication authentication,
+      CallerContext caller,
       HttpServletResponse response) {
     response.setHeader("X-Accel-Buffering", "no");
     response.setHeader("Cache-Control", "no-cache");
     return chatService.chatStream(
-        request,
-        SecurityUtils.currentUserId(authentication),
-        SecurityUtils.currentOrgIds(authentication),
-        AiActorRole.of(authentication));
+        request, caller.userId(), caller.orgIds(), AiActorRole.of(authentication));
   }
 
   @GetMapping("/conversations")
@@ -81,16 +77,10 @@ public class ChatController {
       @RequestParam(required = false) UUID documentId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size,
-      Authentication authentication) {
+      CallerContext caller) {
     return PagedResponse.of(
         chatService.getConversations(
-            SecurityUtils.currentUserId(authentication),
-            q,
-            caseId,
-            documentId,
-            SecurityUtils.currentOrgIds(authentication),
-            page,
-            size));
+            caller.userId(), q, caseId, documentId, caller.orgIds(), page, size));
   }
 
   @GetMapping("/conversations/{id}/messages")
@@ -98,9 +88,8 @@ public class ChatController {
       @PathVariable String id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size,
-      Authentication authentication) {
-    return PagedResponse.of(
-        chatService.getMessages(id, SecurityUtils.currentUserId(authentication), page, size));
+      CallerContext caller) {
+    return PagedResponse.of(chatService.getMessages(id, caller.userId(), page, size));
   }
 
   @DeleteMapping("/conversations/{id}")
@@ -112,10 +101,7 @@ public class ChatController {
 
   @PostMapping("/messages/{id}/rate")
   public ResponseEntity<MessageResponse> rateMessage(
-      @PathVariable String id,
-      @Valid @RequestBody RateRequest request,
-      Authentication authentication) {
-    return ResponseEntity.ok(
-        chatService.rateMessage(id, request, SecurityUtils.currentUserId(authentication)));
+      @PathVariable String id, @Valid @RequestBody RateRequest request, CallerContext caller) {
+    return ResponseEntity.ok(chatService.rateMessage(id, request, caller.userId()));
   }
 }

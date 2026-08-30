@@ -16,6 +16,7 @@ import com.pravoos.ai.core.internal.model.entity.TabularReviewCell;
 import com.pravoos.ai.document.api.DocumentChunkMatch;
 import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
+import com.pravoos.ai.document.api.SearchActor;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.llm.api.LlmUsage;
@@ -37,6 +38,7 @@ class TabularReviewDocumentProcessorTest {
   private static final UUID DOCUMENT_ID = UUID.randomUUID();
   private static final UUID LAWYER_ID = UUID.randomUUID();
   private static final List<String> QUESTIONS = List.of("Стороны договора", "Срок действия");
+  private static final SearchActor ACTOR = SearchActor.of(LAWYER_ID, List.of());
 
   @Mock private DocumentRetrieval documentRetrieval;
   @Mock private LlmClient llmClient;
@@ -139,7 +141,7 @@ class TabularReviewDocumentProcessorTest {
 
   @Test
   void skipsLlmCallWhenNothingRetrieved() {
-    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(DOCUMENT_ID)))
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(DOCUMENT_ID), any()))
         .thenReturn(DocumentChunkMatches.empty());
 
     assertThat(process()).isTrue();
@@ -158,7 +160,7 @@ class TabularReviewDocumentProcessorTest {
 
     assertThat(process()).isFalse();
 
-    verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any());
+    verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any(), any());
     verify(llmClient, never()).complete(anyString(), any(), anyString());
     verify(llmQuotaService, never()).recordUsage(any(), anyLong());
     verify(reviewWriter).markDocumentFailed(eq(REVIEW_ID), eq(DOCUMENT_ID), anyString());
@@ -195,11 +197,12 @@ class TabularReviewDocumentProcessorTest {
   }
 
   private boolean process() {
-    return processor.process(REVIEW_ID, DOCUMENT_ID, "Договор поставки", QUESTIONS, LAWYER_ID);
+    return processor.process(
+        REVIEW_ID, DOCUMENT_ID, "Договор поставки", QUESTIONS, LAWYER_ID, ACTOR);
   }
 
   private void stubRetrieval(DocumentChunkMatch... matches) {
-    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(DOCUMENT_ID)))
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(DOCUMENT_ID), any()))
         .thenReturn(new DocumentChunkMatches(List.of(matches), 128L, 0L));
   }
 

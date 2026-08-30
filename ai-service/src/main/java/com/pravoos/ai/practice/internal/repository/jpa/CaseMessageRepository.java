@@ -26,7 +26,7 @@ public interface CaseMessageRepository extends JpaRepository<CaseMessage, UUID> 
     long getUnreadCount();
   }
 
-  List<CaseMessage> findByCaseIdOrderByCreatedAtAsc(UUID caseId);
+  List<CaseMessage> findTop2000ByCaseIdOrderByCreatedAtDesc(UUID caseId);
 
   @Query(
       value =
@@ -48,6 +48,8 @@ public interface CaseMessageRepository extends JpaRepository<CaseMessage, UUID> 
                 LEFT JOIN clients cl ON cl.id = c.client_id
                 LEFT JOIN case_thread_reads r ON r.case_id = m.case_id AND r.user_id = :lawyerId
                 WHERE c.lawyer_id = :lawyerId
+                  AND c.deleted_at IS NULL
+                  AND (cl.id IS NULL OR cl.deleted_at IS NULL)
                 ORDER BY m.case_id, m.created_at DESC
             ) threads
             ORDER BY threads."lastCreatedAt" DESC

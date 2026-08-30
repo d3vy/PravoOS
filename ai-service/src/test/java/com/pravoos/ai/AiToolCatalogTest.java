@@ -12,12 +12,19 @@ import com.pravoos.ai.core.internal.agent.AiToolRegistry;
 import com.pravoos.ai.llm.api.ToolSpec;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.CodeSource;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -35,6 +42,27 @@ class AiToolCatalogTest {
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final Validator VALIDATOR =
       Validation.buildDefaultValidatorFactory().getValidator();
+
+  private static final Path LOCALE_EN =
+      Path.of("..", "frontend", "src", "i18n", "locales", "en.ts");
+  private static final Path LOCALE_RU =
+      Path.of("..", "frontend", "src", "i18n", "locales", "ru.ts");
+  private static final Pattern TOOL_STEP_BLOCK =
+      Pattern.compile("toolStep:\\s*\\{([^}]*)\\}", Pattern.DOTALL);
+  private static final Pattern TOOL_STEP_KEY = Pattern.compile("([a-z][a-z0-9_]*):\\s*'");
+  private static final String I18N_ONLY_KEY = "error";
+
+  private static final Set<String> ACTOR_SCOPED_PARAMETERS =
+      Set.of(
+          "orgid",
+          "orgids",
+          "organizationid",
+          "tenantid",
+          "lawyerid",
+          "userid",
+          "actorid",
+          "ownerid",
+          "role");
 
   private static final List<String> EXPECTED_TOOL_NAMES =
       List.of(
@@ -106,6 +134,21 @@ class AiToolCatalogTest {
   }
 
   @Test
+  void noToolLetsTheModelChooseTheTenantOrTheActor() {
+    assertThat(tools)
+        .allSatisfy(
+            tool ->
+                tool.parameters()
+                    .path("properties")
+                    .fieldNames()
+                    .forEachRemaining(
+                        property ->
+                            assertThat(property.toLowerCase(Locale.ROOT))
+                                .as("tool %s exposes %s to the model", tool.name(), property)
+                                .isNotIn(ACTOR_SCOPED_PARAMETERS)));
+  }
+
+  @Test
   void everyWriteToolIsExcludedFromDeduplicationAndOfferedToLawyersOnly() {
     assertThat(tools)
         .filteredOn(AiWriteTool.class::isInstance)
@@ -123,6 +166,34 @@ class AiToolCatalogTest {
     AiToolRegistry registry = new AiToolRegistry(tools);
 
     assertThat(registry.specsFor(admin())).isEmpty();
+  }
+
+  @Test
+  void everyToolHasAnI18nLabelInBothLocales() {
+    assertThat(toolStepKeysFrom(LOCALE_EN))
+        .containsExactlyInAnyOrderElementsOf(EXPECTED_TOOL_NAMES);
+    assertThat(toolStepKeysFrom(LOCALE_RU))
+        .containsExactlyInAnyOrderElementsOf(EXPECTED_TOOL_NAMES);
+  }
+
+  private static Set<String> toolStepKeysFrom(Path localeFile) {
+    String content;
+    try {
+      content = Files.readString(localeFile);
+    } catch (IOException ex) {
+      throw new IllegalStateException("Could not read locale file: " + localeFile, ex);
+    }
+    Matcher blockMatcher = TOOL_STEP_BLOCK.matcher(content);
+    if (!blockMatcher.find()) {
+      throw new IllegalStateException("No chat.toolStep block found in " + localeFile);
+    }
+    Set<String> keys = new HashSet<>();
+    Matcher keyMatcher = TOOL_STEP_KEY.matcher(blockMatcher.group(1));
+    while (keyMatcher.find()) {
+      keys.add(keyMatcher.group(1));
+    }
+    keys.remove(I18N_ONLY_KEY);
+    return keys;
   }
 
   private static AiToolContext lawyer() {

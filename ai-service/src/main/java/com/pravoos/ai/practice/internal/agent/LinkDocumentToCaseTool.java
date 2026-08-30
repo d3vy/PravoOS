@@ -6,6 +6,7 @@ import com.pravoos.ai.core.api.AbstractAiWriteTool;
 import com.pravoos.ai.core.api.AiActionProposals;
 import com.pravoos.ai.core.api.AiToolContext;
 import com.pravoos.ai.core.api.AiToolResult;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.ToolArguments;
 import com.pravoos.ai.core.api.ToolJson;
 import com.pravoos.ai.core.api.ToolSchema;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Component;
 public class LinkDocumentToCaseTool extends AbstractAiWriteTool<LinkDocumentToCaseTool.Command> {
 
   private final DocumentCommand documentCommand;
+  private final DocumentAccessGuard documentAccessGuard;
   private final CaseService caseService;
   private final ObjectMapper objectMapper;
 
@@ -28,10 +30,12 @@ public class LinkDocumentToCaseTool extends AbstractAiWriteTool<LinkDocumentToCa
       AiActionProposals proposals,
       Validator validator,
       DocumentCommand documentCommand,
+      DocumentAccessGuard documentAccessGuard,
       CaseService caseService,
       ObjectMapper objectMapper) {
     super(proposals, validator);
     this.documentCommand = documentCommand;
+    this.documentAccessGuard = documentAccessGuard;
     this.caseService = caseService;
     this.objectMapper = objectMapper;
   }
@@ -75,6 +79,7 @@ public class LinkDocumentToCaseTool extends AbstractAiWriteTool<LinkDocumentToCa
 
   @Override
   protected AiToolResult run(Command command, AiToolContext context) {
+    documentAccessGuard.requireVisible(command.documentId(), context.userId(), context.orgIds());
     caseService.requireVisibleCase(command.caseId(), context.userId(), context.orgIds());
     DocumentResponse linked = documentCommand.attachToCase(command.documentId(), command.caseId());
     return AiToolResult.ok(

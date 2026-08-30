@@ -1,6 +1,7 @@
 package com.pravoos.ai.practice.internal.service;
 
-import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 @ExtendWith(MockitoExtension.class)
 class CourtPollingServiceTest {
@@ -63,8 +66,9 @@ class CourtPollingServiceTest {
   @Test
   void skipsPollingWhenNoTrackedCasesMatchEnabledSystems() {
     when(courtCaseLookup.enabledSystems()).thenReturn(Set.of(CourtSystem.ARBITR));
-    when(caseRepository.findByCourtCaseNumberIsNotNull())
-        .thenReturn(List.of(caseWithSystem(CourtSystem.GENERAL_JURISDICTION)));
+    when(caseRepository.findByCourtCaseNumberIsNotNullAndCourtSystemIn(
+            eq(Set.of(CourtSystem.ARBITR)), any()))
+        .thenReturn(Page.empty());
 
     service.pollTrackedCases();
 
@@ -74,15 +78,14 @@ class CourtPollingServiceTest {
   @Test
   void syncsOnlyCasesInEnabledSystems() {
     Case arbitrCase = caseWithSystem(CourtSystem.ARBITR);
-    Case generalCase = caseWithSystem(CourtSystem.GENERAL_JURISDICTION);
     when(courtCaseLookup.enabledSystems()).thenReturn(Set.of(CourtSystem.ARBITR));
-    when(caseRepository.findByCourtCaseNumberIsNotNull())
-        .thenReturn(List.of(arbitrCase, generalCase));
+    when(caseRepository.findByCourtCaseNumberIsNotNullAndCourtSystemIn(
+            eq(Set.of(CourtSystem.ARBITR)), any()))
+        .thenReturn(new PageImpl<>(List.of(arbitrCase)));
 
     service.pollTrackedCases();
 
     verify(courtSyncService, times(1)).syncCase(arbitrCase.getId());
-    verify(courtSyncService, never()).syncCase(generalCase.getId());
   }
 
   @Test
@@ -90,7 +93,9 @@ class CourtPollingServiceTest {
     Case first = caseWithSystem(CourtSystem.ARBITR);
     Case second = caseWithSystem(CourtSystem.ARBITR);
     when(courtCaseLookup.enabledSystems()).thenReturn(Set.of(CourtSystem.ARBITR));
-    when(caseRepository.findByCourtCaseNumberIsNotNull()).thenReturn(List.of(first, second));
+    when(caseRepository.findByCourtCaseNumberIsNotNullAndCourtSystemIn(
+            eq(Set.of(CourtSystem.ARBITR)), any()))
+        .thenReturn(new PageImpl<>(List.of(first, second)));
     org.mockito.Mockito.doThrow(new RuntimeException("boom"))
         .when(courtSyncService)
         .syncCase(first.getId());

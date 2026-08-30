@@ -1,6 +1,7 @@
 package com.pravoos.ai.core.internal.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -493,6 +494,67 @@ class AgentLoopTest {
     ArgumentCaptor<LlmOptions> options = ArgumentCaptor.forClass(LlmOptions.class);
     verify(llmClient).streamComplete(anyString(), anyList(), anyString(), options.capture(), any());
     assertThat(options.getValue().toolChoice()).isEqualTo(LlmOptions.TOOL_CHOICE_NONE);
+  }
+
+  @Test
+  void reportsUsageAfterEveryModelTurnInsteadOfOnlyAtTheEnd() {
+    StubTool tool = new StubTool("get_case", AiToolResult.ok("{}"));
+    AgentLoop loop = loopWith(tool);
+    when(llmClient.streamComplete(anyString(), anyList(), anyString(), any(), any()))
+        .thenAnswer(
+            emitting(
+                null,
+                new LlmStreamResult(
+                    new LlmUsage(10, 5, 15),
+                    List.of(new LlmToolCall("c1", "get_case", "{}")),
+                    "tool_calls")))
+        .thenAnswer(
+            emitting("финал", new LlmStreamResult(new LlmUsage(20, 5, 25), List.of(), null)));
+
+    List<Integer> reportedUsage = new ArrayList<>();
+    AgentResult result =
+        loop.run(
+            "system",
+            List.of(),
+            USER_MESSAGE,
+            CONTEXT,
+            tokens::add,
+            steps::add,
+            usage -> reportedUsage.add(usage.totalTokens()));
+
+    assertThat(reportedUsage).containsExactly(15, 25);
+    assertThat(result.usage().totalTokens()).isEqualTo(40);
+  }
+
+  @Test
+  void usageOfSpentTurnsIsReportedEvenWhenTheClientDropsTheStream() {
+    StubTool tool = new StubTool("get_case", AiToolResult.ok("{}"));
+    AgentLoop loop = loopWith(tool);
+    when(llmClient.streamComplete(anyString(), anyList(), anyString(), any(), any()))
+        .thenAnswer(
+            emitting(
+                null,
+                new LlmStreamResult(
+                    new LlmUsage(10, 5, 15),
+                    List.of(new LlmToolCall("c1", "get_case", "{}")),
+                    "tool_calls")));
+
+    List<Integer> reportedUsage = new ArrayList<>();
+
+    assertThatThrownBy(
+            () ->
+                loop.run(
+                    "system",
+                    List.of(),
+                    USER_MESSAGE,
+                    CONTEXT,
+                    tokens::add,
+                    step -> {
+                      throw new IllegalStateException("client disconnected");
+                    },
+                    usage -> reportedUsage.add(usage.totalTokens())))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(reportedUsage).containsExactly(15);
   }
 
   private static LlmStreamResult toolCalls(LlmToolCall... calls) {

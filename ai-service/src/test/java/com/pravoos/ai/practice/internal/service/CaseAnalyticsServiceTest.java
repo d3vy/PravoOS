@@ -183,7 +183,7 @@ class CaseAnalyticsServiceTest {
         .thenReturn(List.of(event(LocalDate.of(2026, 6, 10), "Заседание", "АС города Москвы")));
     when(caseAnalysisRepository.save(any(CaseAnalysis.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(legalAiPort.analyzeCase(eq(caseId), any(), any(), any(), eq(lawyerId)))
+    when(legalAiPort.analyzeCase(eq(caseId), any(), any(), any(), eq(lawyerId), any()))
         .thenReturn(new LegalAiAnswer("аналитическая справка", 42));
 
     CaseAnalyticsResponse response = service.generateAnalysis(caseId, lawyerId, List.of());

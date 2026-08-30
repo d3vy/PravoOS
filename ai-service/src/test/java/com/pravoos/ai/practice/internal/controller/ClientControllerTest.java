@@ -23,6 +23,7 @@ import com.pravoos.ai.practice.internal.service.ConflictCheckService;
 import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.ClientType;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -56,6 +57,7 @@ class ClientControllerTest {
         new ClientController(clientService, conflictCheckService, accessAuditService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

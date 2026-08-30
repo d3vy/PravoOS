@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pravoos.ai.core.api.AiActionProposals;
 import com.pravoos.ai.core.api.AiToolResult;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.ProposedAction;
 import com.pravoos.ai.document.api.DocumentCommand;
 import com.pravoos.ai.document.api.DocumentResponse;
@@ -25,6 +26,7 @@ import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.service.CaseService;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.DocumentAlreadyLinkedException;
+import com.pravoos.ai.shared.exception.DocumentNotFoundException;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,10 +47,12 @@ class LinkDocumentToCaseToolTest {
 
   @Mock private AiActionProposals proposals;
   @Mock private DocumentCommand documentCommand;
+  @Mock private DocumentAccessGuard documentAccessGuard;
   @Mock private CaseService caseService;
 
   private LinkDocumentToCaseTool tool() {
-    return new LinkDocumentToCaseTool(proposals, VALIDATOR, documentCommand, caseService, MAPPER);
+    return new LinkDocumentToCaseTool(
+        proposals, VALIDATOR, documentCommand, documentAccessGuard, caseService, MAPPER);
   }
 
   @Test
@@ -94,6 +98,16 @@ class LinkDocumentToCaseToolTest {
 
     assertThatThrownBy(() -> tool().perform(arguments(), LAWYER))
         .isInstanceOf(CaseNotFoundException.class);
+    verify(documentCommand, never()).attachToCase(any(), any());
+  }
+
+  @Test
+  void performRefusesToAttachADocumentTheLawyerCannotSee() {
+    when(documentAccessGuard.requireVisible(DOCUMENT_ID, LAWYER_ID, List.of(ORG_ID)))
+        .thenThrow(new DocumentNotFoundException(DOCUMENT_ID));
+
+    assertThatThrownBy(() -> tool().perform(arguments(), LAWYER))
+        .isInstanceOf(DocumentNotFoundException.class);
     verify(documentCommand, never()).attachToCase(any(), any());
   }
 

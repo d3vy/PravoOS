@@ -5,11 +5,10 @@ import com.pravoos.ai.practice.internal.dto.InvoiceResponse;
 import com.pravoos.ai.practice.internal.dto.InvoiceSummary;
 import com.pravoos.ai.practice.internal.service.InvoicePaymentService;
 import com.pravoos.ai.practice.internal.service.PortalInvoiceService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.shared.security.CallerContext;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,23 +29,18 @@ public class PortalInvoiceController {
   }
 
   @GetMapping
-  public ResponseEntity<List<InvoiceSummary>> list(Authentication authentication) {
-    return ResponseEntity.ok(
-        portalInvoiceService.listInvoices(SecurityUtils.currentClientIds(authentication)));
+  public ResponseEntity<List<InvoiceSummary>> list(CallerContext caller) {
+    return ResponseEntity.ok(portalInvoiceService.listInvoices(caller.clientIds()));
   }
 
   @GetMapping("/{invoiceId}")
-  public ResponseEntity<InvoiceResponse> get(
-      @PathVariable UUID invoiceId, Authentication authentication) {
-    return ResponseEntity.ok(
-        portalInvoiceService.getInvoice(invoiceId, SecurityUtils.currentClientIds(authentication)));
+  public ResponseEntity<InvoiceResponse> get(@PathVariable UUID invoiceId, CallerContext caller) {
+    return ResponseEntity.ok(portalInvoiceService.getInvoice(invoiceId, caller.clientIds()));
   }
 
   @PostMapping("/{invoiceId}/pay")
   public ResponseEntity<InvoicePaymentResponse> pay(
-      @PathVariable UUID invoiceId, Authentication authentication) {
-    return ResponseEntity.ok(
-        invoicePaymentService.createPayment(
-            invoiceId, SecurityUtils.currentClientIds(authentication)));
+      @PathVariable UUID invoiceId, CallerContext caller) {
+    return ResponseEntity.ok(invoicePaymentService.createPayment(invoiceId, caller.clientIds()));
   }
 }

@@ -1,5 +1,6 @@
 package com.pravoos.ai.core.internal.service;
 
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.internal.dto.DocumentInsightResponse;
 import com.pravoos.ai.document.api.DocumentAccess;
 import java.util.List;

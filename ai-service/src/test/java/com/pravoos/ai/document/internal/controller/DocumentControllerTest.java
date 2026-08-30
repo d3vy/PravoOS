@@ -20,6 +20,7 @@ import com.pravoos.ai.recyclebin.api.RecycleBin;
 import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.shared.util.PagedResponse;
 import java.nio.charset.StandardCharsets;
@@ -55,7 +56,10 @@ class DocumentControllerTest {
   void setUp() {
     DocumentController controller =
         new DocumentController(documentService, accessAuditService, recycleBin);
-    mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+    mockMvc =
+        MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
+            .build();
   }
 
   private DocumentResponse documentResponse(UUID id) {
@@ -75,7 +79,7 @@ class DocumentControllerTest {
     UUID documentId = UUID.randomUUID();
     MockMultipartFile file =
         new MockMultipartFile("file", "contract.pdf", "application/pdf", "content".getBytes());
-    when(documentService.upload(any(), eq("My Title"), eq(lawyerId)))
+    when(documentService.uploadKnowledgeBaseDocument(any(), eq("My Title"), eq(lawyerId)))
         .thenReturn(
             new DocumentUploadResponse(
                 documentId, "My Title", "contract.pdf", DocumentStatus.PROCESSING));

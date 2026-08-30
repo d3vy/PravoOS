@@ -5,8 +5,8 @@ import com.pravoos.ai.core.internal.dto.CreateComparisonRequest;
 import com.pravoos.ai.core.internal.dto.DocumentComparisonDto;
 import com.pravoos.ai.core.internal.service.DocumentComparisonExportService;
 import com.pravoos.ai.core.internal.service.DocumentComparisonService;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.util.SecureFileHeaders;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -16,7 +16,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,42 +34,35 @@ public class DocumentComparisonController {
 
   @PostMapping
   public ResponseEntity<DocumentComparisonDto> create(
-      @Valid @RequestBody CreateComparisonRequest request, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @Valid @RequestBody CreateComparisonRequest request, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(
             documentComparisonService.compare(
-                request.baseDocumentId(),
-                request.revisedDocumentId(),
-                lawyerId,
-                SecurityUtils.currentOrgIds(authentication)));
+                request.baseDocumentId(), request.revisedDocumentId(), lawyerId, caller.orgIds()));
   }
 
   @GetMapping
   public ResponseEntity<List<DocumentComparisonDto>> listByCase(
-      @RequestParam UUID caseId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @RequestParam UUID caseId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(
-        documentComparisonService.findByCase(
-            caseId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+        documentComparisonService.findByCase(caseId, lawyerId, caller.orgIds()));
   }
 
   @GetMapping("/{comparisonId}")
   public ResponseEntity<DocumentComparisonDto> get(
-      @PathVariable UUID comparisonId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @PathVariable UUID comparisonId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(
-        documentComparisonService.get(
-            comparisonId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+        documentComparisonService.get(comparisonId, lawyerId, caller.orgIds()));
   }
 
   @GetMapping("/{comparisonId}/export.docx")
-  public ResponseEntity<byte[]> exportDocx(
-      @PathVariable UUID comparisonId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+  public ResponseEntity<byte[]> exportDocx(@PathVariable UUID comparisonId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     ComparisonExportFile file =
-        documentComparisonExportService.exportDocx(
-            comparisonId, lawyerId, SecurityUtils.currentOrgIds(authentication));
+        documentComparisonExportService.exportDocx(comparisonId, lawyerId, caller.orgIds());
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentDisposition(

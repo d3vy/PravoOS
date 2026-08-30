@@ -46,7 +46,7 @@ public class WorkflowService {
 
     String query = question != null && !question.isBlank() ? question : workflow.displayName();
     AiResponseDto response =
-        legalAiPort.runCaseWorkflow(caseId, lawyerId, workflow.name(), query, instruction);
+        legalAiPort.runCaseWorkflow(caseId, lawyerId, orgIds, workflow.name(), query, instruction);
     log.info(
         "Workflow {} produced response {} with {} source(s)",
         workflow.name(),

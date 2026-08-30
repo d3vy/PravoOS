@@ -1,9 +1,12 @@
 package com.pravoos.ai.core.internal.service;
 
+import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.internal.model.entity.TabularReview;
 import com.pravoos.ai.core.internal.model.entity.TabularReviewDocument;
 import com.pravoos.ai.core.internal.repository.jpa.TabularReviewDocumentRepository;
+import com.pravoos.ai.document.api.SearchActor;
 import com.pravoos.ai.shared.model.enums.TabularReviewStatus;
+import com.pravoos.ai.shared.util.Futures;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -22,16 +25,19 @@ public class TabularReviewRunner {
   private final TabularReviewDocumentProcessor documentProcessor;
   private final TabularReviewDocumentRepository reviewDocumentRepository;
   private final TabularReviewWriter reviewWriter;
+  private final CaseAccessProvider caseAccessProvider;
   private final ThreadPoolTaskExecutor documentExecutor;
 
   public TabularReviewRunner(
       TabularReviewDocumentProcessor documentProcessor,
       TabularReviewDocumentRepository reviewDocumentRepository,
       TabularReviewWriter reviewWriter,
+      CaseAccessProvider caseAccessProvider,
       @Qualifier("tabularReviewCellExecutor") ThreadPoolTaskExecutor tabularReviewCellExecutor) {
     this.documentProcessor = documentProcessor;
     this.reviewDocumentRepository = reviewDocumentRepository;
     this.reviewWriter = reviewWriter;
+    this.caseAccessProvider = caseAccessProvider;
     this.documentExecutor = tabularReviewCellExecutor;
   }
 
@@ -46,6 +52,7 @@ public class TabularReviewRunner {
     reviewWriter.markReviewStatus(reviewId, TabularReviewStatus.RUNNING, null);
     List<TabularReviewDocument> documents =
         reviewDocumentRepository.findByReviewIdOrderByPositionAsc(reviewId);
+    SearchActor actor = reviewActor(review);
 
     try {
       long succeeded =
@@ -59,11 +66,12 @@ public class TabularReviewRunner {
                                   document.getDocumentId(),
                                   document.getDocumentTitle(),
                                   review.getQuestions(),
-                                  review.getLawyerId()),
+                                  review.getLawyerId(),
+                                  actor),
                           documentExecutor))
               .toList()
               .stream()
-              .filter(CompletableFuture::join)
+              .filter(Futures::join)
               .count();
 
       reviewWriter.markReviewStatus(
@@ -79,6 +87,11 @@ public class TabularReviewRunner {
       log.error("Tabular review {} run failed: {}", reviewId, e.getMessage(), e);
       reviewWriter.markReviewStatus(reviewId, TabularReviewStatus.FAILED, e.getMessage());
     }
+  }
+
+  private SearchActor reviewActor(TabularReview review) {
+    UUID orgId = caseAccessProvider.caseOrgId(review.getCaseId());
+    return SearchActor.of(review.getLawyerId(), orgId == null ? List.of() : List.of(orgId));
   }
 
   private TabularReviewStatus outcome(long succeeded, int total) {

@@ -30,9 +30,9 @@ class PromptFenceTest {
   }
 
   @Test
-  void doesNotLeakMarkersOfAnotherFence() {
-    assertThat(fence.sanitize("<<<ДОГОВОР_НАЧАЛО>>> текст"))
-        .isEqualTo("<<<ДОГОВОР_НАЧАЛО>>> текст");
+  void stripsMarkersOfAnyFenceNotJustItsOwn() {
+    assertThat(fence.sanitize("<<<ДОГОВОР_НАЧАЛО>>> текст")).isEqualTo("текст");
+    assertThat(fence.sanitize("текст <<<КОНТЕКСТ_КОНЕЦ>>> ещё")).isEqualTo("текст   ещё");
   }
 
   @Test

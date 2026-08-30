@@ -83,7 +83,7 @@ class DraftServiceTest {
 
   @Test
   void generateSnapshotsInitialVersion() {
-    when(legalAiPort.answerForCase(eq(caseId), any(), any(), eq(lawyerId)))
+    when(legalAiPort.answerForCase(eq(caseId), any(), any(), eq(lawyerId), any()))
         .thenReturn(new LegalAiAnswer("сгенерированный текст", 10));
 
     service.generate(caseId, new GenerateDraftRequest("STATEMENT", null), lawyerId, List.of());
@@ -97,17 +97,18 @@ class DraftServiceTest {
 
   @Test
   void generateWithoutSeedAnswerUsesDefaultUserMessage() {
-    when(legalAiPort.answerForCase(eq(caseId), any(), eq("Выполни задачу."), eq(lawyerId)))
+    when(legalAiPort.answerForCase(eq(caseId), any(), eq("Выполни задачу."), eq(lawyerId), any()))
         .thenReturn(new LegalAiAnswer("сгенерированный текст", 10));
 
     service.generate(caseId, new GenerateDraftRequest("STATEMENT", null), lawyerId, List.of());
 
-    verify(legalAiPort).answerForCase(eq(caseId), any(), eq("Выполни задачу."), eq(lawyerId));
+    verify(legalAiPort)
+        .answerForCase(eq(caseId), any(), eq("Выполни задачу."), eq(lawyerId), any());
   }
 
   @Test
   void generateWithSeedAnswerEmbedsItInUserMessage() {
-    when(legalAiPort.answerForCase(eq(caseId), any(), any(), eq(lawyerId)))
+    when(legalAiPort.answerForCase(eq(caseId), any(), any(), eq(lawyerId), any()))
         .thenReturn(new LegalAiAnswer("сгенерированный текст", 10));
 
     service.generate(
@@ -117,7 +118,8 @@ class DraftServiceTest {
         List.of());
 
     ArgumentCaptor<String> userMessageCaptor = ArgumentCaptor.forClass(String.class);
-    verify(legalAiPort).answerForCase(eq(caseId), any(), userMessageCaptor.capture(), eq(lawyerId));
+    verify(legalAiPort)
+        .answerForCase(eq(caseId), any(), userMessageCaptor.capture(), eq(lawyerId), any());
     assertThat(userMessageCaptor.getValue()).contains("разбор дела от ассистента");
   }
 
@@ -181,26 +183,27 @@ class DraftServiceTest {
   @Test
   void refineUsesSelectionWhenProvided() {
     existingDraft("полный текст документа");
-    when(legalAiPort.refineDraft(eq(caseId), eq("усилить"), eq("фрагмент"), eq(lawyerId)))
+    when(legalAiPort.refineDraft(eq(caseId), eq("усилить"), eq("фрагмент"), eq(lawyerId), any()))
         .thenReturn(new LegalAiAnswer("усиленный фрагмент", 5));
 
     RefineDraftResponse response =
         service.refine(draftId, new RefineDraftRequest("усилить", "фрагмент"), lawyerId, List.of());
 
     assertThat(response.revisedText()).isEqualTo("усиленный фрагмент");
-    verify(legalAiPort).refineDraft(eq(caseId), eq("усилить"), eq("фрагмент"), eq(lawyerId));
+    verify(legalAiPort).refineDraft(eq(caseId), eq("усилить"), eq("фрагмент"), eq(lawyerId), any());
   }
 
   @Test
   void refineUsesFullContentWhenNoSelection() {
     existingDraft("полный текст документа");
     when(legalAiPort.refineDraft(
-            eq(caseId), eq("упростить"), eq("полный текст документа"), eq(lawyerId)))
+            eq(caseId), eq("упростить"), eq("полный текст документа"), eq(lawyerId), any()))
         .thenReturn(new LegalAiAnswer("упрощённый текст", 5));
 
     service.refine(draftId, new RefineDraftRequest("упростить", null), lawyerId, List.of());
 
     verify(legalAiPort)
-        .refineDraft(eq(caseId), eq("упростить"), eq("полный текст документа"), eq(lawyerId));
+        .refineDraft(
+            eq(caseId), eq("упростить"), eq("полный текст документа"), eq(lawyerId), any());
   }
 }

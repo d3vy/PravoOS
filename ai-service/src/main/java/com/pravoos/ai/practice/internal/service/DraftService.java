@@ -66,7 +66,7 @@ public class DraftService {
 
     String userMessage = buildUserMessage(request.seedAnswer());
     LegalAiAnswer answer =
-        legalAiPort.answerForCase(caseId, draftType.instruction(), userMessage, lawyerId);
+        legalAiPort.answerForCase(caseId, draftType.instruction(), userMessage, lawyerId, orgIds);
     log.info("LLM draft tokens for lawyer {}: total={}", lawyerId, answer.totalTokens());
 
     return self.persistGeneratedDraft(caseId, lawyerId, draftType, answer.content());
@@ -160,7 +160,7 @@ public class DraftService {
         lawyerId,
         request.selectedText() != null && !request.selectedText().isBlank());
     LegalAiAnswer answer =
-        legalAiPort.refineDraft(draft.getCaseId(), request.instruction(), target, lawyerId);
+        legalAiPort.refineDraft(draft.getCaseId(), request.instruction(), target, lawyerId, orgIds);
     return new RefineDraftResponse(answer.content());
   }
 

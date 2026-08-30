@@ -3,11 +3,10 @@ package com.pravoos.ai.practice.internal.controller;
 import com.pravoos.ai.practice.internal.dto.PortalCaseDetailResponse;
 import com.pravoos.ai.practice.internal.dto.PortalCaseResponse;
 import com.pravoos.ai.practice.internal.service.PortalCaseService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.shared.security.CallerContext;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,15 +23,13 @@ public class PortalCaseController {
   }
 
   @GetMapping
-  public ResponseEntity<List<PortalCaseResponse>> list(Authentication authentication) {
-    return ResponseEntity.ok(
-        portalCaseService.findCases(SecurityUtils.currentClientIds(authentication)));
+  public ResponseEntity<List<PortalCaseResponse>> list(CallerContext caller) {
+    return ResponseEntity.ok(portalCaseService.findCases(caller.clientIds()));
   }
 
   @GetMapping("/{caseId}")
   public ResponseEntity<PortalCaseDetailResponse> get(
-      @PathVariable UUID caseId, Authentication authentication) {
-    return ResponseEntity.ok(
-        portalCaseService.getCase(caseId, SecurityUtils.currentClientIds(authentication)));
+      @PathVariable UUID caseId, CallerContext caller) {
+    return ResponseEntity.ok(portalCaseService.getCase(caseId, caller.clientIds()));
   }
 }

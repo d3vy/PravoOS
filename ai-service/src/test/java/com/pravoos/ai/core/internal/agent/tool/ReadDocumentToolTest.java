@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.AiToolContext;
 import com.pravoos.ai.core.api.AiToolResult;
-import com.pravoos.ai.core.internal.service.DocumentAccessGuard;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;

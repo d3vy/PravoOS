@@ -24,6 +24,7 @@ import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import com.pravoos.ai.shared.util.PagedResponse;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -57,6 +58,7 @@ class InvoiceControllerTest {
     InvoiceController controller = new InvoiceController(invoiceService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

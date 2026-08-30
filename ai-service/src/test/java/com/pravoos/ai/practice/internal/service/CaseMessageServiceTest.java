@@ -115,7 +115,8 @@ class CaseMessageServiceTest {
   void findClientThread_delegatesScopeCheck() {
     when(portalCaseService.requireClientCase(caseId, List.of(clientId)))
         .thenReturn(caseEntity(clientId));
-    when(caseMessageRepository.findByCaseIdOrderByCreatedAtAsc(caseId)).thenReturn(List.of());
+    when(caseMessageRepository.findTop2000ByCaseIdOrderByCreatedAtDesc(caseId))
+        .thenReturn(List.of());
 
     assertThat(service.findClientThread(caseId, List.of(clientId))).isEmpty();
     verify(portalCaseService).requireClientCase(caseId, List.of(clientId));

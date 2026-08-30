@@ -9,7 +9,7 @@ class FileCryptoKeyGuardTest {
 
   @Test
   void verifyKeyPresentThrowsWhenKeyMissing() {
-    FileCryptoKeyGuard guard = new FileCryptoKeyGuard(new FileCryptoProperties(null));
+    FileCryptoKeyGuard guard = new FileCryptoKeyGuard(FileCryptoProperties.ofSingleKey(null));
 
     assertThatIllegalStateException()
         .isThrownBy(guard::verifyKeyPresent)
@@ -18,7 +18,8 @@ class FileCryptoKeyGuardTest {
 
   @Test
   void verifyKeyPresentPassesWhenKeyConfigured() {
-    FileCryptoKeyGuard guard = new FileCryptoKeyGuard(new FileCryptoProperties("secret-key"));
+    FileCryptoKeyGuard guard =
+        new FileCryptoKeyGuard(FileCryptoProperties.ofSingleKey("secret-key"));
 
     assertThatNoException().isThrownBy(guard::verifyKeyPresent);
   }

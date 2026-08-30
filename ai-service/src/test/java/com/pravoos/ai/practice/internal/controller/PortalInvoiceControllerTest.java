@@ -15,6 +15,7 @@ import com.pravoos.ai.practice.internal.service.PortalInvoiceService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import com.pravoos.ai.shared.model.enums.InvoiceStatus;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import com.pravoos.common.web.OrgContext;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -46,6 +47,7 @@ class PortalInvoiceControllerTest {
         new PortalInvoiceController(portalInvoiceService, invoicePaymentService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     when(authentication.getDetails())

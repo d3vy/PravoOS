@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.pravoos.ai.document.api.SearchActor;
 import jakarta.persistence.Query;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,20 +20,29 @@ class ChunkSearchSqlTest {
 
   @Mock private Query query;
 
-  @Test
-  void scopeFilter_filtersByDocument_whenDocumentScoped() {
-    ChunkSearchScope scope = ChunkSearchScope.forDocument(UUID.randomUUID());
+  private final UUID userId = UUID.randomUUID();
+  private final UUID orgId = UUID.randomUUID();
+  private final SearchActor actor = SearchActor.of(userId, List.of(orgId));
 
-    assertThat(ChunkSearchSql.scopeFilter(scope)).contains(":documentId");
+  @Test
+  void scopeFilter_filtersByDocumentAndTenant_whenDocumentScoped() {
+    ChunkSearchScope scope = ChunkSearchScope.forDocument(UUID.randomUUID(), actor);
+
+    assertThat(ChunkSearchSql.scopeFilter(scope))
+        .contains(":documentId")
+        .contains(ChunkSearchSql.CASE_VISIBLE_TO_ACTOR);
   }
 
   @Test
-  void scopeFilter_filtersByCaseOrKnowledgeBase_whenCaseScoped() {
-    ChunkSearchScope scope = ChunkSearchScope.forCase(UUID.randomUUID());
+  void scopeFilter_filtersByCaseTenantOrKnowledgeBase_whenCaseScoped() {
+    ChunkSearchScope scope = ChunkSearchScope.forCase(UUID.randomUUID(), actor);
 
     String filter = ChunkSearchSql.scopeFilter(scope);
 
-    assertThat(filter).contains(":caseId").contains("IS NULL");
+    assertThat(filter)
+        .contains(":caseId")
+        .contains("d.case_id IS NULL")
+        .contains(ChunkSearchSql.CASE_VISIBLE_TO_ACTOR);
   }
 
   @Test
@@ -42,20 +53,32 @@ class ChunkSearchSqlTest {
   }
 
   @Test
-  void bindScope_setsDocumentIdParameter_whenDocumentScoped() {
+  void bindScope_setsDocumentIdAndActorParameters_whenDocumentScoped() {
     UUID documentId = UUID.randomUUID();
-    ChunkSearchSql.bindScope(query, ChunkSearchScope.forDocument(documentId));
+    ChunkSearchSql.bindScope(query, ChunkSearchScope.forDocument(documentId, actor));
 
     verify(query).setParameter("documentId", documentId.toString());
+    verify(query).setParameter("actorUserId", userId.toString());
+    verify(query).setParameter("actorOrgIds", "{" + orgId + "}");
     verify(query, never()).setParameter("caseId", (Object) null);
   }
 
   @Test
-  void bindScope_setsCaseIdParameter_whenCaseScoped() {
+  void bindScope_setsCaseIdAndActorParameters_whenCaseScoped() {
     UUID caseId = UUID.randomUUID();
-    ChunkSearchSql.bindScope(query, ChunkSearchScope.forCase(caseId));
+    ChunkSearchSql.bindScope(query, ChunkSearchScope.forCase(caseId, actor));
 
     verify(query).setParameter("caseId", caseId.toString());
+    verify(query).setParameter("actorUserId", userId.toString());
+    verify(query).setParameter("actorOrgIds", "{" + orgId + "}");
+  }
+
+  @Test
+  void bindScope_bindsEmptyArray_whenActorHasNoOrganizations() {
+    ChunkSearchSql.bindScope(
+        query, ChunkSearchScope.forCase(UUID.randomUUID(), SearchActor.of(userId, List.of())));
+
+    verify(query).setParameter("actorOrgIds", "{}");
   }
 
   @Test
@@ -63,6 +86,7 @@ class ChunkSearchSqlTest {
     ChunkSearchSql.bindScope(query, ChunkSearchScope.knowledgeBase());
 
     verify(query, never()).setParameter("documentId", (Object) null);
+    verify(query, never()).setParameter("actorUserId", (Object) null);
   }
 
   @Test

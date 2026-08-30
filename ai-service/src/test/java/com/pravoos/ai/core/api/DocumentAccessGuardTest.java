@@ -1,4 +1,4 @@
-package com.pravoos.ai.core.internal.service;
+package com.pravoos.ai.core.api;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -10,7 +10,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;

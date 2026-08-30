@@ -5,6 +5,8 @@ import com.pravoos.ai.shared.model.enums.WorkflowRunStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,8 +16,8 @@ public interface WorkflowRunRepository extends JpaRepository<WorkflowRun, UUID> 
 
   List<WorkflowRun> findByCaseIdOrderByStartedAtDesc(UUID caseId);
 
-  List<WorkflowRun> findByStatusAndStartedAtBefore(
-      WorkflowRunStatus status, LocalDateTime threshold);
+  Page<WorkflowRun> findByStatusAndStartedAtBefore(
+      WorkflowRunStatus status, LocalDateTime threshold, Pageable pageable);
 
   @Modifying
   @Query(

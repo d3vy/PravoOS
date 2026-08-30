@@ -12,6 +12,7 @@ import com.pravoos.ai.practice.internal.service.EmailAttachmentImportService;
 import com.pravoos.ai.shared.exception.EmailMessageNotFoundException;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.EmailAttachmentStatus;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -41,6 +42,7 @@ class EmailAttachmentControllerTest {
         new EmailAttachmentController(emailAttachmentImportService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     when(authentication.getPrincipal()).thenReturn(lawyerId.toString());

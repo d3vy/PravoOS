@@ -7,9 +7,9 @@ import com.pravoos.ai.practice.internal.dto.InvoiceSummary;
 import com.pravoos.ai.practice.internal.dto.UpdateInvoiceStatusRequest;
 import com.pravoos.ai.practice.internal.service.InvoiceService;
 import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.ai.shared.util.SecureFileHeaders;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -37,33 +37,29 @@ public class InvoiceController {
       @RequestParam(required = false) UUID clientId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size,
-      Authentication authentication) {
-    return PagedResponse.of(
-        invoiceService.list(SecurityUtils.currentUserId(authentication), clientId, page, size));
+      CallerContext caller) {
+    return PagedResponse.of(invoiceService.list(caller.userId(), clientId, page, size));
   }
 
   @PostMapping
   public ResponseEntity<InvoiceResponse> create(
-      @Valid @RequestBody CreateInvoiceRequest request, Authentication authentication) {
+      @Valid @RequestBody CreateInvoiceRequest request, CallerContext caller) {
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(invoiceService.create(request, SecurityUtils.currentUserId(authentication)));
+        .body(invoiceService.create(request, caller.userId()));
   }
 
   @GetMapping("/{invoiceId}")
-  public ResponseEntity<InvoiceResponse> get(
-      @PathVariable UUID invoiceId, Authentication authentication) {
-    return ResponseEntity.ok(
-        invoiceService.get(invoiceId, SecurityUtils.currentUserId(authentication)));
+  public ResponseEntity<InvoiceResponse> get(@PathVariable UUID invoiceId, CallerContext caller) {
+    return ResponseEntity.ok(invoiceService.get(invoiceId, caller.userId()));
   }
 
   @PatchMapping("/{invoiceId}/status")
   public ResponseEntity<InvoiceResponse> updateStatus(
       @PathVariable UUID invoiceId,
       @Valid @RequestBody UpdateInvoiceStatusRequest request,
-      Authentication authentication) {
+      CallerContext caller) {
     return ResponseEntity.ok(
-        invoiceService.updateStatus(
-            invoiceId, SecurityUtils.currentUserId(authentication), request.status()));
+        invoiceService.updateStatus(invoiceId, caller.userId(), request.status()));
   }
 
   @DeleteMapping("/{invoiceId}")
@@ -73,10 +69,8 @@ public class InvoiceController {
   }
 
   @GetMapping("/{invoiceId}/export")
-  public ResponseEntity<byte[]> export(
-      @PathVariable UUID invoiceId, Authentication authentication) {
-    ExportedFile file =
-        invoiceService.exportPdf(invoiceId, SecurityUtils.currentUserId(authentication));
+  public ResponseEntity<byte[]> export(@PathVariable UUID invoiceId, CallerContext caller) {
+    ExportedFile file = invoiceService.exportPdf(invoiceId, caller.userId());
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentDisposition(

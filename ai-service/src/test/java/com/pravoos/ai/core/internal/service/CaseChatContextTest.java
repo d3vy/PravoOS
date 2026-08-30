@@ -17,6 +17,7 @@ import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
 import com.pravoos.ai.core.internal.agent.AgentMetrics;
@@ -128,7 +129,7 @@ class CaseChatContextTest {
 
   @Test
   void usesCaseRetrievalAndCaseContextWhenCaseIdPresent() {
-    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId), any()))
         .thenReturn(
             new RetrievedChunks(
                 List.of(
@@ -150,7 +151,7 @@ class CaseChatContextTest {
             AiActorRole.LAWYER);
 
     verify(caseAccessProvider).assertCaseVisible(caseId, lawyerId, orgIds);
-    verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId));
+    verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId), any());
     verify(ragService)
         .buildCaseSystemPrompt(
             eq("Карточка дела"),
@@ -165,7 +166,7 @@ class CaseChatContextTest {
 
   @Test
   void bindsNewConversationToCase() {
-    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId), any()))
         .thenReturn(RetrievedChunks.empty());
 
     service.chat(
@@ -193,7 +194,7 @@ class CaseChatContextTest {
                     AiActorRole.LAWYER))
         .isInstanceOf(CaseNotFoundException.class);
 
-    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
+    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any(), any());
   }
 
   @Test
@@ -235,7 +236,7 @@ class CaseChatContextTest {
         AiActorRole.LAWYER);
 
     verify(caseAccessProvider, never()).assertCaseVisible(any(), any(), anyList());
-    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
+    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any(), any());
     verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), anyString());
   }
 

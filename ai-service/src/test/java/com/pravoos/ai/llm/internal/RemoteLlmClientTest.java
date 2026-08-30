@@ -94,6 +94,28 @@ class RemoteLlmClientTest {
   }
 
   @Test
+  void upstreamErrorBodyNeverReachesTheClientFacingMessage() {
+    String systemPrompt = "Ты — юридический ассистент PravoOS. СЕКРЕТНАЯ_ИНСТРУКЦИЯ_ПРОМПТА";
+    respond(
+        "/internal/llm/complete",
+        400,
+        "{\"detail\":\"Invalid prompt: " + systemPrompt + "\",\"code\":\"BAD_PROMPT\"}");
+
+    assertThatThrownBy(() -> client.complete(systemPrompt, List.of(), "hi"))
+        .isInstanceOf(LlmException.class)
+        .hasMessage("llm-service completion failed");
+  }
+
+  @Test
+  void embeddingErrorBodyNeverReachesTheClientFacingMessage() {
+    respond("/internal/llm/embed", 400, "{\"detail\":\"secret prompt fragment\"}");
+
+    assertThatThrownBy(() -> client.embed("текст"))
+        .isInstanceOf(LlmException.class)
+        .hasMessage("llm-service embedding failed");
+  }
+
+  @Test
   void completeThrowsWhenServerReturnsEmptyBody() {
     respond("/internal/llm/complete", 200, "null");
 

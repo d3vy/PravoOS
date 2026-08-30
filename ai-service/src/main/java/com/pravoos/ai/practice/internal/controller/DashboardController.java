@@ -2,10 +2,9 @@ package com.pravoos.ai.practice.internal.controller;
 
 import com.pravoos.ai.practice.internal.dto.DashboardResponse;
 import com.pravoos.ai.practice.internal.service.DashboardService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.shared.security.CallerContext;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,8 +20,8 @@ public class DashboardController {
   }
 
   @GetMapping
-  public ResponseEntity<DashboardResponse> dashboard(Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+  public ResponseEntity<DashboardResponse> dashboard(CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(dashboardService.getDashboard(lawyerId));
   }
 }

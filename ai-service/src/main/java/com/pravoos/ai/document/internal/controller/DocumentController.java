@@ -9,10 +9,10 @@ import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.recyclebin.api.RecycleBin;
 import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.model.enums.AuditAction;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.shared.util.PagedResponse;
 import com.pravoos.ai.shared.util.SecureFileHeaders;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -46,10 +46,10 @@ public class DocumentController {
   public ResponseEntity<DocumentUploadResponse> upload(
       @RequestParam("file") MultipartFile file,
       @RequestParam(value = "title", required = false) String title,
-      Authentication authentication) {
-    UUID adminId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID adminId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(documentService.upload(file, title, adminId));
+        .body(documentService.uploadKnowledgeBaseDocument(file, title, adminId));
   }
 
   @GetMapping
@@ -66,8 +66,8 @@ public class DocumentController {
       @RequestParam("editionDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
           LocalDate editionDate,
       @RequestParam(value = "title", required = false) String title,
-      Authentication authentication) {
-    UUID adminId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID adminId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(
             documentService.uploadLegislation(

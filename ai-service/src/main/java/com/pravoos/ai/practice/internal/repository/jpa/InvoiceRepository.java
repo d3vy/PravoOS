@@ -39,7 +39,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
   List<Invoice> findByLawyerIdAndStatusOrderByDueDateAsc(UUID lawyerId, InvoiceStatus status);
 
-  List<Invoice> findByStatusAndDueDate(InvoiceStatus status, LocalDate dueDate);
+  List<Invoice> findByLawyerIdInAndStatusOrderByDueDateAsc(
+      Collection<UUID> lawyerIds, InvoiceStatus status);
+
+  Page<Invoice> findByStatusAndDueDate(InvoiceStatus status, LocalDate dueDate, Pageable pageable);
 
   @Query(
       """
@@ -55,7 +58,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
       Pageable pageable);
 
   @Query("SELECT DISTINCT i.lawyerId FROM Invoice i WHERE i.status = :status")
-  List<UUID> findDistinctLawyerIdsByStatus(@Param("status") InvoiceStatus status);
+  Page<UUID> findDistinctLawyerIdsByStatus(
+      @Param("status") InvoiceStatus status, Pageable pageable);
 
   long countByClientIdAndStatusNot(UUID clientId, InvoiceStatus status);
 

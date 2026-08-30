@@ -9,6 +9,8 @@ import java.util.List;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SignatureExpiryService {
 
   private static final Logger log = LoggerFactory.getLogger(SignatureExpiryService.class);
+  private static final int PAGE_SIZE = 1000;
 
   private final SignatureRequestRepository signatureRequestRepository;
 
@@ -32,15 +35,25 @@ public class SignatureExpiryService {
   @Transactional
   public int sweepExpired() {
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-    List<SignatureRequest> expired =
-        signatureRequestRepository.findByStatusAndExpiresAtBefore(SignatureStatus.PENDING, now);
-    for (SignatureRequest request : expired) {
-      request.setStatus(SignatureStatus.EXPIRED);
+    int total = 0;
+    Pageable firstPage = PageRequest.of(0, PAGE_SIZE);
+    List<SignatureRequest> expired;
+    do {
+      expired =
+          signatureRequestRepository
+              .findByStatusAndExpiresAtBefore(SignatureStatus.PENDING, now, firstPage)
+              .getContent();
+      for (SignatureRequest request : expired) {
+        request.setStatus(SignatureStatus.EXPIRED);
+      }
+      if (!expired.isEmpty()) {
+        signatureRequestRepository.saveAll(expired);
+        total += expired.size();
+      }
+    } while (expired.size() == PAGE_SIZE);
+    if (total > 0) {
+      log.info("Signature expiry sweep marked {} requests as EXPIRED", total);
     }
-    if (!expired.isEmpty()) {
-      signatureRequestRepository.saveAll(expired);
-      log.info("Signature expiry sweep marked {} requests as EXPIRED", expired.size());
-    }
-    return expired.size();
+    return total;
   }
 }

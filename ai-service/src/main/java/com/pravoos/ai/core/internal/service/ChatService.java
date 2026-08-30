@@ -5,6 +5,7 @@ import com.pravoos.ai.core.api.AiToolContext;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.api.PageContextScope;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
@@ -28,6 +29,7 @@ import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.document.api.RetrievedChunk;
 import com.pravoos.ai.document.api.RetrievedChunks;
+import com.pravoos.ai.document.api.SearchActor;
 import com.pravoos.ai.llm.api.LlmMessage;
 import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.recyclebin.api.RecycleBin;
@@ -53,6 +55,8 @@ import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -75,7 +79,9 @@ public class ChatService {
   private static final int TITLE_MAX_LENGTH = 60;
   private static final String CASE_SOURCE_PREFIX = "Материалы дела: ";
   private static final String DOCUMENT_SOURCE_PREFIX = "Документ: ";
-  private static final long STREAM_TIMEOUT_MS = 180_000L;
+  // Must stay below RemoteLlmClient's read timeout (180s) so the emitter never times out
+  // while the upstream llm-service call is still legitimately in flight.
+  private static final long STREAM_TIMEOUT_MS = 170_000L;
   private static final String DOCUMENT_ENTITY_TYPE = "DOCUMENT";
   private static final String CASE_ENTITY_TYPE = "CASE";
   private static final String PAGE_CONTEXT_PREFIX =
@@ -262,12 +268,28 @@ public class ChatService {
         loadOwnedAttachedDocuments(request.attachedDocumentIds(), lawyerId);
 
     SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
+    StreamContext streamContext = new StreamContext(emitter);
+    agentMetrics.streamStarted();
+    emitter.onCompletion(agentMetrics::streamEnded);
+    emitter.onTimeout(
+        () -> {
+          log.warn("Chat stream timed out for lawyer {}", lawyerId);
+          streamContext.cancel();
+        });
+    emitter.onError(
+        ex -> {
+          log.info("Chat stream error for lawyer {}: {}", lawyerId, ex.toString());
+          streamContext.cancel();
+        });
+
     Conversation resolved = conversation;
     try {
       chatStreamExecutor.execute(
-          () ->
+          () -> {
+            streamContext.bindWorkerThread(Thread.currentThread());
+            try {
               streamAnswer(
-                  emitter,
+                  streamContext,
                   request,
                   lawyerId,
                   orgIds,
@@ -276,8 +298,13 @@ public class ChatService {
                   isNewConversation,
                   attachedDocuments,
                   scopedDocument,
-                  scoped.promptLine()));
+                  scoped.promptLine());
+            } finally {
+              streamContext.unbindWorkerThread();
+            }
+          });
     } catch (TaskRejectedException e) {
+      agentMetrics.streamEnded();
       log.warn("Chat stream rejected: executor saturated (lawyer {})", lawyerId);
       throw new LlmException("Сервис перегружен, попробуйте позже");
     }
@@ -285,7 +312,7 @@ public class ChatService {
   }
 
   private void streamAnswer(
-      SseEmitter emitter,
+      StreamContext streamContext,
       ChatRequest request,
       UUID lawyerId,
       List<UUID> orgIds,
@@ -307,7 +334,7 @@ public class ChatService {
               lawyerId,
               orgIds);
 
-      StreamingAnswerAccumulator accumulator = new StreamingAnswerAccumulator(emitter);
+      StreamingAnswerAccumulator accumulator = new StreamingAnswerAccumulator(streamContext);
       LocalDateTime turnStartedAt = LocalDateTime.now(ZoneOffset.UTC);
       AgentResult agentResult =
           agentLoop.run(
@@ -316,13 +343,12 @@ public class ChatService {
               request.message(),
               new AiToolContext(lawyerId, orgIds, role, conversation.getId(), turnStartedAt),
               accumulator::onDelta,
-              step -> sendToolStep(emitter, step));
+              step -> sendToolStep(streamContext, step),
+              usage -> llmQuotaService.recordUsage(lawyerId, usage.totalTokens(), 1));
       agentMetrics.recordTurn(
           agentResult.iterations(),
           agentResult.usage().totalTokens(),
           Duration.between(turnStartedAt, LocalDateTime.now(ZoneOffset.UTC)));
-      llmQuotaService.recordUsage(
-          lawyerId, agentResult.usage().totalTokens(), agentResult.iterations());
 
       FollowUpParser.ParsedAnswer parsed = FollowUpParser.parse(accumulator.rawContent());
       PersistedExchange persisted =
@@ -340,7 +366,7 @@ public class ChatService {
               persisted.conversation().getId(),
               turnStartedAt,
               persisted.assistantMessageId());
-      sendProposals(emitter, proposals);
+      sendProposals(streamContext, proposals);
 
       log.info(
           "Chat stream completed for conversation {} ({} source(s), {} tool step(s), {} tokens)",
@@ -348,42 +374,56 @@ public class ChatService {
           context.sources().size(),
           agentResult.steps().size(),
           agentResult.usage().totalTokens());
-      emitter.send(
-          SseEmitter.event()
-              .name("done")
-              .data(
-                  new ChatResponse(
-                      persisted.conversation().getId(),
-                      persisted.assistantMessageId(),
-                      parsed.answer(),
-                      context.sources(),
-                      parsed.followUps(),
-                      proposals)));
-      emitter.complete();
+      if (streamContext.isCancelled()) {
+        return;
+      }
+      streamContext
+          .emitter()
+          .send(
+              SseEmitter.event()
+                  .name("done")
+                  .data(
+                      new ChatResponse(
+                          persisted.conversation().getId(),
+                          persisted.assistantMessageId(),
+                          parsed.answer(),
+                          context.sources(),
+                          parsed.followUps(),
+                          proposals)));
+      streamContext.emitter().complete();
     } catch (StreamAbortedException e) {
       log.info("Chat stream aborted by client for lawyer {}", lawyerId);
-      emitter.complete();
+      streamContext.completeIfNotCancelled();
     } catch (Exception e) {
       log.error("Chat stream failed for lawyer {}: {}", lawyerId, e.getMessage(), e);
-      trySendStreamError(emitter);
+      trySendStreamError(streamContext);
     }
   }
 
-  private void sendToolStep(SseEmitter emitter, ToolStep step) {
+  private void sendToolStep(StreamContext streamContext, ToolStep step) {
+    if (streamContext.isCancelled()) {
+      throw new StreamAbortedException(null);
+    }
     try {
-      emitter.send(
-          SseEmitter.event()
-              .name("tool_step")
-              .data(new ChatStreamToolStep(step.name(), step.status().name())));
+      streamContext
+          .emitter()
+          .send(
+              SseEmitter.event()
+                  .name("tool_step")
+                  .data(new ChatStreamToolStep(step.name(), step.status().name())));
     } catch (IOException e) {
       throw new StreamAbortedException(e);
     }
   }
 
-  private void sendProposals(SseEmitter emitter, List<AiActionProposalResponse> proposals) {
+  private void sendProposals(
+      StreamContext streamContext, List<AiActionProposalResponse> proposals) {
+    if (streamContext.isCancelled()) {
+      throw new StreamAbortedException(null);
+    }
     for (AiActionProposalResponse proposal : proposals) {
       try {
-        emitter.send(SseEmitter.event().name("proposal").data(proposal));
+        streamContext.emitter().send(SseEmitter.event().name("proposal").data(proposal));
       } catch (IOException e) {
         throw new StreamAbortedException(e);
       }
@@ -399,13 +439,22 @@ public class ChatService {
         .toList();
   }
 
-  private void trySendStreamError(SseEmitter emitter) {
+  private void trySendStreamError(StreamContext streamContext) {
+    if (streamContext.isCancelled()) {
+      return;
+    }
+    SseEmitter emitter = streamContext.emitter();
     try {
       emitter.send(
           SseEmitter.event().name("error").data(new ChatStreamError(STREAM_ERROR_MESSAGE)));
       emitter.complete();
-    } catch (IOException io) {
-      emitter.completeWithError(io);
+    } catch (IOException | RuntimeException sendFailure) {
+      log.warn("Failed to deliver stream error frame to client", sendFailure);
+      try {
+        emitter.completeWithError(sendFailure);
+      } catch (RuntimeException alreadyCompleted) {
+        log.debug("SSE emitter already completed while reporting stream failure", alreadyCompleted);
+      }
     }
   }
 
@@ -442,6 +491,7 @@ public class ChatService {
     int topK = documentProperties.topKResults();
     UUID documentId = request.documentId();
     UUID caseId = request.caseId();
+    SearchActor actor = SearchActor.of(lawyerId, orgIds);
 
     CompletableFuture<List<String>> pendingAttachedChunks =
         supplyContext(() -> attachedChunkContents(attachedDocuments));
@@ -455,7 +505,7 @@ public class ChatService {
             : supplyContext(
                 () ->
                     documentRetrieval.retrieveInDocument(
-                        List.of(request.message()), topK, documentId));
+                        List.of(request.message()), topK, documentId, actor));
     CompletableFuture<CaseContext> pendingCaseContext =
         caseId == null
             ? CompletableFuture.completedFuture(null)
@@ -464,7 +514,7 @@ public class ChatService {
         caseId == null
             ? CompletableFuture.completedFuture(RetrievedChunks.empty())
             : supplyContext(
-                () -> documentRetrieval.retrieveForCase(request.message(), topK, caseId));
+                () -> documentRetrieval.retrieveForCase(request.message(), topK, caseId, actor));
 
     List<String> attachedChunks = Futures.join(pendingAttachedChunks);
     List<LlmMessage> historyForLlm = Futures.join(pendingHistory);
@@ -707,13 +757,13 @@ public class ChatService {
 
   private static final class StreamingAnswerAccumulator {
 
-    private final SseEmitter emitter;
+    private final StreamContext streamContext;
     private final StringBuilder raw = new StringBuilder();
     private int emittedAnswerLength = 0;
     private boolean delimiterReached = false;
 
-    private StreamingAnswerAccumulator(SseEmitter emitter) {
-      this.emitter = emitter;
+    private StreamingAnswerAccumulator(StreamContext streamContext) {
+      this.streamContext = streamContext;
     }
 
     private void onDelta(String delta) {
@@ -738,8 +788,13 @@ public class ChatService {
     }
 
     private void emit(String content) {
+      if (streamContext.isCancelled()) {
+        throw new StreamAbortedException(null);
+      }
       try {
-        emitter.send(SseEmitter.event().name("token").data(new ChatStreamToken(content)));
+        streamContext
+            .emitter()
+            .send(SseEmitter.event().name("token").data(new ChatStreamToken(content)));
       } catch (IOException e) {
         throw new StreamAbortedException(e);
       }
@@ -753,6 +808,47 @@ public class ChatService {
   private static final class StreamAbortedException extends RuntimeException {
     private StreamAbortedException(Throwable cause) {
       super(cause);
+    }
+  }
+
+  private static final class StreamContext {
+    private final SseEmitter emitter;
+    private final AtomicBoolean cancelled = new AtomicBoolean(false);
+    private final AtomicReference<Thread> workerThread = new AtomicReference<>();
+
+    private StreamContext(SseEmitter emitter) {
+      this.emitter = emitter;
+    }
+
+    private SseEmitter emitter() {
+      return emitter;
+    }
+
+    private boolean isCancelled() {
+      return cancelled.get();
+    }
+
+    private void bindWorkerThread(Thread thread) {
+      workerThread.set(thread);
+    }
+
+    private void unbindWorkerThread() {
+      workerThread.set(null);
+    }
+
+    private void cancel() {
+      if (cancelled.compareAndSet(false, true)) {
+        Thread thread = workerThread.get();
+        if (thread != null) {
+          thread.interrupt();
+        }
+      }
+    }
+
+    private void completeIfNotCancelled() {
+      if (!isCancelled()) {
+        emitter.complete();
+      }
     }
   }
 

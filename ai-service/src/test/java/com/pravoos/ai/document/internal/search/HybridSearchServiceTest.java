@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.pravoos.ai.document.api.SearchActor;
 import com.pravoos.ai.document.internal.service.EmbeddingService;
 import com.pravoos.ai.shared.config.HybridSearchProperties;
 import java.util.List;
@@ -109,7 +110,8 @@ class HybridSearchServiceTest {
   @Test
   void passesCaseScopeToBothSources() {
     UUID caseId = UUID.randomUUID();
-    ChunkSearchScope expectedScope = ChunkSearchScope.forCase(caseId);
+    ChunkSearchScope expectedScope =
+        ChunkSearchScope.forCase(caseId, SearchActor.of(UUID.randomUUID(), List.of()));
     when(vectorSearchRepository.search(any(), anyInt(), any()))
         .thenReturn(List.of(candidate(vectorOnly)));
     when(lexicalSearchRepository.search(anyString(), anyInt(), any())).thenReturn(List.of());

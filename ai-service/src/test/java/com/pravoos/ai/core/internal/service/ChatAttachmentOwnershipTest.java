@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
 import com.pravoos.ai.core.internal.agent.AgentMetrics;

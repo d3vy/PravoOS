@@ -8,16 +8,16 @@ class FileCryptoPropertiesTest {
 
   @Test
   void hasKeyIsFalseWhenKeyIsNull() {
-    assertThat(new FileCryptoProperties(null).hasKey()).isFalse();
+    assertThat(FileCryptoProperties.ofSingleKey(null).hasKey()).isFalse();
   }
 
   @Test
   void hasKeyIsFalseWhenKeyIsBlank() {
-    assertThat(new FileCryptoProperties("   ").hasKey()).isFalse();
+    assertThat(FileCryptoProperties.ofSingleKey("   ").hasKey()).isFalse();
   }
 
   @Test
   void hasKeyIsTrueWhenKeyIsPresent() {
-    assertThat(new FileCryptoProperties("some-key").hasKey()).isTrue();
+    assertThat(FileCryptoProperties.ofSingleKey("some-key").hasKey()).isTrue();
   }
 }

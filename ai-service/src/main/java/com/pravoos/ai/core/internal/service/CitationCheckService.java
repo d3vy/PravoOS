@@ -26,7 +26,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CitationCheckService {
@@ -68,7 +67,6 @@ public class CitationCheckService {
     }
   }
 
-  @Transactional(readOnly = true)
   public CitationCheckResult check(String text, UUID lawyerId) {
     List<ExtractedCitation> extracted = citationExtractor.extract(text, properties.maxCitations());
     List<CitationCheck> checks = new ArrayList<>();
@@ -98,7 +96,6 @@ public class CitationCheckService {
     return CitationCheckResult.of(checks);
   }
 
-  @Transactional(readOnly = true)
   public CitationCheckResult checkResponse(UUID responseId, UUID lawyerId) {
     AiResponse response =
         aiResponseRepository

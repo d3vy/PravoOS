@@ -13,11 +13,19 @@ import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +37,7 @@ public class InvoiceOverdueReminderService {
   private static final String TOPIC = "invoice.overdue";
   private static final int[] THRESHOLDS_DAYS = {1, 3, 7, 14};
   private static final DecimalFormat TOTAL_FORMATTER = new DecimalFormat("#,##0.00");
+  private static final int PAGE_SIZE = 500;
 
   private final InvoiceRepository invoiceRepository;
   private final ClientRepository clientRepository;
@@ -60,33 +69,51 @@ public class InvoiceOverdueReminderService {
     int published = 0;
     for (int threshold : THRESHOLDS_DAYS) {
       LocalDate target = today.minusDays(threshold);
-      List<Invoice> invoices =
-          invoiceRepository.findByStatusAndDueDate(InvoiceStatus.ISSUED, target);
-      for (Invoice invoice : invoices) {
-        try {
-          if (self.enqueueReminder(invoice, threshold)) {
-            published++;
+      Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+      Page<Invoice> page;
+      do {
+        page = invoiceRepository.findByStatusAndDueDate(InvoiceStatus.ISSUED, target, pageable);
+        if (!page.isEmpty()) {
+          List<Invoice> invoices = page.getContent();
+          Set<UUID> alreadyReminded =
+              new HashSet<>(
+                  reminderRepository.findInvoiceIdByThresholdDaysAndInvoiceIdIn(
+                      threshold, invoices.stream().map(Invoice::getId).toList()));
+          Map<UUID, String> clientNames =
+              clientRepository
+                  .findAllById(invoices.stream().map(Invoice::getClientId).distinct().toList())
+                  .stream()
+                  .collect(Collectors.toMap(Client::getId, Client::getName, (a, b) -> a));
+          for (Invoice invoice : invoices) {
+            if (alreadyReminded.contains(invoice.getId())) {
+              continue;
+            }
+            try {
+              if (self.enqueueReminder(
+                  invoice, threshold, clientNames.getOrDefault(invoice.getClientId(), "Клиент"))) {
+                published++;
+              }
+            } catch (Exception e) {
+              log.error(
+                  "Failed to enqueue overdue reminder for invoice {}: {}",
+                  invoice.getId(),
+                  e.getMessage(),
+                  e);
+            }
           }
-        } catch (Exception e) {
-          log.error(
-              "Failed to enqueue overdue reminder for invoice {}: {}",
-              invoice.getId(),
-              e.getMessage(),
-              e);
         }
-      }
+        pageable = pageable.next();
+      } while (page.hasNext());
     }
     log.info("Invoice overdue reminder scan finished, published {} reminders", published);
   }
 
   @Transactional
-  public boolean enqueueReminder(Invoice invoice, int thresholdDays) {
+  public boolean enqueueReminder(Invoice invoice, int thresholdDays, String clientName) {
     if (reminderRepository.existsByInvoiceIdAndThresholdDays(invoice.getId(), thresholdDays)) {
       return false;
     }
 
-    String clientName =
-        clientRepository.findById(invoice.getClientId()).map(Client::getName).orElse("Клиент");
     InvoiceOverdueKafkaPayload payload =
         new InvoiceOverdueKafkaPayload(
             invoice.getId(),

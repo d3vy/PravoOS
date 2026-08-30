@@ -14,6 +14,7 @@ import com.pravoos.ai.practice.internal.service.CaseMessageService;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import com.pravoos.common.web.OrgContext;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -46,6 +47,7 @@ class PortalMessageControllerTest {
     PortalMessageController controller = new PortalMessageController(caseMessageService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

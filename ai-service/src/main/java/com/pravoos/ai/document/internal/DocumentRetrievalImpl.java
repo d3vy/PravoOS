@@ -5,6 +5,7 @@ import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
 import com.pravoos.ai.document.api.RetrievedChunk;
 import com.pravoos.ai.document.api.RetrievedChunks;
+import com.pravoos.ai.document.api.SearchActor;
 import com.pravoos.ai.document.internal.search.ChunkCandidate;
 import com.pravoos.ai.document.internal.search.ChunkSearchScope;
 import com.pravoos.ai.document.internal.search.HybridSearchResult;
@@ -36,13 +37,14 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
   }
 
   @Override
-  public RetrievedChunks retrieveForCase(String query, int topK, UUID caseId) {
+  public RetrievedChunks retrieveForCase(String query, int topK, UUID caseId, SearchActor actor) {
     return toRetrievedChunks(
-        hybridSearchService.search(query, topK, ChunkSearchScope.forCase(caseId)));
+        hybridSearchService.search(query, topK, ChunkSearchScope.forCase(caseId, actor)));
   }
 
   @Override
-  public DocumentChunkMatches retrieveInDocument(List<String> queries, int topK, UUID documentId) {
+  public DocumentChunkMatches retrieveInDocument(
+      List<String> queries, int topK, UUID documentId, SearchActor actor) {
     if (queries == null || topK <= 0) {
       return DocumentChunkMatches.empty();
     }
@@ -53,7 +55,7 @@ class DocumentRetrievalImpl implements DocumentRetrieval {
     }
 
     EmbeddingResult embedded = embeddingService.embedBatch(effectiveQueries);
-    ChunkSearchScope scope = ChunkSearchScope.forDocument(documentId);
+    ChunkSearchScope scope = ChunkSearchScope.forDocument(documentId, actor);
     Map<UUID, DocumentChunkMatch> bestByChunk = new LinkedHashMap<>();
     long rerankTokens = 0L;
     for (int index = 0; index < effectiveQueries.size(); index++) {

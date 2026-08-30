@@ -6,8 +6,8 @@ import com.pravoos.ai.practice.internal.dto.SignatureRequestResponse;
 import com.pravoos.ai.practice.internal.dto.SignerContext;
 import com.pravoos.ai.practice.internal.service.PortalSignatureService;
 import com.pravoos.ai.shared.exception.InvalidSignatureFileException;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.util.ClientIpResolver;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -18,7 +18,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,53 +32,46 @@ public class PortalSignatureController {
   }
 
   @GetMapping("/signatures")
-  public ResponseEntity<List<SignatureRequestResponse>> listPending(Authentication authentication) {
-    return ResponseEntity.ok(
-        portalSignatureService.listPending(SecurityUtils.currentClientIds(authentication)));
+  public ResponseEntity<List<SignatureRequestResponse>> listPending(CallerContext caller) {
+    return ResponseEntity.ok(portalSignatureService.listPending(caller.clientIds()));
   }
 
   @GetMapping("/cases/{caseId}/signatures")
   public ResponseEntity<List<SignatureRequestResponse>> listByCase(
-      @PathVariable UUID caseId, Authentication authentication) {
-    return ResponseEntity.ok(
-        portalSignatureService.listByCase(caseId, SecurityUtils.currentClientIds(authentication)));
+      @PathVariable UUID caseId, CallerContext caller) {
+    return ResponseEntity.ok(portalSignatureService.listByCase(caseId, caller.clientIds()));
   }
 
   @PostMapping("/signatures/{signatureId}/sign")
   public ResponseEntity<SignatureRequestResponse> sign(
       @PathVariable UUID signatureId,
       @Valid @RequestBody SignDocumentRequest request,
-      Authentication authentication,
+      CallerContext caller,
       HttpServletRequest httpRequest) {
     return ResponseEntity.ok(
         portalSignatureService.sign(
-            signatureId,
-            request,
-            SecurityUtils.currentClientIds(authentication),
-            signerContext(authentication, httpRequest)));
+            signatureId, request, caller.clientIds(), signerContext(caller, httpRequest)));
   }
 
   @PostMapping("/signatures/{signatureId}/sign-cms")
   public ResponseEntity<SignatureRequestResponse> signWithCms(
       @PathVariable UUID signatureId,
       @RequestParam("file") MultipartFile file,
-      Authentication authentication,
+      CallerContext caller,
       HttpServletRequest httpRequest) {
     return ResponseEntity.ok(
         portalSignatureService.signWithCms(
             signatureId,
             readBytes(file),
             file.getOriginalFilename(),
-            SecurityUtils.currentClientIds(authentication),
-            signerContext(authentication, httpRequest)));
+            caller.clientIds(),
+            signerContext(caller, httpRequest)));
   }
 
   @GetMapping("/signatures/{signatureId}/protocol")
   public ResponseEntity<Resource> exportProtocol(
-      @PathVariable UUID signatureId, Authentication authentication) {
-    byte[] protocol =
-        portalSignatureService.exportProtocol(
-            signatureId, SecurityUtils.currentClientIds(authentication));
+      @PathVariable UUID signatureId, CallerContext caller) {
+    byte[] protocol = portalSignatureService.exportProtocol(signatureId, caller.clientIds());
     return protocolResponse(signatureId, protocol);
   }
 
@@ -87,14 +79,11 @@ public class PortalSignatureController {
   public ResponseEntity<SignatureRequestResponse> decline(
       @PathVariable UUID signatureId,
       @Valid @RequestBody DeclineSignatureRequest request,
-      Authentication authentication,
+      CallerContext caller,
       HttpServletRequest httpRequest) {
     return ResponseEntity.ok(
         portalSignatureService.decline(
-            signatureId,
-            request.reason(),
-            SecurityUtils.currentClientIds(authentication),
-            signerContext(authentication, httpRequest)));
+            signatureId, request.reason(), caller.clientIds(), signerContext(caller, httpRequest)));
   }
 
   static ResponseEntity<Resource> protocolResponse(UUID signatureId, byte[] protocol) {
@@ -115,10 +104,9 @@ public class PortalSignatureController {
     }
   }
 
-  private SignerContext signerContext(
-      Authentication authentication, HttpServletRequest httpRequest) {
+  private SignerContext signerContext(CallerContext caller, HttpServletRequest httpRequest) {
     return new SignerContext(
-        SecurityUtils.currentUserId(authentication),
+        caller.userId(),
         ClientIpResolver.resolve(httpRequest),
         httpRequest.getHeader(HttpHeaders.USER_AGENT));
   }

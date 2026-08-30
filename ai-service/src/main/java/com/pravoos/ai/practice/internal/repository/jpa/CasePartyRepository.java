@@ -32,6 +32,7 @@ public interface CasePartyRepository extends JpaRepository<CaseParty, UUID> {
             FROM case_parties p
                      JOIN cases c ON c.id = p.case_id
             WHERE c.lawyer_id = :lawyerId
+              AND c.deleted_at IS NULL
               AND length(btrim(regexp_replace(lower(p.name), '\\s+', ' ', 'g'))) >= :minLength
               AND (strpos(btrim(regexp_replace(lower(p.name), '\\s+', ' ', 'g')), :query) > 0
                 OR strpos(:query, btrim(regexp_replace(lower(p.name), '\\s+', ' ', 'g'))) > 0)

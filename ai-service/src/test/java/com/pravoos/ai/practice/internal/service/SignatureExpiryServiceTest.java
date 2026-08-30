@@ -19,6 +19,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 @ExtendWith(MockitoExtension.class)
 class SignatureExpiryServiceTest {
@@ -31,8 +33,8 @@ class SignatureExpiryServiceTest {
   void sweepExpired_marksOverduePendingRequests() {
     SignatureRequest overdue = pending(LocalDateTime.now(ZoneOffset.UTC).minusDays(1));
     when(signatureRequestRepository.findByStatusAndExpiresAtBefore(
-            eq(SignatureStatus.PENDING), any()))
-        .thenReturn(List.of(overdue));
+            eq(SignatureStatus.PENDING), any(), any()))
+        .thenReturn(new PageImpl<>(List.of(overdue)));
 
     int swept = service.sweepExpired();
 
@@ -46,8 +48,8 @@ class SignatureExpiryServiceTest {
   @Test
   void sweepExpired_doesNothingWhenNoOverdueRequests() {
     when(signatureRequestRepository.findByStatusAndExpiresAtBefore(
-            eq(SignatureStatus.PENDING), any()))
-        .thenReturn(List.of());
+            eq(SignatureStatus.PENDING), any(), any()))
+        .thenReturn(Page.empty());
 
     assertThat(service.sweepExpired()).isZero();
     verify(signatureRequestRepository, never()).saveAll(any());

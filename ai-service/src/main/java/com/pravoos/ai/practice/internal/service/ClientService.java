@@ -1,7 +1,6 @@
 package com.pravoos.ai.practice.internal.service;
 
 import com.pravoos.ai.practice.internal.dto.*;
-import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Client;
 import com.pravoos.ai.practice.internal.model.entity.ClientConsent;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
@@ -195,8 +194,7 @@ public class ClientService {
         request.inn(),
         request.notes());
 
-    long caseCount =
-        caseRepository.findByClientIdAndLawyerIdOrderByCreatedAtDesc(clientId, lawyerId).size();
+    long caseCount = caseRepository.countByClientIdAndLawyerId(clientId, lawyerId);
     log.info("Client updated: {} by lawyer {}", clientId, lawyerId);
     return ClientResponse.from(client, caseCount);
   }
@@ -249,9 +247,11 @@ public class ClientService {
   }
 
   private Map<UUID, Long> caseCountsFor(UUID lawyerId) {
-    return caseRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId).stream()
-        .filter(caseEntity -> caseEntity.getClientId() != null)
-        .collect(Collectors.groupingBy(Case::getClientId, Collectors.counting()));
+    return caseRepository.countGroupedByClientId(lawyerId).stream()
+        .collect(
+            Collectors.toMap(
+                CaseRepository.ClientCountView::getClientId,
+                CaseRepository.ClientCountView::getCount));
   }
 
   private String normalizePhone(String phone) {

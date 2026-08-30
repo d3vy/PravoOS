@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pravoos.ai.practice.internal.dto.TimeEntryResponse;
 import com.pravoos.ai.practice.internal.service.TimeEntryService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ class TimeTrackerControllerTest {
     TimeTrackerController controller = new TimeTrackerController(timeEntryService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     when(authentication.getPrincipal()).thenReturn(lawyerId.toString());

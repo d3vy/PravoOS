@@ -2,6 +2,7 @@ package com.pravoos.ai.practice.internal.repository.jpa;
 
 import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.shared.model.enums.CaseStatus;
+import com.pravoos.ai.shared.model.enums.CourtSystem;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -18,6 +19,12 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
   interface StatusCountView {
     CaseStatus getStatus();
+
+    long getCount();
+  }
+
+  interface ClientCountView {
+    UUID getClientId();
 
     long getCount();
   }
@@ -95,6 +102,13 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
   long countByLawyerIdAndStatusNotIn(UUID lawyerId, Collection<CaseStatus> statuses);
 
+  long countByClientIdAndLawyerId(UUID clientId, UUID lawyerId);
+
+  @Query(
+      "SELECT c.clientId AS clientId, COUNT(c) AS count FROM Case c "
+          + "WHERE c.lawyerId = :lawyerId AND c.clientId IS NOT NULL GROUP BY c.clientId")
+  List<ClientCountView> countGroupedByClientId(@Param("lawyerId") UUID lawyerId);
+
   @Query(
       """
             SELECT c FROM Case c
@@ -112,16 +126,32 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
   @Query(
       """
+            SELECT c FROM Case c
+            WHERE c.lawyerId IN :lawyerIds
+              AND c.status NOT IN :closedStatuses
+              AND ((c.filingDeadline BETWEEN :today AND :horizon)
+                   OR (c.nextHearingDate BETWEEN :today AND :horizon)
+                   OR (c.expiresAt BETWEEN :today AND :horizon))
+            """)
+  List<Case> findCasesWithUpcomingDeadlinesForLawyerIdIn(
+      @Param("lawyerIds") Collection<UUID> lawyerIds,
+      @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
+      @Param("today") LocalDate today,
+      @Param("horizon") LocalDate horizon);
+
+  @Query(
+      """
             SELECT DISTINCT c.lawyerId FROM Case c
             WHERE c.status NOT IN :closedStatuses
               AND ((c.filingDeadline BETWEEN :today AND :horizon)
                    OR (c.nextHearingDate BETWEEN :today AND :horizon)
                    OR (c.expiresAt BETWEEN :today AND :horizon))
             """)
-  List<UUID> findDistinctLawyerIdsWithUpcomingDeadlines(
+  Page<UUID> findDistinctLawyerIdsWithUpcomingDeadlines(
       @Param("closedStatuses") Collection<CaseStatus> closedStatuses,
       @Param("today") LocalDate today,
-      @Param("horizon") LocalDate horizon);
+      @Param("horizon") LocalDate horizon,
+      Pageable pageable);
 
   List<Case> findTop5ByLawyerIdOrderByCreatedAtDesc(UUID lawyerId);
 
@@ -138,16 +168,17 @@ public interface CaseRepository extends JpaRepository<Case, UUID> {
 
   List<Case> findByClientIdInOrderByCreatedAtDesc(Collection<UUID> clientIds);
 
-  List<Case> findByFilingDeadlineAndStatusNotIn(
-      LocalDate filingDeadline, Collection<CaseStatus> excludedStatuses);
+  Page<Case> findByFilingDeadlineAndStatusNotIn(
+      LocalDate filingDeadline, Collection<CaseStatus> excludedStatuses, Pageable pageable);
 
-  List<Case> findByNextHearingDateAndStatusNotIn(
-      LocalDate nextHearingDate, Collection<CaseStatus> excludedStatuses);
+  Page<Case> findByNextHearingDateAndStatusNotIn(
+      LocalDate nextHearingDate, Collection<CaseStatus> excludedStatuses, Pageable pageable);
 
-  List<Case> findByExpiresAtAndStatusNotIn(
-      LocalDate expiresAt, Collection<CaseStatus> excludedStatuses);
+  Page<Case> findByExpiresAtAndStatusNotIn(
+      LocalDate expiresAt, Collection<CaseStatus> excludedStatuses, Pageable pageable);
 
-  List<Case> findByCourtCaseNumberIsNotNull();
+  Page<Case> findByCourtCaseNumberIsNotNullAndCourtSystemIn(
+      Collection<CourtSystem> courtSystems, Pageable pageable);
 
   List<Case> findByLawyerIdAndCourtCaseNumberIsNotNull(UUID lawyerId);
 

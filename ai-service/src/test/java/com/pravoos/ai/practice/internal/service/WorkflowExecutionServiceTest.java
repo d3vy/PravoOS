@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 @ExtendWith(MockitoExtension.class)
 class WorkflowExecutionServiceTest {
@@ -103,7 +105,7 @@ class WorkflowExecutionServiceTest {
             DeadlineType.FILING_DEADLINE,
             14));
     stubRepositoryEcho();
-    when(legalAiPort.runCaseWorkflow(eq(caseId), eq(lawyerId), any(), any(), any()))
+    when(legalAiPort.runCaseWorkflow(eq(caseId), eq(lawyerId), any(), any(), any(), any()))
         .thenReturn(aiResponse("итог"));
     when(draftService.generate(
             eq(caseId), any(GenerateDraftRequest.class), eq(lawyerId), anyList()))
@@ -169,7 +171,7 @@ class WorkflowExecutionServiceTest {
         new WorkflowStepConfig(
             2, WorkflowStepType.SET_DEADLINE, "Срок", null, null, DeadlineType.FILING_DEADLINE, 7));
     stubRepositoryEcho();
-    when(legalAiPort.runCaseWorkflow(eq(caseId), eq(lawyerId), any(), any(), any()))
+    when(legalAiPort.runCaseWorkflow(eq(caseId), eq(lawyerId), any(), any(), any(), any()))
         .thenReturn(aiResponse("итог"));
     lenient()
         .when(
@@ -191,8 +193,8 @@ class WorkflowExecutionServiceTest {
     WorkflowRun stuck = new WorkflowRun();
     stuck.setStatus(WorkflowRunStatus.RUNNING);
     stuck.setStartedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1));
-    when(runRepository.findByStatusAndStartedAtBefore(eq(WorkflowRunStatus.RUNNING), any()))
-        .thenReturn(List.of(stuck));
+    when(runRepository.findByStatusAndStartedAtBefore(eq(WorkflowRunStatus.RUNNING), any(), any()))
+        .thenReturn(new PageImpl<>(List.of(stuck)));
 
     service().failStuckRuns();
 
@@ -203,8 +205,8 @@ class WorkflowExecutionServiceTest {
 
   @Test
   void failStuckRunsDoesNothingWhenNoneStuck() {
-    when(runRepository.findByStatusAndStartedAtBefore(eq(WorkflowRunStatus.RUNNING), any()))
-        .thenReturn(List.of());
+    when(runRepository.findByStatusAndStartedAtBefore(eq(WorkflowRunStatus.RUNNING), any(), any()))
+        .thenReturn(Page.empty());
 
     service().failStuckRuns();
 

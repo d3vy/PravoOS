@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
 import com.pravoos.ai.core.internal.agent.AgentMetrics;
@@ -123,7 +124,7 @@ class DocumentChatContextTest {
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId), any()))
         .thenReturn(DocumentChunkMatches.empty());
     when(documentAccessGuard.requireVisible(eq(documentId), eq(lawyerId), anyList()))
         .thenReturn(summaryView(DocumentSummaryStatus.NONE, null, List.of()));
@@ -151,7 +152,7 @@ class DocumentChatContextTest {
 
   @Test
   void retrievesInsideTheDocumentAndLabelsItAsSource() {
-    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId), any()))
         .thenReturn(
             new DocumentChunkMatches(
                 List.of(new DocumentChunkMatch(UUID.randomUUID(), 3, "пункт 4.1 договора", 0.8)),
@@ -167,8 +168,8 @@ class DocumentChatContextTest {
 
     verify(documentAccessGuard, atLeastOnce())
         .requireVisible(eq(documentId), eq(lawyerId), anyList());
-    verify(documentRetrieval).retrieveInDocument(anyList(), anyInt(), eq(documentId));
-    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
+    verify(documentRetrieval).retrieveInDocument(anyList(), anyInt(), eq(documentId), any());
+    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any(), any());
     verify(ragService)
         .buildDocumentSystemPrompt(
             eq("Договор поставки"),
@@ -231,7 +232,7 @@ class DocumentChatContextTest {
                     AiActorRole.LAWYER))
         .isInstanceOf(DocumentNotFoundException.class);
 
-    verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any());
+    verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any(), any());
   }
 
   @Test
@@ -260,7 +261,7 @@ class DocumentChatContextTest {
                     AiActorRole.LAWYER))
         .isInstanceOf(ChatScopeConflictException.class);
 
-    verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any());
+    verify(documentRetrieval, never()).retrieveInDocument(anyList(), anyInt(), any(), any());
   }
 
   @Test

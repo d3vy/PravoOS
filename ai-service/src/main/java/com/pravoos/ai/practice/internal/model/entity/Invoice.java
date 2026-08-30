@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.SQLRestriction;
 
 @Entity
@@ -67,6 +68,7 @@ public class Invoice {
 
   @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("position ASC")
+  @BatchSize(size = 25)
   private List<InvoiceLine> lines = new ArrayList<>();
 
   @PrePersist

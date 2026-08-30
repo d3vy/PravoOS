@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pravoos.ai.practice.internal.dto.WorkflowInfo;
 import com.pravoos.ai.practice.internal.service.WorkflowService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class WorkflowControllerTest {
     WorkflowController controller = new WorkflowController(workflowService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

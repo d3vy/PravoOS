@@ -19,6 +19,7 @@ import com.pravoos.ai.practice.internal.service.ClientContactService;
 import com.pravoos.ai.shared.exception.ClientContactNotFoundException;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.ContactType;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -52,6 +53,7 @@ class ClientContactControllerTest {
     ClientContactController controller = new ClientContactController(contactService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

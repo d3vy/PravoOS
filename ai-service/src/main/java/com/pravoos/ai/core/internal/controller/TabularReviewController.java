@@ -6,8 +6,8 @@ import com.pravoos.ai.core.internal.dto.TabularReviewDto;
 import com.pravoos.ai.core.internal.dto.TabularReviewSummaryDto;
 import com.pravoos.ai.core.internal.service.TabularReviewExportService;
 import com.pravoos.ai.core.internal.service.TabularReviewService;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.util.SecureFileHeaders;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -17,7 +17,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -36,35 +35,29 @@ public class TabularReviewController {
 
   @PostMapping
   public ResponseEntity<TabularReviewDto> create(
-      @Valid @RequestBody CreateTabularReviewRequest request, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @Valid @RequestBody CreateTabularReviewRequest request, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.ACCEPTED)
-        .body(
-            tabularReviewService.create(
-                request, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+        .body(tabularReviewService.create(request, lawyerId, caller.orgIds()));
   }
 
   @GetMapping
   public ResponseEntity<List<TabularReviewSummaryDto>> listByCase(
-      @RequestParam UUID caseId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
-    return ResponseEntity.ok(
-        tabularReviewService.findByCase(
-            caseId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+      @RequestParam UUID caseId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
+    return ResponseEntity.ok(tabularReviewService.findByCase(caseId, lawyerId, caller.orgIds()));
   }
 
   @GetMapping("/{reviewId}")
-  public ResponseEntity<TabularReviewDto> get(
-      @PathVariable UUID reviewId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
-    return ResponseEntity.ok(
-        tabularReviewService.get(reviewId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+  public ResponseEntity<TabularReviewDto> get(@PathVariable UUID reviewId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
+    return ResponseEntity.ok(tabularReviewService.get(reviewId, lawyerId, caller.orgIds()));
   }
 
   @DeleteMapping("/{reviewId}")
-  public ResponseEntity<Void> delete(@PathVariable UUID reviewId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
-    tabularReviewService.delete(reviewId, lawyerId, SecurityUtils.currentOrgIds(authentication));
+  public ResponseEntity<Void> delete(@PathVariable UUID reviewId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
+    tabularReviewService.delete(reviewId, lawyerId, caller.orgIds());
     return ResponseEntity.noContent().build();
   }
 
@@ -72,11 +65,10 @@ public class TabularReviewController {
   public ResponseEntity<byte[]> export(
       @PathVariable UUID reviewId,
       @RequestParam(defaultValue = "xlsx") String format,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     ReviewExportFile file =
-        tabularReviewExportService.export(
-            reviewId, format, lawyerId, SecurityUtils.currentOrgIds(authentication));
+        tabularReviewExportService.export(reviewId, format, lawyerId, caller.orgIds());
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentDisposition(

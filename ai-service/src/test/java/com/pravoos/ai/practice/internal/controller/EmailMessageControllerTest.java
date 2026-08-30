@@ -18,6 +18,7 @@ import com.pravoos.ai.shared.exception.EmailLinkTargetRequiredException;
 import com.pravoos.ai.shared.exception.EmailMessageNotFoundException;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.EmailDirection;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -47,6 +48,7 @@ class EmailMessageControllerTest {
     EmailMessageController controller = new EmailMessageController(emailLinkingService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -23,7 +25,7 @@ class FileCryptoServiceTest {
   }
 
   private FileCryptoService withKey(String base64Key) {
-    return new FileCryptoService(new FileCryptoProperties(base64Key));
+    return new FileCryptoService(FileCryptoProperties.ofSingleKey(base64Key));
   }
 
   @Test
@@ -79,6 +81,80 @@ class FileCryptoServiceTest {
 
     assertArrayEquals(original, Files.readAllBytes(file));
     assertArrayEquals(original, service.decryptFile(file));
+  }
+
+  @Test
+  void decryptsFileWrittenWithARetiredKeyAfterRotation() {
+    String oldKey = randomKey();
+    String newKey = randomKey();
+    byte[] original = "документ до ротации".getBytes(StandardCharsets.UTF_8);
+    Path file = tempDir.resolve("doc.bin");
+
+    new FileCryptoService(new FileCryptoProperties("v1", Map.of("v1", oldKey), null))
+        .encryptToFile(original, file);
+
+    Map<String, String> bothKeys = new LinkedHashMap<>();
+    bothKeys.put("v1", oldKey);
+    bothKeys.put("v2", newKey);
+    FileCryptoService afterRotation =
+        new FileCryptoService(new FileCryptoProperties("v2", bothKeys, null));
+
+    assertArrayEquals(original, afterRotation.decryptFile(file));
+  }
+
+  @Test
+  void newFilesAreWrittenWithTheActiveKeyOnly() {
+    String oldKey = randomKey();
+    String newKey = randomKey();
+    Map<String, String> bothKeys = new LinkedHashMap<>();
+    bothKeys.put("v1", oldKey);
+    bothKeys.put("v2", newKey);
+    byte[] original = "документ после ротации".getBytes(StandardCharsets.UTF_8);
+    Path file = tempDir.resolve("doc.bin");
+
+    new FileCryptoService(new FileCryptoProperties("v2", bothKeys, null))
+        .encryptToFile(original, file);
+
+    FileCryptoService activeKeyOnly =
+        new FileCryptoService(new FileCryptoProperties("v2", Map.of("v2", newKey), null));
+    assertArrayEquals(original, activeKeyOnly.decryptFile(file));
+
+    FileCryptoService retiredKeyOnly =
+        new FileCryptoService(new FileCryptoProperties("v1", Map.of("v1", oldKey), null));
+    assertThrows(DocumentProcessingException.class, () -> retiredKeyOnly.decryptFile(file));
+  }
+
+  @Test
+  void rejectsAnActiveKeyIdThatHasNoConfiguredKey() {
+    Map<String, String> keys = Map.of("v1", randomKey());
+    assertThrows(
+        IllegalStateException.class,
+        () -> new FileCryptoService(new FileCryptoProperties("v2", keys, null)));
+  }
+
+  @Test
+  void requiresAnActiveKeyIdWhenSeveralKeysAreConfigured() {
+    Map<String, String> keys = new LinkedHashMap<>();
+    keys.put("v1", randomKey());
+    keys.put("v2", randomKey());
+    assertThrows(
+        IllegalStateException.class,
+        () -> new FileCryptoService(new FileCryptoProperties(null, keys, null)));
+  }
+
+  @Test
+  void rejectsAFileWhoseKeyIdWasTamperedWith() throws Exception {
+    String keyId = "v1";
+    FileCryptoService service =
+        new FileCryptoService(new FileCryptoProperties(keyId, Map.of(keyId, randomKey()), null));
+    Path file = tempDir.resolve("doc.bin");
+    service.encryptToFile("данные".getBytes(StandardCharsets.UTF_8), file);
+
+    byte[] onDisk = Files.readAllBytes(file);
+    onDisk[5] = (byte) 'X';
+    Files.write(file, onDisk);
+
+    assertThrows(DocumentProcessingException.class, () -> service.decryptFile(file));
   }
 
   @Test

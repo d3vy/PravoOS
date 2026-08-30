@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,8 +87,9 @@ public class DocumentService {
             .register(meterRegistry);
   }
 
-  public DocumentUploadResponse upload(MultipartFile file, String title, UUID uploadedBy) {
-    return upload(file, title, uploadedBy, null);
+  public DocumentUploadResponse uploadKnowledgeBaseDocument(
+      MultipartFile file, String title, UUID uploadedBy) {
+    return store(file, title, uploadedBy, null, false);
   }
 
   public DocumentUploadResponse upload(
@@ -96,6 +98,13 @@ public class DocumentService {
   }
 
   public DocumentUploadResponse upload(
+      MultipartFile file, String title, UUID uploadedBy, UUID caseId, boolean visibleToClient) {
+    Objects.requireNonNull(
+        caseId, "caseId is required: the shared library is written by uploadKnowledgeBaseDocument");
+    return store(file, title, uploadedBy, caseId, visibleToClient);
+  }
+
+  private DocumentUploadResponse store(
       MultipartFile file, String title, UUID uploadedBy, UUID caseId, boolean visibleToClient) {
     if (file == null || file.isEmpty()) {
       log.warn("Document upload rejected: empty file from {}", uploadedBy);

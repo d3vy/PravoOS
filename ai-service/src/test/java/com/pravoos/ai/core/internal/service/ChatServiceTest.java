@@ -20,6 +20,7 @@ import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
 import com.pravoos.ai.core.internal.agent.AgentMetrics;
@@ -170,7 +171,7 @@ class ChatServiceTest {
         .thenReturn(new CaseContext("Карточка", "Хронология", "Задачи"));
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(new RetrievedChunks(List.of(), 7L));
-    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId), any()))
         .thenReturn(
             new RetrievedChunks(
                 List.of(new RetrievedChunk("фрагмент", "Иск.pdf", 0.8, false, null, null, null)),
@@ -395,7 +396,7 @@ class ChatServiceTest {
     ChatRequest request = new ChatRequest(null, "Что по делу?", List.of(), caseId, null, null);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId), any()))
         .thenReturn(
             new RetrievedChunks(
                 List.of(new RetrievedChunk("контент", "Иск.pdf", 0.5, false, null, null, null)),
@@ -442,7 +443,7 @@ class ChatServiceTest {
     when(documentAccessGuard.requireVisible(documentId, lawyerId, List.of())).thenReturn(document);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId), any()))
         .thenReturn(
             new DocumentChunkMatches(
                 List.of(new DocumentChunkMatch(UUID.randomUUID(), 0, "фрагмент", 0.7)), 5L, 0L));
@@ -662,7 +663,7 @@ class ChatServiceTest {
     when(caseAccessProvider.caseOrgId(caseId)).thenReturn(caseOrgId);
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId)))
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), eq(caseId), any()))
         .thenReturn(RetrievedChunks.empty());
     when(caseContextProvider.loadContext(eq(caseId), eq(lawyerId), anyList()))
         .thenReturn(new CaseContext("card", "timeline", "checklist"));

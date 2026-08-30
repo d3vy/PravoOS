@@ -13,6 +13,7 @@ import com.pravoos.ai.practice.internal.service.CalendarService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.exception.PravoosException;
 import com.pravoos.ai.shared.model.enums.CalendarEventType;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +41,7 @@ class CalendarControllerTest {
     CalendarController controller = new CalendarController(calendarService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

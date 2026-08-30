@@ -4,7 +4,7 @@ import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.AiToolContext;
 import com.pravoos.ai.core.internal.dto.AiTrustedToolResponse;
 import com.pravoos.ai.core.internal.service.AiActionProposalService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.shared.security.CallerContext;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,20 +25,19 @@ public class AiTrustedToolController {
   }
 
   @GetMapping
-  public ResponseEntity<List<AiTrustedToolResponse>> list(Authentication authentication) {
-    return ResponseEntity.ok(proposalService.trusted(actor(authentication)));
+  public ResponseEntity<List<AiTrustedToolResponse>> list(
+      Authentication authentication, CallerContext caller) {
+    return ResponseEntity.ok(proposalService.trusted(actor(caller, authentication)));
   }
 
   @DeleteMapping("/{toolName}")
-  public ResponseEntity<Void> revoke(@PathVariable String toolName, Authentication authentication) {
-    proposalService.revoke(toolName, actor(authentication));
+  public ResponseEntity<Void> revoke(
+      @PathVariable String toolName, Authentication authentication, CallerContext caller) {
+    proposalService.revoke(toolName, actor(caller, authentication));
     return ResponseEntity.noContent().build();
   }
 
-  private static AiToolContext actor(Authentication authentication) {
-    return new AiToolContext(
-        SecurityUtils.currentUserId(authentication),
-        SecurityUtils.currentOrgIds(authentication),
-        AiActorRole.of(authentication));
+  private static AiToolContext actor(CallerContext caller, Authentication authentication) {
+    return new AiToolContext(caller.userId(), caller.orgIds(), AiActorRole.of(authentication));
   }
 }

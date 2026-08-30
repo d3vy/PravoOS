@@ -21,6 +21,7 @@ import com.pravoos.ai.shared.exception.PravoosException;
 import com.pravoos.ai.shared.model.enums.SignatureProviderType;
 import com.pravoos.ai.shared.model.enums.SignatureSignerRole;
 import com.pravoos.ai.shared.model.enums.SignatureStatus;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import com.pravoos.common.web.OrgContext;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -55,6 +56,7 @@ class PortalSignatureControllerTest {
     PortalSignatureController controller = new PortalSignatureController(portalSignatureService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

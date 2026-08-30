@@ -11,6 +11,7 @@ import com.pravoos.ai.practice.internal.dto.BillingProfileRequest;
 import com.pravoos.ai.practice.internal.dto.BillingProfileResponse;
 import com.pravoos.ai.practice.internal.service.BillingProfileService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
@@ -40,6 +41,7 @@ class BillingProfileControllerTest {
     BillingProfileController controller = new BillingProfileController(billingProfileService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

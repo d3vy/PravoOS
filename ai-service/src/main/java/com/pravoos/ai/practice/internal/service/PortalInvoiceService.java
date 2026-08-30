@@ -8,7 +8,9 @@ import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.shared.exception.InvoiceNotFoundException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +31,11 @@ public class PortalInvoiceService {
     if (clientIds == null || clientIds.isEmpty()) {
       return List.of();
     }
-    return invoiceRepository.findByClientIdInOrderByCreatedAtDesc(clientIds).stream()
-        .map(invoice -> InvoiceSummary.from(invoice, clientName(invoice.getClientId())))
+    List<Invoice> invoices = invoiceRepository.findByClientIdInOrderByCreatedAtDesc(clientIds);
+    Map<UUID, String> names =
+        clientNames(invoices.stream().map(Invoice::getClientId).distinct().toList());
+    return invoices.stream()
+        .map(invoice -> InvoiceSummary.from(invoice, names.get(invoice.getClientId())))
         .toList();
   }
 
@@ -51,5 +56,13 @@ public class PortalInvoiceService {
 
   private String clientName(UUID clientId) {
     return clientRepository.findById(clientId).map(Client::getName).orElse(null);
+  }
+
+  private Map<UUID, String> clientNames(List<UUID> clientIds) {
+    if (clientIds.isEmpty()) {
+      return Map.of();
+    }
+    return clientRepository.findAllById(clientIds).stream()
+        .collect(Collectors.toMap(Client::getId, Client::getName, (a, b) -> a));
   }
 }

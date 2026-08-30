@@ -65,11 +65,24 @@ public class AgentLoop {
       AiToolContext context,
       Consumer<String> tokenConsumer,
       Consumer<ToolStep> stepConsumer) {
+    return run(
+        systemPrompt, history, userMessage, context, tokenConsumer, stepConsumer, usage -> {});
+  }
+
+  public AgentResult run(
+      String systemPrompt,
+      List<LlmMessage> history,
+      String userMessage,
+      AiToolContext context,
+      Consumer<String> tokenConsumer,
+      Consumer<ToolStep> stepConsumer,
+      Consumer<LlmUsage> usageConsumer) {
     return execute(
         history,
         userMessage,
         context,
         stepConsumer,
+        usageConsumer,
         (working, pendingUserMessage, options) -> {
           LlmStreamResult result =
               llmClient.streamComplete(
@@ -89,6 +102,7 @@ public class AgentLoop {
         userMessage,
         context,
         stepConsumer,
+        usage -> {},
         (working, pendingUserMessage, options) -> {
           LlmResult result = llmClient.complete(systemPrompt, working, pendingUserMessage, options);
           return new ModelTurn(result.content(), result.usage(), result.toolCalls());
@@ -100,12 +114,14 @@ public class AgentLoop {
       String userMessage,
       AiToolContext context,
       Consumer<ToolStep> stepConsumer,
+      Consumer<LlmUsage> usageConsumer,
       ModelCaller modelCaller) {
 
     List<ToolSpec> specs = toolRegistry.specsFor(context);
     if (specs.isEmpty()) {
       ModelTurn turn =
           modelCaller.call(history == null ? List.of() : history, userMessage, LlmOptions.DEFAULT);
+      usageConsumer.accept(turn.usage());
       return new AgentResult(turn.content(), turn.usage(), List.of(), 1);
     }
 
@@ -137,6 +153,7 @@ public class AgentLoop {
               pendingUserMessage,
               LlmOptions.DEFAULT.andTools(specs, toolChoice));
       usage.add(turn.usage());
+      usageConsumer.accept(turn.usage());
       content = turn.content();
 
       if (turn.toolCalls().isEmpty()) {
@@ -192,6 +209,7 @@ public class AgentLoop {
       content = invoke(toolCall, context);
       status = ToolStepStatus.OK;
     } catch (ToolInvocationException ex) {
+      log.info("AI tool '{}' rejected the call: {}", toolCall.name(), ex.getMessage());
       content = ex.getMessage();
       status = ToolStepStatus.ERROR;
     } catch (RuntimeException ex) {

@@ -4,14 +4,13 @@ import com.pravoos.ai.practice.internal.dto.ContactResponse;
 import com.pravoos.ai.practice.internal.dto.CreateContactRequest;
 import com.pravoos.ai.practice.internal.dto.UpdateContactRequest;
 import com.pravoos.ai.practice.internal.service.ClientContactService;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.util.PagedResponse;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -29,8 +28,8 @@ public class ClientContactController {
       @PathVariable UUID clientId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return PagedResponse.of(contactService.findByClient(clientId, lawyerId, page, size));
   }
 
@@ -38,8 +37,8 @@ public class ClientContactController {
   public ResponseEntity<ContactResponse> create(
       @PathVariable UUID clientId,
       @Valid @RequestBody CreateContactRequest request,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(contactService.create(clientId, request, lawyerId));
   }
@@ -49,15 +48,15 @@ public class ClientContactController {
       @PathVariable UUID clientId,
       @PathVariable UUID contactId,
       @Valid @RequestBody UpdateContactRequest request,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(contactService.update(clientId, contactId, request, lawyerId));
   }
 
   @DeleteMapping("/{contactId}")
   public ResponseEntity<Void> delete(
-      @PathVariable UUID clientId, @PathVariable UUID contactId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @PathVariable UUID clientId, @PathVariable UUID contactId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     contactService.delete(clientId, contactId, lawyerId);
     return ResponseEntity.noContent().build();
   }

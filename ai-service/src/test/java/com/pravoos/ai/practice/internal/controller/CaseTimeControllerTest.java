@@ -22,6 +22,7 @@ import com.pravoos.ai.practice.internal.dto.UpdateTimeEntryRequest;
 import com.pravoos.ai.practice.internal.service.TimeEntryService;
 import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -55,6 +56,7 @@ class CaseTimeControllerTest {
     CaseTimeController controller = new CaseTimeController(timeEntryService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -64,13 +65,24 @@ class DeadlineScanRepositoryIT {
     caseWithDeadlines("Выигранное дело", CaseStatus.CLOSED_WON);
     caseWithDeadlines("Проигранное дело", CaseStatus.CLOSED_LOST);
 
-    assertThat(caseRepository.findByFilingDeadlineAndStatusNotIn(target, CaseStatus.CLOSED))
+    assertThat(
+            caseRepository
+                .findByFilingDeadlineAndStatusNotIn(
+                    target, CaseStatus.CLOSED, PageRequest.of(0, 500))
+                .getContent())
         .extracting(Case::getId)
         .containsExactly(openCase);
-    assertThat(caseRepository.findByNextHearingDateAndStatusNotIn(target, CaseStatus.CLOSED))
+    assertThat(
+            caseRepository
+                .findByNextHearingDateAndStatusNotIn(
+                    target, CaseStatus.CLOSED, PageRequest.of(0, 500))
+                .getContent())
         .extracting(Case::getId)
         .containsExactly(openCase);
-    assertThat(caseRepository.findByExpiresAtAndStatusNotIn(target, CaseStatus.CLOSED))
+    assertThat(
+            caseRepository
+                .findByExpiresAtAndStatusNotIn(target, CaseStatus.CLOSED, PageRequest.of(0, 500))
+                .getContent())
         .extracting(Case::getId)
         .containsExactly(openCase);
   }
@@ -82,7 +94,10 @@ class DeadlineScanRepositoryIT {
     openTaskDueOnTarget(openCase);
     openTaskDueOnTarget(closedCase);
 
-    assertThat(caseTaskRepository.findDueOnDate(target, CaseStatus.CLOSED))
+    assertThat(
+            caseTaskRepository
+                .findDueOnDate(target, CaseStatus.CLOSED, PageRequest.of(0, 500))
+                .getContent())
         .extracting(CaseTaskRepository.TaskReminderView::getCaseId)
         .containsExactly(openCase);
   }

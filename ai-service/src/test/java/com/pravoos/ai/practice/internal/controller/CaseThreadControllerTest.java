@@ -9,6 +9,7 @@ import com.pravoos.ai.practice.internal.dto.CaseThreadResponse;
 import com.pravoos.ai.practice.internal.service.CaseMessageService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.MessageAuthorRole;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -36,6 +37,7 @@ class CaseThreadControllerTest {
     CaseThreadController controller = new CaseThreadController(caseMessageService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     when(authentication.getPrincipal()).thenReturn(lawyerId.toString());

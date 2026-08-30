@@ -12,9 +12,9 @@ import com.pravoos.ai.practice.internal.service.ConflictCheckService;
 import com.pravoos.ai.recyclebin.api.DeletionActor;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.model.enums.AuditAction;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.shared.util.PagedResponse;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -43,8 +43,8 @@ public class ClientController {
 
   @PostMapping
   public ResponseEntity<ClientResponse> create(
-      @Valid @RequestBody CreateClientRequest request, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @Valid @RequestBody CreateClientRequest request, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED).body(clientService.create(request, lawyerId));
   }
 
@@ -52,8 +52,8 @@ public class ClientController {
   public ResponseEntity<List<ConflictHit>> conflictCheck(
       @RequestParam String name,
       @RequestParam(required = false) UUID excludeClientId,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(conflictCheckService.check(lawyerId, name, excludeClientId));
   }
 
@@ -61,16 +61,17 @@ public class ClientController {
   public ResponseEntity<List<ClientResponse>> list(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size,
-      Authentication authentication) {
-    return PagedResponse.of(
-        clientService.findByLawyer(SecurityUtils.currentUserId(authentication), page, size));
+      CallerContext caller) {
+    return PagedResponse.of(clientService.findByLawyer(caller.userId(), page, size));
   }
 
   @GetMapping("/{clientId}")
   public ResponseEntity<ClientDetailResponse> get(
-      @PathVariable UUID clientId, Authentication authentication, HttpServletRequest request) {
-    ClientDetailResponse client =
-        clientService.get(clientId, SecurityUtils.currentUserId(authentication));
+      @PathVariable UUID clientId,
+      Authentication authentication,
+      CallerContext caller,
+      HttpServletRequest request) {
+    ClientDetailResponse client = clientService.get(clientId, caller.userId());
     accessAuditService.record(authentication, AuditAction.CLIENT_VIEW, clientId, request);
     return ResponseEntity.ok(client);
   }
@@ -79,62 +80,66 @@ public class ClientController {
   public ResponseEntity<ClientResponse> update(
       @PathVariable UUID clientId,
       @Valid @RequestBody UpdateClientRequest request,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(clientService.update(clientId, request, lawyerId));
   }
 
   @PostMapping("/{clientId}/portal/invite")
-  public ResponseEntity<Void> invitePortal(
-      @PathVariable UUID clientId, Authentication authentication) {
-    clientService.invitePortal(clientId, SecurityUtils.currentUserId(authentication));
+  public ResponseEntity<Void> invitePortal(@PathVariable UUID clientId, CallerContext caller) {
+    clientService.invitePortal(clientId, caller.userId());
     return ResponseEntity.accepted().build();
   }
 
   @GetMapping("/{clientId}/portal/invite")
   public ResponseEntity<PortalInviteStatusResponse> portalInviteStatus(
-      @PathVariable UUID clientId, Authentication authentication) {
-    return ResponseEntity.ok(
-        clientService.portalInviteStatus(clientId, SecurityUtils.currentUserId(authentication)));
+      @PathVariable UUID clientId, CallerContext caller) {
+    return ResponseEntity.ok(clientService.portalInviteStatus(clientId, caller.userId()));
   }
 
   @DeleteMapping("/{clientId}/portal/invite")
   public ResponseEntity<Void> revokePortalInvite(
-      @PathVariable UUID clientId, Authentication authentication) {
-    clientService.revokePortalInvite(clientId, SecurityUtils.currentUserId(authentication));
+      @PathVariable UUID clientId, CallerContext caller) {
+    clientService.revokePortalInvite(clientId, caller.userId());
     return ResponseEntity.noContent().build();
   }
 
   @GetMapping("/{clientId}/consent")
   public ResponseEntity<ConsentResponse> consent(
-      @PathVariable UUID clientId, Authentication authentication) {
-    ConsentResponse consent =
-        clientService.currentConsent(clientId, SecurityUtils.currentUserId(authentication));
+      @PathVariable UUID clientId, CallerContext caller) {
+    ConsentResponse consent = clientService.currentConsent(clientId, caller.userId());
     return consent == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(consent);
   }
 
   @PostMapping("/{clientId}/consent")
   public ResponseEntity<ConsentResponse> grantConsent(
-      @PathVariable UUID clientId, Authentication authentication, HttpServletRequest request) {
-    ConsentResponse consent =
-        clientService.grantConsent(clientId, SecurityUtils.currentUserId(authentication));
+      @PathVariable UUID clientId,
+      Authentication authentication,
+      CallerContext caller,
+      HttpServletRequest request) {
+    ConsentResponse consent = clientService.grantConsent(clientId, caller.userId());
     accessAuditService.record(authentication, AuditAction.CONSENT_GRANT, clientId, request);
     return ResponseEntity.ok(consent);
   }
 
   @DeleteMapping("/{clientId}/consent")
   public ResponseEntity<Void> revokeConsent(
-      @PathVariable UUID clientId, Authentication authentication, HttpServletRequest request) {
-    clientService.revokeConsent(clientId, SecurityUtils.currentUserId(authentication));
+      @PathVariable UUID clientId,
+      Authentication authentication,
+      CallerContext caller,
+      HttpServletRequest request) {
+    clientService.revokeConsent(clientId, caller.userId());
     accessAuditService.record(authentication, AuditAction.CONSENT_REVOKE, clientId, request);
     return ResponseEntity.noContent().build();
   }
 
   @GetMapping("/{clientId}/personal-data-export")
   public ResponseEntity<PersonalDataExportResponse> exportPersonalData(
-      @PathVariable UUID clientId, Authentication authentication, HttpServletRequest request) {
-    PersonalDataExportResponse export =
-        clientService.exportPersonalData(clientId, SecurityUtils.currentUserId(authentication));
+      @PathVariable UUID clientId,
+      Authentication authentication,
+      CallerContext caller,
+      HttpServletRequest request) {
+    PersonalDataExportResponse export = clientService.exportPersonalData(clientId, caller.userId());
     accessAuditService.record(authentication, AuditAction.PERSONAL_DATA_EXPORT, clientId, request);
     return ResponseEntity.ok(export);
   }

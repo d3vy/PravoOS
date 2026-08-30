@@ -56,7 +56,8 @@ class WorkflowServiceTest {
             null,
             null,
             List.of());
-    when(legalAiPort.runCaseWorkflow(eq(caseId), eq(lawyerId), eq("CASE_SUMMARY"), any(), any()))
+    when(legalAiPort.runCaseWorkflow(
+            eq(caseId), eq(lawyerId), any(), eq("CASE_SUMMARY"), any(), any()))
         .thenReturn(expectedResponse);
 
     AiResponseDto result =
@@ -69,7 +70,7 @@ class WorkflowServiceTest {
     ArgumentCaptor<String> queryCaptor = ArgumentCaptor.forClass(String.class);
     verify(legalAiPort)
         .runCaseWorkflow(
-            eq(caseId), eq(lawyerId), eq("CASE_SUMMARY"), queryCaptor.capture(), any());
+            eq(caseId), eq(lawyerId), any(), eq("CASE_SUMMARY"), queryCaptor.capture(), any());
     assertThat(queryCaptor.getValue()).isEqualTo(BankruptcyWorkflow.CASE_SUMMARY.displayName());
   }
 
@@ -78,7 +79,7 @@ class WorkflowServiceTest {
     UUID caseId = UUID.randomUUID();
     UUID lawyerId = UUID.randomUUID();
     List<UUID> orgIds = List.of();
-    when(legalAiPort.runCaseWorkflow(any(), any(), any(), any(), any()))
+    when(legalAiPort.runCaseWorkflow(any(), any(), any(), any(), any(), any()))
         .thenReturn(
             new AiResponseDto(
                 UUID.randomUUID(),
@@ -102,6 +103,7 @@ class WorkflowServiceTest {
         .runCaseWorkflow(
             eq(caseId),
             eq(lawyerId),
+            any(),
             eq("CASE_SUMMARY"),
             queryCaptor.capture(),
             instructionCaptor.capture());

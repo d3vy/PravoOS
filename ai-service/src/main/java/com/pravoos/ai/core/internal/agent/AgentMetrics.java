@@ -2,9 +2,11 @@ package com.pravoos.ai.core.internal.agent;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,6 +17,7 @@ public class AgentMetrics {
   private final DistributionSummary iterations;
   private final DistributionSummary tokens;
   private final Timer turnDuration;
+  private final AtomicInteger activeStreams = new AtomicInteger();
 
   public AgentMetrics(MeterRegistry registry) {
     this.registry = registry;
@@ -34,6 +37,9 @@ public class AgentMetrics {
         Timer.builder("pravoos.agent.turn_duration")
             .description("Wall-clock duration of an agent turn")
             .register(registry);
+    Gauge.builder("pravoos.agent.streams.active", activeStreams, AtomicInteger::get)
+        .description("Number of SSE chat streams currently open")
+        .register(registry);
   }
 
   public void recordTurn(int iterationCount, int totalTokens, Duration duration) {
@@ -63,5 +69,13 @@ public class AgentMetrics {
         .tag("status", status)
         .register(registry)
         .increment(count);
+  }
+
+  public void streamStarted() {
+    activeStreams.incrementAndGet();
+  }
+
+  public void streamEnded() {
+    activeStreams.decrementAndGet();
   }
 }

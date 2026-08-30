@@ -1,5 +1,6 @@
 package com.pravoos.ai.shared.client;
 
+import com.pravoos.ai.shared.config.PooledClientHttpRequestFactories;
 import com.pravoos.ai.shared.config.UserServiceProperties;
 import com.pravoos.ai.shared.dto.PortalInviteStatusResponse;
 import com.pravoos.ai.shared.exception.DigestPreferenceCheckException;
@@ -14,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -26,15 +27,16 @@ public class UserServiceClient {
   private static final String CALLER_NAME = "ai-service";
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
+  private static final int MAX_TOTAL_CONNECTIONS = 20;
 
   private final RestClient restClient;
 
   public UserServiceClient(
       UserServiceProperties properties,
       @LoadBalanced RestClient.Builder loadBalancedRestClientBuilder) {
-    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-    requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
-    requestFactory.setReadTimeout(READ_TIMEOUT);
+    ClientHttpRequestFactory requestFactory =
+        PooledClientHttpRequestFactories.create(
+            CONNECT_TIMEOUT, READ_TIMEOUT, MAX_TOTAL_CONNECTIONS, MAX_TOTAL_CONNECTIONS);
     this.restClient =
         DiscoveryAwareRestClients.builderFor(properties.baseUrl(), loadBalancedRestClientBuilder)
             .baseUrl(properties.baseUrl())

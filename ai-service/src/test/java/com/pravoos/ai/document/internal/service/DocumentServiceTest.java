@@ -108,14 +108,14 @@ class DocumentServiceTest {
         new MockMultipartFile("file", "doc.pdf", "application/pdf", new byte[0]);
     UUID uploadedBy = UUID.randomUUID();
 
-    assertThatThrownBy(() -> service.upload(empty, "title", uploadedBy))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(empty, "title", uploadedBy))
         .isInstanceOf(DocumentProcessingException.class);
     verifyNoInteractions(uploadRateLimiter, documentRepository);
   }
 
   @Test
   void upload_throwsProcessingException_whenFileIsNull() {
-    assertThatThrownBy(() -> service.upload(null, "title", UUID.randomUUID()))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(null, "title", UUID.randomUUID()))
         .isInstanceOf(DocumentProcessingException.class);
   }
 
@@ -135,7 +135,7 @@ class DocumentServiceTest {
   void upload_throwsProcessingException_whenFileNameHasNoExtension() {
     MockMultipartFile file = new MockMultipartFile("file", "doc", "application/pdf", PDF_BYTES);
 
-    assertThatThrownBy(() -> service.upload(file, "title", UUID.randomUUID()))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(file, "title", UUID.randomUUID()))
         .isInstanceOf(DocumentProcessingException.class);
   }
 
@@ -144,7 +144,7 @@ class DocumentServiceTest {
     MockMultipartFile file =
         new MockMultipartFile("file", "doc.exe", "application/x-msdownload", PDF_BYTES);
 
-    assertThatThrownBy(() -> service.upload(file, "title", UUID.randomUUID()))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(file, "title", UUID.randomUUID()))
         .isInstanceOf(DocumentProcessingException.class);
   }
 
@@ -153,7 +153,7 @@ class DocumentServiceTest {
     MockMultipartFile file =
         new MockMultipartFile("file", "doc.pdf", "application/pdf", "not a pdf".getBytes());
 
-    assertThatThrownBy(() -> service.upload(file, "title", UUID.randomUUID()))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(file, "title", UUID.randomUUID()))
         .isInstanceOf(DocumentProcessingException.class);
   }
 
@@ -166,7 +166,7 @@ class DocumentServiceTest {
             "application/vnd.openxmlformats",
             new byte[] {0x50, 0x4B, 0x03, 0x04});
 
-    assertThatThrownBy(() -> service.upload(file, "title", UUID.randomUUID()))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(file, "title", UUID.randomUUID()))
         .isInstanceOf(DocumentProcessingException.class);
   }
 
@@ -189,7 +189,7 @@ class DocumentServiceTest {
     MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", PDF_BYTES);
     when(documentRepository.countByUploadedBy(uploadedBy)).thenReturn(1L);
 
-    assertThatThrownBy(() -> service.upload(file, "title", uploadedBy))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(file, "title", uploadedBy))
         .isInstanceOf(StorageQuotaExceededException.class);
   }
 
@@ -212,7 +212,7 @@ class DocumentServiceTest {
     MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", PDF_BYTES);
     when(documentRepository.sumSizeBytesByUploadedBy(uploadedBy)).thenReturn(2L);
 
-    assertThatThrownBy(() -> service.upload(file, "title", uploadedBy))
+    assertThatThrownBy(() -> service.uploadKnowledgeBaseDocument(file, "title", uploadedBy))
         .isInstanceOf(StorageQuotaExceededException.class);
   }
 
@@ -223,7 +223,8 @@ class DocumentServiceTest {
         new MockMultipartFile("file", "contract.pdf", "application/pdf", PDF_BYTES);
     when(documentRepository.save(any(Document.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    DocumentUploadResponse response = service.upload(file, "My Title", uploadedBy);
+    DocumentUploadResponse response =
+        service.uploadKnowledgeBaseDocument(file, "My Title", uploadedBy);
 
     ArgumentCaptor<Document> captor = ArgumentCaptor.forClass(Document.class);
     verify(documentRepository).save(captor.capture());
@@ -245,7 +246,7 @@ class DocumentServiceTest {
         new MockMultipartFile("file", "my-contract.pdf", "application/pdf", PDF_BYTES);
     when(documentRepository.save(any(Document.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    DocumentUploadResponse response = service.upload(file, "  ", uploadedBy);
+    DocumentUploadResponse response = service.uploadKnowledgeBaseDocument(file, "  ", uploadedBy);
 
     assertThat(response.title()).isEqualTo("my-contract");
   }
@@ -258,7 +259,8 @@ class DocumentServiceTest {
             "file", "contract.docx", "application/vnd.openxmlformats", docxBytes());
     when(documentRepository.save(any(Document.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    DocumentUploadResponse response = service.upload(file, "title", uploadedBy);
+    DocumentUploadResponse response =
+        service.uploadKnowledgeBaseDocument(file, "title", uploadedBy);
 
     assertThat(response.fileName()).isEqualTo("contract.docx");
   }

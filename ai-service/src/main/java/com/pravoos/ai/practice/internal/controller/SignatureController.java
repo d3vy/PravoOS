@@ -10,8 +10,8 @@ import com.pravoos.ai.practice.internal.service.CaseService;
 import com.pravoos.ai.practice.internal.service.SignatureService;
 import com.pravoos.ai.practice.internal.service.SignatureService.SignatureFileDownload;
 import com.pravoos.ai.shared.exception.InvalidSignatureFileException;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.util.ClientIpResolver;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -25,7 +25,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,24 +44,23 @@ public class SignatureController {
   public ResponseEntity<SignatureRequestResponse> create(
       @PathVariable UUID caseId,
       @Valid @RequestBody CreateSignatureRequestDto request,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(signatureService.create(caseId, request, lawyerId));
   }
 
   @GetMapping
   public ResponseEntity<List<SignatureRequestResponse>> list(
-      @PathVariable UUID caseId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
-    return ResponseEntity.ok(
-        signatureService.findByCase(caseId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+      @PathVariable UUID caseId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
+    return ResponseEntity.ok(signatureService.findByCase(caseId, lawyerId, caller.orgIds()));
   }
 
   @GetMapping("/{signatureId}/protocol")
   public ResponseEntity<Resource> exportProtocol(
-      @PathVariable UUID caseId, @PathVariable UUID signatureId, Authentication authentication) {
-    Case caseEntity = visibleCase(caseId, authentication);
+      @PathVariable UUID caseId, @PathVariable UUID signatureId, CallerContext caller) {
+    Case caseEntity = visibleCase(caseId, caller);
     byte[] protocol = signatureService.exportProtocol(caseEntity, signatureId);
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_PDF)
@@ -78,8 +76,8 @@ public class SignatureController {
 
   @GetMapping("/{signatureId}/signature-file")
   public ResponseEntity<Resource> downloadSignatureFile(
-      @PathVariable UUID caseId, @PathVariable UUID signatureId, Authentication authentication) {
-    Case caseEntity = visibleCase(caseId, authentication);
+      @PathVariable UUID caseId, @PathVariable UUID signatureId, CallerContext caller) {
+    Case caseEntity = visibleCase(caseId, caller);
     SignatureFileDownload download =
         signatureService.downloadSignatureFile(caseEntity, signatureId);
     return ResponseEntity.ok()
@@ -99,12 +97,12 @@ public class SignatureController {
       @PathVariable UUID caseId,
       @PathVariable UUID signatureId,
       @Valid @RequestBody SignDocumentRequest request,
-      Authentication authentication,
+      CallerContext caller,
       HttpServletRequest httpRequest) {
-    Case caseEntity = visibleCase(caseId, authentication);
+    Case caseEntity = visibleCase(caseId, caller);
     return ResponseEntity.ok(
         signatureService.signAsLawyer(
-            caseEntity, signatureId, request, signerContext(authentication, httpRequest)));
+            caseEntity, signatureId, request, signerContext(caller, httpRequest)));
   }
 
   @PostMapping("/{signatureId}/sign-cms")
@@ -112,16 +110,16 @@ public class SignatureController {
       @PathVariable UUID caseId,
       @PathVariable UUID signatureId,
       @RequestParam("file") MultipartFile file,
-      Authentication authentication,
+      CallerContext caller,
       HttpServletRequest httpRequest) {
-    Case caseEntity = visibleCase(caseId, authentication);
+    Case caseEntity = visibleCase(caseId, caller);
     return ResponseEntity.ok(
         signatureService.signWithCmsAsLawyer(
             caseEntity,
             signatureId,
             readBytes(file),
             file.getOriginalFilename(),
-            signerContext(authentication, httpRequest)));
+            signerContext(caller, httpRequest)));
   }
 
   @PostMapping("/{signatureId}/decline")
@@ -129,26 +127,23 @@ public class SignatureController {
       @PathVariable UUID caseId,
       @PathVariable UUID signatureId,
       @Valid @RequestBody DeclineSignatureRequest request,
-      Authentication authentication,
+      CallerContext caller,
       HttpServletRequest httpRequest) {
-    Case caseEntity = visibleCase(caseId, authentication);
+    Case caseEntity = visibleCase(caseId, caller);
     return ResponseEntity.ok(
         signatureService.declineAsLawyer(
-            caseEntity, signatureId, request.reason(), signerContext(authentication, httpRequest)));
+            caseEntity, signatureId, request.reason(), signerContext(caller, httpRequest)));
   }
 
   @PostMapping("/{signatureId}/cancel")
   public ResponseEntity<SignatureRequestResponse> cancel(
-      @PathVariable UUID caseId, @PathVariable UUID signatureId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @PathVariable UUID caseId, @PathVariable UUID signatureId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(signatureService.cancel(caseId, signatureId, lawyerId));
   }
 
-  private Case visibleCase(UUID caseId, Authentication authentication) {
-    return caseService.requireVisibleCase(
-        caseId,
-        SecurityUtils.currentUserId(authentication),
-        SecurityUtils.currentOrgIds(authentication));
+  private Case visibleCase(UUID caseId, CallerContext caller) {
+    return caseService.requireVisibleCase(caseId, caller.userId(), caller.orgIds());
   }
 
   private byte[] readBytes(MultipartFile file) {
@@ -159,10 +154,9 @@ public class SignatureController {
     }
   }
 
-  private SignerContext signerContext(
-      Authentication authentication, HttpServletRequest httpRequest) {
+  private SignerContext signerContext(CallerContext caller, HttpServletRequest httpRequest) {
     return new SignerContext(
-        SecurityUtils.currentUserId(authentication),
+        caller.userId(),
         ClientIpResolver.resolve(httpRequest),
         httpRequest.getHeader(HttpHeaders.USER_AGENT));
   }

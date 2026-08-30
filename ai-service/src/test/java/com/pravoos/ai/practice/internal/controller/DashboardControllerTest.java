@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pravoos.ai.practice.internal.dto.DashboardResponse;
 import com.pravoos.ai.practice.internal.service.DashboardService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +35,7 @@ class DashboardControllerTest {
     DashboardController controller = new DashboardController(dashboardService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     when(authentication.getPrincipal()).thenReturn(lawyerId.toString());

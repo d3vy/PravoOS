@@ -2,13 +2,11 @@ package com.pravoos.ai.practice.internal.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.pravoos.ai.practice.internal.model.entity.Case;
 import com.pravoos.ai.practice.internal.model.entity.Invoice;
 import com.pravoos.ai.practice.internal.model.entity.LawyerDigestSent;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
@@ -17,7 +15,6 @@ import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.LawyerDigestSentRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
 import com.pravoos.ai.shared.event.LawyerDigestKafkaPayload;
-import com.pravoos.ai.shared.model.enums.InvoiceStatus;
 import com.pravoos.ai.shared.service.OutboxEventService;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -62,17 +59,10 @@ class MorningDigestServiceTest {
   @Test
   void enqueuesDigest_whenLawyerHasUnpaidInvoices() {
     when(digestSentRepository.existsByLawyerIdAndDigestDate(lawyerId, today)).thenReturn(false);
-    when(caseTaskRepository.countDueTodayOrOverdueByLawyerId(
-            eq(lawyerId), anyCollection(), eq(today)))
-        .thenReturn(0L);
-    when(caseRepository.findCasesWithUpcomingDeadlines(eq(lawyerId), anyCollection(), any(), any()))
-        .thenReturn(List.of());
-    when(caseTaskRepository.findUpcomingByLawyerId(eq(lawyerId), anyCollection(), any(), any()))
-        .thenReturn(List.of());
-    when(invoiceRepository.findByLawyerIdAndStatusOrderByDueDateAsc(lawyerId, InvoiceStatus.ISSUED))
-        .thenReturn(List.of(invoice(new BigDecimal("1000.00")), invoice(new BigDecimal("500.50"))));
+    List<Invoice> unpaidInvoices =
+        List.of(invoice(new BigDecimal("1000.00")), invoice(new BigDecimal("500.50")));
 
-    boolean result = service.enqueueDigest(lawyerId, today);
+    boolean result = service.enqueueDigest(lawyerId, today, 0L, 0L, unpaidInvoices);
 
     assertThat(result).isTrue();
     ArgumentCaptor<LawyerDigestSent> sentCaptor = ArgumentCaptor.forClass(LawyerDigestSent.class);
@@ -96,7 +86,7 @@ class MorningDigestServiceTest {
   void doesNotEnqueueDigest_whenAlreadySentToday() {
     when(digestSentRepository.existsByLawyerIdAndDigestDate(lawyerId, today)).thenReturn(true);
 
-    boolean result = service.enqueueDigest(lawyerId, today);
+    boolean result = service.enqueueDigest(lawyerId, today, 0L, 0L, List.of());
 
     assertThat(result).isFalse();
     verify(digestSentRepository, never()).save(any());
@@ -106,17 +96,8 @@ class MorningDigestServiceTest {
   @Test
   void doesNotEnqueueDigest_whenNothingToReport() {
     when(digestSentRepository.existsByLawyerIdAndDigestDate(lawyerId, today)).thenReturn(false);
-    when(caseTaskRepository.countDueTodayOrOverdueByLawyerId(
-            eq(lawyerId), anyCollection(), eq(today)))
-        .thenReturn(0L);
-    when(caseRepository.findCasesWithUpcomingDeadlines(eq(lawyerId), anyCollection(), any(), any()))
-        .thenReturn(List.of());
-    when(caseTaskRepository.findUpcomingByLawyerId(eq(lawyerId), anyCollection(), any(), any()))
-        .thenReturn(List.of());
-    when(invoiceRepository.findByLawyerIdAndStatusOrderByDueDateAsc(lawyerId, InvoiceStatus.ISSUED))
-        .thenReturn(List.of());
 
-    boolean result = service.enqueueDigest(lawyerId, today);
+    boolean result = service.enqueueDigest(lawyerId, today, 0L, 0L, List.of());
 
     assertThat(result).isFalse();
     verify(digestSentRepository, never()).save(any());
@@ -124,22 +105,10 @@ class MorningDigestServiceTest {
   }
 
   @Test
-  void countsUpcomingDeadlines_withinHorizon() {
+  void passesThroughUpcomingDeadlinesCount() {
     when(digestSentRepository.existsByLawyerIdAndDigestDate(lawyerId, today)).thenReturn(false);
-    when(caseTaskRepository.countDueTodayOrOverdueByLawyerId(
-            eq(lawyerId), anyCollection(), eq(today)))
-        .thenReturn(0L);
-    Case caseWithDeadlines = caseEntity();
-    caseWithDeadlines.setFilingDeadline(today.plusDays(2));
-    caseWithDeadlines.setNextHearingDate(today.plusDays(9));
-    when(caseRepository.findCasesWithUpcomingDeadlines(eq(lawyerId), anyCollection(), any(), any()))
-        .thenReturn(List.of(caseWithDeadlines));
-    when(caseTaskRepository.findUpcomingByLawyerId(eq(lawyerId), anyCollection(), any(), any()))
-        .thenReturn(List.of());
-    when(invoiceRepository.findByLawyerIdAndStatusOrderByDueDateAsc(lawyerId, InvoiceStatus.ISSUED))
-        .thenReturn(List.of());
 
-    service.enqueueDigest(lawyerId, today);
+    service.enqueueDigest(lawyerId, today, 0L, 1L, List.of());
 
     ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     verify(outboxEventService).enqueue(any(), any(), payloadCaptor.capture());
@@ -153,13 +122,6 @@ class MorningDigestServiceTest {
     invoice.setLawyerId(lawyerId);
     invoice.setTotal(total);
     return invoice;
-  }
-
-  private Case caseEntity() {
-    Case caseEntity = new Case();
-    setField(caseEntity, "id", UUID.randomUUID());
-    caseEntity.setLawyerId(lawyerId);
-    return caseEntity;
   }
 
   private void setField(Object target, String name, Object value) {

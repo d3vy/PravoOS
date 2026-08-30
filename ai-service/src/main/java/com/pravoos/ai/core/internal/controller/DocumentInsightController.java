@@ -2,10 +2,9 @@ package com.pravoos.ai.core.internal.controller;
 
 import com.pravoos.ai.core.internal.dto.DocumentInsightResponse;
 import com.pravoos.ai.core.internal.service.DocumentInsightService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.shared.security.CallerContext;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,21 +23,15 @@ public class DocumentInsightController {
 
   @GetMapping("/{documentId}")
   public ResponseEntity<DocumentInsightResponse> summary(
-      @PathVariable UUID documentId, Authentication authentication) {
+      @PathVariable UUID documentId, CallerContext caller) {
     return ResponseEntity.ok(
-        documentInsightService.summary(
-            documentId,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+        documentInsightService.summary(documentId, caller.userId(), caller.orgIds()));
   }
 
   @PostMapping("/{documentId}/regenerate")
   public ResponseEntity<DocumentInsightResponse> regenerate(
-      @PathVariable UUID documentId, Authentication authentication) {
+      @PathVariable UUID documentId, CallerContext caller) {
     return ResponseEntity.ok(
-        documentInsightService.regenerate(
-            documentId,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+        documentInsightService.regenerate(documentId, caller.userId(), caller.orgIds()));
   }
 }

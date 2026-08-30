@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.pravoos.ai.shared.model.entity.OutboxEvent;
 import com.pravoos.ai.shared.repository.jpa.OutboxEventRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +32,9 @@ class OutboxPublisherTest {
 
   @BeforeEach
   void setUp() {
-    publisher = new OutboxPublisher(outboxEventRepository, stringKafkaTemplate, MAX_ATTEMPTS);
+    publisher =
+        new OutboxPublisher(
+            outboxEventRepository, stringKafkaTemplate, new SimpleMeterRegistry(), MAX_ATTEMPTS);
   }
 
   @Test

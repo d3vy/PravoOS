@@ -1,6 +1,5 @@
-package com.pravoos.ai.core.internal.service;
+package com.pravoos.ai.core.api;
 
-import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentSummaryView;
 import com.pravoos.ai.shared.exception.DocumentNotFoundException;

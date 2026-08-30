@@ -26,6 +26,7 @@ public class CaseMessageService {
   private static final Logger log = LoggerFactory.getLogger(CaseMessageService.class);
   private static final String TOPIC = "case.message.created";
   private static final int PREVIEW_MAX_LENGTH = 140;
+  private static final int MAX_THREAD_MESSAGES = 2000;
 
   private final CaseMessageRepository caseMessageRepository;
   private final CaseThreadReadRepository caseThreadReadRepository;
@@ -107,9 +108,15 @@ public class CaseMessageService {
   }
 
   private List<CaseMessageResponse> toResponses(UUID caseId) {
-    return caseMessageRepository.findByCaseIdOrderByCreatedAtAsc(caseId).stream()
-        .map(CaseMessageResponse::from)
-        .toList();
+    List<CaseMessage> latestFirst =
+        caseMessageRepository.findTop2000ByCaseIdOrderByCreatedAtDesc(caseId);
+    if (latestFirst.size() == MAX_THREAD_MESSAGES) {
+      log.warn(
+          "Case {} thread exceeds {} messages; oldest messages truncated from the response",
+          caseId,
+          MAX_THREAD_MESSAGES);
+    }
+    return latestFirst.reversed().stream().map(CaseMessageResponse::from).toList();
   }
 
   private CaseMessage save(

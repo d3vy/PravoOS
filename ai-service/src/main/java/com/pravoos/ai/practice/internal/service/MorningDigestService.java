@@ -5,6 +5,8 @@ import com.pravoos.ai.practice.internal.model.entity.Invoice;
 import com.pravoos.ai.practice.internal.model.entity.LawyerDigestSent;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository;
+import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository.LawyerCountView;
+import com.pravoos.ai.practice.internal.repository.jpa.CaseTaskRepository.LawyerUpcomingTaskView;
 import com.pravoos.ai.practice.internal.repository.jpa.InvoiceRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.LawyerDigestSentRepository;
 import com.pravoos.ai.shared.client.UserServiceClient;
@@ -19,12 +21,18 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +43,7 @@ public class MorningDigestService {
   private static final Logger log = LoggerFactory.getLogger(MorningDigestService.class);
   private static final String TOPIC = "lawyer.digest.morning";
   private static final int DEADLINE_HORIZON_DAYS = 7;
+  private static final int PAGE_SIZE = 500;
   private static final DecimalFormat TOTAL_FORMATTER = new DecimalFormat("#,##0.00");
 
   private final CaseRepository caseRepository;
@@ -78,10 +87,59 @@ public class MorningDigestService {
 
     List<UUID> digestEnabledLawyerIds =
         userServiceClient.filterDigestEnabledLawyerIds(candidateLawyerIds);
+    if (digestEnabledLawyerIds.isEmpty()) {
+      log.info("Morning digest scan finished, no digest-enabled lawyers found");
+      return;
+    }
+
+    Set<UUID> alreadySent =
+        Set.copyOf(
+            digestSentRepository.findLawyerIdByDigestDateAndLawyerIdIn(
+                today, digestEnabledLawyerIds));
+    List<UUID> pendingLawyerIds =
+        digestEnabledLawyerIds.stream().filter(id -> !alreadySent.contains(id)).toList();
+    if (pendingLawyerIds.isEmpty()) {
+      log.info("Morning digest scan finished, digests already sent for all candidates");
+      return;
+    }
+
+    LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
+    Map<UUID, Long> tasksTodayCounts =
+        caseTaskRepository
+            .countDueTodayOrOverdueByLawyerIdIn(pendingLawyerIds, CaseStatus.CLOSED, today)
+            .stream()
+            .collect(Collectors.toMap(LawyerCountView::getLawyerId, LawyerCountView::getCount));
+    Map<UUID, List<Case>> upcomingCasesByLawyer =
+        caseRepository
+            .findCasesWithUpcomingDeadlinesForLawyerIdIn(
+                pendingLawyerIds, CaseStatus.CLOSED, today, horizon)
+            .stream()
+            .collect(Collectors.groupingBy(Case::getLawyerId));
+    Map<UUID, Long> upcomingTaskCounts =
+        caseTaskRepository
+            .findUpcomingByLawyerIdIn(pendingLawyerIds, CaseStatus.CLOSED, today, horizon)
+            .stream()
+            .collect(
+                Collectors.groupingBy(LawyerUpcomingTaskView::getLawyerId, Collectors.counting()));
+    Map<UUID, List<Invoice>> unpaidInvoicesByLawyer =
+        invoiceRepository
+            .findByLawyerIdInAndStatusOrderByDueDateAsc(pendingLawyerIds, InvoiceStatus.ISSUED)
+            .stream()
+            .collect(Collectors.groupingBy(Invoice::getLawyerId));
+
     int published = 0;
-    for (UUID lawyerId : digestEnabledLawyerIds) {
+    for (UUID lawyerId : pendingLawyerIds) {
       try {
-        if (self.enqueueDigest(lawyerId, today)) {
+        long tasksTodayCount = tasksTodayCounts.getOrDefault(lawyerId, 0L);
+        long upcomingDeadlinesCount =
+            countUpcomingDeadlines(
+                upcomingCasesByLawyer.getOrDefault(lawyerId, List.of()),
+                upcomingTaskCounts.getOrDefault(lawyerId, 0L),
+                today,
+                horizon);
+        List<Invoice> unpaidInvoices = unpaidInvoicesByLawyer.getOrDefault(lawyerId, List.of());
+        if (self.enqueueDigest(
+            lawyerId, today, tasksTodayCount, upcomingDeadlinesCount, unpaidInvoices)) {
           published++;
         }
       } catch (Exception e) {
@@ -95,28 +153,43 @@ public class MorningDigestService {
   private List<UUID> collectCandidateLawyerIds(LocalDate today) {
     LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
     Set<UUID> lawyerIds = new LinkedHashSet<>();
-    lawyerIds.addAll(
-        caseTaskRepository.findDistinctLawyerIdsWithTasksDueTodayOrOverdue(
-            CaseStatus.CLOSED, today));
-    lawyerIds.addAll(
-        caseRepository.findDistinctLawyerIdsWithUpcomingDeadlines(
-            CaseStatus.CLOSED, today, horizon));
-    lawyerIds.addAll(invoiceRepository.findDistinctLawyerIdsByStatus(InvoiceStatus.ISSUED));
+    collectAllPages(
+        pageable ->
+            caseTaskRepository.findDistinctLawyerIdsWithTasksDueTodayOrOverdue(
+                CaseStatus.CLOSED, today, pageable),
+        lawyerIds);
+    collectAllPages(
+        pageable ->
+            caseRepository.findDistinctLawyerIdsWithUpcomingDeadlines(
+                CaseStatus.CLOSED, today, horizon, pageable),
+        lawyerIds);
+    collectAllPages(
+        pageable -> invoiceRepository.findDistinctLawyerIdsByStatus(InvoiceStatus.ISSUED, pageable),
+        lawyerIds);
     return List.copyOf(lawyerIds);
   }
 
+  private void collectAllPages(Function<Pageable, Page<UUID>> pageFetcher, Set<UUID> target) {
+    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+    Page<UUID> page;
+    do {
+      page = pageFetcher.apply(pageable);
+      target.addAll(page.getContent());
+      pageable = pageable.next();
+    } while (page.hasNext());
+  }
+
   @Transactional
-  public boolean enqueueDigest(UUID lawyerId, LocalDate today) {
+  public boolean enqueueDigest(
+      UUID lawyerId,
+      LocalDate today,
+      long tasksTodayCount,
+      long upcomingDeadlinesCount,
+      List<Invoice> unpaidInvoices) {
     if (digestSentRepository.existsByLawyerIdAndDigestDate(lawyerId, today)) {
       return false;
     }
 
-    LocalDate horizon = today.plusDays(DEADLINE_HORIZON_DAYS);
-    long tasksTodayCount =
-        caseTaskRepository.countDueTodayOrOverdueByLawyerId(lawyerId, CaseStatus.CLOSED, today);
-    long upcomingDeadlinesCount = countUpcomingDeadlines(lawyerId, today, horizon);
-    List<Invoice> unpaidInvoices =
-        invoiceRepository.findByLawyerIdAndStatusOrderByDueDateAsc(lawyerId, InvoiceStatus.ISSUED);
     BigDecimal unpaidTotal =
         unpaidInvoices.stream().map(Invoice::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -145,20 +218,15 @@ public class MorningDigestService {
     return true;
   }
 
-  private long countUpcomingDeadlines(UUID lawyerId, LocalDate today, LocalDate horizon) {
+  private long countUpcomingDeadlines(
+      List<Case> upcomingCases, long upcomingTaskCount, LocalDate today, LocalDate horizon) {
     long count = 0;
-    for (Case caseEntity :
-        caseRepository.findCasesWithUpcomingDeadlines(
-            lawyerId, CaseStatus.CLOSED, today, horizon)) {
+    for (Case caseEntity : upcomingCases) {
       count += isWithinHorizon(caseEntity.getFilingDeadline(), today, horizon) ? 1 : 0;
       count += isWithinHorizon(caseEntity.getNextHearingDate(), today, horizon) ? 1 : 0;
       count += isWithinHorizon(caseEntity.getExpiresAt(), today, horizon) ? 1 : 0;
     }
-    count +=
-        caseTaskRepository
-            .findUpcomingByLawyerId(lawyerId, CaseStatus.CLOSED, today, horizon)
-            .size();
-    return count;
+    return count + upcomingTaskCount;
   }
 
   private boolean isWithinHorizon(LocalDate date, LocalDate today, LocalDate horizon) {

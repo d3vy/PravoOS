@@ -85,7 +85,12 @@ public class CaseAnalyticsService {
 
     LegalAiAnswer answer =
         legalAiPort.analyzeCase(
-            caseId, inputs.caseContext(), inputs.timelineText(), inputs.statisticsText(), lawyerId);
+            caseId,
+            inputs.caseContext(),
+            inputs.timelineText(),
+            inputs.statisticsText(),
+            lawyerId,
+            orgIds);
 
     CaseAnalysis saved;
     try {

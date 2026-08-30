@@ -2,6 +2,7 @@ package com.pravoos.ai.document.internal.search;
 
 import com.pravoos.ai.document.internal.service.EmbeddingService;
 import com.pravoos.ai.shared.config.HybridSearchProperties;
+import com.pravoos.ai.shared.util.Futures;
 import jakarta.persistence.PersistenceException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -61,7 +62,7 @@ public class HybridSearchService {
             () -> lexicalCandidates(query, candidateLimit, scope), searchExecutor);
     List<ChunkCandidate> vectorCandidates =
         vectorSearchRepository.search(queryEmbedding, candidateLimit, scope);
-    List<ChunkCandidate> lexicalCandidates = pendingLexicalCandidates.join();
+    List<ChunkCandidate> lexicalCandidates = Futures.join(pendingLexicalCandidates);
 
     List<ChunkCandidate> fused =
         ReciprocalRankFusion.fuse(

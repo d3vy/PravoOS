@@ -15,6 +15,7 @@ import com.pravoos.ai.core.api.AiActorRole;
 import com.pravoos.ai.core.api.CaseAccessProvider;
 import com.pravoos.ai.core.api.CaseContext;
 import com.pravoos.ai.core.api.CaseContextProvider;
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.api.PageContextResolver;
 import com.pravoos.ai.core.api.PageContextScope;
 import com.pravoos.ai.core.internal.agent.AgentLoop;
@@ -116,7 +117,7 @@ class ChatPageContextTest {
     when(messageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     when(documentRetrieval.retrieveKnowledgeBase(anyString(), anyInt()))
         .thenReturn(RetrievedChunks.empty());
-    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), any()))
+    when(documentRetrieval.retrieveForCase(anyString(), anyInt(), any(), any()))
         .thenReturn(RetrievedChunks.empty());
     when(caseContextProvider.loadContext(any(), any(), anyList()))
         .thenReturn(new CaseContext("Карточка дела", "Хронология", "Задачи"));
@@ -148,7 +149,7 @@ class ChatPageContextTest {
     service.chat(requestWithPageContext("CASE", caseId), lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(caseAccessProvider).assertCaseVisible(caseId, lawyerId, orgIds);
-    verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId));
+    verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId), any());
     verify(ragService, never()).buildSystemPrompt(anyList(), any(Boolean.class), anyString());
   }
 
@@ -227,13 +228,13 @@ class ChatPageContextTest {
             List.of(),
             null);
     when(documentAccessGuard.requireVisible(documentId, lawyerId, orgIds)).thenReturn(document);
-    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId)))
+    when(documentRetrieval.retrieveInDocument(anyList(), anyInt(), eq(documentId), any()))
         .thenReturn(DocumentChunkMatches.empty());
 
     service.chat(
         requestWithPageContext("DOCUMENT", documentId), lawyerId, orgIds, AiActorRole.LAWYER);
 
-    verify(documentRetrieval).retrieveInDocument(anyList(), anyInt(), eq(documentId));
+    verify(documentRetrieval).retrieveInDocument(anyList(), anyInt(), eq(documentId), any());
   }
 
   @Test
@@ -250,7 +251,7 @@ class ChatPageContextTest {
     service.chat(request, lawyerId, orgIds, AiActorRole.LAWYER);
 
     verify(pageContextResolver, never()).resolve(anyString(), any(), any(), anyList());
-    verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId));
+    verify(documentRetrieval).retrieveForCase(anyString(), anyInt(), eq(caseId), any());
   }
 
   @Test
@@ -261,7 +262,7 @@ class ChatPageContextTest {
 
     service.chat(requestWithPageContext("CLIENT", clientId), lawyerId, orgIds, AiActorRole.LAWYER);
 
-    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any());
+    verify(documentRetrieval, never()).retrieveForCase(anyString(), anyInt(), any(), any());
     ArgumentCaptor<String> pageContextLine = ArgumentCaptor.forClass(String.class);
     verify(ragService).buildSystemPrompt(anyList(), any(Boolean.class), pageContextLine.capture());
     assertThat(pageContextLine.getValue()).contains("ООО Ромашка");

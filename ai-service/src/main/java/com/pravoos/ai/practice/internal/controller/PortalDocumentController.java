@@ -5,9 +5,9 @@ import com.pravoos.ai.document.api.DocumentResponse;
 import com.pravoos.ai.document.api.DocumentUploadResponse;
 import com.pravoos.ai.practice.internal.service.PortalDocumentService;
 import com.pravoos.ai.shared.model.enums.AuditAction;
+import com.pravoos.ai.shared.security.CallerContext;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.ai.shared.util.SecureFileHeaders;
-import com.pravoos.common.web.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -33,10 +33,8 @@ public class PortalDocumentController {
 
   @GetMapping
   public ResponseEntity<List<DocumentResponse>> list(
-      @PathVariable UUID caseId, Authentication authentication) {
-    return ResponseEntity.ok(
-        portalDocumentService.listCaseDocuments(
-            caseId, SecurityUtils.currentClientIds(authentication)));
+      @PathVariable UUID caseId, CallerContext caller) {
+    return ResponseEntity.ok(portalDocumentService.listCaseDocuments(caseId, caller.clientIds()));
   }
 
   @PostMapping
@@ -44,23 +42,23 @@ public class PortalDocumentController {
       @PathVariable UUID caseId,
       @RequestParam("file") MultipartFile file,
       @RequestParam(value = "title", required = false) String title,
-      Authentication authentication) {
-    UUID clientUserId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID clientUserId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(
             portalDocumentService.uploadCaseDocument(
-                caseId, file, title, clientUserId, SecurityUtils.currentClientIds(authentication)));
+                caseId, file, title, clientUserId, caller.clientIds()));
   }
 
   @GetMapping("/{documentId}/content")
   public ResponseEntity<Resource> content(
       @PathVariable UUID caseId,
       @PathVariable UUID documentId,
+      CallerContext caller,
       Authentication authentication,
       HttpServletRequest request) {
     DocumentContent document =
-        portalDocumentService.downloadCaseDocument(
-            caseId, documentId, SecurityUtils.currentClientIds(authentication));
+        portalDocumentService.downloadCaseDocument(caseId, documentId, caller.clientIds());
     accessAuditService.record(authentication, AuditAction.DOCUMENT_DOWNLOAD, documentId, request);
 
     boolean inline = !"docx".equals(document.fileType());

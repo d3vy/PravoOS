@@ -60,7 +60,7 @@ class InvoiceOverdueReminderServiceTest {
     when(reminderRepository.existsByInvoiceIdAndThresholdDays(invoice.getId(), 3))
         .thenReturn(false);
 
-    boolean result = service.enqueueReminder(invoice, 3);
+    boolean result = service.enqueueReminder(invoice, 3, "ООО Ромашка");
 
     assertThat(result).isTrue();
     ArgumentCaptor<InvoiceOverdueReminder> reminderCaptor =
@@ -84,7 +84,7 @@ class InvoiceOverdueReminderServiceTest {
     Invoice invoice = invoice();
     when(reminderRepository.existsByInvoiceIdAndThresholdDays(invoice.getId(), 7)).thenReturn(true);
 
-    boolean result = service.enqueueReminder(invoice, 7);
+    boolean result = service.enqueueReminder(invoice, 7, "ООО Ромашка");
 
     assertThat(result).isFalse();
     verify(reminderRepository, never()).save(any());

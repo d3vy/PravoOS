@@ -2,9 +2,8 @@ package com.pravoos.ai.practice.internal.controller;
 
 import com.pravoos.ai.practice.internal.dto.TimeEntryResponse;
 import com.pravoos.ai.practice.internal.service.TimeEntryService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.shared.security.CallerContext;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,9 +19,9 @@ public class TimeTrackerController {
   }
 
   @GetMapping("/active")
-  public ResponseEntity<TimeEntryResponse> activeTimer(Authentication authentication) {
+  public ResponseEntity<TimeEntryResponse> activeTimer(CallerContext caller) {
     return timeEntryService
-        .activeTimer(SecurityUtils.currentUserId(authentication))
+        .activeTimer(caller.userId())
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.noContent().build());
   }

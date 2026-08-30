@@ -1,14 +1,17 @@
 package com.pravoos.ai.shared.service;
 
 import com.pravoos.ai.shared.exception.LlmQuotaExceededException;
+import com.pravoos.ai.shared.security.CurrentTenantProvider;
 import com.pravoos.ai.shared.security.PlanLimitsProvider;
 import com.pravoos.common.web.PlanLimits;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -19,14 +22,24 @@ public class LlmQuotaService {
   private static final Logger log = LoggerFactory.getLogger(LlmQuotaService.class);
   private static final String REQUEST_KEY_PREFIX = "llm_quota:";
   private static final String TOKEN_KEY_PREFIX = "llm_tokens:";
+  private static final String ORG_REQUEST_KEY_PREFIX = "llm_quota_org:";
+  private static final String ORG_TOKEN_KEY_PREFIX = "llm_tokens_org:";
   private static final Duration WINDOW = Duration.ofDays(1);
 
   private final StringRedisTemplate redisTemplate;
   private final PlanLimitsProvider planLimitsProvider;
+  private final CurrentTenantProvider currentTenantProvider;
+  private final int orgQuotaMultiplier;
 
-  public LlmQuotaService(StringRedisTemplate redisTemplate, PlanLimitsProvider planLimitsProvider) {
+  public LlmQuotaService(
+      StringRedisTemplate redisTemplate,
+      PlanLimitsProvider planLimitsProvider,
+      CurrentTenantProvider currentTenantProvider,
+      @Value("${llm.quota.org-multiplier:10}") int orgQuotaMultiplier) {
     this.redisTemplate = redisTemplate;
     this.planLimitsProvider = planLimitsProvider;
+    this.currentTenantProvider = currentTenantProvider;
+    this.orgQuotaMultiplier = Math.max(orgQuotaMultiplier, 0);
   }
 
   public void assertWithinQuota(UUID lawyerId) {
@@ -59,6 +72,7 @@ public class LlmQuotaService {
           throw new LlmQuotaExceededException();
         }
       }
+      assertWithinOrgQuota(limits, 0);
     } catch (DataAccessException ex) {
       log.warn("Redis unavailable during LLM quota check, allowing", ex);
     }
@@ -86,6 +100,7 @@ public class LlmQuotaService {
             limits.dailyRequests());
         throw new LlmQuotaExceededException();
       }
+      assertWithinOrgQuota(limits, requestedCalls);
     } catch (DataAccessException ex) {
       log.warn("Redis unavailable during LLM quota headroom check, allowing", ex);
     }
@@ -100,10 +115,14 @@ public class LlmQuotaService {
     if (planLimitsProvider.currentLimits().quotaDisabled()) {
       return;
     }
+    Optional<UUID> orgId = quotaScopedOrgId();
     try {
-      incrementWithTtl(requestKey(lawyerId), Math.max(1L, requestCount));
+      long requests = Math.max(1L, requestCount);
+      incrementWithTtl(requestKey(lawyerId), requests);
+      orgId.ifPresent(org -> incrementWithTtl(orgRequestKey(org), requests));
       if (totalTokens > 0) {
         incrementWithTtl(tokenKey(lawyerId), totalTokens);
+        orgId.ifPresent(org -> incrementWithTtl(orgTokenKey(org), totalTokens));
       }
     } catch (DataAccessException ex) {
       log.warn("Redis unavailable during LLM usage recording for lawyer {}", lawyerId, ex);
@@ -117,9 +136,49 @@ public class LlmQuotaService {
     }
     try {
       incrementWithTtl(tokenKey(lawyerId), totalTokens);
+      quotaScopedOrgId().ifPresent(org -> incrementWithTtl(orgTokenKey(org), totalTokens));
     } catch (DataAccessException ex) {
       log.warn("Redis unavailable during embedding token accounting for lawyer {}", lawyerId, ex);
     }
+  }
+
+  private void assertWithinOrgQuota(PlanLimits limits, int requestedCalls) {
+    Optional<UUID> scopedOrgId = quotaScopedOrgId();
+    if (scopedOrgId.isEmpty()) {
+      return;
+    }
+    UUID orgId = scopedOrgId.get();
+    long requestLimit = (long) limits.dailyRequests() * orgQuotaMultiplier;
+    if (requestLimit > 0) {
+      long requests = readCounter(orgRequestKey(orgId));
+      if (requests + Math.max(requestedCalls, 0) >= requestLimit) {
+        log.warn(
+            "LLM daily request quota exceeded for org {} on plan {} ({}+{}/{})",
+            orgId,
+            limits.code(),
+            requests,
+            requestedCalls,
+            requestLimit);
+        throw new LlmQuotaExceededException(LlmQuotaExceededException.Scope.ORG);
+      }
+    }
+    long tokenLimit = limits.dailyTokens() * orgQuotaMultiplier;
+    if (tokenLimit > 0) {
+      long tokens = readCounter(orgTokenKey(orgId));
+      if (tokens >= tokenLimit) {
+        log.warn(
+            "LLM daily token budget exceeded for org {} on plan {} ({}/{})",
+            orgId,
+            limits.code(),
+            tokens,
+            tokenLimit);
+        throw new LlmQuotaExceededException(LlmQuotaExceededException.Scope.ORG);
+      }
+    }
+  }
+
+  private Optional<UUID> quotaScopedOrgId() {
+    return orgQuotaMultiplier == 0 ? Optional.empty() : currentTenantProvider.currentOrgId();
   }
 
   private void incrementWithTtl(String key, long delta) {
@@ -142,10 +201,22 @@ public class LlmQuotaService {
   }
 
   private String requestKey(UUID lawyerId) {
-    return REQUEST_KEY_PREFIX + lawyerId + ":" + LocalDate.now(ZoneOffset.UTC);
+    return REQUEST_KEY_PREFIX + lawyerId + ":" + today();
   }
 
   private String tokenKey(UUID lawyerId) {
-    return TOKEN_KEY_PREFIX + lawyerId + ":" + LocalDate.now(ZoneOffset.UTC);
+    return TOKEN_KEY_PREFIX + lawyerId + ":" + today();
+  }
+
+  private String orgRequestKey(UUID orgId) {
+    return ORG_REQUEST_KEY_PREFIX + orgId + ":" + today();
+  }
+
+  private String orgTokenKey(UUID orgId) {
+    return ORG_TOKEN_KEY_PREFIX + orgId + ":" + today();
+  }
+
+  private LocalDate today() {
+    return LocalDate.now(ZoneOffset.UTC);
   }
 }

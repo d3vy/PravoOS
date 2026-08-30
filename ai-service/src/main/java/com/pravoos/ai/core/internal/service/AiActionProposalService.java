@@ -35,6 +35,7 @@ public class AiActionProposalService implements AiActionProposals {
   private static final Logger log = LoggerFactory.getLogger(AiActionProposalService.class);
   private static final Duration RATE_LIMIT_WINDOW = Duration.ofHours(1);
   private static final String TOOL_UNAVAILABLE = "Инструмент больше недоступен.";
+  private static final String TOOL_FAILED = "Действие не выполнено — внутренняя ошибка.";
   private static final String CONVERSATION_REQUIRED =
       "Подтверждаемое действие должно принадлежать диалогу";
 
@@ -122,10 +123,7 @@ public class AiActionProposalService implements AiActionProposals {
       trust(proposal.getToolName(), context);
     }
 
-    AiToolContext executionContext =
-        new AiToolContext(
-            context.userId(), context.orgIds(), context.role(), proposal.getConversationId());
-    AiToolResult outcome = perform(proposal, executionContext);
+    AiToolResult outcome = perform(proposal, executionContextFor(proposal, context));
 
     if (outcome.ok()) {
       proposalStore.recordSuccess(proposalId, outcome.content());
@@ -200,6 +198,15 @@ public class AiActionProposalService implements AiActionProposals {
     return expired;
   }
 
+  private AiToolContext executionContextFor(AiActionProposal proposal, AiToolContext context) {
+    List<UUID> executionOrgIds =
+        proposal.getOrgId() != null && context.orgIds().contains(proposal.getOrgId())
+            ? List.of(proposal.getOrgId())
+            : context.orgIds();
+    return new AiToolContext(
+        context.userId(), executionOrgIds, context.role(), proposal.getConversationId());
+  }
+
   private AiToolResult perform(AiActionProposal proposal, AiToolContext context) {
     Optional<AiWriteTool> tool = writeTool(proposal.getToolName(), context);
     if (tool.isEmpty()) {
@@ -215,7 +222,7 @@ public class AiActionProposalService implements AiActionProposals {
     } catch (RuntimeException ex) {
       log.warn(
           "Approved proposal {} failed in tool '{}'", proposal.getId(), proposal.getToolName(), ex);
-      return AiToolResult.error(ex.getMessage() == null ? TOOL_UNAVAILABLE : ex.getMessage());
+      return AiToolResult.error(TOOL_FAILED);
     }
   }
 

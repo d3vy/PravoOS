@@ -7,6 +7,7 @@ import com.pravoos.ai.core.internal.model.entity.TabularReviewCell;
 import com.pravoos.ai.document.api.DocumentChunkMatch;
 import com.pravoos.ai.document.api.DocumentChunkMatches;
 import com.pravoos.ai.document.api.DocumentRetrieval;
+import com.pravoos.ai.document.api.SearchActor;
 import com.pravoos.ai.llm.api.LlmClient;
 import com.pravoos.ai.llm.api.LlmResult;
 import com.pravoos.ai.shared.config.TabularReviewProperties;
@@ -59,12 +60,17 @@ public class TabularReviewDocumentProcessor {
   }
 
   public boolean process(
-      UUID reviewId, UUID documentId, String documentTitle, List<String> questions, UUID lawyerId) {
+      UUID reviewId,
+      UUID documentId,
+      String documentTitle,
+      List<String> questions,
+      UUID lawyerId,
+      SearchActor actor) {
     try {
       llmQuotaService.assertWithinQuota(lawyerId);
       reviewWriter.markDocumentRunning(reviewId, documentId);
 
-      List<Fragment> fragments = retrieveFragments(documentId, questions, lawyerId);
+      List<Fragment> fragments = retrieveFragments(documentId, questions, lawyerId, actor);
       List<TabularReviewCell> cells =
           fragments.isEmpty()
               ? emptyCells(reviewId, documentId, questions)
@@ -79,9 +85,11 @@ public class TabularReviewDocumentProcessor {
     }
   }
 
-  private List<Fragment> retrieveFragments(UUID documentId, List<String> questions, UUID lawyerId) {
+  private List<Fragment> retrieveFragments(
+      UUID documentId, List<String> questions, UUID lawyerId, SearchActor actor) {
     DocumentChunkMatches retrieved =
-        documentRetrieval.retrieveInDocument(questions, properties.topKPerQuestion(), documentId);
+        documentRetrieval.retrieveInDocument(
+            questions, properties.topKPerQuestion(), documentId, actor);
     llmQuotaService.recordTokenUsage(lawyerId, retrieved.totalTokens());
 
     List<Fragment> fragments = new ArrayList<>();

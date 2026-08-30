@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.pravoos.ai.core.api.DocumentAccessGuard;
 import com.pravoos.ai.core.internal.dto.DocumentInsightResponse;
 import com.pravoos.ai.document.api.DocumentAccess;
 import com.pravoos.ai.document.api.DocumentSummaryView;

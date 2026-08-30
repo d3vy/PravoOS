@@ -19,6 +19,7 @@ import com.pravoos.ai.shared.exception.CaseNotFoundException;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.model.enums.AuditAction;
 import com.pravoos.ai.shared.model.enums.DocumentStatus;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import com.pravoos.ai.shared.service.AccessAuditService;
 import com.pravoos.common.web.OrgContext;
 import java.time.LocalDateTime;
@@ -53,6 +54,7 @@ class PortalDocumentControllerTest {
         new PortalDocumentController(portalDocumentService, accessAuditService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }
