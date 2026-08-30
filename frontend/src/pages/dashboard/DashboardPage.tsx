@@ -6,6 +6,7 @@ import { dashboardApi } from '../../api/dashboard'
 import { useAiChatStore } from '../../store/aiChatStore'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { QueryState } from '../../components/ui/QueryState'
 import { useDensity } from '../../hooks/useDensity'
 import type { DashboardResponse } from '../../types'
 import type { TFunction } from 'i18next'
@@ -52,11 +53,7 @@ export default function DashboardPage(): JSX.Element {
 
         {isLoading && <DashboardSkeleton />}
 
-        {isError && (
-          <div className="card-elevated p-6 text-fg-muted">
-            {t('dashboard.loadError')}
-          </div>
-        )}
+        <QueryState isError={isError} errorMessage={t('dashboard.loadError')} />
 
         {data && <DashboardContent data={data} density={density} />}
 

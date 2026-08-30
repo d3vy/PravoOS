@@ -9,6 +9,7 @@ import type { DocumentResponse, LegislationResponse } from '../../types'
 import { DocumentStatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
@@ -252,9 +253,7 @@ export default function DocumentsPage(): JSX.Element {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner size="lg" />
-          </div>
+          <QueryState isLoading spinnerSize="lg" />
         ) : (
           <>
             <div className="flex justify-end mb-3">

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { casesApi } from '../../api/cases'
 import type { CaseThreadResponse } from '../../types'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import i18n from '../../i18n'
 import { PageHeader } from '../../components/ui/PageHeader'
 
@@ -35,9 +35,7 @@ export default function MessagesPage(): JSX.Element {
         <PageHeader title={t('messages.title')} description={t('messages.subtitle')} />
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner />
-          </div>
+          <QueryState isLoading />
         ) : threads.length === 0 ? (
           <div className="card-elevated p-10 text-center">
             <p className="text-fg-muted text-sm">

@@ -6,7 +6,7 @@ import { adminApi, DEFAULT_PAGE_SIZE, type Page } from '../../api/admin'
 import i18n from '../../i18n'
 import type { LawyerProfileResponse } from '../../types'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Modal } from '../../components/ui/Modal'
@@ -177,9 +177,7 @@ export default function UsersPage(): JSX.Element {
       </AnimatePresence>
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
-        </div>
+        <QueryState isLoading spinnerSize="lg" />
       ) : (
         <DataTable
           rows={lawyers}

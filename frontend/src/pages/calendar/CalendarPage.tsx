@@ -7,7 +7,7 @@ import { calendarApi } from '../../api/calendar'
 import { clientsApi } from '../../api/clients'
 import { casesApi } from '../../api/cases'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import type { CalendarEvent, CalendarEventType } from '../../types'
 import { PageHeader } from '../../components/ui/PageHeader'
 
@@ -196,17 +196,11 @@ export default function CalendarPage(): JSX.Element {
           <Legend type="TASK" label={t('calendar.legendTask')} />
         </div>
 
-        {isLoading && (
-          <div className="flex justify-center py-20">
-            <Spinner />
-          </div>
-        )}
-
-        {isError && (
-          <div className="card-elevated p-6 text-fg-muted">
-            {t('calendar.loadError')}
-          </div>
-        )}
+        <QueryState
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={t('calendar.loadError')}
+        />
 
         {!isLoading && !isError && (
           <AgendaList

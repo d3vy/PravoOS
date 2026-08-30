@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { PortalLayout } from '../../components/layout/PortalLayout'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { portalApi } from '../../api/portal'
 import { formatDuration, formatMoney } from '../../utils/billing'
 import type { InvoiceResponse } from '../../types'
@@ -34,9 +34,7 @@ export default function PortalInvoiceDetailPage(): JSX.Element {
   if (isLoading || !invoice) {
     return (
       <PortalLayout>
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
+        <QueryState isLoading />
       </PortalLayout>
     )
   }

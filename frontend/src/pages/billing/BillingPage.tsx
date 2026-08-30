@@ -6,7 +6,7 @@ import { billingApi } from '../../api/billing'
 import { refreshSession } from '../../api/client'
 import type { BillingPlan, BillingStatus, PaymentRecord, PaymentStatus, SubscriptionStatus } from '../../types'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { useConfirm } from '../../hooks/useConfirm'
 import { PageHeader } from '../../components/ui/PageHeader'
 
@@ -101,9 +101,7 @@ export default function BillingPage(): JSX.Element {
 
   if (statusLoading || plansLoading) {
     return (
-      <div className="flex justify-center py-16">
-        <Spinner size="lg" />
-      </div>
+      <QueryState isLoading spinnerSize="lg" />
     )
   }
 

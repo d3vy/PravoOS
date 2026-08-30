@@ -5,7 +5,7 @@ import { workflowDefinitionsApi } from '../../api/workflows'
 import { casesApi } from '../../api/cases'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { useConfirm } from '../../hooks/useConfirm'
 import { PageHeader } from '../../components/ui/PageHeader'
 import type {
@@ -83,12 +83,12 @@ export default function WorkflowsPage(): JSX.Element {
           />
         )}
 
-        {isLoading && (
-          <div className="flex justify-center py-16">
-            <Spinner size="lg" />
-          </div>
-        )}
-        {isError && <p className="text-sm text-danger">{t('workflowBuilder.loadError')}</p>}
+        <QueryState
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={t('workflowBuilder.loadError')}
+          spinnerSize="lg"
+        />
 
         <div className="space-y-3 mt-2">
           {definitions.map((definition) => (

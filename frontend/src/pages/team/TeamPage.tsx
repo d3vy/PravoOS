@@ -7,7 +7,7 @@ import { useAuthStore } from '../../store/authStore'
 import type { OrgInvite, OrgRole, Organization, OrganizationMember } from '../../types'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { PageHeader } from '../../components/ui/PageHeader'
 
 export default function TeamPage(): JSX.Element {
@@ -118,7 +118,7 @@ export default function TeamPage(): JSX.Element {
         {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
         {isLoading ? (
-          <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+          <QueryState isLoading spinnerSize="lg" />
         ) : (
           <div className="flex flex-col gap-8">
             {organizations.length > 0 && (

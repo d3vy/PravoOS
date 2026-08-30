@@ -5,7 +5,7 @@ import { invoicesApi } from '../../api/invoices'
 import type { InvoiceResponse, InvoiceStatus } from '../../types'
 import { usePageContext } from '../../hooks/usePageContext'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
 import { formatDuration, formatMoney } from '../../utils/billing'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -76,9 +76,7 @@ export default function InvoiceDetailPage(): JSX.Element {
 
   if (isLoading || !invoice) {
     return (
-      <div className="flex justify-center py-16">
-        <Spinner />
-      </div>
+      <QueryState isLoading />
     )
   }
 

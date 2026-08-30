@@ -5,7 +5,7 @@ import i18n from '../../i18n'
 import { templatesApi } from '../../api/templates'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
 import { TableToolbar } from '../../components/ui/TableToolbar'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -104,17 +104,11 @@ export default function TemplatesPage(): JSX.Element {
           />
         )}
 
-        {isLoading && (
-          <div className="flex justify-center py-16">
-            <Spinner />
-          </div>
-        )}
-
-        {isError && (
-          <p className="text-sm text-fg-muted">
-            {t('templates.loadError')}
-          </p>
-        )}
+        <QueryState
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={t('templates.loadError')}
+        />
 
         {templates && (
           <>

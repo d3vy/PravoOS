@@ -8,7 +8,7 @@ import { adminApi, DEFAULT_PAGE_SIZE, type Page } from '../../api/admin'
 import type { ApplicationResponse } from '../../types'
 import { ApplicationStatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { Pagination } from '../../components/ui/Pagination'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { DataTable, type DataTableColumn } from '../../components/ui/DataTable'
@@ -269,9 +269,7 @@ export default function ApplicationsPage(): JSX.Element {
       </AnimatePresence>
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
-        </div>
+        <QueryState isLoading spinnerSize="lg" />
       ) : (
         <DataTable
           rows={displayedApplications}

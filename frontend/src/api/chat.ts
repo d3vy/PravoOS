@@ -16,7 +16,7 @@ import type {
 } from '../types'
 
 const baseURL = import.meta.env.VITE_API_URL || ''
-export const CONVERSATION_PAGE_SIZE = 30
+const CONVERSATION_PAGE_SIZE = 30
 
 const genericStreamError = (): string => i18n.t('chat.streamError')
 

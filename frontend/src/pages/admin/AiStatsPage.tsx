@@ -4,7 +4,7 @@ import i18n from '../../i18n'
 import { aiStatsApi } from '../../api/aiStats'
 import { adminApi } from '../../api/admin'
 import type { AiResponseDto, AiStatsResponse, ClientStatsResponse } from '../../types'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { PageHeader } from '../../components/ui/PageHeader'
 
 export default function AiStatsPage(): JSX.Element {
@@ -27,9 +27,7 @@ export default function AiStatsPage(): JSX.Element {
 
   if (isLoading || !stats) {
     return (
-      <div className="flex justify-center py-16">
-        <Spinner size="lg" />
-      </div>
+      <QueryState isLoading spinnerSize="lg" />
     )
   }
 

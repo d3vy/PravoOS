@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { PortalLayout } from '../../components/layout/PortalLayout'
 import { InvoiceStatusBadge } from '../../components/invoices/InvoiceStatusBadge'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { portalApi } from '../../api/portal'
 import { formatMoney } from '../../utils/billing'
@@ -27,17 +27,11 @@ export default function PortalInvoicesPage(): JSX.Element {
     <PortalLayout>
       <PageHeader size="md" title={t('portalInvoices.title')} className="mb-6" />
 
-      {isLoading && (
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      )}
-
-      {isError && (
-        <div className="card-elevated rounded-xl p-8 text-center text-fg-muted">
-          {t('portalInvoices.loadError')}
-        </div>
-      )}
+      <QueryState
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={t('portalInvoices.loadError')}
+      />
 
       {!isLoading && !isError && invoices.length === 0 && (
         <EmptyState illustration="invoices" description={t('portalInvoices.empty')} />

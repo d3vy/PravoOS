@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { PortalLayout } from '../../components/layout/PortalLayout'
 import { CaseStatusBadge } from '../../components/ui/Badge'
 import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { CaseMessageThread } from '../../components/messages/CaseMessageThread'
 import { PortalSignatureSection } from '../../components/portal/PortalSignatureSection'
 import { portalApi } from '../../api/portal'
@@ -164,17 +165,11 @@ export default function PortalCaseDetailPage(): JSX.Element {
         {t('portalCaseDetail.backToList')}
       </Link>
 
-      {isLoading && (
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      )}
-
-      {isError && (
-        <div className="card-elevated rounded-xl p-8 text-center text-fg-muted">
-          {t('portalCaseDetail.notFound')}
-        </div>
-      )}
+      <QueryState
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={t('portalCaseDetail.notFound')}
+      />
 
       {caseData && (
         <div className="space-y-6">

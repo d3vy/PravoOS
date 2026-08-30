@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { PortalLayout } from '../../components/layout/PortalLayout'
 import { CaseStatusBadge } from '../../components/ui/Badge'
-import { Spinner } from '../../components/ui/Spinner'
+import { QueryState } from '../../components/ui/QueryState'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { portalApi } from '../../api/portal'
 import i18n from '../../i18n'
@@ -26,17 +26,11 @@ export default function PortalCasesPage(): JSX.Element {
     <PortalLayout>
       <PageHeader size="md" title={t('portalCases.title')} className="mb-6" />
 
-      {isLoading && (
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      )}
-
-      {isError && (
-        <div className="card-elevated rounded-xl p-8 text-center text-fg-muted">
-          {t('portalCases.loadError')}
-        </div>
-      )}
+      <QueryState
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={t('portalCases.loadError')}
+      />
 
       {!isLoading && !isError && cases.length === 0 && (
         <EmptyState illustration="cases" description={t('portalCases.empty')} />
