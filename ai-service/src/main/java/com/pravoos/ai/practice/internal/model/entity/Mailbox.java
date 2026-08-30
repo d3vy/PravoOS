@@ -18,9 +18,11 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "mailboxes")
+@SQLRestriction("deleted_at IS NULL")
 public class Mailbox {
 
   private static final int MAX_ERROR_LENGTH = 500;
@@ -83,6 +85,9 @@ public class Mailbox {
   @Version
   @Column(nullable = false)
   private long version;
+
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
 
   private LocalDateTime nextAttemptAt;
 

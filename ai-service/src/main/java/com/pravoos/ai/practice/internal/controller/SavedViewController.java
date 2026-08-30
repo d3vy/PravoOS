@@ -5,7 +5,8 @@ import com.pravoos.ai.practice.internal.dto.SavedViewResponse;
 import com.pravoos.ai.practice.internal.dto.UpdateSavedViewRequest;
 import com.pravoos.ai.practice.internal.model.SavedViewScope;
 import com.pravoos.ai.practice.internal.service.SavedViewService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.shared.security.CallerContext;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -26,41 +27,29 @@ public class SavedViewController {
 
   @GetMapping
   public ResponseEntity<List<SavedViewResponse>> list(
-      @RequestParam SavedViewScope scope, Authentication authentication) {
-    return ResponseEntity.ok(
-        savedViewService.findVisible(
-            scope,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+      @RequestParam SavedViewScope scope, CallerContext caller) {
+    return ResponseEntity.ok(savedViewService.findVisible(scope, caller.userId(), caller.orgIds()));
   }
 
   @PostMapping
   public ResponseEntity<SavedViewResponse> create(
-      @Valid @RequestBody CreateSavedViewRequest request, Authentication authentication) {
+      @Valid @RequestBody CreateSavedViewRequest request, CallerContext caller) {
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(
-            savedViewService.create(
-                request,
-                SecurityUtils.currentUserId(authentication),
-                SecurityUtils.currentOrgIds(authentication)));
+        .body(savedViewService.create(request, caller.userId(), caller.orgIds()));
   }
 
   @PutMapping("/{viewId}")
   public ResponseEntity<SavedViewResponse> update(
       @PathVariable UUID viewId,
       @Valid @RequestBody UpdateSavedViewRequest request,
-      Authentication authentication) {
+      CallerContext caller) {
     return ResponseEntity.ok(
-        savedViewService.update(
-            viewId,
-            request,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+        savedViewService.update(viewId, request, caller.userId(), caller.orgIds()));
   }
 
   @DeleteMapping("/{viewId}")
   public ResponseEntity<Void> delete(@PathVariable UUID viewId, Authentication authentication) {
-    savedViewService.delete(viewId, SecurityUtils.currentUserId(authentication));
+    savedViewService.delete(viewId, DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 }

@@ -5,7 +5,8 @@ import com.pravoos.ai.practice.internal.dto.CreateTemplateRequest;
 import com.pravoos.ai.practice.internal.dto.TemplateResponse;
 import com.pravoos.ai.practice.internal.dto.UpdateTemplateRequest;
 import com.pravoos.ai.practice.internal.service.TemplateService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.shared.security.CallerContext;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -25,47 +26,42 @@ public class TemplateController {
 
   @PostMapping("/api/ai/templates")
   public ResponseEntity<TemplateResponse> create(
-      @Valid @RequestBody CreateTemplateRequest request, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @Valid @RequestBody CreateTemplateRequest request, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(templateService.create(request, lawyerId));
   }
 
   @GetMapping("/api/ai/templates")
-  public ResponseEntity<List<TemplateResponse>> list(Authentication authentication) {
-    return ResponseEntity.ok(
-        templateService.findByLawyer(SecurityUtils.currentUserId(authentication)));
+  public ResponseEntity<List<TemplateResponse>> list(CallerContext caller) {
+    return ResponseEntity.ok(templateService.findByLawyer(caller.userId()));
   }
 
   @GetMapping("/api/ai/templates/{templateId}")
-  public ResponseEntity<TemplateResponse> get(
-      @PathVariable UUID templateId, Authentication authentication) {
-    return ResponseEntity.ok(
-        templateService.get(templateId, SecurityUtils.currentUserId(authentication)));
+  public ResponseEntity<TemplateResponse> get(@PathVariable UUID templateId, CallerContext caller) {
+    return ResponseEntity.ok(templateService.get(templateId, caller.userId()));
   }
 
   @PutMapping("/api/ai/templates/{templateId}")
   public ResponseEntity<TemplateResponse> update(
       @PathVariable UUID templateId,
       @Valid @RequestBody UpdateTemplateRequest request,
-      Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.ok(templateService.update(templateId, request, lawyerId));
   }
 
   @DeleteMapping("/api/ai/templates/{templateId}")
   public ResponseEntity<Void> delete(@PathVariable UUID templateId, Authentication authentication) {
-    templateService.delete(templateId, SecurityUtils.currentUserId(authentication));
+    templateService.delete(templateId, DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 
   @PostMapping("/api/ai/cases/{caseId}/templates/{templateId}/apply")
   public ResponseEntity<CaseDraftDto> applyToCase(
-      @PathVariable UUID caseId, @PathVariable UUID templateId, Authentication authentication) {
-    UUID lawyerId = SecurityUtils.currentUserId(authentication);
+      @PathVariable UUID caseId, @PathVariable UUID templateId, CallerContext caller) {
+    UUID lawyerId = caller.userId();
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(
-            templateService.applyToCase(
-                caseId, templateId, lawyerId, SecurityUtils.currentOrgIds(authentication)));
+        .body(templateService.applyToCase(caseId, templateId, lawyerId, caller.orgIds()));
   }
 }

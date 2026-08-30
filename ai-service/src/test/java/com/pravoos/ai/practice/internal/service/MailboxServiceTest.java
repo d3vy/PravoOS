@@ -14,6 +14,10 @@ import com.pravoos.ai.practice.internal.dto.MailboxTestResult;
 import com.pravoos.ai.practice.internal.dto.UpdateMailboxRequest;
 import com.pravoos.ai.practice.internal.model.entity.Mailbox;
 import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.DeletionRole;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.config.MailboxProperties;
 import com.pravoos.ai.shared.exception.MailboxAlreadyExistsException;
 import com.pravoos.ai.shared.exception.MailboxConnectionException;
@@ -25,6 +29,7 @@ import com.pravoos.ai.shared.mail.MailboxCredentials;
 import com.pravoos.ai.shared.mail.MailboxReader;
 import com.pravoos.ai.shared.model.enums.MailboxStatus;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +45,7 @@ class MailboxServiceTest {
   @Mock private MailboxRepository mailboxRepository;
   @Mock private MailboxReader mailboxReader;
   @Mock private MailHostGuard hostGuard;
+  @Mock private RecycleBin recycleBin;
 
   private MailboxService service;
 
@@ -54,6 +60,7 @@ class MailboxServiceTest {
             mailboxReader,
             new MailboxProperties(Duration.ofSeconds(5), Duration.ofSeconds(10), 2),
             hostGuard,
+            recycleBin,
             selfProxy());
   }
 
@@ -63,6 +70,7 @@ class MailboxServiceTest {
         mailboxReader,
         new MailboxProperties(Duration.ofSeconds(5), Duration.ofSeconds(10), 2),
         hostGuard,
+        recycleBin,
         null);
   }
 
@@ -250,6 +258,27 @@ class MailboxServiceTest {
 
     assertThatThrownBy(() -> service.get(mailboxId, userId))
         .isInstanceOf(MailboxNotFoundException.class);
+  }
+
+  @Test
+  void deleteMovesOwnedMailboxToRecycleBin() {
+    Mailbox mailbox = mailbox();
+    when(mailboxRepository.findByIdAndUserId(mailboxId, userId)).thenReturn(Optional.of(mailbox));
+    DeletionActor actor = new DeletionActor(userId, DeletionRole.LAWYER, null, List.of());
+
+    service.delete(mailboxId, actor);
+
+    verify(recycleBin).moveToBin(RecycleBinEntityType.MAILBOX, mailboxId.toString(), actor);
+  }
+
+  @Test
+  void deleteRejectsForeignMailbox() {
+    when(mailboxRepository.findByIdAndUserId(mailboxId, userId)).thenReturn(Optional.empty());
+    DeletionActor actor = new DeletionActor(userId, DeletionRole.LAWYER, null, List.of());
+
+    assertThatThrownBy(() -> service.delete(mailboxId, actor))
+        .isInstanceOf(MailboxNotFoundException.class);
+    verify(recycleBin, never()).moveToBin(any(), any(), any());
   }
 
   private Mailbox mailbox() {

@@ -8,7 +8,8 @@ import com.pravoos.ai.practice.internal.dto.MailboxTestResult;
 import com.pravoos.ai.practice.internal.dto.UpdateMailboxRequest;
 import com.pravoos.ai.practice.internal.service.MailSyncService;
 import com.pravoos.ai.practice.internal.service.MailboxService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.shared.security.CallerContext;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -42,23 +43,19 @@ public class MailboxController {
   }
 
   @GetMapping
-  public ResponseEntity<List<MailboxResponse>> list(Authentication authentication) {
-    return ResponseEntity.ok(
-        mailboxService.findByUser(SecurityUtils.currentUserId(authentication)));
+  public ResponseEntity<List<MailboxResponse>> list(CallerContext caller) {
+    return ResponseEntity.ok(mailboxService.findByUser(caller.userId()));
   }
 
   @GetMapping("/{mailboxId}")
-  public ResponseEntity<MailboxResponse> get(
-      @PathVariable UUID mailboxId, Authentication authentication) {
-    return ResponseEntity.ok(
-        mailboxService.get(mailboxId, SecurityUtils.currentUserId(authentication)));
+  public ResponseEntity<MailboxResponse> get(@PathVariable UUID mailboxId, CallerContext caller) {
+    return ResponseEntity.ok(mailboxService.get(mailboxId, caller.userId()));
   }
 
   @PostMapping
   public ResponseEntity<MailboxResponse> create(
-      @Valid @RequestBody CreateMailboxRequest request, Authentication authentication) {
-    MailboxResponse mailbox =
-        mailboxService.create(request, SecurityUtils.currentUserId(authentication));
+      @Valid @RequestBody CreateMailboxRequest request, CallerContext caller) {
+    MailboxResponse mailbox = mailboxService.create(request, caller.userId());
     return ResponseEntity.status(HttpStatus.CREATED).body(mailbox);
   }
 
@@ -66,28 +63,24 @@ public class MailboxController {
   public ResponseEntity<MailboxResponse> update(
       @PathVariable UUID mailboxId,
       @Valid @RequestBody UpdateMailboxRequest request,
-      Authentication authentication) {
-    return ResponseEntity.ok(
-        mailboxService.update(mailboxId, request, SecurityUtils.currentUserId(authentication)));
+      CallerContext caller) {
+    return ResponseEntity.ok(mailboxService.update(mailboxId, request, caller.userId()));
   }
 
   @PostMapping("/{mailboxId}/test")
   public ResponseEntity<MailboxTestResult> test(
-      @PathVariable UUID mailboxId, Authentication authentication) {
-    return ResponseEntity.ok(
-        mailboxService.testConnection(mailboxId, SecurityUtils.currentUserId(authentication)));
+      @PathVariable UUID mailboxId, CallerContext caller) {
+    return ResponseEntity.ok(mailboxService.testConnection(mailboxId, caller.userId()));
   }
 
   @PostMapping("/{mailboxId}/sync")
-  public ResponseEntity<MailSyncResult> sync(
-      @PathVariable UUID mailboxId, Authentication authentication) {
-    return ResponseEntity.ok(
-        mailSyncService.syncMailboxForUser(mailboxId, SecurityUtils.currentUserId(authentication)));
+  public ResponseEntity<MailSyncResult> sync(@PathVariable UUID mailboxId, CallerContext caller) {
+    return ResponseEntity.ok(mailSyncService.syncMailboxForUser(mailboxId, caller.userId()));
   }
 
   @DeleteMapping("/{mailboxId}")
   public ResponseEntity<Void> delete(@PathVariable UUID mailboxId, Authentication authentication) {
-    mailboxService.delete(mailboxId, SecurityUtils.currentUserId(authentication));
+    mailboxService.delete(mailboxId, DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 }

@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "document_templates")
+@SQLRestriction("deleted_at IS NULL")
 public class DocumentTemplate {
 
   @Id
@@ -24,6 +26,9 @@ public class DocumentTemplate {
 
   @Column(nullable = false)
   private LocalDateTime createdAt;
+
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
 
   @PrePersist
   void prePersist() {

@@ -6,6 +6,9 @@ import com.pravoos.ai.practice.internal.dto.UpdateSavedViewRequest;
 import com.pravoos.ai.practice.internal.model.SavedViewScope;
 import com.pravoos.ai.practice.internal.model.entity.SavedView;
 import com.pravoos.ai.practice.internal.repository.jpa.SavedViewRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.exception.OrganizationAccessException;
 import com.pravoos.ai.shared.exception.SavedViewNameTakenException;
 import com.pravoos.ai.shared.exception.SavedViewNotFoundException;
@@ -13,6 +16,8 @@ import com.pravoos.ai.shared.exception.SavedViewOrgRequiredException;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,17 +29,44 @@ public class SavedViewService {
   private static final int MAX_NAME_LENGTH = 80;
 
   private final SavedViewRepository savedViewRepository;
+  private final RecycleBin recycleBin;
+  private final SavedViewCatalogCache catalogCache;
+  private final boolean catalogCacheEnabled;
 
-  public SavedViewService(SavedViewRepository savedViewRepository) {
+  public SavedViewService(
+      SavedViewRepository savedViewRepository,
+      RecycleBin recycleBin,
+      SavedViewCatalogCache catalogCache,
+      @Value("${ai.catalog-cache.enabled:true}") boolean catalogCacheEnabled) {
     this.savedViewRepository = savedViewRepository;
+    this.recycleBin = recycleBin;
+    this.catalogCache = catalogCache;
+    this.catalogCacheEnabled = catalogCacheEnabled;
   }
 
   @Transactional(readOnly = true)
   public List<SavedViewResponse> findVisible(
       SavedViewScope scope, UUID lawyerId, List<UUID> orgIds) {
+    if (!catalogCacheEnabled) {
+      return loadVisible(scope, lawyerId, orgIds);
+    }
+    String key = cacheKey(scope, lawyerId, orgIds);
+    return catalogCache.get(key, k -> loadVisible(scope, lawyerId, orgIds));
+  }
+
+  private List<SavedViewResponse> loadVisible(
+      SavedViewScope scope, UUID lawyerId, List<UUID> orgIds) {
     return savedViewRepository.findVisible(lawyerId, orgIdsOrSentinel(orgIds), scope).stream()
         .map(view -> SavedViewResponse.from(view, lawyerId))
         .toList();
+  }
+
+  private static String cacheKey(SavedViewScope scope, UUID lawyerId, List<UUID> orgIds) {
+    String sortedOrgIds =
+        orgIds == null
+            ? ""
+            : orgIds.stream().map(UUID::toString).sorted().collect(Collectors.joining(","));
+    return scope + "|" + lawyerId + "|" + sortedOrgIds;
   }
 
   @Transactional
@@ -50,7 +82,9 @@ public class SavedViewService {
     view.setName(name);
     view.setConfig(request.config());
     applySharing(view, request.sharedWithTeam(), request.orgId(), orgIds);
-    return SavedViewResponse.from(saveOrThrowNameTaken(view, name), lawyerId);
+    SavedViewResponse response = SavedViewResponse.from(saveOrThrowNameTaken(view, name), lawyerId);
+    catalogCache.evictAll();
+    return response;
   }
 
   @Transactional
@@ -65,12 +99,15 @@ public class SavedViewService {
     view.setName(name);
     view.setConfig(request.config());
     applySharing(view, request.sharedWithTeam(), request.orgId(), orgIds);
-    return SavedViewResponse.from(saveOrThrowNameTaken(view, name), lawyerId);
+    SavedViewResponse response = SavedViewResponse.from(saveOrThrowNameTaken(view, name), lawyerId);
+    catalogCache.evictAll();
+    return response;
   }
 
   @Transactional
-  public void delete(UUID viewId, UUID lawyerId) {
-    savedViewRepository.delete(requireOwnedView(viewId, lawyerId));
+  public void delete(UUID viewId, DeletionActor actor) {
+    requireOwnedView(viewId, actor.userId());
+    recycleBin.moveToBin(RecycleBinEntityType.SAVED_VIEW, viewId.toString(), actor);
   }
 
   private SavedView saveOrThrowNameTaken(SavedView view, String name) {

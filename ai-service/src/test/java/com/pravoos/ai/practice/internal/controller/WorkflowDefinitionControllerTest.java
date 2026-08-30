@@ -17,6 +17,7 @@ import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.exception.WorkflowDefinitionNotFoundException;
 import com.pravoos.ai.shared.model.enums.WorkflowCategory;
 import com.pravoos.ai.shared.model.enums.WorkflowStepType;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -46,6 +47,7 @@ class WorkflowDefinitionControllerTest {
     WorkflowDefinitionController controller = new WorkflowDefinitionController(definitionService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

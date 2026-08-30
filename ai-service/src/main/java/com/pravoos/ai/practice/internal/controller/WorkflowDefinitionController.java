@@ -3,7 +3,8 @@ package com.pravoos.ai.practice.internal.controller;
 import com.pravoos.ai.practice.internal.dto.SaveWorkflowDefinitionRequest;
 import com.pravoos.ai.practice.internal.dto.WorkflowDefinitionDto;
 import com.pravoos.ai.practice.internal.service.WorkflowDefinitionService;
-import com.pravoos.common.web.SecurityUtils;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.shared.security.CallerContext;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -23,49 +24,34 @@ public class WorkflowDefinitionController {
   }
 
   @GetMapping
-  public ResponseEntity<List<WorkflowDefinitionDto>> list(Authentication authentication) {
-    return ResponseEntity.ok(
-        definitionService.listVisible(
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+  public ResponseEntity<List<WorkflowDefinitionDto>> list(CallerContext caller) {
+    return ResponseEntity.ok(definitionService.listVisible(caller.userId(), caller.orgIds()));
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<WorkflowDefinitionDto> get(
-      @PathVariable UUID id, Authentication authentication) {
-    return ResponseEntity.ok(
-        definitionService.get(
-            id,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+  public ResponseEntity<WorkflowDefinitionDto> get(@PathVariable UUID id, CallerContext caller) {
+    return ResponseEntity.ok(definitionService.get(id, caller.userId(), caller.orgIds()));
   }
 
   @PostMapping
   public ResponseEntity<WorkflowDefinitionDto> create(
-      @Valid @RequestBody SaveWorkflowDefinitionRequest request, Authentication authentication) {
+      @Valid @RequestBody SaveWorkflowDefinitionRequest request, CallerContext caller) {
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(definitionService.create(request, SecurityUtils.currentUserId(authentication)));
+        .body(definitionService.create(request, caller.userId()));
   }
 
   @PutMapping("/{id}")
   public ResponseEntity<WorkflowDefinitionDto> update(
       @PathVariable UUID id,
       @Valid @RequestBody SaveWorkflowDefinitionRequest request,
-      Authentication authentication) {
+      CallerContext caller) {
     return ResponseEntity.ok(
-        definitionService.update(
-            id,
-            request,
-            SecurityUtils.currentUserId(authentication),
-            SecurityUtils.currentOrgIds(authentication)));
+        definitionService.update(id, request, caller.userId(), caller.orgIds()));
   }
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication authentication) {
-    definitionService.delete(
-        id,
-        SecurityUtils.currentUserId(authentication),
-        SecurityUtils.currentOrgIds(authentication));
+    definitionService.delete(id, DeletionActor.of(authentication));
     return ResponseEntity.noContent().build();
   }
 }

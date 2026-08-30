@@ -7,6 +7,9 @@ import com.pravoos.ai.practice.internal.dto.MailboxTestResult;
 import com.pravoos.ai.practice.internal.dto.UpdateMailboxRequest;
 import com.pravoos.ai.practice.internal.model.entity.Mailbox;
 import com.pravoos.ai.practice.internal.repository.jpa.MailboxRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.config.MailboxProperties;
 import com.pravoos.ai.shared.exception.MailboxAlreadyExistsException;
 import com.pravoos.ai.shared.exception.MailboxConnectionException;
@@ -38,6 +41,7 @@ public class MailboxService {
   private final MailboxReader mailboxReader;
   private final MailboxProperties mailboxProperties;
   private final MailHostGuard hostGuard;
+  private final RecycleBin recycleBin;
   private final MailboxService self;
 
   public MailboxService(
@@ -45,11 +49,13 @@ public class MailboxService {
       MailboxReader mailboxReader,
       MailboxProperties mailboxProperties,
       MailHostGuard hostGuard,
+      RecycleBin recycleBin,
       @Lazy MailboxService self) {
     this.mailboxRepository = mailboxRepository;
     this.mailboxReader = mailboxReader;
     this.mailboxProperties = mailboxProperties;
     this.hostGuard = hostGuard;
+    this.recycleBin = recycleBin;
     this.self = self;
   }
 
@@ -180,10 +186,10 @@ public class MailboxService {
   }
 
   @Transactional
-  public void delete(UUID mailboxId, UUID userId) {
-    Mailbox mailbox = requireOwnedMailbox(mailboxId, userId);
-    mailboxRepository.delete(mailbox);
-    log.info("Mailbox {} deleted by user {}", mailboxId, userId);
+  public void delete(UUID mailboxId, DeletionActor actor) {
+    requireOwnedMailbox(mailboxId, actor.userId());
+    recycleBin.moveToBin(RecycleBinEntityType.MAILBOX, mailboxId.toString(), actor);
+    log.info("Mailbox {} deleted by user {}", mailboxId, actor.userId());
   }
 
   private MailboxCredentials credentialsOf(Mailbox mailbox) {

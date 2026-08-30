@@ -5,7 +5,15 @@ public enum RecycleBinEntityType {
   CLIENT(RecycleBinArea.CLIENTS),
   DOCUMENT(RecycleBinArea.DOCUMENTS),
   INVOICE(RecycleBinArea.INVOICES),
-  CONVERSATION(RecycleBinArea.CHAT);
+  CONVERSATION(RecycleBinArea.CHAT),
+  CASE_TASK(RecycleBinArea.CASES),
+  CLIENT_CONTACT(RecycleBinArea.CLIENTS),
+  TEMPLATE(RecycleBinArea.TEMPLATES),
+  WORKFLOW_DEFINITION(RecycleBinArea.WORKFLOWS),
+  MAILBOX(RecycleBinArea.MAILBOXES),
+  SAVED_VIEW(RecycleBinArea.VIEWS),
+  TABULAR_REVIEW(RecycleBinArea.REVIEW),
+  TIME_ENTRY(RecycleBinArea.TIME);
 
   private final RecycleBinArea area;
 

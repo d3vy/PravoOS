@@ -22,6 +22,7 @@ import com.pravoos.ai.practice.internal.service.MailboxService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.exception.MailboxNotFoundException;
 import com.pravoos.ai.shared.model.enums.MailboxStatus;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -52,6 +53,7 @@ class MailboxControllerTest {
     MailboxController controller = new MailboxController(mailboxService, mailSyncService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

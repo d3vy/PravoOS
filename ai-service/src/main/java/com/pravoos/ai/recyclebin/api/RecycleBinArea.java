@@ -5,5 +5,11 @@ public enum RecycleBinArea {
   CLIENTS,
   DOCUMENTS,
   INVOICES,
-  CHAT
+  CHAT,
+  TEMPLATES,
+  WORKFLOWS,
+  MAILBOXES,
+  VIEWS,
+  REVIEW,
+  TIME
 }

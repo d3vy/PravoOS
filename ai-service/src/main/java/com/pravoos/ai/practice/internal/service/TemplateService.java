@@ -12,11 +12,15 @@ import com.pravoos.ai.practice.internal.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.DocumentTemplateRepository;
 import com.pravoos.ai.practice.internal.util.TemplatePlaceholderResolver;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.exception.TemplateNotFoundException;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,16 +35,25 @@ public class TemplateService {
   private final CaseDraftRepository caseDraftRepository;
   private final ClientRepository clientRepository;
   private final CaseService caseService;
+  private final RecycleBin recycleBin;
+  private final TemplateCatalogCache catalogCache;
+  private final boolean catalogCacheEnabled;
 
   public TemplateService(
       DocumentTemplateRepository templateRepository,
       CaseDraftRepository caseDraftRepository,
       ClientRepository clientRepository,
-      CaseService caseService) {
+      CaseService caseService,
+      RecycleBin recycleBin,
+      TemplateCatalogCache catalogCache,
+      @Value("${ai.catalog-cache.enabled:true}") boolean catalogCacheEnabled) {
     this.templateRepository = templateRepository;
     this.caseDraftRepository = caseDraftRepository;
     this.clientRepository = clientRepository;
     this.caseService = caseService;
+    this.recycleBin = recycleBin;
+    this.catalogCache = catalogCache;
+    this.catalogCacheEnabled = catalogCacheEnabled;
   }
 
   @Transactional
@@ -51,12 +64,20 @@ public class TemplateService {
     template.setContent(request.content());
 
     DocumentTemplate saved = templateRepository.save(template);
+    catalogCache.evictAll();
     log.info("Template created: '{}' ({}) by lawyer {}", saved.getName(), saved.getId(), lawyerId);
     return TemplateResponse.from(saved);
   }
 
   @Transactional(readOnly = true)
   public List<TemplateResponse> findByLawyer(UUID lawyerId) {
+    if (!catalogCacheEnabled) {
+      return loadByLawyer(lawyerId);
+    }
+    return catalogCache.get(lawyerId.toString(), k -> loadByLawyer(lawyerId));
+  }
+
+  private List<TemplateResponse> loadByLawyer(UUID lawyerId) {
     return templateRepository.findByLawyerIdOrderByCreatedAtDesc(lawyerId).stream()
         .map(TemplateResponse::from)
         .toList();
@@ -72,15 +93,16 @@ public class TemplateService {
     DocumentTemplate template = requireOwnedTemplate(templateId, lawyerId);
     template.setName(request.name().trim());
     template.setContent(request.content());
+    catalogCache.evictAll();
     log.info("Template updated: {} by lawyer {}", templateId, lawyerId);
     return TemplateResponse.from(template);
   }
 
   @Transactional
-  public void delete(UUID templateId, UUID lawyerId) {
-    DocumentTemplate template = requireOwnedTemplate(templateId, lawyerId);
-    templateRepository.delete(template);
-    log.info("Template deleted: {} by lawyer {}", templateId, lawyerId);
+  public void delete(UUID templateId, DeletionActor actor) {
+    requireOwnedTemplate(templateId, actor.userId());
+    recycleBin.moveToBin(RecycleBinEntityType.TEMPLATE, templateId.toString(), actor);
+    log.info("Template deleted: {} by lawyer {}", templateId, actor.userId());
   }
 
   @Transactional

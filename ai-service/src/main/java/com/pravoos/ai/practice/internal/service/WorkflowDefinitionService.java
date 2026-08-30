@@ -6,6 +6,9 @@ import com.pravoos.ai.practice.internal.dto.WorkflowStepDto;
 import com.pravoos.ai.practice.internal.model.WorkflowStepConfig;
 import com.pravoos.ai.practice.internal.model.entity.WorkflowDefinition;
 import com.pravoos.ai.practice.internal.repository.jpa.WorkflowDefinitionRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.exception.DraftTypeNotFoundException;
 import com.pravoos.ai.shared.exception.InvalidWorkflowDefinitionException;
 import com.pravoos.ai.shared.exception.WorkflowDefinitionNotFoundException;
@@ -14,9 +17,11 @@ import com.pravoos.ai.shared.model.enums.WorkflowStepType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,16 +32,42 @@ public class WorkflowDefinitionService {
   private static final UUID NO_ORG = new UUID(0L, 0L);
 
   private final WorkflowDefinitionRepository definitionRepository;
+  private final RecycleBin recycleBin;
+  private final WorkflowDefinitionCatalogCache catalogCache;
+  private final boolean catalogCacheEnabled;
 
-  public WorkflowDefinitionService(WorkflowDefinitionRepository definitionRepository) {
+  public WorkflowDefinitionService(
+      WorkflowDefinitionRepository definitionRepository,
+      RecycleBin recycleBin,
+      WorkflowDefinitionCatalogCache catalogCache,
+      @Value("${ai.catalog-cache.enabled:true}") boolean catalogCacheEnabled) {
     this.definitionRepository = definitionRepository;
+    this.recycleBin = recycleBin;
+    this.catalogCache = catalogCache;
+    this.catalogCacheEnabled = catalogCacheEnabled;
   }
 
   @Transactional(readOnly = true)
   public List<WorkflowDefinitionDto> listVisible(UUID lawyerId, List<UUID> orgIds) {
+    if (!catalogCacheEnabled) {
+      return loadVisible(lawyerId, orgIds);
+    }
+    String key = cacheKey(lawyerId, orgIds);
+    return catalogCache.get(key, k -> loadVisible(lawyerId, orgIds));
+  }
+
+  private List<WorkflowDefinitionDto> loadVisible(UUID lawyerId, List<UUID> orgIds) {
     return definitionRepository.findVisible(lawyerId, safeOrgIds(orgIds)).stream()
         .map(definition -> WorkflowDefinitionDto.from(definition, isEditable(definition, lawyerId)))
         .toList();
+  }
+
+  private static String cacheKey(UUID lawyerId, List<UUID> orgIds) {
+    String sortedOrgIds =
+        orgIds == null
+            ? ""
+            : orgIds.stream().map(UUID::toString).sorted().collect(Collectors.joining(","));
+    return lawyerId + "|" + sortedOrgIds;
   }
 
   @Transactional(readOnly = true)
@@ -66,6 +97,7 @@ public class WorkflowDefinitionService {
     definition.setSystem(false);
     applyRequest(definition, request);
     WorkflowDefinition saved = definitionRepository.save(definition);
+    catalogCache.evictAll();
     log.info(
         "Workflow definition created: {} ({}) by lawyer {}",
         saved.getId(),
@@ -79,15 +111,16 @@ public class WorkflowDefinitionService {
       UUID id, SaveWorkflowDefinitionRequest request, UUID lawyerId, List<UUID> orgIds) {
     WorkflowDefinition definition = requireEditable(id, lawyerId, orgIds);
     applyRequest(definition, request);
+    catalogCache.evictAll();
     log.info("Workflow definition updated: {} by lawyer {}", id, lawyerId);
     return WorkflowDefinitionDto.from(definition, true);
   }
 
   @Transactional
-  public void delete(UUID id, UUID lawyerId, List<UUID> orgIds) {
-    WorkflowDefinition definition = requireEditable(id, lawyerId, orgIds);
-    definitionRepository.delete(definition);
-    log.info("Workflow definition deleted: {} by lawyer {}", id, lawyerId);
+  public void delete(UUID id, DeletionActor actor) {
+    requireEditable(id, actor.userId(), actor.orgIds());
+    recycleBin.moveToBin(RecycleBinEntityType.WORKFLOW_DEFINITION, id.toString(), actor);
+    log.info("Workflow definition deleted: {} by lawyer {}", id, actor.userId());
   }
 
   private WorkflowDefinition requireEditable(UUID id, UUID lawyerId, List<UUID> orgIds) {

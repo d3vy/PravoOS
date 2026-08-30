@@ -5,9 +5,11 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "saved_views")
+@SQLRestriction("deleted_at IS NULL")
 public class SavedView {
 
   @Id
@@ -37,6 +39,9 @@ public class SavedView {
 
   @Column(nullable = false)
   private LocalDateTime updatedAt;
+
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
 
   @PrePersist
   void prePersist() {

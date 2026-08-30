@@ -18,14 +18,18 @@ import com.pravoos.ai.practice.internal.model.entity.DocumentTemplate;
 import com.pravoos.ai.practice.internal.repository.jpa.CaseDraftRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.ClientRepository;
 import com.pravoos.ai.practice.internal.repository.jpa.DocumentTemplateRepository;
+import com.pravoos.ai.recyclebin.api.DeletionActor;
+import com.pravoos.ai.recyclebin.api.DeletionRole;
+import com.pravoos.ai.recyclebin.api.RecycleBin;
+import com.pravoos.ai.recyclebin.api.RecycleBinEntityType;
 import com.pravoos.ai.shared.exception.TemplateNotFoundException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -37,10 +41,24 @@ class TemplateServiceTest {
   @Mock private CaseDraftRepository caseDraftRepository;
   @Mock private ClientRepository clientRepository;
   @Mock private CaseService caseService;
+  @Mock private RecycleBin recycleBin;
 
-  @InjectMocks private TemplateService templateService;
+  private TemplateService templateService;
 
   private final UUID lawyerId = UUID.randomUUID();
+
+  @BeforeEach
+  void setUp() {
+    templateService =
+        new TemplateService(
+            templateRepository,
+            caseDraftRepository,
+            clientRepository,
+            caseService,
+            recycleBin,
+            new TemplateCatalogCache(),
+            true);
+  }
 
   private DocumentTemplate templateWithId(UUID id, UUID owner, String name, String content) {
     DocumentTemplate template = new DocumentTemplate();
@@ -137,25 +155,30 @@ class TemplateServiceTest {
   }
 
   @Test
-  void deleteRemovesOwnedTemplate() {
+  void deleteMovesOwnedTemplateToRecycleBin() {
     UUID templateId = UUID.randomUUID();
     DocumentTemplate existing = templateWithId(templateId, lawyerId, "Шаблон", "Текст");
     when(templateRepository.findByIdAndLawyerId(templateId, lawyerId))
         .thenReturn(Optional.of(existing));
+    DeletionActor actor = actor();
 
-    templateService.delete(templateId, lawyerId);
+    templateService.delete(templateId, actor);
 
-    verify(templateRepository).delete(existing);
+    verify(recycleBin).moveToBin(RecycleBinEntityType.TEMPLATE, templateId.toString(), actor);
   }
 
   @Test
-  void deleteThrowsWhenTemplateNotOwnedAndDoesNotCallRepository() {
+  void deleteThrowsWhenTemplateNotOwnedAndDoesNotTouchRecycleBin() {
     UUID templateId = UUID.randomUUID();
     when(templateRepository.findByIdAndLawyerId(templateId, lawyerId)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> templateService.delete(templateId, lawyerId))
+    assertThatThrownBy(() -> templateService.delete(templateId, actor()))
         .isInstanceOf(TemplateNotFoundException.class);
-    verify(templateRepository, never()).delete(any());
+    verify(recycleBin, never()).moveToBin(any(), any(), any());
+  }
+
+  private DeletionActor actor() {
+    return new DeletionActor(lawyerId, DeletionRole.LAWYER, null, List.of());
   }
 
   @Test

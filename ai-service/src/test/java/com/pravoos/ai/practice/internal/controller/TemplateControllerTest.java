@@ -16,6 +16,7 @@ import com.pravoos.ai.practice.internal.dto.UpdateTemplateRequest;
 import com.pravoos.ai.practice.internal.service.TemplateService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
 import com.pravoos.ai.shared.exception.TemplateNotFoundException;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -45,6 +46,7 @@ class TemplateControllerTest {
     TemplateController controller = new TemplateController(templateService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

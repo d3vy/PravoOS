@@ -15,6 +15,7 @@ import com.pravoos.ai.practice.internal.dto.UpdateSavedViewRequest;
 import com.pravoos.ai.practice.internal.model.SavedViewScope;
 import com.pravoos.ai.practice.internal.service.SavedViewService;
 import com.pravoos.ai.shared.exception.GlobalExceptionHandler;
+import com.pravoos.ai.shared.security.CallerContextArgumentResolver;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -44,6 +45,7 @@ class SavedViewControllerTest {
     SavedViewController controller = new SavedViewController(savedViewService);
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new CallerContextArgumentResolver())
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }

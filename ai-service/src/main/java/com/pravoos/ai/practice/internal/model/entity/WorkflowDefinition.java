@@ -8,10 +8,12 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "workflow_definitions")
+@SQLRestriction("deleted_at IS NULL")
 public class WorkflowDefinition {
 
   @Id
@@ -46,6 +48,9 @@ public class WorkflowDefinition {
 
   @Column(nullable = false)
   private LocalDateTime updatedAt;
+
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
 
   @PrePersist
   void prePersist() {
